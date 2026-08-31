@@ -1,0 +1,46 @@
+# Build
+target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Env / secrets
+.env
+.env.secrets
+*.local.env
+
+# Coverage
+coverage/
+.jacoco
+jacoco*.xml
+
+# Maven wrapper
+.mvn/wrapper/maven-wrapper.properties
+
+# Ollama / model cache
+models/
+*.gguf
+
+# Data
+data/ingested/
+data/chunks/
+
+# Obs
+.grafana/
+prometheus-data/

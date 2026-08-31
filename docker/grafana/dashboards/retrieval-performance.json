@@ -1,0 +1,65 @@
+{
+  "title": "Retrieval Performance",
+  "uid": "rag-retrieval",
+  "version": 1,
+  "schemaVersion": 39,
+  "time": { "from": "now-1h", "to": "now" },
+  "refresh": "10s",
+  "templating": { "list": [] },
+  "panels": [
+    {
+      "title": "Vector Search Latency",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(rag_retrieval_vector_search_seconds_bucket[5m])) by (le))",
+          "legendFormat": "p95 search latency",
+          "refId": "A"
+        }
+      ],
+      "unit": "s"
+    },
+    {
+      "title": "Chunks Returned per Query",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(rag_retrieval_chunks_returned_bucket[5m])) by (le))",
+          "legendFormat": "p95 chunks returned",
+          "refId": "A"
+        }
+      ],
+      "unit": "short"
+    },
+    {
+      "title": "Similarity Score Distribution",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.5, sum(rate(rag_retrieval_similarity_score_bucket[5m])) by (le))",
+          "legendFormat": "median similarity",
+          "refId": "A"
+        }
+      ],
+      "unit": "percentunit"
+    },
+    {
+      "title": "Retrieval Recall",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "rag_quality_recall",
+          "legendFormat": "recall",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "percentunit", "max": 1, "min": 0 }
+      }
+    }
+  ]
+}

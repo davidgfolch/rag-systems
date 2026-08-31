@@ -1,0 +1,12 @@
+target/
+.git
+.idea
+.vscode
+*.iml
+.env
+.env.secrets
+data/
+models/
+README.md
+docs/
+scripts/

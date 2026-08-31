@@ -1,0 +1,55 @@
+{
+  "title": "Cost & Usage",
+  "uid": "rag-cost",
+  "version": 1,
+  "schemaVersion": 39,
+  "time": { "from": "now-24h", "to": "now" },
+  "refresh": "10s",
+  "templating": { "list": [] },
+  "panels": [
+    {
+      "title": "Token Usage by Provider",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(rag_generation_tokens_total[5m])) by (provider)",
+          "legendFormat": "{{provider}}",
+          "refId": "A"
+        }
+      ],
+      "unit": "short"
+    },
+    {
+      "title": "Input vs Output Tokens",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(rag_generation_tokens_input[5m]))",
+          "legendFormat": "input",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(rag_generation_tokens_output[5m]))",
+          "legendFormat": "output",
+          "refId": "B"
+        }
+      ],
+      "unit": "short"
+    },
+    {
+      "title": "Estimated Cost",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(rag_generation_cost_total[5m])) by (provider)",
+          "legendFormat": "{{provider}} cost",
+          "refId": "A"
+        }
+      ],
+      "unit": "currencyUSD"
+    }
+  ]
+}
