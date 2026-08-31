@@ -115,6 +115,7 @@ Agent skills are in `.claude/skills/`:
 - `test-implementer`: Implement unit/integration tests (JUnit 5, Mockito)
 - `rag-architecture-tester`: Run and enforce architecture tests (ArchUnit)
 - `documentation-generator`: Generate module documentation and diagrams
+- `sonarqube-analyzer`: Run and fix SonarQube static analysis findings
 
 ## Observability
 

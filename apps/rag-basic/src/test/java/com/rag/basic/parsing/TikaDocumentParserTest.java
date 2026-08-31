@@ -24,8 +24,9 @@ class TikaDocumentParserTest {
 
         String result = parser.parse(doc);
 
-        assertThat(result).containsIgnoringCase("Title");
-        assertThat(result).containsIgnoringCase("Some content here");
+        assertThat(result)
+                .containsIgnoringCase("Title")
+                .containsIgnoringCase("Some content here");
     }
 
     @Test

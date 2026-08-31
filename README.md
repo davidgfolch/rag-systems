@@ -89,7 +89,8 @@ All operations are centralized in `scripts/` with Windows (`.bat`) and Linux/Mac
 | `test` | Run tests | `.\scripts\test.bat --coverage`, `.\scripts\test.bat rag-basic` |
 | `build` | Build modules | `.\scripts\build.bat`, `.\scripts\build.bat rag-basic` |
 | `run` | Run a module | `.\scripts\run.bat rag-basic --profile local` |
-| `docker` | Docker operations | `.\scripts\docker.bat up`, `.\scripts\docker.bat up-obs` |
+| `docker` | Docker operations | `.\scripts\docker.bat up`, `.\scripts\docker.bat up-obs`, `.\scripts\docker.bat up-sonar` |
+| `sonar` | SonarQube static analysis | `.\scripts\sonar.bat up`, `.\scripts\sonar.bat scan <token>` |
 
 ## RAG Modules
 
@@ -112,6 +113,20 @@ Every module emits tracing, metrics, and structured logs through the `rag-observ
 
 See [docs/guides/observability.md](docs/guides/observability.md).
 
+## SonarQube Static Analysis
+
+The monorepo runs local **SonarQube Community 10.7 LTS** for bugs, vulnerabilities, code smells, and coverage enforcement via the "Clean as You Code" quality gate (new-code coverage ≥ 80%).
+
+```bash
+# Windows
+.\scripts\sonar.bat up-scan %SONAR_TOKEN%   # start server, wait, then analyze
+
+# Linux/Mac
+./scripts/sonar.sh up-scan $SONAR_TOKEN
+```
+
+A token is only needed the first time (generate one in the SonarQube UI: **My Account → Security**). Results appear at `http://localhost:9000` under project `com.rag:rag-systems`. See [docs/guides/sonarqube.md](docs/guides/sonarqube.md).
+
 ## Documentation
 
 | Document | Purpose |
@@ -121,6 +136,7 @@ See [docs/guides/observability.md](docs/guides/observability.md).
 | [Chunking Strategies](docs/guides/chunking-strategies.md) | Chunking approach comparison |
 | [Vector Stores](docs/guides/vector-stores.md) | Vector store options |
 | [Observability](docs/guides/observability.md) | Observability setup and dashboards |
+| [SonarQube](docs/guides/sonarqube.md) | Static analysis setup and quality gate |
 | [Performance Metrics](docs/comparison/performance-metrics.md) | Quantitative comparison |
 | [Trade-offs](docs/comparison/trade-offs.md) | Architecture trade-off analysis |
 
@@ -129,7 +145,7 @@ See [docs/guides/observability.md](docs/guides/observability.md).
 This repository is configured for agentic AI-assisted development compatible with both Claude and OpenCode:
 
 - **Rules**: [.claude/rules/architecture-guidelines.md](.claude/rules/architecture-guidelines.md)
-- **Skills**: [.claude/skills/](.claude/skills/) (test-implementer, architecture-tester, documentation-generator)
+- **Skills**: [.claude/skills/](.claude/skills/) (test-implementer, rag-architecture-tester, documentation-generator, sonarqube-analyzer)
 - **Config**: [.claude/CLAUDE.md](.claude/CLAUDE.md), [.opencode/opencode.json](.opencode/opencode.json)
 
 ## License

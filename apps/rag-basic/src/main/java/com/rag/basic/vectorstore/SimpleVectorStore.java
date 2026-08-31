@@ -53,9 +53,12 @@ public class SimpleVectorStore implements VectorStore {
 
     private static double cosine(List<Float> a, List<Float> b) {
         int n = Math.min(a.size(), b.size());
-        double dot = 0, normA = 0, normB = 0;
+        double dot = 0;
+        double normA = 0;
+        double normB = 0;
         for (int i = 0; i < n; i++) {
-            double av = a.get(i), bv = b.get(i);
+            double av = a.get(i);
+            double bv = b.get(i);
             dot += av * bv;
             normA += av * av;
             normB += bv * bv;

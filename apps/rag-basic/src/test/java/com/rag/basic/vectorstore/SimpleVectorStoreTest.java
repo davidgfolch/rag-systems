@@ -50,7 +50,8 @@ class SimpleVectorStoreTest {
     @Test
     void rejectsChunkWithoutEmbedding() {
         Chunk noEmbedding = new Chunk("c1", "d1", "text", 0, Map.of());
-        assertThatThrownBy(() -> store.add(List.of(noEmbedding)))
+        List<Chunk> chunks = List.of(noEmbedding);
+        assertThatThrownBy(() -> store.add(chunks))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

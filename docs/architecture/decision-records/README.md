@@ -9,6 +9,7 @@ This directory records significant architecture decisions for the RAG Systems pr
 | [ADR-0001](adr-0001-monorepo-layout.md) | Accepted | Monorepo layout with decoupled modules |
 | [ADR-0002](adr-0002-provider-abstraction.md) | Accepted | Provider abstraction for embeddings/LLMs |
 | [ADR-0003](adr-0003-local-first.md) | Accepted | Local-first development with Ollama |
+| [ADR-0004](adr-0004-sonarqube-static-analysis.md) | Accepted | SonarQube static analysis for code quality |
 
 ## How to add an ADR
 

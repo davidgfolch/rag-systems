@@ -111,6 +111,20 @@ Use the interactive CLI to query without a web UI:
 .\scripts\test.bat rag-basic
 ```
 
+## 8. Run SonarQube Static Analysis (Optional)
+
+Start the local SonarQube server and analyze the whole monorepo (bugs, code smells, coverage, quality gate):
+
+```bash
+# Windows
+.\scripts\sonar.bat up-scan %SONAR_TOKEN%
+
+# Linux/Mac
+./scripts/sonar.sh up-scan $SONAR_TOKEN
+```
+
+A token is only needed the first time (generate one at http://localhost:9000 → **My Account → Security**, default login `admin`/`admin`). Results are at http://localhost:9000 under project `com.rag:rag-systems`. See the [SonarQube guide](../guides/sonarqube.md).
+
 ## Configuration Profiles
 
 | Profile | Description |
@@ -141,3 +155,4 @@ Set via `SPRING_PROFILES_ACTIVE` env var or `--profile` script flag.
 - Read the [Architecture Overview](../architecture/overview.md)
 - Explore [Chunking Strategies](../guides/chunking-strategies.md)
 - Compare [Performance Metrics](../comparison/performance-metrics.md)
+- Set up [SonarQube Static Analysis](../guides/sonarqube.md)

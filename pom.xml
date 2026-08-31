@@ -43,6 +43,9 @@
         <!-- Observability -->
         <otel.version>1.45.0</otel.version>
 
+        <!-- Static analysis -->
+        <sonar.version>5.5.0.6356</sonar.version>
+
         <!-- Testing -->
         <archunit.version>1.3.0</archunit.version>
         <testcontainers.version>1.20.4</testcontainers.version>
@@ -178,6 +181,11 @@
                             </configuration>
                         </execution>
                     </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.sonarsource.scanner.maven</groupId>
+                    <artifactId>sonar-maven-plugin</artifactId>
+                    <version>${sonar.version}</version>
                 </plugin>
             </plugins>
         </pluginManagement>

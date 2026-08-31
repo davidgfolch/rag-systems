@@ -213,7 +213,8 @@ rag-systems/
 │   ├── test.bat/.sh                # Run tests
 │   ├── build.bat/.sh               # Build modules
 │   ├── run.bat/.sh                 # Run modules
-│   └── docker.bat/.sh              # Docker operations
+│   ├── docker.bat/.sh              # Docker operations
+│   └── sonar.bat/.sh               # SonarQube static analysis
 ├── docs/                             # Documentation
 │   ├── architecture/
 │   │   ├── decision-records/
@@ -222,14 +223,17 @@ rag-systems/
 │   │   ├── getting-started.md
 │   │   ├── chunking-strategies.md
 │   │   ├── vector-stores.md
-│   │   └── observability.md
+│   │   ├── observability.md
+│   │   └── sonarqube.md
 │   └── comparison/
 │       ├── performance-metrics.md
 │       └── trade-offs.md
 ├── docker/                           # Docker configurations
 │   ├── docker-compose.yml
 │   ├── docker-compose.observability.yml
+│   ├── docker-compose.sonarqube.yml
 │   └── Dockerfile
+├── sonar-project.properties          # SonarQube scanner settings
 ├── pom.xml                           # Parent POM
 └── README.md
 ```
@@ -412,7 +416,19 @@ All operations centralized in `scripts/` folder with Windows (`.bat`) and Linux/
 | `test` | Run tests (with `--coverage`, `--architecture`, module selection) |
 | `build` | Build all or specific modules |
 | `run` | Run a specific module (with optional observability profile) |
-| `docker` | Docker operations (base, observability, specific services) |
+| `docker` | Docker operations (base, observability, SonarQube, all services) |
+| `sonar` | SonarQube static analysis (`up`/`scan`/`up-scan`/`down`) |
+
+### Static Analysis (SonarQube)
+
+Local **SonarQube Community 10.7 LTS** (Docker) runs `mvn verify sonar:sonar` for bugs, vulnerabilities, code smells, and coverage enforcement.
+
+- **Compose overlay**: `docker/docker-compose.sonarqube.yml` (port `9000`, persistent volumes).
+- **Scanner config**: `sonar-project.properties`; plugin in `pom.xml` (`sonar-maven-plugin`).
+- **Quality gate**: "Clean as You Code" - new-code coverage ≥ 80%, no new violations, no new duplication.
+- **Workflow**: `.\scripts\sonar.bat up-scan %SONAR_TOKEN%`, review at `http://localhost:9000` (project `com.rag:rag-systems`).
+
+See [docs/guides/sonarqube.md](docs/guides/sonarqube.md) and [ADR-0004](docs/architecture/decision-records/adr-0004-sonarqube-static-analysis.md).
 
 ## Implementation Phases
 

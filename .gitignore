@@ -44,3 +44,6 @@ data/chunks/
 # Obs
 .grafana/
 prometheus-data/
+
+# SonarQube
+.sonarqube/

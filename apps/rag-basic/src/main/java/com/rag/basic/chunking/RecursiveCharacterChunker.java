@@ -60,25 +60,20 @@ public class RecursiveCharacterChunker implements TextSplitter {
             result.add(text);
             return;
         }
-
-        if (sepIndex >= separators.length) {
-            // Hard split as last resort
-            result.add(text.substring(0, Math.min(maxChunkSize, text.length())));
-            if (text.length() > maxChunkSize) {
-                splitRecursively(text.substring(maxChunkSize - overlap), separators, sepIndex, result);
-            }
+        if (separators[sepIndex].isEmpty()) {
+            splitByCharacter(text, result);
             return;
         }
+        splitBySeparator(text, separators[sepIndex], separators, sepIndex, result);
+    }
 
-        String separator = separators[sepIndex];
-        if (separator.isEmpty()) {
-            // Character-level split
-            for (int i = 0; i < text.length(); i += maxChunkSize - overlap) {
-                result.add(text.substring(i, Math.min(i + maxChunkSize, text.length())));
-            }
-            return;
+    private void splitByCharacter(String text, List<String> result) {
+        for (int i = 0; i < text.length(); i += maxChunkSize - overlap) {
+            result.add(text.substring(i, Math.min(i + maxChunkSize, text.length())));
         }
+    }
 
+    private void splitBySeparator(String text, String separator, String[] separators, int sepIndex, List<String> result) {
         String[] parts = text.split(java.util.regex.Pattern.quote(separator), -1);
         StringBuilder current = new StringBuilder();
 
@@ -86,16 +81,15 @@ public class RecursiveCharacterChunker implements TextSplitter {
             String candidate = current.isEmpty() ? part : current + separator + part;
             if (candidate.length() <= maxChunkSize) {
                 current = new StringBuilder(candidate);
-            } else {
-                if (!current.isEmpty()) {
-                    result.add(current.toString());
-                }
-                if (part.length() <= maxChunkSize) {
-                    current = new StringBuilder(part);
-                } else {
+            } else if (!current.isEmpty()) {
+                result.add(current.toString());
+                current = new StringBuilder(part);
+                if (part.length() > maxChunkSize) {
                     splitRecursively(part, separators, sepIndex + 1, result);
                     current = new StringBuilder();
                 }
+            } else if (part.length() > maxChunkSize) {
+                splitRecursively(part, separators, sepIndex + 1, result);
             }
         }
 
