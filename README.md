@@ -20,6 +20,7 @@ Each module has a dedicated CI job. A green badge means its tests pass with ≥ 
 | evaluation | [![rag-evaluation](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml/badge.svg?job=tests-%28rag-evaluation%29)](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml) |
 | observability | [![rag-observability](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml/badge.svg?job=tests-%28rag-observability%29)](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml) |
 | cli | [![rag-cli](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml/badge.svg?job=tests-%28rag-cli%29)](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml) |
+| tui | [![rag-tui](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml/badge.svg?job=tests-%28rag-tui%29)](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml) |
 | architecture | [![architecture](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml/badge.svg?job=architecture-tests)](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml) |
 
 ## Quick Start
@@ -47,7 +48,8 @@ apps/
 ├── rag-agentic/      # Agentic RAG: tool calling, multi-step retrieval
 ├── rag-evaluation/   # Metrics, benchmarking, comparison
 ├── rag-observability/# Tracing, metrics, dashboards
-└── rag-cli/          # Interactive CLI for testing queries
+├── rag-cli/          # Interactive CLI for testing queries
+└── rag-tui/          # Terminal UI to add documents/webpages and chat
 ```
 
 ## Architecture Principles
@@ -108,7 +110,7 @@ All operations are centralized in `scripts/` with Windows (`.bat`) and Linux/Mac
 | `install` | Install dependencies | `.\scripts\install.bat` |
 | `test` | Run tests | `.\scripts\test.bat --coverage`, `.\scripts\test.bat rag-basic` |
 | `build` | Build modules | `.\scripts\build.bat`, `.\scripts\build.bat rag-basic` |
-| `run` | Run a module | `.\scripts\run.bat rag-basic --profile local` |
+| `run` | Run a module | `.\scripts\run.bat rag-basic --profile local`, `.\scripts\run.bat rag-tui --profile local` |
 | `docker` | Docker operations | `.\scripts\docker.bat up`, `.\scripts\docker.bat up-obs`, `.\scripts\docker.bat up-sonar` |
 | `sonar` | SonarQube static analysis | `.\scripts\sonar.bat up`, `.\scripts\sonar.bat scan <token>` |
 
@@ -122,6 +124,7 @@ Each module is a **decoupled bounded context** implementing a different RAG arch
 | rag-advanced | + Semantic | + Hybrid, reranking | Metadata filtering, query transform |
 | rag-agentic | Agentic | Tool calling, multi-step | Self-reflection |
 | rag-evaluation | - | - | Metrics, benchmarking, comparison |
+| rag-tui | Recursive, Tika | Vector similarity | Interactive add-file / add-url + chat |
 
 ## Observability
 
@@ -156,6 +159,7 @@ A token is only needed the first time (generate one in the SonarQube UI: **My Ac
 | [Chunking Strategies](docs/guides/chunking-strategies.md) | Chunking approach comparison |
 | [Vector Stores](docs/guides/vector-stores.md) | Vector store options |
 | [Observability](docs/guides/observability.md) | Observability setup and dashboards |
+| [TUI Ingestion](docs/guides/tui-ingestion.md) | Ingesting files/webpages and chatting via the terminal |
 | [SonarQube](docs/guides/sonarqube.md) | Static analysis setup and quality gate |
 | [CI Workflow](docs/guides/ci-workflow.md) | GitHub Actions CI and badge setup |
 | [Performance Metrics](docs/comparison/performance-metrics.md) | Quantitative comparison |
@@ -166,7 +170,7 @@ A token is only needed the first time (generate one in the SonarQube UI: **My Ac
 This repository is configured for agentic AI-assisted development compatible with both Claude and OpenCode:
 
 - **Rules**: [.claude/rules/architecture-guidelines.md](.claude/rules/architecture-guidelines.md)
-- **Skills**: [.claude/skills/](.claude/skills/) (test-implementer, rag-architecture-tester, documentation-generator, sonarqube-analyzer)
+- **Skills**: [.claude/skills/](.claude/skills/) (test-implementer, rag-architecture-tester, documentation-generator, sonarqube-analyzer, rag-tui)
 - **Config**: [.claude/CLAUDE.md](.claude/CLAUDE.md), [.opencode/opencode.json](.opencode/opencode.json)
 
 ## License

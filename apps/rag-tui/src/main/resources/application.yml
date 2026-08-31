@@ -1,0 +1,53 @@
+# rag-tui default configuration (local profile = Ollama)
+spring:
+  profiles:
+    active: local
+  application:
+    name: rag-tui
+
+rag:
+  vector-store:
+    type: ${VECTOR_STORE_TYPE:in-memory}
+  parsing:
+    mode: ${PARSING_MODE:tika}
+  chunking:
+    size: ${CHUNK_SIZE:512}
+    overlap: ${CHUNK_OVERLAP:64}
+  chat:
+    top-k: ${CHAT_TOP_K:4}
+
+---
+# Local profile - Ollama models (zero-cost, private, runs on CPU/GPU)
+spring:
+  config:
+    activate:
+      on-profile: local
+  ai:
+    ollama:
+      base-url: http://localhost:11434
+      init:
+        pull-model-strategy: when-missing
+        timeout: 60s
+        keep-alive: 5m
+        embedding:
+          options:
+            model: ${OLLAMA_EMBEDDING_MODEL:nomic-embed-text}
+        chat:
+          options:
+            model: ${OLLAMA_CHAT_MODEL:qwen3:4b}
+
+---
+# Cloud profile - OpenAI models (frontier quality, per-token cost)
+spring:
+  config:
+    activate:
+      on-profile: cloud
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      chat:
+        options:
+          model: ${OPENAI_CHAT_MODEL:gpt-4o}
+      embedding:
+        options:
+          model: ${OPENAI_EMBEDDING_MODEL:text-embedding-3-small}

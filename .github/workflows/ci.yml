@@ -61,6 +61,7 @@ jobs:
           - rag-evaluation
           - rag-observability
           - rag-cli
+          - rag-tui
     steps:
       - uses: actions/checkout@v4
 

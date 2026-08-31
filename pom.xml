@@ -26,6 +26,7 @@
         <module>apps/rag-evaluation</module>
         <module>apps/rag-observability</module>
         <module>apps/rag-cli</module>
+        <module>apps/rag-tui</module>
     </modules>
 
     <properties>
