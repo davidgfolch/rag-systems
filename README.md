@@ -2,6 +2,26 @@
 
 A monorepo for learning and comparing different RAG (Retrieval-Augmented Generation) implementations using the latest Java Spring ecosystem. Supports document ingestion (PDF, docs, web-sites) about any kind of knowledge - designed to be reusable and easily run on a regular local machine.
 
+[![CI](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml/badge.svg)](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml)
+[![Java](https://img.shields.io/badge/Java-21-007396?logo=openjdk&logoColor=white)](https://adoptium.net/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.5-6DB33F?logo=spring)](https://spring.io/projects/spring-boot)
+[![Maven](https://img.shields.io/badge/Maven-3.9-C71A36?logo=apache-maven)](https://maven.apache.org/)
+
+### Module Status
+
+Each module has a dedicated CI job. A green badge means its tests pass with ≥ 85% coverage.
+
+| Module | Status |
+|--------|--------|
+| common | [![rag-common](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml/badge.svg?job=tests-%28rag-common%29)](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml) |
+| basic | [![rag-basic](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml/badge.svg?job=tests-%28rag-basic%29)](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml) |
+| advanced | [![rag-advanced](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml/badge.svg?job=tests-%28rag-advanced%29)](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml) |
+| agentic | [![rag-agentic](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml/badge.svg?job=tests-%28rag-agentic%29)](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml) |
+| evaluation | [![rag-evaluation](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml/badge.svg?job=tests-%28rag-evaluation%29)](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml) |
+| observability | [![rag-observability](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml/badge.svg?job=tests-%28rag-observability%29)](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml) |
+| cli | [![rag-cli](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml/badge.svg?job=tests-%28rag-cli%29)](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml) |
+| architecture | [![architecture](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml/badge.svg?job=architecture-tests)](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml) |
+
 ## Quick Start
 
 ```bash
@@ -137,6 +157,7 @@ A token is only needed the first time (generate one in the SonarQube UI: **My Ac
 | [Vector Stores](docs/guides/vector-stores.md) | Vector store options |
 | [Observability](docs/guides/observability.md) | Observability setup and dashboards |
 | [SonarQube](docs/guides/sonarqube.md) | Static analysis setup and quality gate |
+| [CI Workflow](docs/guides/ci-workflow.md) | GitHub Actions CI and badge setup |
 | [Performance Metrics](docs/comparison/performance-metrics.md) | Quantitative comparison |
 | [Trade-offs](docs/comparison/trade-offs.md) | Architecture trade-off analysis |
 

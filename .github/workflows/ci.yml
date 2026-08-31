@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  JAVA_VERSION: '21'
+
+jobs:
+  build:
+    name: Build modules
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+          cache: maven
+
+      - name: Build all modules (skip tests)
+        run: ./mvnw clean package -DskipTests -B
+
+  architecture-tests:
+    name: Architecture tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+          cache: maven
+
+      - name: Run architecture tests
+        run: ./mvnw test -Dtest=ArchitectureTest -DfailIfNoTests=false -B
+
+  tests:
+    name: Tests (${{ matrix.module }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module:
+          - rag-common
+          - rag-basic
+          - rag-advanced
+          - rag-agentic
+          - rag-evaluation
+          - rag-observability
+          - rag-cli
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+          cache: maven
+
+      - name: Install dependencies
+        run: ./mvnw clean install -DskipTests -B
+
+      - name: Run tests with coverage
+        run: ./mvnw -pl apps/${{ matrix.module }} -am verify -B
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.module }}
+          path: apps/${{ matrix.module }}/target/site/jacoco/
