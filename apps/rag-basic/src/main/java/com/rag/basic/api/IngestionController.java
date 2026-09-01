@@ -34,26 +34,26 @@ public class IngestionController {
 
     @PostMapping("/ingest")
     public ResponseEntity<IngestResponse> ingest(@RequestBody IngestRequest request) {
-        if (request.getContent() == null || request.getContent().isBlank()) {
+        if (request.getContent().isBlank()) {
             return ResponseEntity.badRequest().build();
         }
-        Document document = new Document(UUID.randomUUID().toString(), request.getContent(), request.getMetadata());
+        var document = new Document(UUID.randomUUID().toString(), request.getContent(), request.getMetadata());
         return created(ingestionService.ingest(document));
     }
 
     @PostMapping("/ingest-url")
     public ResponseEntity<IngestResponse> ingestUrl(@RequestBody IngestUrlRequest request) {
-        if (request.getUrl() == null || request.getUrl().toString().isBlank()) {
+        if (request.getUrl().toString().isBlank()) {
             return ResponseEntity.badRequest().build();
         }
         Page page = webCrawlerClient.fetch(request.getUrl().toString());
-        Document document = new Document(UUID.randomUUID().toString(), page.getText(),
+        var document = new Document(UUID.randomUUID().toString(), page.getText(),
                 Map.of("sourceType", "web", "source", page.getUrl()));
         return created(ingestionService.ingest(document));
     }
 
     private ResponseEntity<IngestResponse> created(IngestionService.IngestionResult result) {
-        IngestResponse response = new IngestResponse().documentId(result.documentId()).chunkCount(result.chunkCount());
+        var response = new IngestResponse().documentId(result.documentId()).chunkCount(result.chunkCount());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }

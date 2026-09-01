@@ -21,14 +21,14 @@ class InMemoryVectorStoreTest {
     @Test
     void storesAndRetrievesBySimilarity() {
         when(embeddingModel.embed(anyString())).thenReturn(List.of(0.9f, 0.1f));
-        Chunk aboutDogs = chunk("c1", new float[]{1, 0});
-        Chunk aboutCats = chunk("c2", new float[]{0, 1});
+        var aboutDogs = chunk("c1", new float[]{1, 0});
+        var aboutCats = chunk("c2", new float[]{0, 1});
         store.add(List.of(aboutDogs, aboutCats));
 
         List<Chunk> results = store.similaritySearch("dogs", 1);
 
         assertThat(results).hasSize(1);
-        assertThat(results.get(0).getId()).isEqualTo("c1");
+        assertThat(results.getFirst().getId()).isEqualTo("c1");
     }
 
     @Test
@@ -49,7 +49,7 @@ class InMemoryVectorStoreTest {
 
     @Test
     void rejectsChunkWithoutEmbedding() {
-        Chunk noEmbedding = new Chunk("c1", "d1", "text", 0, Map.of());
+        var noEmbedding = new Chunk("c1", "d1", "text", 0, Map.of());
         List<Chunk> chunks = List.of(noEmbedding);
         assertThatThrownBy(() -> store.add(chunks))
                 .isInstanceOf(IllegalArgumentException.class);
@@ -64,20 +64,19 @@ class InMemoryVectorStoreTest {
     @Test
     void filtersByDocumentId() {
         when(embeddingModel.embed(anyString())).thenReturn(List.of(1f, 0f));
-        Chunk a = chunk("c1", new float[]{1, 0});
-        Chunk b = chunk("c2", new float[]{1, 0});
-        Chunk otherDoc = new Chunk("c3", "d2", "text", 0, Map.of());
+        var a = chunk("c1", new float[]{1, 0});
+        var b = chunk("c2", new float[]{1, 0});
+        var otherDoc = new Chunk("c3", "d2", "text", 0, Map.of());
         otherDoc.setEmbedding(List.of(1f, 0f));
         store.add(List.of(a, b, otherDoc));
 
         List<Chunk> results = store.similaritySearch("q", 5, "d1");
 
-        assertThat(results).hasSize(2);
-        assertThat(results).allMatch(c -> c.getDocumentId().equals("d1"));
+        assertThat(results).hasSize(2).allMatch(c -> c.getDocumentId().equals("d1"));
     }
 
     private static Chunk chunk(String id, float[] embedding) {
-        Chunk c = new Chunk(id, "d1", "text " + id, 0, Map.of());
+        var c = new Chunk(id, "d1", "text " + id, 0, Map.of());
         c.setEmbedding(floatList(embedding));
         return c;
     }

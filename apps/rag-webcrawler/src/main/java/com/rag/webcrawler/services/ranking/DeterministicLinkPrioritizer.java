@@ -15,7 +15,7 @@ public class DeterministicLinkPrioritizer implements LinkPrioritizer {
         String query = question == null ? "" : question.toLowerCase(Locale.ROOT);
         return links.stream()
                 .sorted(Comparator.comparing((String link) -> score(link, query))
-                        .reversed().thenComparing(link -> links.indexOf(link)))
+                        .reversed().thenComparing(links::indexOf))
                 .toList();
     }
 

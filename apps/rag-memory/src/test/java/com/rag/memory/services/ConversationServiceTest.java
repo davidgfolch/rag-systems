@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Test;
 
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -58,9 +57,21 @@ class ConversationServiceTest {
     }
 
     @Test
+    void listsMessagesForConversation() {
+        com.rag.memory.domain.ChatMessage stored = new com.rag.memory.domain.ChatMessage(
+                "m1", "c1", "user", "hello", OffsetDateTime.parse("2026-01-01T10:00:00+01:00"));
+        when(messageRepository.findByConversationIdOrderByCreatedAtAsc("c1")).thenReturn(List.of(stored));
+
+        List<ChatMessage> result = sut.listMessages("c1");
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getId()).isEqualTo("m1");
+        assertThat(result.get(0).getRole()).isEqualTo(ChatMessage.RoleEnum.USER);
+    }
+
+    @Test
     void addsMessageToExistingConversation() {
-        when(conversationRepository.findById("c1")).thenReturn(
-                Optional.of(new Conversation("c1", "title", OffsetDateTime.now())));
+        when(conversationRepository.existsById("c1")).thenReturn(true);
         when(messageRepository.save(any(com.rag.memory.domain.ChatMessage.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -74,7 +85,7 @@ class ConversationServiceTest {
 
     @Test
     void rejectsMessageToUnknownConversation() {
-        when(conversationRepository.findById("missing")).thenReturn(Optional.empty());
+        when(conversationRepository.existsById("missing")).thenReturn(false);
 
         ChatMessage input = new ChatMessage().role(ChatMessage.RoleEnum.USER).content("hello");
 

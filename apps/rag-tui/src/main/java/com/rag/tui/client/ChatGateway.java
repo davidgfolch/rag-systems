@@ -17,12 +17,17 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Streaming chat client over WebSocket (/ws/chat) for the active module.
  * ask() blocks until done/error, feeding tokens to a sink; cancel() closes the
  * active session so the module disposes the in-flight LLM stream.
  */
 public class ChatGateway {
+
+    private static final Logger log = LoggerFactory.getLogger(ChatGateway.class);
 
     private final ModuleRegistry registry;
     private final WebSocketClient webSocketClient;
@@ -39,12 +44,12 @@ public class ChatGateway {
         Module module = registry.active();
         String conversationId = "tui-" + System.currentTimeMillis();
         CountDownLatch done = new CountDownLatch(1);
-        AtomicReference<String> answer = new AtomicReference<>("");
-        AtomicReference<String> error = new AtomicReference<>();
+        var answer = new AtomicReference<String>("");
+        var error = new AtomicReference<String>();
 
-        WebSocketSession session = connect(module, done, answer, error, onToken, conversationId);
+        WebSocketSession session = connect(module, done, answer, error, onToken);
         sendAsk(session, question, topK, conversationId);
-        await(done, error, answer);
+        await(done, error);
         return answer.get();
     }
 
@@ -53,14 +58,14 @@ public class ChatGateway {
         if (session != null) {
             try {
                 session.close();
-            } catch (IOException ignored) {
+            } catch (IOException e) {
+                log.warn("Failed to close chat session", e);
             }
         }
     }
 
     private WebSocketSession connect(Module module, CountDownLatch done, AtomicReference<String> answer,
-                                     AtomicReference<String> error, Consumer<String> onToken,
-                                     String conversationId) {
+                                     AtomicReference<String> error, Consumer<String> onToken) {
         WebSocketHandler handler = new TextWebSocketHandler() {
             @Override
             protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
@@ -75,8 +80,7 @@ public class ChatGateway {
                         error.set(event.content());
                         done.countDown();
                     }
-                    default -> {
-                    }
+                    default -> log.debug("Unknown chat event type '{}'", event.type());
                 }
             }
         };
@@ -94,7 +98,7 @@ public class ChatGateway {
         }
     }
 
-    private void await(CountDownLatch done, AtomicReference<String> error, AtomicReference<String> answer) {
+    private void await(CountDownLatch done, AtomicReference<String> error) {
         try {
             if (!done.await(60, TimeUnit.SECONDS)) {
                 throw new ChatException("Timed out waiting for chat answer", null);

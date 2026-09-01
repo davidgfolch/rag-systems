@@ -10,19 +10,17 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ModuleLifecycleManager {
 
-    private final String projectDir;
     private final ProcessStarter starter;
     private final Map<String, Process> running = new ConcurrentHashMap<>();
 
     public ModuleLifecycleManager(String projectDir) {
-        this(projectDir, command -> new ProcessBuilder(command)
+        this(command -> new ProcessBuilder(command)
                 .directory(new java.io.File(projectDir))
                 .redirectErrorStream(true)
                 .start());
     }
 
-    ModuleLifecycleManager(String projectDir, ProcessStarter starter) {
-        this.projectDir = projectDir;
+    ModuleLifecycleManager(ProcessStarter starter) {
         this.starter = starter;
     }
 

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rag.common.services.ChatService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
+import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.mockito.ArgumentCaptor;
@@ -77,5 +78,37 @@ class ChatWebSocketHandlerTest {
 
         verify(session, never()).sendMessage(any(TextMessage.class));
         verify(chatService, never()).askStream(anyString(), anyInt());
+    }
+
+    @Test
+    void streamsErrorEvent() throws Exception {
+        when(chatService.askStream("hello", 5))
+                .thenReturn(Flux.error(new IllegalStateException("boom")));
+
+        send("{\"type\":\"ask\",\"question\":\"hello\",\"conversationId\":\"c1\"}");
+
+        List<String> payloads = sentPayloads(1);
+        assertThat(payloads.get(0)).contains("\"type\":\"error\"", "\"boom\"");
+    }
+
+    @Test
+    void usesDefaultTopKWhenNull() throws Exception {
+        when(chatService.askStream("hello", 5)).thenReturn(Flux.empty());
+
+        send("{\"type\":\"ask\",\"question\":\"hello\",\"conversationId\":\"c1\"}");
+
+        sentPayloads(1);
+        verify(chatService).askStream("hello", 5);
+    }
+
+    @Test
+    void cleansUpOnDisconnect() throws Exception {
+        when(chatService.askStream("hello", 5)).thenReturn(Flux.never());
+        send("{\"type\":\"ask\",\"question\":\"hello\",\"conversationId\":\"c1\"}");
+
+        handler.afterConnectionClosed(session, CloseStatus.NORMAL);
+
+        handler.handleTextMessage(session, new TextMessage("{\"type\":\"cancel\",\"conversationId\":\"c1\"}"));
+        verify(chatService).askStream("hello", 5);
     }
 }

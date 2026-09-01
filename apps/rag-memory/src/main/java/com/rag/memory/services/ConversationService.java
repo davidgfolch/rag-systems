@@ -13,39 +13,40 @@ import java.util.UUID;
 @Service
 public class ConversationService {
 
-    private final ConversationRepository conversationRepository;
-    private final MessageRepository messageRepository;
+    private final ConversationRepository conversationRepo;
+    private final MessageRepository messageRepo;
 
-    public ConversationService(ConversationRepository conversationRepository,
-                               MessageRepository messageRepository) {
-        this.conversationRepository = conversationRepository;
-        this.messageRepository = messageRepository;
+    public ConversationService(ConversationRepository conversationRepo,
+                               MessageRepository messageRepo) {
+        this.conversationRepo = conversationRepo;
+        this.messageRepo = messageRepo;
     }
 
     public List<Conversation> listConversations() {
-        return conversationRepository.findAllByOrderByCreatedAtDesc().stream()
+        return conversationRepo.findAllByOrderByCreatedAtDesc().stream()
                 .map(ConversationService::toContract)
                 .toList();
     }
 
     public Conversation createConversation(String title) {
         String resolvedTitle = title == null || title.isBlank() ? "New conversation" : title.trim();
-        var conversation = conversationRepository.save(
+        var conversation = conversationRepo.save(
                 new com.rag.memory.domain.Conversation(UUID.randomUUID().toString(),
                         resolvedTitle, OffsetDateTime.now()));
         return toContract(conversation);
     }
 
     public List<ChatMessage> listMessages(String conversationId) {
-        return messageRepository.findByConversationIdOrderByCreatedAtAsc(conversationId).stream()
+        return messageRepo.findByConversationIdOrderByCreatedAtAsc(conversationId).stream()
                 .map(ConversationService::toContract)
                 .toList();
     }
 
     public ChatMessage addMessage(String conversationId, ChatMessage message) {
-        conversationRepository.findById(conversationId)
-                .orElseThrow(() -> new IllegalArgumentException("Unknown conversation: " + conversationId));
-        var saved = messageRepository.save(new com.rag.memory.domain.ChatMessage(
+        if (!conversationRepo.existsById(conversationId)) {
+            throw new IllegalArgumentException("Unknown conversation: " + conversationId);
+        }
+        var saved = messageRepo.save(new com.rag.memory.domain.ChatMessage(
                 UUID.randomUUID().toString(), conversationId, message.getRole().getValue(),
                 message.getContent(), OffsetDateTime.now()));
         return toContract(saved);

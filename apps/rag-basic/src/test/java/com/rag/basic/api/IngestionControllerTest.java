@@ -61,9 +61,9 @@ class IngestionControllerTest {
     }
 
     @Test
-    void rejectsMissingUrl() {
+    void rejectsBlankUrl() {
         ResponseEntity<IngestResponse> response =
-                controller.ingestUrl(new IngestUrlRequest());
+                controller.ingestUrl(new IngestUrlRequest().url(URI.create("")));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         verify(service, never()).ingest(any());

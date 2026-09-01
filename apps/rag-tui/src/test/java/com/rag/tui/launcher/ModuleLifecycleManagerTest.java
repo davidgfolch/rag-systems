@@ -2,17 +2,14 @@ package com.rag.tui.launcher;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class ModuleLifecycleManagerTest {
 
     private final ModuleLifecycleManager.ProcessStarter starter = mock(ModuleLifecycleManager.ProcessStarter.class);
-    private final ModuleLifecycleManager sut = new ModuleLifecycleManager("C:/work", starter);
+    private final ModuleLifecycleManager sut = new ModuleLifecycleManager(starter);
     private final Module module = new Module("rag-basic", "http://localhost:8081");
 
     @Test
@@ -55,12 +52,21 @@ class ModuleLifecycleManagerTest {
         assertThat(sut.stop("nope")).isFalse();
     }
 
-    @Test
+@Test
     void throwsStartExceptionWhenLaunchFails() throws Exception {
         when(starter.start(org.mockito.ArgumentMatchers.any(String[].class)))
                 .thenThrow(new java.io.IOException("boom"));
 
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> sut.start(module))
+                .isInstanceOf(ModuleLifecycleManager.StartException.class);
+    }
+
+    @Test
+    void defaultStarterFailsFastWhenScriptMissing() {
+        java.nio.file.Path projectDir = java.nio.file.Path.of(System.getProperty("java.io.tmpdir"));
+        ModuleLifecycleManager raw = new ModuleLifecycleManager(projectDir.toString());
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> raw.start(module))
                 .isInstanceOf(ModuleLifecycleManager.StartException.class);
     }
 

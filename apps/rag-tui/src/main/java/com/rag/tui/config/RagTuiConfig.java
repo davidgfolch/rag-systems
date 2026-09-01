@@ -79,6 +79,6 @@ public class RagTuiConfig {
     @Bean
     public ApplicationRunner tuiRunner(CommandDispatcher dispatcher) {
         return args -> new InteractiveShell(dispatcher,
-                new InputStreamReader(System.in), new OutputStreamWriter(System.out)).run();
+                new InputStreamReader(System.in), new OutputStreamWriter(System.out)).run(); // NOSONAR java:S106 - interactive CLI output must go to the console
     }
 }
