@@ -51,7 +51,7 @@ jobs:
           cache: maven
 
       - name: Run architecture tests
-        run: ./mvnw test -Dtest=ArchitectureTest -DfailIfNoTests=false -B
+        run: ./mvnw test -Dtest=ArchitectureTest -Dsurefire.failIfNoSpecifiedTests=false -B
 
   tests:
     name: Tests (${{ matrix.module }})
