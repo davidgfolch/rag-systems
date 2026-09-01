@@ -30,9 +30,6 @@ coverage/
 .jacoco
 jacoco*.xml
 
-# Maven wrapper
-.mvn/wrapper/maven-wrapper.properties
-
 # Ollama / model cache
 models/
 *.gguf
