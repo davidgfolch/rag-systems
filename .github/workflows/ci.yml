@@ -21,6 +21,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Make mvnw executable
+        run: chmod +x ./mvnw
+
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
@@ -36,6 +39,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Make mvnw executable
+        run: chmod +x ./mvnw
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -64,6 +70,9 @@ jobs:
           - rag-tui
     steps:
       - uses: actions/checkout@v4
+
+      - name: Make mvnw executable
+        run: chmod +x ./mvnw
 
       - name: Set up JDK
         uses: actions/setup-java@v4
