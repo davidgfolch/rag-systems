@@ -122,7 +122,7 @@ See [performance-metrics.md](../comparison/performance-metrics.md) for details.
 
 ## Related Documents
 
-- [Master Plan](../../PLAN.md)
+- [Master Plan](../PLAN.md)
 - [Getting Started](../guides/getting-started.md)
 - [Chunking Strategies](../guides/chunking-strategies.md)
 - [Observability](../guides/observability.md)

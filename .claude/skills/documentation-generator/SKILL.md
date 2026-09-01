@@ -12,7 +12,7 @@ Use this skill when creating or updating documentation for the RAG Systems repos
 | Type | Location |
 |------|----------|
 | Project overview | `README.md` |
-| Master plan | `PLAN.md` |
+| Master plan | `docs/PLAN.md` |
 | Architecture | `docs/architecture/` |
 | ADRs | `docs/architecture/decision-records/` |
 | Guides | `docs/guides/` |

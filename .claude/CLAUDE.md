@@ -83,6 +83,10 @@ api/          - REST controllers (only in runnable modules)
 6. **Reactive/Parallel**: Use Project Reactor and virtual threads strategically for I/O-bound operations
 7. **Provider Abstraction**: Never hardcode provider-specific code; use configuration profiles
 8. **Documentation**: Avoid explanatory comments; code should be self-documenting
+9. **Minimal Root**: Root holds only files needed for the GitHub landing page and the build (enforced by `ArchitectureTest`)
+10. **Docs Placement**: All `.md` lives in `docs/`; `README.md` is the only root markdown
+11. **Scripts Placement**: All `.bat`/`.sh`/`.ps1` live in `scripts/`; `mvnw`/`mvnw.cmd` are the exception
+12. **Portability**: Every operational script has both a Windows (`.bat`/`.ps1`) and Unix (`.sh`) variant
 
 ## Configuration Profiles
 
@@ -98,7 +102,7 @@ Always run after significant changes:
 .\scripts\test.bat --architecture
 ```
 
-This runs ArchUnit tests enforcing layer dependencies, file length limits, and naming conventions.
+This runs ArchUnit tests enforcing layer dependencies, layer file-length/quality conventions via the `rag-common` `ArchitectureTest`, and repository hygiene (minimal root, docs/scripts placement, script portability).
 
 ## Definition of Done
 

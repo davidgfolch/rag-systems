@@ -14,7 +14,7 @@ Run local SonarQube static analysis on the monorepo, map findings to fixes, and 
 
 - **Server**: local SonarQube Community 10.7 LTS at `http://localhost:9000` (`admin`/`admin` first login).
 - **Project key**: `com.rag:rag-systems` (derived from the parent POM GAV).
-- **Entry points**: `scripts/sonar.{bat,sh}` and the `sonar-maven-plugin`.
+- **Entry points**: `scripts/sonar.{bat,sh}` and the `sonar-maven-plugin`. Results are auto-exported to the README by `scripts/sonar-export.ps1` (Windows) / `scripts/sonar-export.sh` (Linux/Mac) after each scan.
 - **Config**: `sonar-project.properties` (exclusions, JRE-provisioning skip, report paths), `docker/docker-compose.sonarqube.yml`.
 - **Docs**: `docs/guides/sonarqube.md`, `docs/architecture/decision-records/adr-0004-sonarqube-static-analysis.md`.
 

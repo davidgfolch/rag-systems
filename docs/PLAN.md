@@ -428,7 +428,7 @@ Local **SonarQube Community 10.7 LTS** (Docker) runs `mvn verify sonar:sonar` fo
 - **Quality gate**: "Clean as You Code" - new-code coverage ≥ 80%, no new violations, no new duplication.
 - **Workflow**: `.\scripts\sonar.bat up-scan %SONAR_TOKEN%`, review at `http://localhost:9000` (project `com.rag:rag-systems`).
 
-See [docs/guides/sonarqube.md](docs/guides/sonarqube.md) and [ADR-0004](docs/architecture/decision-records/adr-0004-sonarqube-static-analysis.md).
+See [guides/sonarqube.md](guides/sonarqube.md) and [ADR-0004](architecture/decision-records/adr-0004-sonarqube-static-analysis.md).
 
 ## Implementation Phases
 

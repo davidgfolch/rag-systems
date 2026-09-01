@@ -117,6 +117,19 @@ Or start the server and wait until it is ready, then scan, in one step:
 ./scripts/sonar.sh up-scan $SONAR_TOKEN      # Linux/Mac
 ```
 
+### 3b. Results are exported to the README
+
+After a successful scan, both scripts fetch the quality gate status and key metrics from the SonarQube API (via `scripts/sonar-export.ps1` on Windows, `scripts/sonar-export.sh` on Linux/Mac) and update the **SonarQube → Latest Results** section in `README.md`:
+
+| Metric | Value |
+|--------|-------|
+| Quality Gate | `OK` |
+| Bugs / Vulnerabilities / Security Hotspots | Counts |
+| Code Smells | Count |
+| Coverage / Duplication | Percentages |
+
+If `jq` (Linux/Mac) is missing or the analysis is not yet available on the server, the export script warns and leaves the README unchanged. The `<!-- SONARQUBE_RESULTS_START/END -->` markers in `README.md` define the auto-updated block — keep them intact.
+
 ### 4. Review results
 
 - **Dashboard**: `http://localhost:9000` → project `com.rag:rag-systems`

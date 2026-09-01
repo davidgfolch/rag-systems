@@ -38,6 +38,7 @@ if "%CMD%"=="up" (
     )
     echo Running tests with coverage + SonarQube analysis...
     call mvnw.cmd verify sonar:sonar -Dsonar.token=%TOKEN% %SCAN_ARGS%
+    if not errorlevel 1 call :export_results
 ) else if "%CMD%"=="up-scan" (
     echo Starting SonarQube...
     docker compose %COMPOSE_SONAR% up -d
@@ -53,6 +54,7 @@ if "%CMD%"=="up" (
     )
     echo Running tests with coverage + SonarQube analysis...
     call mvnw.cmd verify sonar:sonar -Dsonar.token=%TOKEN% %SCAN_ARGS%
+    if not errorlevel 1 call :export_results
 ) else if "%CMD%"=="down" (
     echo Stopping SonarQube...
     docker compose %COMPOSE_SONAR% down
@@ -65,3 +67,9 @@ if "%CMD%"=="up" (
 echo.
 echo SonarQube operation complete.
 endlocal
+exit /b 0
+
+:export_results
+echo Exporting SonarQube results to README.md...
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "scripts\sonar-export.ps1" -RepoRoot "%ROOT%"
+goto :eof

@@ -18,7 +18,7 @@ MODULE_SPEC=""
 for arg in "$@"; do
     case "$arg" in
         --coverage) COVERAGE_GOAL="verify" ;;
-        --architecture) ARCHITECTURE_FLAG="-Dtest=ArchitectureTest -DfailIfNoTests=false" ;;
+        --architecture) ARCHITECTURE_FLAG="-Dtest=ArchitectureTest -Dsurefire.failIfNoSpecifiedTests=false" ;;
         install) mvn install -DskipTests >/dev/null 2>&1 ;;
         *) MODULE_SPEC="-pl apps/$arg -am" ;;
     esac

@@ -51,6 +51,14 @@ Rules for all code in this repository. These enforce quality, maintainability, a
 6. **Coverage**: Minimum 85% per module (enforced by JaCoCo).
 7. **Architecture test**: Every module has an `ArchitectureTest` enforcing the layer/dependency rules.
 
+## Repository Organization Rules
+
+1. **Minimal root**: Project root holds only the files needed for the GitHub landing page and the build. Keep the root file count to the minimum possible so `README.md` and its badges show at a glance.
+2. **Docs placement**: All documentation (`.md`) lives in `docs/`. The only `.md` allowed at the project root is `README.md`.
+3. **Scripts placement**: All executable scripts (`.bat`, `.sh`, `.ps1`) live in `scripts/`. None at the root. Maven wrapper (`mvnw`, `mvnw.cmd`) is the exception.
+4. **Portability**: The project must be portable across Windows and Linux/Mac. Every operational script needs both a Windows variant (`.bat` or `.ps1`) and a Unix variant (`.sh`) with identical behavior. Prefer cross-platform tools (`curl`, `jq`/PowerShell) over shell-only assumptions.
+5. **Enforcement**: Rules 1-4 are enforced by the filesystem checks in `rag-common` `ArchitectureTest` (`repoRootContainsOnlyAllowedEntries`, `noDocsOrScriptsAtRoot`, `scriptsArePortable`).
+
 ## Verification
 
 Always run architecture tests after significant changes:

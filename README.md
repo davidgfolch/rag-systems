@@ -1,15 +1,9 @@
 # RAG Systems
 
-A monorepo for learning and comparing different RAG (Retrieval-Augmented Generation) implementations using the latest Java Spring ecosystem. Supports document ingestion (PDF, docs, web-sites) about any kind of knowledge - designed to be reusable and easily run on a regular local machine.
-
 [![CI](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml/badge.svg)](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml)
 [![Java](https://img.shields.io/badge/Java-21-007396?logo=openjdk&logoColor=white)](https://adoptium.net/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.5-6DB33F?logo=spring)](https://spring.io/projects/spring-boot)
 [![Maven](https://img.shields.io/badge/Maven-3.9-C71A36?logo=apache-maven)](https://maven.apache.org/)
-
-### Module Status
-
-Each module has a dedicated CI job. A green badge means its tests pass with ≥ 85% coverage.
 
 | Module | Status |
 |--------|--------|
@@ -22,6 +16,10 @@ Each module has a dedicated CI job. A green badge means its tests pass with ≥ 
 | cli | [![rag-cli](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml/badge.svg?job=tests-%28rag-cli%29)](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml) |
 | tui | [![rag-tui](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml/badge.svg?job=tests-%28rag-tui%29)](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml) |
 | architecture | [![architecture](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml/badge.svg?job=architecture-tests)](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml) |
+
+A monorepo for learning and comparing different RAG (Retrieval-Augmented Generation) implementations using the latest Java Spring ecosystem. Supports document ingestion (PDF, docs, web-sites) about any kind of knowledge - designed to be reusable and easily run on a regular local machine.
+
+> Each module above has a dedicated CI job. A green badge means its tests pass with ≥ 85% coverage.
 
 ## Quick Start
 
@@ -54,7 +52,7 @@ apps/
 
 ## Architecture Principles
 
-The project follows TDD, DDD, SOLID, KISS, DRY, YAGNI, Composition over Inheritance, and Reactive/Parallel processing (when applicable). See [PLAN.md](PLAN.md) for the full architecture plan and [.claude/rules/architecture-guidelines.md](.claude/rules/architecture-guidelines.md) for agentic SDLC rules.
+The project follows TDD, DDD, SOLID, KISS, DRY, YAGNI, Composition over Inheritance, and Reactive/Parallel processing (when applicable). See [PLAN.md](docs/PLAN.md) for the full architecture plan and [.claude/rules/architecture-guidelines.md](.claude/rules/architecture-guidelines.md) for agentic SDLC rules.
 
 ## Performance on a Local Machine
 
@@ -150,11 +148,19 @@ The monorepo runs local **SonarQube Community 10.7 LTS** for bugs, vulnerabiliti
 
 A token is only needed the first time (generate one in the SonarQube UI: **My Account → Security**). Results appear at `http://localhost:9000` under project `com.rag:rag-systems`. See [docs/guides/sonarqube.md](docs/guides/sonarqube.md).
 
+### Latest Results
+
+<!-- SONARQUBE_RESULTS_START -->
+No scan results yet. Run `.\scripts\sonar.bat scan <token>` to generate and this section will update automatically.
+<!-- SONARQUBE_RESULTS_END -->
+
+The scanner exports the quality gate and key metrics to this section after every successful scan.
+
 ## Documentation
 
 | Document | Purpose |
 |----------|---------|
-| [PLAN.md](PLAN.md) | Master architecture plan |
+| [PLAN.md](docs/PLAN.md) | Master architecture plan |
 | [Getting Started](docs/guides/getting-started.md) | Setup and run guide |
 | [Chunking Strategies](docs/guides/chunking-strategies.md) | Chunking approach comparison |
 | [Vector Stores](docs/guides/vector-stores.md) | Vector store options |

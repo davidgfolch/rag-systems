@@ -23,6 +23,11 @@ COMPOSE_BASE="-f docker/docker-compose.yml"
 COMPOSE_SONAR="-f docker/docker-compose.yml -f docker/docker-compose.sonarqube.yml"
 SCAN_ARGS="-Dsonar.host.url=http://localhost:9000 -Dsonar.scanner.skipJreProvisioning=true -DskipTests=false"
 
+export_results() {
+    echo "Exporting SonarQube results to README.md..."
+    bash scripts/sonar-export.sh
+}
+
 case "$CMD" in
     up)
         echo "Starting SonarQube..."
@@ -39,6 +44,7 @@ case "$CMD" in
         fi
         echo "Running tests with coverage + SonarQube analysis..."
         mvn verify sonar:sonar -Dsonar.token="$TOKEN" $SCAN_ARGS
+        export_results
         ;;
     up-scan)
         echo "Starting SonarQube..."
@@ -54,6 +60,7 @@ case "$CMD" in
         fi
         echo "Running tests with coverage + SonarQube analysis..."
         mvn verify sonar:sonar -Dsonar.token="$TOKEN" $SCAN_ARGS
+        export_results
         ;;
     down)
         echo "Stopping SonarQube..."
