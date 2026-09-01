@@ -34,4 +34,4 @@ The **"Clean as You Code" quality gate** (new-code coverage ≥ 80%, no new viol
 
 ## Reference
 
-- [SonarQube Guide](../guides/sonarqube.md)
+- [SonarQube Guide](../../guides/sonarqube.md)
