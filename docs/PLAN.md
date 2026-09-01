@@ -108,6 +108,26 @@ Master architecture plan for learning and comparing different RAG (Retrieval-Aug
 - Embedding models as strategy implementations
 - Retrieval strategies can be swapped at runtime
 
+### Strategy Decisions (recent)
+
+This architecture evolves around a **thin TUI + switchable RAG modules**. Each decision is recorded as an ADR in `docs/architecture/decision-records/`.
+
+| Area | Strategy | ADR |
+|------|----------|-----|
+| **Contract** | API-first: `rag-contract` OpenAPI spec generates shared DTOs used by all modules | [ADR-0005](architecture/decision-records/adr-0005-api-contract.md) |
+| **Data isolation** | PostgreSQL schema per rag-* module + single `chunks` table with `document_id` column | [ADR-0006](architecture/decision-records/adr-0006-data-store-isolation.md) |
+| **TUI** | Thin interface over a control plane: starts/stops rag-* modules as child processes, routes REST/WebSocket to the active module | [ADR-0007](architecture/decision-records/adr-0007-tui-interface.md) |
+| **Conversation state** | `rag-memory` module owns chat/conversation history (schema `rag_memory`, non-vector) | [ADR-0008](architecture/decision-records/adr-0008-rag-memory.md) |
+| **Web ingestion** | `rag-webcrawler` module: intelligent fetching with LLM-driven link selection | [ADR-0009](architecture/decision-records/adr-0009-rag-webcrawler.md) |
+
+Core invariants:
+
+- **TUI is only an interface** - it never executes RAG logic (no chunking/embedding/vectors/chat)
+- **Modules own their strategy** - chunking, retrieval, and generation config live in each rag-* module because they differ per approach
+- **Crawl is module-orchestrated** - `add-url` goes TUI → active rag-module → rag-webcrawler → chunk/embed/store → notify TUI
+- **Chat streams over WebSocket** so the user can cancel an in-flight answer
+- **DRY** - shared strategy implementations (chunkers, parsers, adapters, ingestion) live in `rag-common`, not duplicated per module
+
 ### Naming Conventions
 
 - **Packages**: `com.rag.[module].[layer]` (e.g., `com.rag.common.domain`)
@@ -162,6 +182,7 @@ rag-systems/
 ├── .opencode/                        # Opencode configuration
 │   └── opencode.json
 ├── apps/                             # Monorepo modules
+│   ├── rag-contract/                 # OpenAPI contract + generated DTOs
 │   ├── rag-common/                   # Shared library
 │   │   ├── src/main/java/com/rag/common/
 │   │   │   ├── domain/              # Document, Chunk, Embedding
@@ -169,6 +190,12 @@ rag-systems/
 │   │   │   ├── repositories/        # VectorStore interface
 │   │   │   └── config/              # Configuration
 │   │   └── src/test/java/com/rag/common/
+│   ├── rag-memory/                  # Conversation memory (schema rag_memory)
+│   │   ├── src/main/java/com/rag/memory/
+│   │   └── src/test/java/com/rag/memory/
+│   ├── rag-webcrawler/              # Intelligent web fetching tool
+│   │   ├── src/main/java/com/rag/webcrawler/
+│   │   └── src/test/java/com/rag/webcrawler/
 │   ├── rag-basic/                    # Basic RAG implementation
 │   │   ├── src/main/java/com/rag/basic/
 │   │   │   ├── ingestion/           # Document ingestion
@@ -240,6 +267,14 @@ rag-systems/
 
 ## Module Architecture
 
+### 0. rag-contract (API Contract)
+
+Single source of truth for the module API. Holds `rag-api.yaml` (OpenAPI 3) and generates the shared DTOs consumed by every module.
+
+- `src/main/resources/openapi/rag-api.yaml` - canonical spec
+- Generated `com.rag.contract.model.*` - Ingest/Query/Chat/Page/Conversation DTOs
+- Consumed by TUI (client), rag-* modules (server), rag-memory, rag-webcrawler
+
 ### 1. rag-common (Shared Library)
 
 Core domain models, services, and utilities shared across all RAG modules.
@@ -291,6 +326,20 @@ Monitoring, tracing, and metrics for RAG systems.
 Interactive CLI for testing RAG queries.
 
 **Features**: Picocli commands, interactive query mode, batch query processing
+
+### 8. rag-memory (Conversation Memory)
+
+Thin service owning chat/conversation history. Schema `rag_memory`, non-vector (JPA).
+
+**API**: create/list conversations, list/append messages (from `rag-contract`)
+**Features**: conversation history for the TUI `history` command, survives module switches
+
+### 9. rag-webcrawler (Intelligent Web Tool)
+
+Reusable web-fetch tool. No RAG pipeline - returns `Page` DTOs.
+
+**API**: `POST /api/fetch {url}`, `POST /api/fetch/links {url, question}`
+**Features**: jsoup fetching, LLM-driven `LinkPrioritizer` for selecting which links to load (deterministic fallback)
 
 ## Local Development Profile
 
@@ -432,42 +481,42 @@ See [guides/sonarqube.md](guides/sonarqube.md) and [ADR-0004](architecture/decis
 
 ## Implementation Phases
 
-### Phase 1: Foundation (Week 1-2)
-- [ ] Setup monorepo structure
-- [ ] Implement rag-common domain models
-- [ ] Create document parser interfaces
-- [ ] Setup test infrastructure with ArchUnit
-- [ ] Create all scripts
+### Phase 1: Foundation
+- [x] Setup monorepo structure
+- [x] Implement rag-common domain models
+- [x] Create document parser interfaces
+- [x] Setup test infrastructure with ArchUnit
+- [x] Create all scripts
 
-### Phase 2: Basic RAG (Week 3-4)
-- [ ] Implement fixed-size chunking
-- [ ] Add recursive chunking
-- [ ] Integrate PgVector
-- [ ] Create basic query endpoint with Swagger
+### Phase 2: API Contract & Common Consolidation
+- [x] `rag-contract` OpenAPI spec + codegen (generated DTOs build clean)
+- [ ] Consolidate chunking/parsing/adapters/ingestion into rag-common (kill duplication)
+- [ ] Remove rag-tui duplicates, point both modules at rag-common implementations
 
-### Phase 3: Advanced RAG (Week 5-6)
-- [ ] Add semantic chunking
-- [ ] Implement reranking
-- [ ] Add metadata filtering
-- [ ] Create hybrid search
+### Phase 3: Data Store Isolation
+- [ ] rag-basic schema `rag_basic` + `chunks` table with `document_id`
+- [ ] Apply same pattern to rag-advanced/rag-agentic when implemented
+- [ ] `.env`: `RAG_BASIC_URL`, `RAG_ADVANCED_URL`, `RAG_AGENTIC_URL`, `RAG_MEMORY_URL`, `RAG_WEBCRAWLER_URL`
 
-### Phase 4: Agentic RAG (Week 7-8)
-- [ ] Implement query planning
-- [ ] Add tool calling
-- [ ] Create multi-step retrieval
-- [ ] Add self-reflection
+### Phase 4: Supporting Modules
+- [ ] `rag-memory` - conversation persistence (schema `rag_memory`)
+- [ ] `rag-webcrawler` - smart fetch tool + LLM link prioritizer
+- [ ] rag-basic WebSocket `/ws/chat` + module-orchestrated `ingest-url`
 
-### Phase 5: Observability (Week 9)
-- [ ] Implement OpenTelemetry tracing
-- [ ] Add Micrometer metrics
-- [ ] Create Grafana dashboards
-- [ ] Setup Prometheus
+### Phase 5: Thin TUI + Control Plane
+- [ ] Strip RAG logic out of TUI (keep UI + clients)
+- [ ] `ModuleRegistry`/`ModuleLifecycleManager` (start/stop child processes)
+- [ ] Commands: `modules`, `use`, `start`, `stop`, `add-file`, `add-url`, `ask` (WS/cancel), `history`
 
-### Phase 6: Evaluation & CLI (Week 10)
-- [ ] Implement metrics collection
-- [ ] Create benchmarking suite
-- [ ] Generate comparison reports
-- [ ] Create CLI tool
+### Phase 6: Advanced RAG & Agentic RAG
+- [ ] rag-advanced: reranking, hybrid search, metadata filtering
+- [ ] rag-agentic: query planning, tool calling, multi-step retrieval
+
+### Phase 7: Observability, Evaluation & Docs
+- [ ] OpenTelemetry tracing + Micrometer metrics
+- [ ] Grafana dashboards + Prometheus
+- [ ] Evaluation/benchmarking; comparison reports
+- [ ] README + docs updated (ADR-0005..0009)
 
 ## Success Criteria
 

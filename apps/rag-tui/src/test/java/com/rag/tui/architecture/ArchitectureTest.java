@@ -1,22 +1,16 @@
 package com.rag.tui.architecture;
 
-import com.rag.common.repositories.VectorStore;
-import com.rag.common.services.ChatModel;
-import com.rag.common.services.DocumentParser;
-import com.rag.common.services.EmbeddingModel;
-import com.rag.common.services.TextSplitter;
-import com.rag.tui.fetching.WebPageFetcher;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
+import com.tngtech.archunit.library.Architectures;
 import org.junit.jupiter.api.Test;
 
-import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
 /**
- * Architecture rules for rag-tui, enforced by ArchUnit.
- * The ui layer bridges services to the terminal; services and fetching depend
- * only on the rag-common strategy interfaces, never on concrete providers.
+ * Architecture rules for the thin rag-tui, enforced by ArchUnit. The TUI is a
+ * control plane: launcher owns process/registry logic, clients talk to modules
+ * over REST/WS, services load files, and ui routes commands. No RAG logic.
  */
 class ArchitectureTest {
 
@@ -26,65 +20,34 @@ class ArchitectureTest {
             .withImportOption(new ImportOption.DoNotIncludeTests());
 
     @Test
-    void uiDoesNotDependOnInternals() {
+    void layersMayOnlyDependInward() {
+        Architectures.layeredArchitecture()
+                .consideringOnlyDependenciesInLayers()
+                .layer("ui").definedBy("..ui..")
+                .layer("services").definedBy("..services..")
+                .layer("launcher").definedBy("..launcher..")
+                .layer("client").definedBy("..client..")
+                .whereLayer("ui").mayOnlyAccessLayers("services", "launcher", "client")
+                .whereLayer("client").mayOnlyAccessLayers("launcher")
+                .whereLayer("services").mayOnlyAccessLayers("launcher")
+                .check(importer.importPackages(ROOT));
+    }
+
+    @Test
+    void noDependencyOnCommonRagInternals() {
+        noClasses()
+                .that().resideInAPackage(ROOT)
+                .should().dependOnClassesThat().resideInAnyPackage(
+                        "com.rag.common.services", "com.rag.common.repositories",
+                        "com.rag.common.domain", "com.rag.common.adapter")
+                .check(importer.importPackages(ROOT));
+    }
+
+    @Test
+    void uiDoesNotDependOnConfig() {
         noClasses()
                 .that().resideInAPackage("..ui..")
-                .should().dependOnClassesThat().resideInAnyPackage(
-                        "..config..", "..adapter..", "..chunking..", "..parsing..",
-                        "..vectorstore..", "com.rag.common.repositories")
-                .check(importer.importPackages(ROOT));
-    }
-
-    @Test
-    void servicesDoNotDependOnProvidersOrConfig() {
-        noClasses()
-                .that().resideInAPackage("..services..")
-                .should().dependOnClassesThat().resideInAnyPackage(
-                        "..config..", "..adapter..", "..chunking..", "..parsing..", "..vectorstore..")
-                .check(importer.importPackages(ROOT));
-    }
-
-    @Test
-    void fetchersImplementWebPageFetcher() {
-        classes()
-                .that().resideInAPackage("..fetching..")
-                .and().haveSimpleNameEndingWith("WebPageFetcher")
-                .and().areNotInterfaces()
-                .and().areNotNestedClasses()
-                .should().implement(WebPageFetcher.class)
-                .check(importer.importPackages(ROOT));
-    }
-
-    @Test
-    void chunkersImplementTextSplitter() {
-        classes()
-                .that().resideInAPackage("..chunking..")
-                .should().implement(TextSplitter.class)
-                .check(importer.importPackages(ROOT));
-    }
-
-    @Test
-    void parsersImplementDocumentParser() {
-        classes()
-                .that().resideInAPackage("..parsing..")
-                .should().implement(DocumentParser.class)
-                .check(importer.importPackages(ROOT));
-    }
-
-    @Test
-    void adaptersImplementTheirStrategyInterface() {
-        classes()
-                .that().resideInAPackage("..adapter..").and().haveSimpleNameEndingWith("ChatModel")
-                .should().implement(ChatModel.class)
-                .orShould().implement(EmbeddingModel.class)
-                .check(importer.importPackages(ROOT));
-    }
-
-    @Test
-    void vectorStoresImplementVectorStore() {
-        classes()
-                .that().resideInAPackage("..vectorstore..").and().areNotNestedClasses()
-                .should().implement(VectorStore.class)
+                .should().dependOnClassesThat().resideInAPackage("..config..")
                 .check(importer.importPackages(ROOT));
     }
 }

@@ -1,11 +1,13 @@
 package com.rag.basic.api;
 
-import com.rag.basic.api.dto.QueryResponse;
 import com.rag.basic.services.RetrievalService;
 import com.rag.common.domain.Chunk;
-import org.springframework.web.bind.annotation.GetMapping;
+import com.rag.contract.model.ChunkResult;
+import com.rag.contract.model.QueryRequest;
+import com.rag.contract.model.QueryResponse;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -23,13 +25,21 @@ public class QueryController {
         this.retrievalService = retrievalService;
     }
 
-    @GetMapping
-    public QueryResponse query(@RequestParam String q,
-                               @RequestParam(defaultValue = "5") int topK) {
-        List<Chunk> chunks = retrievalService.retrieve(q, topK);
-        List<QueryResponse.ChunkResult> results = chunks.stream()
-                .map(QueryResponse.ChunkResult::from)
+    @PostMapping
+    public QueryResponse query(@RequestBody QueryRequest request) {
+        int topK = request.getTopK() == null ? 5 : request.getTopK();
+        String documentId = request.getDocumentId();
+        List<Chunk> chunks = documentId == null
+                ? retrievalService.retrieve(request.getQuestion(), topK)
+                : retrievalService.retrieve(request.getQuestion(), topK, documentId);
+        List<ChunkResult> results = chunks.stream()
+                .map(QueryController::toResult)
                 .toList();
-        return new QueryResponse(q, results);
+        return new QueryResponse(request.getQuestion()).results(results);
+    }
+
+    private static ChunkResult toResult(Chunk chunk) {
+        return new ChunkResult().id(chunk.getId()).documentId(chunk.getDocumentId())
+                .content(chunk.getContent()).index(chunk.getIndex());
     }
 }

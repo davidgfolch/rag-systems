@@ -62,6 +62,8 @@ jobs:
         module:
           - rag-common
           - rag-basic
+          - rag-memory
+          - rag-webcrawler
           - rag-advanced
           - rag-agentic
           - rag-evaluation

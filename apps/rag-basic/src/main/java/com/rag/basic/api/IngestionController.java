@@ -1,9 +1,12 @@
 package com.rag.basic.api;
 
-import com.rag.basic.api.dto.IngestRequest;
-import com.rag.basic.api.dto.IngestResponse;
-import com.rag.basic.services.IngestionService;
 import com.rag.common.domain.Document;
+import com.rag.common.services.IngestionService;
+import com.rag.contract.model.IngestRequest;
+import com.rag.contract.model.IngestResponse;
+import com.rag.contract.model.IngestUrlRequest;
+import com.rag.contract.model.Page;
+import com.rag.basic.services.WebCrawlerClient;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -11,29 +14,46 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
 import java.util.UUID;
 
 /**
- * REST endpoint for ingesting documents into the vector store.
+ * REST endpoints for ingesting documents (raw content or via rag-webcrawler).
  */
 @RestController
 @RequestMapping("/api/documents")
 public class IngestionController {
 
     private final IngestionService ingestionService;
+    private final WebCrawlerClient webCrawlerClient;
 
-    public IngestionController(IngestionService ingestionService) {
+    public IngestionController(IngestionService ingestionService, WebCrawlerClient webCrawlerClient) {
         this.ingestionService = ingestionService;
+        this.webCrawlerClient = webCrawlerClient;
     }
 
     @PostMapping("/ingest")
     public ResponseEntity<IngestResponse> ingest(@RequestBody IngestRequest request) {
-        if (request.content() == null || request.content().isBlank()) {
+        if (request.getContent() == null || request.getContent().isBlank()) {
             return ResponseEntity.badRequest().build();
         }
-        Document document = new Document(UUID.randomUUID().toString(), request.content(), request.metadata());
-        IngestionService.IngestionResult result = ingestionService.ingest(document);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new IngestResponse(result.documentId(), result.chunkCount()));
+        Document document = new Document(UUID.randomUUID().toString(), request.getContent(), request.getMetadata());
+        return created(ingestionService.ingest(document));
+    }
+
+    @PostMapping("/ingest-url")
+    public ResponseEntity<IngestResponse> ingestUrl(@RequestBody IngestUrlRequest request) {
+        if (request.getUrl() == null || request.getUrl().toString().isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
+        Page page = webCrawlerClient.fetch(request.getUrl().toString());
+        Document document = new Document(UUID.randomUUID().toString(), page.getText(),
+                Map.of("sourceType", "web", "source", page.getUrl()));
+        return created(ingestionService.ingest(document));
+    }
+
+    private ResponseEntity<IngestResponse> created(IngestionService.IngestionResult result) {
+        IngestResponse response = new IngestResponse().documentId(result.documentId()).chunkCount(result.chunkCount());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }

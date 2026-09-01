@@ -71,6 +71,32 @@ The pipeline: files and URLs are parsed, split into chunks, embedded, and stored
 
 See the [TUI Guide](docs/guides/tui-ingestion.md) for details on extending sources and how the architecture works.
 
+## Modules & Strategy
+
+The monorepo is organized around a **thin TUI + switchable RAG modules**. Each `rag-*` module is an independent Spring Boot application exposing the [shared OpenAPI contract](apps/rag-contract/src/main/resources/openapi/rag-api.yaml); the TUI starts/stops them and routes work to the active one.
+
+| Module | Role | Data | Port (from `.env`) |
+|--------|------|------|--------------------|
+| **rag-contract** | OpenAPI spec + generated DTOs | - | - |
+| **rag-common** | Shared strategies (chunking, parsing, adapters, ingestion) | - | - |
+| **rag-basic** | Basic RAG | schema `rag_basic` | `RAG_BASIC_URL` |
+| **rag-advanced** *(planned)* | Advanced RAG (reranking, hybrid) | schema `rag_advanced` | `RAG_ADVANCED_URL` |
+| **rag-agentic** *(planned)* | Agentic RAG (tool calling) | schema `rag_agentic` | `RAG_AGENTIC_URL` |
+| **rag-memory** | Conversation history (non-vector) | schema `rag_memory` | `RAG_MEMORY_URL` |
+| **rag-webcrawler** | Intelligent web fetching tool | - | `RAG_WEBCRAWLER_URL` |
+| **rag-tui** | Thin interface + control plane | - | - |
+
+**Data isolation:** each rag-* implementation stores vectors in its own PostgreSQL schema (`rag_basic`, `rag_advanced`, ...) in a single `chunks` table with a `document_id` column - no cross-module contamination. Conversation state lives separately in `rag_memory`.
+
+**Module switching:** use the TUI commands `modules`, `start <module>`, `stop <module>`, and `use <module>`. Chat streams over WebSocket `/ws/chat` so an in-flight answer can be cancelled. `add-url` is module-orchestrated: the active rag-module calls `rag-webcrawler`, chunks with its own strategy, stores, and notifies the TUI.
+
+See the architecture decisions for the full rationale:
+- [ADR-0005: API-First Contract](docs/architecture/decision-records/adr-0005-api-contract.md)
+- [ADR-0006: Data Store Isolation](docs/architecture/decision-records/adr-0006-data-store-isolation.md)
+- [ADR-0007: Thin TUI + Module Control Plane](docs/architecture/decision-records/adr-0007-tui-interface.md)
+- [ADR-0008: rag-memory Module](docs/architecture/decision-records/adr-0008-rag-memory.md)
+- [ADR-0009: rag-webcrawler Module](docs/architecture/decision-records/adr-0009-rag-webcrawler.md)
+
 ## More Documentation
 
 | Topic | Link |

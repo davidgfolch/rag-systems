@@ -33,4 +33,11 @@ class RetrievalServiceTest {
 
         assertThat(service.retrieve("query", 3)).isEmpty();
     }
+
+    @Test
+    void delegatesDocumentScopedQuery() {
+        when(vectorStore.similaritySearch("query", 5, "d1")).thenReturn(List.of());
+
+        assertThat(service.retrieve("query", 5, "d1")).isEmpty();
+    }
 }

@@ -1,88 +1,65 @@
 package com.rag.tui.config;
 
-import com.rag.common.repositories.VectorStore;
-import com.rag.common.services.ChatModel;
-import com.rag.common.services.DocumentParser;
-import com.rag.common.services.EmbeddingModel;
-import com.rag.common.services.TextSplitter;
-import com.rag.tui.adapter.SpringAiChatModel;
-import com.rag.tui.adapter.SpringAiEmbeddingModel;
-import com.rag.tui.chunking.RecursiveCharacterChunker;
-import com.rag.tui.fetching.JsoupWebPageFetcher;
-import com.rag.tui.fetching.WebPageFetcher;
-import com.rag.tui.parsing.PlainTextParser;
-import com.rag.tui.parsing.TikaDocumentParser;
-import com.rag.tui.services.ChatService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rag.tui.client.ChatGateway;
+import com.rag.tui.client.MemoryClient;
+import com.rag.tui.client.RagApiClient;
+import com.rag.tui.launcher.Module;
+import com.rag.tui.launcher.ModuleLifecycleManager;
+import com.rag.tui.launcher.ModuleRegistry;
 import com.rag.tui.services.FileDocumentLoader;
-import com.rag.tui.services.IngestionService;
 import com.rag.tui.ui.CommandDispatcher;
 import com.rag.tui.ui.InteractiveShell;
-import com.rag.tui.vectorstore.InMemoryVectorStore;
-import com.rag.tui.vectorstore.PgVectorStoreAdapter;
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.util.List;
 
 /**
- * Wiring for the rag-tui module. Exposes the domain strategy interfaces and
- * picks concrete implementations from application properties (SoC, DIP).
+ * Wiring for the thin rag-tui: module control plane + REST/WS clients to the
+ * active rag-* module. No RAG logic (chunking/parsing/chat) lives in the TUI.
  */
 @Configuration
 public class RagTuiConfig {
 
     @Bean
-    public TextSplitter textSplitter(
-            @Value("${rag.chunking.size:512}") int size,
-            @Value("${rag.chunking.overlap:64}") int overlap) {
-        return new RecursiveCharacterChunker(size, overlap);
+    public ModuleRegistry moduleRegistry(
+            @Value("${rag.tui.active:rag-basic}") String active,
+            @Value("${RAG_BASIC_URL:http://localhost:8081}") String basicUrl,
+            @Value("${RAG_ADVANCED_URL:http://localhost:8082}") String advancedUrl,
+            @Value("${RAG_AGENTIC_URL:http://localhost:8083}") String agenticUrl) {
+        List<Module> modules = List.of(
+                new Module("rag-basic", basicUrl),
+                new Module("rag-advanced", advancedUrl),
+                new Module("rag-agentic", agenticUrl));
+        return new ModuleRegistry(modules, active);
     }
 
     @Bean
-    public DocumentParser documentParser(@Value("${rag.parsing.mode:plain}") String mode) {
-        return "tika".equalsIgnoreCase(mode) ? new TikaDocumentParser() : new PlainTextParser();
+    public ModuleLifecycleManager moduleLifecycleManager(
+            @Value("${rag.tui.project-dir:${user.dir}}") String projectDir) {
+        return new ModuleLifecycleManager(projectDir);
     }
 
     @Bean
-    public EmbeddingModel embeddingModel(org.springframework.ai.embedding.EmbeddingModel delegate) {
-        return new SpringAiEmbeddingModel(delegate);
+    public RagApiClient ragApiClient(ModuleRegistry registry) {
+        return new RagApiClient(registry, RestClient.builder());
     }
 
     @Bean
-    public ChatModel chatModel(ChatClient.Builder builder) {
-        return new SpringAiChatModel(builder.build());
+    public MemoryClient memoryClient(@Value("${RAG_MEMORY_URL:http://localhost:8084}") String memoryUrl) {
+        return new MemoryClient(RestClient.builder().baseUrl(memoryUrl).build());
     }
 
     @Bean
-    public VectorStore vectorStore(
-            @Value("${rag.vector-store.type:in-memory}") String type,
-            EmbeddingModel embeddingModel,
-            ObjectProvider<org.springframework.ai.vectorstore.VectorStore> springAiStore) {
-        if ("pgvector".equalsIgnoreCase(type) && springAiStore.getIfAvailable() != null) {
-            return new PgVectorStoreAdapter(springAiStore.getObject());
-        }
-        return new InMemoryVectorStore(embeddingModel);
-    }
-
-    @Bean
-    public IngestionService ingestionService(DocumentParser parser, TextSplitter splitter,
-                                             EmbeddingModel embeddingModel, VectorStore vectorStore) {
-        return new IngestionService(parser, splitter, embeddingModel, vectorStore);
-    }
-
-    @Bean
-    public ChatService chatService(VectorStore vectorStore, ChatModel chatModel) {
-        return new ChatService(vectorStore, chatModel);
-    }
-
-    @Bean
-    public WebPageFetcher webPageFetcher() {
-        return new JsoupWebPageFetcher();
+    public ChatGateway chatGateway(ModuleRegistry registry, ObjectMapper objectMapper) {
+        return new ChatGateway(registry, new StandardWebSocketClient(), objectMapper);
     }
 
     @Bean
@@ -91,10 +68,12 @@ public class RagTuiConfig {
     }
 
     @Bean
-    public CommandDispatcher commandDispatcher(IngestionService ingestionService, ChatService chatService,
-                                               WebPageFetcher webPageFetcher, FileDocumentLoader fileLoader,
+    public CommandDispatcher commandDispatcher(ModuleRegistry registry, ModuleLifecycleManager lifecycle,
+                                               RagApiClient apiClient, ChatGateway chatGateway,
+                                               MemoryClient memoryClient, FileDocumentLoader fileLoader,
                                                @Value("${rag.chat.top-k:4}") int topK) {
-        return new CommandDispatcher(ingestionService, chatService, webPageFetcher, fileLoader, topK);
+        return new CommandDispatcher(registry, lifecycle, apiClient, chatGateway,
+                memoryClient, fileLoader, topK);
     }
 
     @Bean

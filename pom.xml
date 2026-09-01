@@ -19,8 +19,11 @@
     <description>Monorepo for learning and comparing RAG implementations in the Java Spring ecosystem</description>
 
     <modules>
+        <module>apps/rag-contract</module>
         <module>apps/rag-common</module>
         <module>apps/rag-basic</module>
+        <module>apps/rag-memory</module>
+        <module>apps/rag-webcrawler</module>
         <module>apps/rag-advanced</module>
         <module>apps/rag-agentic</module>
         <module>apps/rag-evaluation</module>
@@ -112,6 +115,11 @@
             </dependency>
 
             <!-- Internal modules -->
+            <dependency>
+                <groupId>com.rag</groupId>
+                <artifactId>rag-contract</artifactId>
+                <version>${project.version}</version>
+            </dependency>
             <dependency>
                 <groupId>com.rag</groupId>
                 <artifactId>rag-common</artifactId>

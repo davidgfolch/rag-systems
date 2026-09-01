@@ -1,23 +1,31 @@
 package com.rag.basic.config;
 
-import com.rag.basic.chunking.FixedSizeChunker;
-import com.rag.basic.chunking.RecursiveCharacterChunker;
-import com.rag.basic.chunking.TokenChunker;
-import com.rag.basic.embedding.SpringAiEmbeddingModel;
-import com.rag.basic.parsing.PlainTextParser;
-import com.rag.basic.parsing.TikaDocumentParser;
-import com.rag.basic.services.IngestionService;
 import com.rag.basic.services.RetrievalService;
-import com.rag.basic.vectorstore.SimpleVectorStore;
+import com.rag.basic.services.WebCrawlerClient;
+import com.rag.common.adapter.SpringAiChatModel;
+import com.rag.common.adapter.SpringAiEmbeddingModel;
 import com.rag.common.repositories.VectorStore;
+import com.rag.common.repositories.store.InMemoryVectorStore;
+import com.rag.common.repositories.store.PgVectorStoreAdapter;
+import com.rag.common.services.ChatModel;
+import com.rag.common.services.ChatService;
 import com.rag.common.services.DocumentParser;
 import com.rag.common.services.EmbeddingModel;
+import com.rag.common.services.IngestionService;
 import com.rag.common.services.TextSplitter;
+import com.rag.common.services.chunking.FixedSizeChunker;
+import com.rag.common.services.chunking.RecursiveCharacterChunker;
+import com.rag.common.services.chunking.TokenChunker;
+import com.rag.common.services.parsing.PlainTextParser;
+import com.rag.common.services.parsing.TikaDocumentParser;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.web.client.RestClient;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Wiring for the rag-basic module. Exposes the domain strategy interfaces so its
@@ -57,10 +65,10 @@ public class RagBasicConfig {
             EmbeddingModel embeddingModel,
             org.springframework.ai.vectorstore.VectorStore springAiStore) {
         if ("simple".equalsIgnoreCase(type)) {
-            return new SimpleVectorStore(embeddingModel);
+            return new InMemoryVectorStore(embeddingModel);
         }
         if (springAiStore instanceof PgVectorStore) {
-            return new com.rag.basic.vectorstore.PgVectorStoreAdapter(springAiStore);
+            return new PgVectorStoreAdapter(springAiStore);
         }
         throw new IllegalStateException("Unsupported vector store type: " + type);
     }
@@ -74,5 +82,27 @@ public class RagBasicConfig {
     @Bean
     public RetrievalService retrievalService(VectorStore vectorStore) {
         return new RetrievalService(vectorStore);
+    }
+
+    @Bean
+    public ChatModel chatModel(ChatClient.Builder builder) {
+        return new SpringAiChatModel(builder.build());
+    }
+
+    @Bean
+    public ChatService chatService(VectorStore vectorStore, ChatModel chatModel) {
+        return new ChatService(vectorStore, chatModel);
+    }
+
+    @Bean
+    public WebCrawlerClient webCrawlerClient(
+            @Value("${rag.webcrawler.url:http://localhost:8085}") String baseUrl) {
+        return new WebCrawlerClient(RestClient.builder().baseUrl(baseUrl).build());
+    }
+
+    @Bean
+    public com.rag.basic.api.chat.ChatWebSocketHandler chatWebSocketHandler(
+            ChatService chatService, ObjectMapper objectMapper) {
+        return new com.rag.basic.api.chat.ChatWebSocketHandler(chatService, objectMapper);
     }
 }

@@ -41,8 +41,8 @@ class ArchitectureTest {
                 .layer("services").definedBy("..services..")
                 .layer("repositories").definedBy("..repositories..")
                 .whereLayer("domain").mayNotAccessAnyLayer()
-                .whereLayer("services").mayOnlyAccessLayers("domain")
-                .whereLayer("repositories").mayOnlyAccessLayers("domain")
+                .whereLayer("services").mayOnlyAccessLayers("domain", "repositories")
+                .whereLayer("repositories").mayOnlyAccessLayers("domain", "services")
                 .check(importer.importPackages(ROOT));
     }
 

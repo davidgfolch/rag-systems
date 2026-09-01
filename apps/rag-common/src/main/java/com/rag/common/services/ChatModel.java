@@ -1,6 +1,6 @@
 package com.rag.common.services;
 
-import java.util.List;
+import reactor.core.publisher.Flux;
 
 /**
  * Strategy interface for LLM chat generation.
@@ -18,4 +18,13 @@ public interface ChatModel {
      * @return the generated completion
      */
     String complete(String prompt);
+
+    /**
+     * Streams a completion for the given prompt, token by token.
+     * Disposing the returned {@link Flux} cancels generation.
+     *
+     * @param prompt the prompt text
+     * @return a streaming publisher of answer tokens
+     */
+    Flux<String> completeStream(String prompt);
 }

@@ -32,4 +32,23 @@ public interface VectorStore {
      * @return the most similar chunks
      */
     List<Chunk> similaritySearch(String query, int topK);
+
+    /**
+     * Finds the chunks most similar to the given query, scoped to a single
+     * ingested document (for per-document retrieval).
+     *
+     * <p>The store is responsible for embedding the query internally, keeping
+     * the caller decoupled from the embedding strategy (matching Spring AI's
+     * {@code SearchRequest.query(...)} model).
+     *
+     * @param query      the query text
+     * @param topK       the number of results to return
+     * @param documentId the document to scope the search to
+     * @return the most similar chunks of the given document
+     */
+    default List<Chunk> similaritySearch(String query, int topK, String documentId) {
+        return similaritySearch(query, topK).stream()
+                .filter(chunk -> chunk.getDocumentId().equals(documentId))
+                .toList();
+    }
 }

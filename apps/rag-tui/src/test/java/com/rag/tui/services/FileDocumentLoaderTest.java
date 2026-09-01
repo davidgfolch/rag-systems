@@ -1,6 +1,5 @@
 package com.rag.tui.services;
 
-import com.rag.common.domain.Document;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -16,15 +15,15 @@ class FileDocumentLoaderTest {
     private final FileDocumentLoader sut = new FileDocumentLoader();
 
     @Test
-    void loadsFileIntoDocumentWithMetadata(@TempDir Path dir) throws IOException {
+    void loadsFileContentWithMetadata(@TempDir Path dir) throws IOException {
         Path file = dir.resolve("note.txt");
         Files.writeString(file, "hello rag");
 
-        Document doc = sut.load(file.toString());
+        FileDocumentLoader.LoadedFile loaded = sut.load(file.toString());
 
-        assertThat(doc.getContent()).isEqualTo("hello rag");
-        assertThat(doc.getMetadata()).containsEntry("sourceType", "file");
-        assertThat(doc.getId()).startsWith("file-");
+        assertThat(loaded.content()).isEqualTo("hello rag");
+        assertThat(loaded.metadata()).containsEntry("sourceType", "file");
+        assertThat(loaded.metadata()).containsEntry("fileName", "note.txt");
     }
 
     @Test

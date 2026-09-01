@@ -26,7 +26,7 @@ public class InteractiveShell {
             write("RAG TUI - type 'help' for commands, 'quit' to exit\n");
             String line;
             while ((line = reader.readLine()) != null) {
-                CommandResult result = dispatcher.handle(line);
+                CommandResult result = dispatcher.handle(line, this::writeToken);
                 write(result.message());
                 if (result.exit()) break;
             }
@@ -39,6 +39,15 @@ public class InteractiveShell {
         writer.write(text);
         writer.write(System.lineSeparator());
         writer.flush();
+    }
+
+    private void writeToken(String token) {
+        try {
+            writer.write(token);
+            writer.flush();
+        } catch (IOException e) {
+            throw new ShellException("Terminal I/O error", e);
+        }
     }
 
     public static class ShellException extends RuntimeException {

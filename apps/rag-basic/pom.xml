@@ -22,12 +22,20 @@
         </dependency>
         <dependency>
             <groupId>com.rag</groupId>
+            <artifactId>rag-contract</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.rag</groupId>
             <artifactId>rag-observability</artifactId>
         </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
 
         <!-- Spring AI providers (composable via profiles) -->

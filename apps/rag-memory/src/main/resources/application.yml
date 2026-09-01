@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: rag-memory
+  datasource:
+    url: jdbc:postgresql://${PGVECTOR_HOST:localhost}:${PGVECTOR_PORT:5432}/${PGVECTOR_DB:rag}
+    username: ${PGVECTOR_USER:rag}
+    password: ${PGVECTOR_PASSWORD:rag}
+    hikari:
+      connection-init-sql: CREATE SCHEMA IF NOT EXISTS rag_memory
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        default_schema: rag_memory
+        format_sql: false
+
+server:
+  port: ${SERVER_PORT:8084}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
