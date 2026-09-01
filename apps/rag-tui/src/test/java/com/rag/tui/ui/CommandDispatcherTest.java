@@ -1,7 +1,8 @@
 package com.rag.tui.ui;
 
-import com.rag.contract.model.Conversation;
+import com.rag.contract.model.ConversationDTO;
 import com.rag.contract.model.IngestResponse;
+import com.rag.contract.model.ChatMessageDTO;
 import com.rag.tui.client.ChatGateway;
 import com.rag.tui.client.MemoryClient;
 import com.rag.tui.client.RagApiClient;
@@ -124,10 +125,10 @@ class CommandDispatcherTest {
 
     @Test
     void showsHistoryFromMemory() {
-        Conversation conversation = new Conversation().id("c1").title("t1");
+        ConversationDTO conversation = new ConversationDTO().id("c1").title("t1");
         when(memoryClient.conversations()).thenReturn(List.of(conversation));
         when(memoryClient.messages("c1")).thenReturn(List.of(
-                new com.rag.contract.model.ChatMessage().content("hi")));
+                new ChatMessageDTO().content("hi")));
 
         CommandResult result = handle("history");
 

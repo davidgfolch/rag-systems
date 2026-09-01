@@ -1,7 +1,9 @@
 package com.rag.memory.services;
 
-import com.rag.contract.model.ChatMessage;
-import com.rag.contract.model.Conversation;
+import com.rag.contract.model.ChatMessageDTO;
+import com.rag.contract.model.ConversationDTO;
+import com.rag.memory.domain.ChatMessageEntity;
+import com.rag.memory.domain.ConversationEntity;
 import com.rag.memory.repositories.ConversationRepository;
 import com.rag.memory.repositories.MessageRepository;
 import org.springframework.stereotype.Service;
@@ -22,43 +24,43 @@ public class ConversationService {
         this.messageRepo = messageRepo;
     }
 
-    public List<Conversation> listConversations() {
+    public List<ConversationDTO> listConversations() {
         return conversationRepo.findAllByOrderByCreatedAtDesc().stream()
                 .map(ConversationService::toContract)
                 .toList();
     }
 
-    public Conversation createConversation(String title) {
+    public ConversationDTO createConversation(String title) {
         String resolvedTitle = title == null || title.isBlank() ? "New conversation" : title.trim();
         var conversation = conversationRepo.save(
-                new com.rag.memory.domain.Conversation(UUID.randomUUID().toString(),
+                new ConversationEntity(UUID.randomUUID().toString(),
                         resolvedTitle, OffsetDateTime.now()));
         return toContract(conversation);
     }
 
-    public List<ChatMessage> listMessages(String conversationId) {
+    public List<ChatMessageDTO> listMessages(String conversationId) {
         return messageRepo.findByConversationIdOrderByCreatedAtAsc(conversationId).stream()
                 .map(ConversationService::toContract)
                 .toList();
     }
 
-    public ChatMessage addMessage(String conversationId, ChatMessage message) {
+    public ChatMessageDTO addMessage(String conversationId, ChatMessageDTO message) {
         if (!conversationRepo.existsById(conversationId)) {
             throw new IllegalArgumentException("Unknown conversation: " + conversationId);
         }
-        var saved = messageRepo.save(new com.rag.memory.domain.ChatMessage(
+        var saved = messageRepo.save(new ChatMessageEntity(
                 UUID.randomUUID().toString(), conversationId, message.getRole().getValue(),
                 message.getContent(), OffsetDateTime.now()));
         return toContract(saved);
     }
 
-    private static Conversation toContract(com.rag.memory.domain.Conversation entity) {
-        return new Conversation().id(entity.getId()).title(entity.getTitle()).createdAt(entity.getCreatedAt());
+    private static ConversationDTO toContract(ConversationEntity entity) {
+        return new ConversationDTO().id(entity.getId()).title(entity.getTitle()).createdAt(entity.getCreatedAt());
     }
 
-    private static ChatMessage toContract(com.rag.memory.domain.ChatMessage entity) {
-        return new ChatMessage().id(entity.getId()).conversationId(entity.getConversationId())
-                .role(ChatMessage.RoleEnum.fromValue(entity.getRole()))
+    private static ChatMessageDTO toContract(ChatMessageEntity entity) {
+        return new ChatMessageDTO().id(entity.getId()).conversationId(entity.getConversationId())
+                .role(ChatMessageDTO.RoleEnum.fromValue(entity.getRole()))
                 .content(entity.getContent()).createdAt(entity.getCreatedAt());
     }
 }

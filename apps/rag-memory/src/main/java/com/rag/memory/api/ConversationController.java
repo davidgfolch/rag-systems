@@ -1,7 +1,7 @@
 package com.rag.memory.api;
 
-import com.rag.contract.model.ChatMessage;
-import com.rag.contract.model.Conversation;
+import com.rag.contract.model.ChatMessageDTO;
+import com.rag.contract.model.ConversationDTO;
 import com.rag.memory.services.ConversationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,26 +26,26 @@ public class ConversationController {
     }
 
     @GetMapping
-    public List<Conversation> listConversations() {
+    public List<ConversationDTO> listConversations() {
         return conversationService.listConversations();
     }
 
     @PostMapping
-    public ResponseEntity<Conversation> createConversation(
+    public ResponseEntity<ConversationDTO> createConversation(
             @RequestParam(required = false) String title) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(conversationService.createConversation(title));
     }
 
     @GetMapping("/{conversationId}/messages")
-    public List<ChatMessage> listMessages(@PathVariable String conversationId) {
+    public List<ChatMessageDTO> listMessages(@PathVariable String conversationId) {
         return conversationService.listMessages(conversationId);
     }
 
     @PostMapping("/{conversationId}/messages")
-    public ResponseEntity<ChatMessage> addMessage(@PathVariable String conversationId,
-                                                  @RequestBody ChatMessage message) {
-        ChatMessage saved = conversationService.addMessage(conversationId, message);
+    public ResponseEntity<ChatMessageDTO> addMessage(@PathVariable String conversationId,
+                                                     @RequestBody ChatMessageDTO message) {
+        ChatMessageDTO saved = conversationService.addMessage(conversationId, message);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 }

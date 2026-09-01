@@ -36,6 +36,7 @@ Rules for all code in this repository. These enforce quality, maintainability, a
 
 - **Packages**: `com.rag.[module].[layer]`
 - **Classes**: PascalCase (e.g., `DocumentIngestionService`)
+- **Bean suffixes**: JPA `@Entity` classes end with `Entity` (e.g., `ConversationEntity`); OpenAPI contract DTOs end with `DTO` or a transfer suffix `Request`/`Response`/`Result` (e.g., `ConversationDTO`, `PageDTO`); pure domain beans (non-entity, non-DTO) keep plain names (e.g., `Chunk`, `Document`). This prevents same-name collisions between layers (enforced by `rag-memory` `ArchitectureTest` and `rag-contract` `DtoNamingTest`).
 - **Methods**: camelCase (e.g., `ingestDocument()`)
 - **Constants**: UPPER_SNAKE_CASE (e.g., `MAX_CHUNK_SIZE`)
 - **Test Classes**: `[ClassName]Test` (e.g., `DocumentIngestionServiceTest`)
@@ -77,3 +78,6 @@ Always run architecture tests after significant changes:
 - Keep classes and methods focused and small
 - Document architecture decisions and patterns in docs/
 - Ensure scalability and maintainability
+- Prefer modern Java (records, compact constructors) over manual boilerplate constructors; avoid verbose getters/setters
+- Use `var` for local variables when the type is obvious from the initializer
+- After any code modification, run the tests and SonarQube and fix all findings before committing (see `docs/process/asdlc.md`)

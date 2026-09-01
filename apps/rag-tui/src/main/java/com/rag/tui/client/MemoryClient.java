@@ -1,7 +1,7 @@
 package com.rag.tui.client;
 
-import com.rag.contract.model.Conversation;
-import com.rag.contract.model.ChatMessage;
+import com.rag.contract.model.ConversationDTO;
+import com.rag.contract.model.ChatMessageDTO;
 import org.springframework.web.client.RestClient;
 
 import java.util.List;
@@ -17,19 +17,19 @@ public class MemoryClient {
         this.restClient = restClient;
     }
 
-    public List<Conversation> conversations() {
-        Conversation[] conversations = restClient.get()
+    public List<ConversationDTO> conversations() {
+        ConversationDTO[] conversations = restClient.get()
                 .uri("/api/conversations")
                 .retrieve()
-                .body(Conversation[].class);
+                .body(ConversationDTO[].class);
         return conversations == null ? List.of() : List.of(conversations);
     }
 
-    public List<ChatMessage> messages(String conversationId) {
-        ChatMessage[] messages = restClient.get()
+    public List<ChatMessageDTO> messages(String conversationId) {
+        ChatMessageDTO[] messages = restClient.get()
                 .uri("/api/conversations/{id}/messages", conversationId)
                 .retrieve()
-                .body(ChatMessage[].class);
+                .body(ChatMessageDTO[].class);
         return messages == null ? List.of() : List.of(messages);
     }
 }

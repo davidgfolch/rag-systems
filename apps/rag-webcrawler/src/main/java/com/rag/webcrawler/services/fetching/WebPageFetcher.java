@@ -1,11 +1,11 @@
 package com.rag.webcrawler.services.fetching;
 
-import com.rag.contract.model.Page;
+import com.rag.contract.model.PageDTO;
 
 /**
  * Strategy interface for fetching a web page and extracting its plain text.
  */
 public interface WebPageFetcher {
 
-    Page fetch(String url);
+    PageDTO fetch(String url);
 }

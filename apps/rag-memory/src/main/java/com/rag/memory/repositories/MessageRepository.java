@@ -1,11 +1,11 @@
 package com.rag.memory.repositories;
 
-import com.rag.memory.domain.ChatMessage;
+import com.rag.memory.domain.ChatMessageEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 
-public interface MessageRepository extends JpaRepository<ChatMessage, String> {
+public interface MessageRepository extends JpaRepository<ChatMessageEntity, String> {
 
-    List<ChatMessage> findByConversationIdOrderByCreatedAtAsc(String conversationId);
+    List<ChatMessageEntity> findByConversationIdOrderByCreatedAtAsc(String conversationId);
 }

@@ -8,7 +8,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.rag.contract.model.Page;
+import com.rag.contract.model.PageDTO;
 
 /**
  * {@link WebPageFetcher} implementation backed by jsoup. Accepts a
@@ -27,13 +27,13 @@ public class JsoupWebPageFetcher implements WebPageFetcher {
     }
 
     @Override
-    public Page fetch(String url) {
+    public PageDTO fetch(String url) {
         try {
             Connection conn = connection != null ? connection : Jsoup.connect(url);
             Document doc = conn.get();
             List<String> links = new ArrayList<>();
             doc.select("a[href]").forEach(a -> links.add(a.absUrl("href")));
-            return new Page(url, doc.title(), doc.text()).links(links);
+            return new PageDTO(url, doc.title(), doc.text()).links(links);
         } catch (IOException e) {
             throw new WebFetchException("Failed to fetch URL: " + url, e);
         }

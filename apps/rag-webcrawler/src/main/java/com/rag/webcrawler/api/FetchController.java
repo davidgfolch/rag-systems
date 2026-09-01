@@ -2,7 +2,7 @@ package com.rag.webcrawler.api;
 
 import com.rag.contract.model.FetchLinksRequest;
 import com.rag.contract.model.FetchRequest;
-import com.rag.contract.model.Page;
+import com.rag.contract.model.PageDTO;
 import com.rag.webcrawler.services.WebCrawlService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,13 +24,13 @@ public class FetchController {
     }
 
     @PostMapping
-    public ResponseEntity<Page> fetch(@RequestBody FetchRequest request) {
+    public ResponseEntity<PageDTO> fetch(@RequestBody FetchRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(webCrawlService.fetch(request.getUrl().toString()));
     }
 
     @PostMapping("/links")
-    public ResponseEntity<List<Page>> fetchLinks(@RequestBody FetchLinksRequest request) {
-        List<Page> pages = webCrawlService.fetchRelevantLinks(
+    public ResponseEntity<List<PageDTO>> fetchLinks(@RequestBody FetchLinksRequest request) {
+        List<PageDTO> pages = webCrawlService.fetchRelevantLinks(
                 request.getUrl().toString(), request.getQuestion(), 5);
         return ResponseEntity.status(HttpStatus.CREATED).body(pages);
     }

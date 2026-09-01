@@ -1,6 +1,6 @@
 package com.rag.webcrawler.services.fetching;
 
-import com.rag.contract.model.Page;
+import com.rag.contract.model.PageDTO;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.junit.jupiter.api.Test;
@@ -23,7 +23,7 @@ class JsoupWebPageFetcherTest {
 
         JsoupWebPageFetcher sut = new JsoupWebPageFetcher(connection);
 
-        Page page = sut.fetch("https://example.com/spring");
+        PageDTO page = sut.fetch("https://example.com/spring");
 
         assertThat(page.getUrl()).isEqualTo("https://example.com/spring");
         assertThat(page.getTitle()).isEqualTo("Spring");

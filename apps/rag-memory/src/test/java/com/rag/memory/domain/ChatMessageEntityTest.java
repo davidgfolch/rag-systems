@@ -6,11 +6,11 @@ import java.time.OffsetDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class ChatMessageTest {
+class ChatMessageEntityTest {
 
     @Test
     void exposesFields() {
-        ChatMessage message = new ChatMessage(
+        ChatMessageEntity message = new ChatMessageEntity(
                 "m1", "c1", "user", "hello", OffsetDateTime.parse("2026-01-01T10:00:00+01:00"));
 
         assertThat(message.getId()).isEqualTo("m1");

@@ -1,6 +1,6 @@
 package com.rag.tui.ui;
 
-import com.rag.contract.model.Conversation;
+import com.rag.contract.model.ConversationDTO;
 import com.rag.contract.model.IngestResponse;
 import com.rag.tui.client.ChatGateway;
 import com.rag.tui.client.MemoryClient;
@@ -131,10 +131,10 @@ public class CommandDispatcher {
     }
 
     private CommandResult history() {
-        List<Conversation> conversations = memoryClient.conversations();
+        List<ConversationDTO> conversations = memoryClient.conversations();
         if (conversations.isEmpty()) return new CommandResult("No conversations yet.", false);
         StringBuilder sb = new StringBuilder("Conversations:\n");
-        for (Conversation conversation : conversations) {
+        for (ConversationDTO conversation : conversations) {
             int count = memoryClient.messages(conversation.getId()).size();
             sb.append(" - ").append(conversation.getId())
                     .append(" (").append(conversation.getTitle() == null ? "" : conversation.getTitle())

@@ -5,7 +5,7 @@ import com.rag.common.services.IngestionService;
 import com.rag.contract.model.IngestRequest;
 import com.rag.contract.model.IngestResponse;
 import com.rag.contract.model.IngestUrlRequest;
-import com.rag.contract.model.Page;
+import com.rag.contract.model.PageDTO;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -48,7 +48,7 @@ class IngestionControllerTest {
 
     @Test
     void ingestsUrlViaWebCrawler() {
-        Page page = new Page().url("https://example.com").title("Example").text("page text");
+        PageDTO page = new PageDTO().url("https://example.com").title("Example").text("page text");
         when(webCrawlerClient.fetch("https://example.com")).thenReturn(page);
         when(service.ingest(any())).thenReturn(new IngestionService.IngestionResult("d2", 3));
 

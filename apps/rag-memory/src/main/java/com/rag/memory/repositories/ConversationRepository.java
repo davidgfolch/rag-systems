@@ -1,11 +1,11 @@
 package com.rag.memory.repositories;
 
-import com.rag.memory.domain.Conversation;
+import com.rag.memory.domain.ConversationEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 
-public interface ConversationRepository extends JpaRepository<Conversation, String> {
+public interface ConversationRepository extends JpaRepository<ConversationEntity, String> {
 
-    List<Conversation> findAllByOrderByCreatedAtDesc();
+    List<ConversationEntity> findAllByOrderByCreatedAtDesc();
 }

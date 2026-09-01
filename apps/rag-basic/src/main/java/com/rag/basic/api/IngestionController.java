@@ -5,7 +5,7 @@ import com.rag.common.services.IngestionService;
 import com.rag.contract.model.IngestRequest;
 import com.rag.contract.model.IngestResponse;
 import com.rag.contract.model.IngestUrlRequest;
-import com.rag.contract.model.Page;
+import com.rag.contract.model.PageDTO;
 import com.rag.basic.services.WebCrawlerClient;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -46,7 +46,7 @@ public class IngestionController {
         if (request.getUrl().toString().isBlank()) {
             return ResponseEntity.badRequest().build();
         }
-        Page page = webCrawlerClient.fetch(request.getUrl().toString());
+        PageDTO page = webCrawlerClient.fetch(request.getUrl().toString());
         var document = new Document(UUID.randomUUID().toString(), page.getText(),
                 Map.of("sourceType", "web", "source", page.getUrl()));
         return created(ingestionService.ingest(document));

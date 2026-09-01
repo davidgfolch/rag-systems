@@ -1,7 +1,7 @@
 package com.rag.tui.client;
 
-import com.rag.contract.model.Conversation;
-import com.rag.contract.model.ChatMessage;
+import com.rag.contract.model.ConversationDTO;
+import com.rag.contract.model.ChatMessageDTO;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
@@ -31,7 +31,7 @@ class MemoryClientTest {
                 .andRespond(withSuccess("[{\"id\":\"c1\",\"title\":\"t1\"}]",
                         MediaType.APPLICATION_JSON));
 
-        List<Conversation> conversations = sut.conversations();
+        List<ConversationDTO> conversations = sut.conversations();
 
         assertThat(conversations).hasSize(1);
         assertThat(conversations.get(0).getId()).isEqualTo("c1");
@@ -55,7 +55,7 @@ class MemoryClientTest {
                         "[{\"id\":\"m1\",\"content\":\"hi\",\"role\":\"user\",\"conversationId\":\"c1\"}]",
                         MediaType.APPLICATION_JSON));
 
-        List<ChatMessage> messages = sut.messages("c1");
+        List<ChatMessageDTO> messages = sut.messages("c1");
 
         assertThat(messages).hasSize(1);
         assertThat(messages.get(0).getContent()).isEqualTo("hi");

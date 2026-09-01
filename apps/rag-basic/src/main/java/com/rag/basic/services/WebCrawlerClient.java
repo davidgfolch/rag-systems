@@ -1,7 +1,7 @@
 package com.rag.basic.services;
 
 import com.rag.contract.model.FetchRequest;
-import com.rag.contract.model.Page;
+import com.rag.contract.model.PageDTO;
 import org.springframework.web.client.RestClient;
 
 import java.net.URI;
@@ -18,12 +18,12 @@ public class WebCrawlerClient {
         this.restClient = restClient;
     }
 
-    public Page fetch(String url) {
+    public PageDTO fetch(String url) {
         FetchRequest request = new FetchRequest(URI.create(url));
         return restClient.post()
                 .uri("/api/fetch")
                 .body(request)
                 .retrieve()
-                .body(Page.class);
+                .body(PageDTO.class);
     }
 }

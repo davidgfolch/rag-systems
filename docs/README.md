@@ -9,6 +9,7 @@ All project documentation lives here. The main [README](../README.md) covers pre
 | [Architecture](architecture/) | Layered architecture, module roles, design decisions |
 | [Guides](guides/) | Step-by-step setup and usage guides |
 | [Comparison](comparison/) | Performance metrics, benchmarks, trade-off analysis |
+| [Process](process/) | Development process and conventions (ASDLC) |
 | [Master Plan](PLAN.md) | Full architecture plan, phases, and success criteria |
 
 ## Guides

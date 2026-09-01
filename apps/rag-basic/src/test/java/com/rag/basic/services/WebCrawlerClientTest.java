@@ -1,6 +1,6 @@
 package com.rag.basic.services;
 
-import com.rag.contract.model.Page;
+import com.rag.contract.model.PageDTO;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
@@ -29,7 +29,7 @@ class WebCrawlerClientTest {
                         {"url":"https://example.com","title":"Example","text":"page text"}
                         """, MediaType.APPLICATION_JSON));
 
-        Page page = sut.fetch("https://example.com");
+        PageDTO page = sut.fetch("https://example.com");
 
         assertThat(page.getUrl()).isEqualTo("https://example.com");
         assertThat(page.getTitle()).isEqualTo("Example");

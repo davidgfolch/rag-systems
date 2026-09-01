@@ -9,7 +9,7 @@ import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "conversations", schema = "rag_memory")
-public class Conversation {
+public class ConversationEntity {
 
     @Id
     private String id;
@@ -19,10 +19,10 @@ public class Conversation {
     @Column(name = "created_at")
     private OffsetDateTime createdAt;
 
-    protected Conversation() {
+    protected ConversationEntity() {
     }
 
-    public Conversation(String id, String title, OffsetDateTime createdAt) {
+    public ConversationEntity(String id, String title, OffsetDateTime createdAt) {
         this.id = id;
         this.title = title;
         this.createdAt = createdAt;
