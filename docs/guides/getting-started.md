@@ -125,6 +125,19 @@ Start the local SonarQube server and analyze the whole monorepo (bugs, code smel
 
 A token is only needed the first time (generate one at http://localhost:9000 → **My Account → Security**, default login `admin`/`admin`). Results are at http://localhost:9000 under project `com.rag:rag-systems`. See the [SonarQube guide](../guides/sonarqube.md).
 
+## Scripts Reference
+
+All operations are centralized in `scripts/` with Windows (`.bat`) and Linux/Mac (`.sh`) variants:
+
+| Script | Purpose | Examples |
+|--------|---------|----------|
+| `install` | Install dependencies | `.\scripts\install.bat` |
+| `build` | Build modules | `.\scripts\build.bat`, `.\scripts\build.bat rag-basic` |
+| `test` | Run tests | `.\scripts\test.bat --coverage`, `.\scripts\test.bat rag-basic` |
+| `run` | Run a module | `.\scripts\run.bat rag-basic --profile local`, `.\scripts\run.bat rag-tui --profile local` |
+| `docker` | Docker operations | `.\scripts\docker.bat up`, `.\scripts\docker.bat up-obs`, `.\scripts\docker.bat up-sonar` |
+| `sonar` | SonarQube analysis | `.\scripts\sonar.bat up-scan %SONAR_TOKEN%` |
+
 ## Configuration Profiles
 
 | Profile | Description |

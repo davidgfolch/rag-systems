@@ -99,6 +99,20 @@ Query → QueryEmbedding → Retriever → ContextAssembly → LLM → Answer
 OpenTelemetry spans + Micrometer metrics + Structured logs
 ```
 
+## Project Structure
+
+```
+apps/
+├── rag-common/       # Shared library: domain, services, repositories
+├── rag-basic/        # Basic RAG: fixed chunking, similarity search
+├── rag-advanced/     # Advanced RAG: reranking, hybrid search, metadata
+├── rag-agentic/      # Agentic RAG: tool calling, multi-step retrieval
+├── rag-evaluation/   # Metrics, benchmarking, comparison
+├── rag-observability/# Tracing, metrics, dashboards
+├── rag-cli/          # Interactive CLI for testing queries
+└── rag-tui/          # Terminal UI to add documents/webpages and chat
+```
+
 ## Module Roles
 
 | Module | Responsibility |
@@ -110,6 +124,17 @@ OpenTelemetry spans + Micrometer metrics + Structured logs
 | rag-evaluation | Metrics (precision, recall, MRR), benchmarking, comparison |
 | rag-observability | Tracing, metrics, structured logging, dashboards |
 | rag-cli | Interactive command-line testing of RAG queries |
+| rag-tui | Terminal UI for interactive file/URL ingestion and chat |
+
+## Module Comparison
+
+| Module | Chunking | Retrieval | Extras |
+|--------|----------|-----------|--------|
+| rag-basic | Fixed, recursive, token | Vector similarity | Simple, baseline |
+| rag-advanced | + Semantic | + Hybrid, reranking | Metadata filtering, query transform |
+| rag-agentic | Agentic | Tool calling, multi-step | Self-reflection |
+| rag-evaluation | - | - | Metrics, benchmarking, comparison |
+| rag-tui | Recursive, Tika | Vector similarity | Interactive add-file / add-url + chat |
 
 ## Local Machine Feasibility
 

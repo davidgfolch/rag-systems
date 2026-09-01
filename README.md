@@ -5,180 +5,84 @@
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.5-6DB33F?logo=spring)](https://spring.io/projects/spring-boot)
 [![Maven](https://img.shields.io/badge/Maven-3.9-C71A36?logo=apache-maven)](https://maven.apache.org/)
 
-| Module | Status |
-|--------|--------|
-| common | [![rag-common](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml/badge.svg?job=tests-%28rag-common%29)](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml) |
-| basic | [![rag-basic](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml/badge.svg?job=tests-%28rag-basic%29)](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml) |
-| advanced | [![rag-advanced](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml/badge.svg?job=tests-%28rag-advanced%29)](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml) |
-| agentic | [![rag-agentic](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml/badge.svg?job=tests-%28rag-agentic%29)](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml) |
-| evaluation | [![rag-evaluation](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml/badge.svg?job=tests-%28rag-evaluation%29)](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml) |
-| observability | [![rag-observability](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml/badge.svg?job=tests-%28rag-observability%29)](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml) |
-| cli | [![rag-cli](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml/badge.svg?job=tests-%28rag-cli%29)](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml) |
-| tui | [![rag-tui](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml/badge.svg?job=tests-%28rag-tui%29)](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml) |
-| architecture | [![architecture](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml/badge.svg?job=architecture-tests)](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml) |
+A monorepo for learning and comparing different RAG (Retrieval-Augmented Generation) implementations using Java Spring Boot and Spring AI. Each module is a decoupled bounded context with interchangeable chunking, embedding, and retrieval strategies — designed to be reusable across knowledge domains and to run comfortably on a regular local machine.
 
-A monorepo for learning and comparing different RAG (Retrieval-Augmented Generation) implementations using the latest Java Spring ecosystem. Supports document ingestion (PDF, docs, web-sites) about any kind of knowledge - designed to be reusable and easily run on a regular local machine.
+Modules range from basic vector similarity search to advanced hybrid retrieval with reranking, agentic tool-calling pipelines, and a terminal UI for interactive ingestion and Q&A. Full observability (tracing, metrics, dashboards) and benchmarking are built in for quantitative comparison.
 
-> Each module above has a dedicated CI job. A green badge means its tests pass with ≥ 85% coverage.
+## Prerequisites
+
+- **Java 21** (LTS)
+- **Maven 3.9+**
+- **Docker** (for PostgreSQL/PgVector)
+- **Ollama** (optional, for local models)
+
+## Installation
+
+```bash
+# Pull local models (essential)
+ollama pull nomic-embed-text    # embeddings
+ollama pull phi4                # small CPU-friendly LLM
+
+# Install project dependencies (Windows)
+.\scripts\install.bat
+
+# Linux/Mac
+./scripts/install.sh
+
+# Start PostgreSQL (Windows)
+.\scripts\docker.bat up
+
+# Linux/Mac
+./scripts/docker.sh up
+```
+
+## Build
+
+```bash
+# Build all modules (Windows)
+.\scripts\build.bat
+
+# Build a specific module
+.\scripts\build.bat rag-tui
+```
 
 ## Quick Start
 
-```bash
-# 1. Install dependencies (Windows)
-.\scripts\install.bat
-
-# 2. Start infrastructure (PostgreSQL + observability)
-.\scripts\docker.bat up
-
-# 3. Run a module
-.\scripts\run.bat rag-basic
-```
-
-See [Getting Started](docs/guides/getting-started.md) for the full guide.
-
-## Project Structure
-
-```
-apps/
-├── rag-common/       # Shared library: domain, services, repositories
-├── rag-basic/        # Basic RAG: fixed chunking, similarity search
-├── rag-advanced/     # Advanced RAG: reranking, hybrid search, metadata
-├── rag-agentic/      # Agentic RAG: tool calling, multi-step retrieval
-├── rag-evaluation/   # Metrics, benchmarking, comparison
-├── rag-observability/# Tracing, metrics, dashboards
-├── rag-cli/          # Interactive CLI for testing queries
-└── rag-tui/          # Terminal UI to add documents/webpages and chat
-```
-
-## Architecture Principles
-
-The project follows TDD, DDD, SOLID, KISS, DRY, YAGNI, Composition over Inheritance, and Reactive/Parallel processing (when applicable). See [PLAN.md](docs/PLAN.md) for the full architecture plan and [.claude/rules/architecture-guidelines.md](.claude/rules/architecture-guidelines.md) for agentic SDLC rules.
-
-## Performance on a Local Machine
-
-This project is designed to run **comfortably on a regular local machine**. RAG separates into layers with very different hardware demands, and the heavy compute is composable and optional. Full details in [docs/comparison/performance-metrics.md](docs/comparison/performance-metrics.md).
-
-### Hardware Requirements
-
-| Configuration | RAM | GPU | Typical Use |
-|---------------|-----|-----|-------------|
-| **Minimum** | 16GB | None | Embeddings + vector store + small LLM (3B-4B). Working but LLM is slow. |
-| **Recommended** | 16GB | 8GB VRAM | Everything + Qwen3 8B for comfortable LLM generation |
-| **Enthusiast** | 32GB+ | 16GB+ VRAM | Larger models, faster bulk indexing, agentic RAG |
-
-### Layer Performance Breakdown (CPU)
-
-| Layer | Model | Memory | Speed | Notes |
-|-------|-------|--------|-------|-------|
-| Embeddings | `nomic-embed-text` | ~300MB | ~580 chunks/sec | Great default, runs on CPU |
-| Embeddings | `all-MiniLM-L6-v2` | ~90MB | ~100+ chunks/sec | Smallest, fastest |
-| Vector Store | PgVector | - | Fast | Same machine PostgreSQL |
-| Vector Store | SimpleVectorStore | - | Fastest | In-memory, small corpora |
-| LLM | Qwen3 4B / Phi-4 | ~4GB | Usable | CPU-friendly |
-| LLM | Qwen3 8B (Q4) | 4-8GB VRAM | Fast | Needs GPU |
-
-### Key Takeaways
-
-- **No GPU needed for retrieval** - Embeddings and vector search run great on CPU
-- **GPU accelerates bulk indexing** - 5,000 pages in ~9 min CPU vs ~1 min GPU
-- **LLM generation is the bottleneck on CPU** - use small models (3B-4B) or a GPU
-- **Provider abstraction is essential** - swap OpenAI ↔ Ollama ↔ HuggingFace via config, not code
-
-### Local Model Setup (Ollama)
+The fastest way to try the system is with the **TUI** (Terminal UI) — it lets you add local files or web pages as sources and then ask grounded questions against them.
 
 ```bash
-ollama pull nomic-embed-text     # embeddings
-ollama pull phi4                 # small CPU-friendly LLM
-ollama pull qwen3:4b             # medium CPU-friendly LLM
-ollama pull qwen3:8b             # GPU-friendly LLM (8GB VRAM+)
-```
-
-Run with the local profile:
-
-```bash
-.\scripts\run.bat rag-basic --profile local
-```
-
-## Scripts (Centralized Operations)
-
-All operations are centralized in `scripts/` with Windows (`.bat`) and Linux/Mac (`.sh`) variants:
-
-| Script | Purpose | Examples |
-|--------|---------|----------|
-| `install` | Install dependencies | `.\scripts\install.bat` |
-| `test` | Run tests | `.\scripts\test.bat --coverage`, `.\scripts\test.bat rag-basic` |
-| `build` | Build modules | `.\scripts\build.bat`, `.\scripts\build.bat rag-basic` |
-| `run` | Run a module | `.\scripts\run.bat rag-basic --profile local`, `.\scripts\run.bat rag-tui --profile local` |
-| `docker` | Docker operations | `.\scripts\docker.bat up`, `.\scripts\docker.bat up-obs`, `.\scripts\docker.bat up-sonar` |
-| `sonar` | SonarQube static analysis | `.\scripts\sonar.bat up`, `.\scripts\sonar.bat scan <token>` |
-
-## RAG Modules
-
-Each module is a **decoupled bounded context** implementing a different RAG architecture with Strategy patterns for chunking, embedding, and retrieval. This lets you compare approaches quantitatively.
-
-| Module | Chunking | Retrieval | Extras |
-|--------|----------|-----------|--------|
-| rag-basic | Fixed, recursive, token | Vector similarity | Simple, baseline |
-| rag-advanced | + Semantic | + Hybrid, reranking | Metadata filtering, query transform |
-| rag-agentic | Agentic | Tool calling, multi-step | Self-reflection |
-| rag-evaluation | - | - | Metrics, benchmarking, comparison |
-| rag-tui | Recursive, Tika | Vector similarity | Interactive add-file / add-url + chat |
-
-## Observability
-
-Every module emits tracing, metrics, and structured logs through the `rag-observability` module:
-
-- **Tracing**: OpenTelemetry spans through the full query pipeline
-- **Metrics**: Ingestion, retrieval, generation, and quality metrics with cost tracking
-- **Dashboards**: Grafana (pipeline overview, retrieval performance, cost & usage)
-
-See [docs/guides/observability.md](docs/guides/observability.md).
-
-## SonarQube Static Analysis
-
-The monorepo runs local **SonarQube Community 10.7 LTS** for bugs, vulnerabilities, code smells, and coverage enforcement via the "Clean as You Code" quality gate (new-code coverage ≥ 80%).
-
-```bash
-# Windows
-.\scripts\sonar.bat up-scan %SONAR_TOKEN%   # start server, wait, then analyze
+# Start the TUI with local models (Windows)
+.\scripts\run.bat rag-tui --profile local
 
 # Linux/Mac
-./scripts/sonar.sh up-scan $SONAR_TOKEN
+./scripts/run.sh rag-tui --profile local
 ```
 
-A token is only needed the first time (generate one in the SonarQube UI: **My Account → Security**). Results appear at `http://localhost:9000` under project `com.rag:rag-systems`. See [docs/guides/sonarqube.md](docs/guides/sonarqube.md).
+Once started, use these commands interactively:
 
-### Latest Results
+```
+add-file /path/to/document.pdf    # ingest a local file
+add-url https://example.com       # ingest a web page
+ask What is this document about?  # ask a question against ingested content
+exit                              # quit
+```
 
-<!-- SONARQUBE_RESULTS_START -->
-No scan results yet. Run `.\scripts\sonar.bat scan <token>` to generate and this section will update automatically.
-<!-- SONARQUBE_RESULTS_END -->
+The pipeline: files and URLs are parsed, split into chunks, embedded, and stored in a vector store. Questions retrieve the most relevant chunks and generate a grounded answer via the configured LLM.
 
-The scanner exports the quality gate and key metrics to this section after every successful scan.
+See the [TUI Guide](docs/guides/tui-ingestion.md) for details on extending sources and how the architecture works.
 
-## Documentation
+## More Documentation
 
-| Document | Purpose |
-|----------|---------|
-| [PLAN.md](docs/PLAN.md) | Master architecture plan |
-| [Getting Started](docs/guides/getting-started.md) | Setup and run guide |
-| [Chunking Strategies](docs/guides/chunking-strategies.md) | Chunking approach comparison |
-| [Vector Stores](docs/guides/vector-stores.md) | Vector store options |
-| [Observability](docs/guides/observability.md) | Observability setup and dashboards |
-| [TUI Ingestion](docs/guides/tui-ingestion.md) | Ingesting files/webpages and chatting via the terminal |
-| [SonarQube](docs/guides/sonarqube.md) | Static analysis setup and quality gate |
-| [CI Workflow](docs/guides/ci-workflow.md) | GitHub Actions CI and badge setup |
-| [Performance Metrics](docs/comparison/performance-metrics.md) | Quantitative comparison |
-| [Trade-offs](docs/comparison/trade-offs.md) | Architecture trade-off analysis |
-
-## Agentic SDLC
-
-This repository is configured for agentic AI-assisted development compatible with both Claude and OpenCode:
-
-- **Rules**: [.claude/rules/architecture-guidelines.md](.claude/rules/architecture-guidelines.md)
-- **Skills**: [.claude/skills/](.claude/skills/) (test-implementer, rag-architecture-tester, documentation-generator, sonarqube-analyzer, rag-tui)
-- **Config**: [.claude/CLAUDE.md](.claude/CLAUDE.md), [.opencode/opencode.json](.opencode/opencode.json)
+| Topic | Link |
+|-------|------|
+| Architecture Overview | [docs/architecture/](docs/architecture/) |
+| Master Plan | [docs/PLAN.md](docs/PLAN.md) |
+| All Guides | [docs/guides/](docs/guides/) |
+| Performance & Benchmarks | [docs/comparison/](docs/comparison/) |
+| Observability (tracing, metrics, dashboards) | [docs/guides/observability.md](docs/guides/observability.md) |
+| SonarQube Static Analysis | [docs/guides/sonarqube.md](docs/guides/sonarqube.md) |
+| Agentic SDLC (rules, skills, config) | [.claude/](.claude/) |
 
 ## License
 
-Learning project - no license restrictions on reuse.
+Learning project — no license restrictions on reuse.
