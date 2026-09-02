@@ -19,6 +19,8 @@ import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
 /**
@@ -43,8 +45,17 @@ public class RagTuiConfig {
 
     @Bean
     public ModuleLifecycleManager moduleLifecycleManager(
-            @Value("${rag.tui.project-dir:${user.dir}}") String projectDir) {
-        return new ModuleLifecycleManager(projectDir);
+            @Value("${rag.tui.project-dir:}") String projectDir) {
+        return new ModuleLifecycleManager(projectDir.isBlank() ? repoRoot() : projectDir);
+    }
+
+    private String repoRoot() {
+        String script = System.getProperty("os.name", "").toLowerCase().contains("win") ? "run.bat" : "run.sh";
+        Path dir = Path.of(System.getProperty("user.dir"));
+        while (dir != null && !Files.isRegularFile(dir.resolve("scripts").resolve(script))) {
+            dir = dir.getParent();
+        }
+        return dir == null ? System.getProperty("user.dir") : dir.toString();
     }
 
     @Bean

@@ -50,8 +50,8 @@ The vector store defaults to in-memory (no Postgres needed) and can be switched 
 PgVector with `rag.vector-store.type=pgvector`.
 
 ```bash
-.\scripts\run.bat rag-tui --profile local
-VECTOR_STORE_TYPE=pgvector .\scripts\run.bat rag-tui --profile local
+.\scripts\run.bat --profile local
+VECTOR_STORE_TYPE=pgvector .\scripts\run.bat --profile local
 ```
 
 ## Testing

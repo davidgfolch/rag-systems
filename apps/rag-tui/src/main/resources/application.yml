@@ -5,6 +5,9 @@ spring:
   application:
     name: rag-tui
 
+server:
+  port: ${SERVER_PORT:8086}
+
 rag:
   vector-store:
     type: ${VECTOR_STORE_TYPE:in-memory}

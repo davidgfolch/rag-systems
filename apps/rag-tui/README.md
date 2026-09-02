@@ -38,11 +38,11 @@ The TUI uses the provider abstraction: run with the `local` profile (Ollama) or 
 ## Running
 
 ```bash
-# Windows
-.\scripts\run.bat rag-tui --profile local
+# Windows (rag-tui is the default run target)
+.\scripts\run.bat --profile local
 
 # Linux/Mac
-./scripts/run.sh rag-tui --profile local
+./scripts/run.sh --profile local
 ```
 
 Example session:

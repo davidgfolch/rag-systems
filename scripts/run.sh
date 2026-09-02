@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # ===== RAG Systems Run Script (Linux/Mac) =====
-# Usage: ./run.sh <module> [--profile <name>] [--args <spring args>]
-#   ./run.sh rag-basic                 - Run with default (local) profile
-#   ./run.sh rag-basic --profile cloud - Run with cloud profile
-#   ./run.sh rag-basic --profile local,observability
+# Usage: ./run.sh [<module>] [--profile <name>] [--args <spring args>]
+#   ./run.sh                           - Run the TUI (default) with local profile
+#   ./run.sh --profile cloud           - Run the TUI with cloud profile
+#   ./run.sh rag-basic --profile cloud - Run another module
 
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -22,9 +22,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [ -z "$MODULE" ]; then
-    echo "Error: module argument required."
-    echo "Usage: ./run.sh <module> [--profile <name>]"
-    exit 1
+    MODULE="rag-tui"
 fi
 
 echo "Running $MODULE with profile: $PROFILES"

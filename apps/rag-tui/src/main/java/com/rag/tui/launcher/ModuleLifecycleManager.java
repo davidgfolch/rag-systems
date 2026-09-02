@@ -1,6 +1,7 @@
 package com.rag.tui.launcher;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -10,17 +11,23 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ModuleLifecycleManager {
 
+    private final Path projectDir;
     private final ProcessStarter starter;
     private final Map<String, Process> running = new ConcurrentHashMap<>();
 
     public ModuleLifecycleManager(String projectDir) {
-        this(command -> new ProcessBuilder(command)
+        this(Path.of(projectDir), command -> new ProcessBuilder(command)
                 .directory(new java.io.File(projectDir))
                 .redirectErrorStream(true)
                 .start());
     }
 
     ModuleLifecycleManager(ProcessStarter starter) {
+        this(null, starter);
+    }
+
+    private ModuleLifecycleManager(Path projectDir, ProcessStarter starter) {
+        this.projectDir = projectDir;
         this.starter = starter;
     }
 
@@ -47,8 +54,9 @@ public class ModuleLifecycleManager {
     }
 
     private String script() {
-        return System.getProperty("os.name", "").toLowerCase().contains("win")
-                ? "scripts\\run.bat" : "scripts/run.sh";
+        String name = System.getProperty("os.name", "").toLowerCase().contains("win") ? "run.bat" : "run.sh";
+        Path base = projectDir != null ? projectDir : Path.of("");
+        return base.resolve("scripts").resolve(name).toString();
     }
 
     @FunctionalInterface

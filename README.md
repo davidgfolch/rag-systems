@@ -51,11 +51,11 @@ ollama pull phi4                # small CPU-friendly LLM
 The fastest way to try the system is with the **TUI** (Terminal UI) — it lets you add local files or web pages as sources and then ask grounded questions against them.
 
 ```bash
-# Start the TUI with local models (Windows)
-.\scripts\run.bat rag-tui --profile local
+# Start the TUI with local models (Windows; rag-tui is the default)
+.\scripts\run.bat --profile local
 
 # Linux/Mac
-./scripts/run.sh rag-tui --profile local
+./scripts/run.sh --profile local
 ```
 
 Once started, use these commands interactively:
@@ -84,7 +84,7 @@ The monorepo is organized around a **thin TUI + switchable RAG modules**. Each `
 | **rag-agentic** *(planned)* | Agentic RAG (tool calling) | schema `rag_agentic` | `RAG_AGENTIC_URL` |
 | **rag-memory** | Conversation history (non-vector) | schema `rag_memory` | `RAG_MEMORY_URL` |
 | **rag-webcrawler** | Intelligent web fetching tool | - | `RAG_WEBCRAWLER_URL` |
-| **rag-tui** | Thin interface + control plane | - | - |
+| **rag-tui** | Thin interface + control plane | - | `RAG_TUI_URL` |
 
 **Data isolation:** each rag-* implementation stores vectors in its own PostgreSQL schema (`rag_basic`, `rag_advanced`, ...) in a single `chunks` table with a `document_id` column - no cross-module contamination. Conversation state lives separately in `rag_memory`.
 
