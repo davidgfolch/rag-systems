@@ -8,6 +8,10 @@ spring:
     url: jdbc:postgresql://${PGVECTOR_HOST:localhost}:${PGVECTOR_PORT:5432}/${PGVECTOR_DB:rag}
     username: ${PGVECTOR_USER:rag}
     password: ${PGVECTOR_PASSWORD:rag}
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
   webcrawler:
     url: ${RAG_WEBCRAWLER_URL:http://localhost:8085}
 

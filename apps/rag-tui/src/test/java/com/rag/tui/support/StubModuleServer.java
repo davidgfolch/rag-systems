@@ -17,6 +17,7 @@ public final class StubModuleServer {
 
     private final HttpServer server;
     private final AtomicReference<byte[]> lastIngestBody = new AtomicReference<>();
+    private final AtomicReference<String> lastIngestContentType = new AtomicReference<>();
 
     public StubModuleServer() throws IOException {
         server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
@@ -25,6 +26,11 @@ public final class StubModuleServer {
         });
         server.createContext("/api/documents/ingest", exchange -> {
             lastIngestBody.set(exchange.getRequestBody().readAllBytes());
+            respond(exchange, 200, "{\"documentId\":\"i-1\",\"chunkCount\":2}");
+        });
+        server.createContext("/api/documents/ingest-file", exchange -> {
+            lastIngestBody.set(exchange.getRequestBody().readAllBytes());
+            lastIngestContentType.set(exchange.getRequestHeaders().getFirst("Content-Type"));
             respond(exchange, 200, "{\"documentId\":\"i-1\",\"chunkCount\":2}");
         });
         server.createContext("/api/conversations", exchange -> {
@@ -44,6 +50,10 @@ public final class StubModuleServer {
 
     public byte[] lastIngestBody() {
         return lastIngestBody.get();
+    }
+
+    public String lastIngestContentType() {
+        return lastIngestContentType.get();
     }
 
     public void stop() {

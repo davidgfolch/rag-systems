@@ -9,6 +9,7 @@ import com.rag.contract.model.PageDTO;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockMultipartFile;
 
 import java.net.URI;
 import java.util.Base64;
@@ -59,6 +60,31 @@ class IngestionControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody().getDocumentId()).isEqualTo("d1");
         assertThat(response.getBody().getChunkCount()).isEqualTo(7);
+    }
+
+    @Test
+    void ingestsMultipartFile() throws Exception {
+        when(service.ingest(any())).thenReturn(new IngestionService.IngestionResult("d1", 7));
+        MockMultipartFile file = new MockMultipartFile("file", "doc.pdf", "application/pdf",
+                new byte[]{0x25, 0x50, 0x44, 0x46});
+
+        ResponseEntity<IngestResponse> response =
+                controller.ingestFile(file, Map.of("source", "x.pdf"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody().getDocumentId()).isEqualTo("d1");
+        assertThat(response.getBody().getChunkCount()).isEqualTo(7);
+    }
+
+    @Test
+    void rejectsEmptyMultipartFile() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("file", "empty.pdf", "application/pdf", new byte[0]);
+
+        ResponseEntity<IngestResponse> response =
+                controller.ingestFile(file, Map.of());
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        verify(service, never()).ingest(any());
     }
 
     @Test

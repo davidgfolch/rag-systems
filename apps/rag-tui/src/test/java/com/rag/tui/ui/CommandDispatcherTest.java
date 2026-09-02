@@ -116,9 +116,10 @@ class CommandDispatcherTest {
 
     @Test
     void ingestsFileViaActiveModule() {
+        byte[] bytes = new byte[]{1, 2, 3};
         when(fileLoader.load("note.txt"))
-                .thenReturn(new FileDocumentLoader.LoadedFile("text", java.util.Map.of()));
-        when(apiClient.ingest("text", java.util.Map.of()))
+                .thenReturn(new FileDocumentLoader.LoadedFile(bytes, java.util.Map.of("fileName", "note.txt")));
+        when(apiClient.ingestFile(bytes, "note.txt", java.util.Map.of("fileName", "note.txt")))
                 .thenReturn(new IngestResponse().documentId("d1").chunkCount(3));
 
         CommandResult result = handle("add-file note.txt");
@@ -189,9 +190,10 @@ class CommandDispatcherTest {
 
     @Test
     void reportsUnreachableModuleInsteadOfCrashing() {
+        byte[] bytes = new byte[]{1, 2, 3};
         when(fileLoader.load("note.txt"))
-                .thenReturn(new FileDocumentLoader.LoadedFile("text", java.util.Map.of()));
-        when(apiClient.ingest(eq("text"), any()))
+                .thenReturn(new FileDocumentLoader.LoadedFile(bytes, java.util.Map.of("fileName", "note.txt")));
+        when(apiClient.ingestFile(eq(bytes), eq("note.txt"), any()))
                 .thenThrow(new RestClientException("Connection refused"));
 
         CommandResult result = handle("add-file note.txt");

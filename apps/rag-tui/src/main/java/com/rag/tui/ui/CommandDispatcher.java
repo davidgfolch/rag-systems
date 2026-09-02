@@ -122,7 +122,8 @@ public class CommandDispatcher {
     private CommandResult addFile(String path) {
         if (path.isEmpty()) return new CommandResult("Usage: add-file <path>", false);
         FileDocumentLoader.LoadedFile file = clients.fileLoader().load(path);
-        IngestResponse response = clients.apiClient().ingest(file.content(), file.metadata());
+        IngestResponse response = clients.apiClient().ingestFile(file.bytes(),
+                file.metadata().get("fileName").toString(), file.metadata());
         return new CommandResult("Ingested %s -> document %s, %d chunks"
                 .formatted(path, response.getDocumentId(), response.getChunkCount()), false);
     }

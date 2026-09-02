@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
@@ -39,6 +40,22 @@ class RagApiClientTest {
 
         assertThat(response.getDocumentId()).isEqualTo("d1");
         assertThat(response.getChunkCount()).isEqualTo(2);
+        server.verify();
+    }
+
+    @Test
+    void ingestsFileViaMultipart() {
+        byte[] bytes = new byte[]{1, 2, 3};
+        server.expect(requestTo("http://localhost:8081/api/documents/ingest-file"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.MULTIPART_FORM_DATA))
+                .andRespond(withSuccess("{\"documentId\":\"d1\",\"chunkCount\":5}",
+                        MediaType.APPLICATION_JSON));
+
+        IngestResponse response = sut.ingestFile(bytes, "doc.pdf", Map.of("sourceType", "file"));
+
+        assertThat(response.getDocumentId()).isEqualTo("d1");
+        assertThat(response.getChunkCount()).isEqualTo(5);
         server.verify();
     }
 

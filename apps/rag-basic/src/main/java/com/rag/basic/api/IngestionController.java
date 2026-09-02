@@ -8,17 +8,22 @@ import com.rag.contract.model.IngestUrlRequest;
 import com.rag.contract.model.PageDTO;
 import com.rag.basic.services.WebCrawlerClient;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
 /**
- * REST endpoints for ingesting documents (raw content or via rag-webcrawler).
+ * REST endpoints for ingesting documents (raw content, multipart file or via rag-webcrawler).
  */
 @RestController
 @RequestMapping("/api/documents")
@@ -38,6 +43,24 @@ public class IngestionController {
             return ResponseEntity.badRequest().build();
         }
         var document = new Document(UUID.randomUUID().toString(), request.getContent(), request.getMetadata());
+        return created(ingestionService.ingest(document));
+    }
+
+    @PostMapping(value = "/ingest-file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<IngestResponse> ingestFile(
+            @RequestPart("file") MultipartFile file,
+            @RequestPart(value = "fileInfo", required = false) Map<String, Object> fileInfo) throws IOException {
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+        Map<String, Object> metadata = new HashMap<>();
+        if (fileInfo != null) {
+            metadata.putAll(fileInfo);
+        }
+        metadata.putIfAbsent("sourceType", "file");
+        metadata.putIfAbsent("fileName", file.getOriginalFilename());
+        metadata.put("rawBytes", file.getBytes());
+        var document = new Document(UUID.randomUUID().toString(), "", metadata);
         return created(ingestionService.ingest(document));
     }
 

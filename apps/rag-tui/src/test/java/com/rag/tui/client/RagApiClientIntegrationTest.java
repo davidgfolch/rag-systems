@@ -12,7 +12,6 @@ import org.springframework.web.client.RestClientException;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
@@ -43,16 +42,17 @@ class RagApiClientIntegrationTest {
     }
 
     @Test
-    void ingestsRawMetadataAndBase64BytesOverHttp() {
-        String encoded = Base64.getEncoder().encodeToString(new byte[]{1, 2, 3, 0, -1});
+    void ingestsFileBytesOverMultipartHttp() {
+        byte[] bytes = new byte[]{1, 2, 3, 0, -1};
 
-        IngestResponse response = sut.ingest("", Map.of(
-                "sourceType", "file", "source", "x.pdf", "fileName", "x.pdf", "raw", encoded));
+        IngestResponse response = sut.ingestFile(bytes, "x.pdf",
+                Map.of("sourceType", "file", "source", "x.pdf", "fileName", "x.pdf"));
 
         assertThat(response.getDocumentId()).isEqualTo("i-1");
         assertThat(response.getChunkCount()).isEqualTo(2);
+        assertThat(stub.lastIngestContentType()).startsWith("multipart/form-data");
         String body = new String(stub.lastIngestBody(), StandardCharsets.UTF_8);
-        assertThat(body).contains(encoded).contains("x.pdf");
+        assertThat(body).contains("x.pdf");
     }
 
     @Test

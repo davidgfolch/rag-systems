@@ -6,6 +6,12 @@ import com.rag.contract.model.IngestUrlRequest;
 import com.rag.contract.model.QueryRequest;
 import com.rag.contract.model.QueryResponse;
 import com.rag.tui.launcher.ModuleRegistry;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 
 import java.net.URI;
@@ -31,6 +37,23 @@ public class RagApiClient {
             request.metadata(metadata);
         }
         return post("/api/documents/ingest", request, IngestResponse.class);
+    }
+
+    public IngestResponse ingestFile(byte[] bytes, String fileName, Map<String, Object> metadata) {
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("file", new ByteArrayResource(bytes) {
+            @Override
+            public String getFilename() {
+                return fileName;
+            }
+        });
+        HttpHeaders jsonHeaders = new HttpHeaders();
+        jsonHeaders.setContentType(MediaType.APPLICATION_JSON);
+        body.add("fileInfo", new HttpEntity<>(metadata, jsonHeaders));
+        return client()
+                .post().uri("/api/documents/ingest-file")
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(body).retrieve().body(IngestResponse.class);
     }
 
     public IngestResponse ingestUrl(String url) {

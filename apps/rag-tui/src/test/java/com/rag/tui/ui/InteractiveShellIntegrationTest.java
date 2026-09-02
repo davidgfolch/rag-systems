@@ -67,7 +67,8 @@ class InteractiveShellIntegrationTest {
         new InteractiveShell(dispatcher, new StringReader("add-file " + pdf + "\nquit\n"), out).run();
 
         assertThat(out.toString()).contains("document i-1", "2 chunks", "Bye.");
-        assertThat(new String(stub.lastIngestBody(), StandardCharsets.UTF_8)).contains("raw");
+        assertThat(new String(stub.lastIngestBody(), StandardCharsets.UTF_8)).contains(pdf.getFileName().toString());
+        assertThat(stub.lastIngestContentType()).startsWith("multipart/form-data");
     }
 
     @Test

@@ -19,7 +19,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Base64;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -61,7 +60,7 @@ class CommandDispatcherIntegrationTest {
     }
 
     @Test
-    void ingestsBinaryFileOverHttpWithBase64RawMetadata() throws IOException {
+    void ingestsBinaryFileOverHttpViaMultipart() throws IOException {
         Path pdf = Files.createTempFile("doc", ".pdf");
         byte[] bytes = "%PDF-1.4 fake binary content \u0000\u0001\u0002".getBytes(StandardCharsets.UTF_8);
         Files.write(pdf, bytes);
@@ -69,8 +68,9 @@ class CommandDispatcherIntegrationTest {
         CommandResult result = sut.handle("add-file " + pdf, token -> {});
 
         assertThat(result.message()).contains("i-1", "2 chunks");
+        assertThat(stub.lastIngestContentType()).startsWith("multipart/form-data");
         String body = new String(stub.lastIngestBody(), StandardCharsets.UTF_8);
-        assertThat(body).contains("raw", Base64.getEncoder().encodeToString(bytes), pdf.getFileName().toString());
+        assertThat(body).contains(pdf.getFileName().toString());
     }
 
     @Test

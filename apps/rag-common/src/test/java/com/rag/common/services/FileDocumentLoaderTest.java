@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Base64;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -16,16 +15,16 @@ class FileDocumentLoaderTest {
     private final FileDocumentLoader sut = new FileDocumentLoader();
 
     @Test
-    void loadsBytesAsBase64WithMetadata(@TempDir Path dir) throws IOException {
+    void loadsRawBytesWithMetadata(@TempDir Path dir) throws IOException {
         byte[] bytes = "hello rag".getBytes(StandardCharsets.UTF_8);
         Path file = dir.resolve("note.txt");
         Files.write(file, bytes);
 
         FileDocumentLoader.LoadedFile loaded = sut.load(file.toString());
 
+        assertThat(loaded.bytes()).isEqualTo(bytes);
         assertThat(loaded.metadata()).containsEntry("sourceType", "file");
         assertThat(loaded.metadata()).containsEntry("fileName", "note.txt");
-        assertThat(loaded.metadata()).containsEntry("raw", Base64.getEncoder().encodeToString(bytes));
     }
 
     @Test
@@ -36,8 +35,7 @@ class FileDocumentLoaderTest {
 
         FileDocumentLoader.LoadedFile loaded = sut.load(file.toString());
 
-        byte[] decoded = Base64.getDecoder().decode((String) loaded.metadata().get("raw"));
-        assertThat(decoded).isEqualTo(bytes);
+        assertThat(loaded.bytes()).isEqualTo(bytes);
     }
 
     @Test
