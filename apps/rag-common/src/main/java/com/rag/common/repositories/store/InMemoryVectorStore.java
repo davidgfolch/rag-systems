@@ -66,8 +66,7 @@ public class InMemoryVectorStore implements VectorStore {
         int n = Math.min(a.size(), b.size());
         double dot = 0;
         double normA = 0;
-        double normB = 0;
-        for (int i = 0; i < n; i++) {
+        double normB = 0;        for (int i = 0; i < n; i++) {
             double av = a.get(i);
             double bv = b.get(i);
             dot += av * bv;

@@ -4,6 +4,10 @@ spring:
     active: local
   application:
     name: rag-basic
+  datasource:
+    url: jdbc:postgresql://${PGVECTOR_HOST:localhost}:${PGVECTOR_PORT:5432}/${PGVECTOR_DB:rag}
+    username: ${PGVECTOR_USER:rag}
+    password: ${PGVECTOR_PASSWORD:rag}
   webcrawler:
     url: ${RAG_WEBCRAWLER_URL:http://localhost:8085}
 

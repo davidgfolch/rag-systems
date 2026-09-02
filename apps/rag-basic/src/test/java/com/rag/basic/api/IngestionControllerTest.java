@@ -11,6 +11,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.net.URI;
+import java.util.Base64;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -41,6 +43,28 @@ class IngestionControllerTest {
     void rejectsBlankContent() {
         ResponseEntity<IngestResponse> response =
                 controller.ingest(new IngestRequest().content("   "));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        verify(service, never()).ingest(any());
+    }
+
+    @Test
+    void ingestsBinaryContentViaRawMetadata() {
+        when(service.ingest(any())).thenReturn(new IngestionService.IngestionResult("d1", 7));
+
+        ResponseEntity<IngestResponse> response =
+                controller.ingest(new IngestRequest().content("")
+                        .metadata(Map.of("raw", Base64.getEncoder().encodeToString(new byte[]{0x25, 0x50, 0x44, 0x46}))));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(response.getBody().getDocumentId()).isEqualTo("d1");
+        assertThat(response.getBody().getChunkCount()).isEqualTo(7);
+    }
+
+    @Test
+    void rejectsEmptyContentWithoutRawMetadata() {
+        ResponseEntity<IngestResponse> response =
+                controller.ingest(new IngestRequest().content(""));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         verify(service, never()).ingest(any());

@@ -80,4 +80,21 @@ class InteractiveShellTest {
                 .isInstanceOf(InteractiveShell.ShellException.class)
                 .hasMessageContaining("Terminal I/O error");
     }
+
+    @Test
+    void survivesCommandFailuresAndKeepsLooping() {
+        when(dispatcher.handle(eq("add-file x"), any()))
+                .thenThrow(new RuntimeException("Module unreachable: Connection refused"));
+        when(dispatcher.handle(eq("quit"), any()))
+                .thenReturn(new CommandResult("bye", true));
+
+        StringWriter out = new StringWriter();
+        InteractiveShell sut =
+                new InteractiveShell(dispatcher, new StringReader("add-file x\nquit\n"), out);
+
+        sut.run();
+
+        assertThat(out.toString()).contains("Error: Module unreachable");
+        assertThat(out.toString()).contains("bye");
+    }
 }

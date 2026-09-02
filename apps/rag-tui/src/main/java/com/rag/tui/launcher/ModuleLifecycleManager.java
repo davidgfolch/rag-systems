@@ -19,6 +19,7 @@ public class ModuleLifecycleManager {
         this(Path.of(projectDir), command -> new ProcessBuilder(command)
                 .directory(new java.io.File(projectDir))
                 .redirectErrorStream(true)
+                .redirectOutput(ProcessBuilder.Redirect.INHERIT)
                 .start());
     }
 

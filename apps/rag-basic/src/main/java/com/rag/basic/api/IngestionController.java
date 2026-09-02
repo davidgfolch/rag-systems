@@ -34,11 +34,15 @@ public class IngestionController {
 
     @PostMapping("/ingest")
     public ResponseEntity<IngestResponse> ingest(@RequestBody IngestRequest request) {
-        if (request.getContent().isBlank()) {
+        if (request.getContent().isBlank() && !hasRawBytes(request)) {
             return ResponseEntity.badRequest().build();
         }
         var document = new Document(UUID.randomUUID().toString(), request.getContent(), request.getMetadata());
         return created(ingestionService.ingest(document));
+    }
+
+    private boolean hasRawBytes(IngestRequest request) {
+        return request.getMetadata() != null && request.getMetadata().get("raw") != null;
     }
 
     @PostMapping("/ingest-url")

@@ -1,25 +1,27 @@
-package com.rag.tui.services;
+package com.rag.common.services;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Base64;
 import java.util.Map;
 
 /**
- * Loads a local file's raw text (no parsing/RAG logic) for sending to the
- * active rag-module, which is the one owning document processing.
+ * Loads a local file's raw bytes, base64-encoded, for sending to the active
+ * rag-module where {@link DocumentParser} (e.g. Tika) performs the extraction.
+ * Binary formats (PDF, DOCX, XLSX) are carried intact rather than decoded as text.
  */
 public class FileDocumentLoader {
 
     public LoadedFile load(String path) {
         try {
             Path p = Path.of(path);
-            String content = Files.readString(p);
-            Map<String, Object> metadata = Map.of(
+            byte[] bytes = Files.readAllBytes(p);
+            return new LoadedFile("", Map.of(
                     "sourceType", "file",
                     "source", path,
-                    "fileName", p.getFileName().toString());
-            return new LoadedFile(content, metadata);
+                    "fileName", p.getFileName().toString(),
+                    "raw", Base64.getEncoder().encodeToString(bytes)));
         } catch (IOException e) {
             throw new DocumentLoadException("Failed to read file: " + path, e);
         }

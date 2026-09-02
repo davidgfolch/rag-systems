@@ -19,11 +19,18 @@ import com.rag.common.services.chunking.TokenChunker;
 import com.rag.common.services.parsing.PlainTextParser;
 import com.rag.common.services.parsing.TikaDocumentParser;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.ollama.OllamaChatModel;
+import org.springframework.ai.ollama.OllamaEmbeddingModel;
+import org.springframework.ai.openai.OpenAiChatModel;
+import org.springframework.ai.openai.OpenAiEmbeddingModel;
 import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.context.annotation.Profile;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.client.RestClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -49,13 +56,40 @@ public class RagBasicConfig {
     }
 
     @Bean
-    public DocumentParser documentParser(@Value("${rag.parsing.mode:plain}") String mode) {
+    public DocumentParser documentParser(@Value("${rag.parsing.mode:tika}") String mode) {
         return "tika".equalsIgnoreCase(mode) ? new TikaDocumentParser() : new PlainTextParser();
     }
 
     @Bean
-    public EmbeddingModel embeddingModel(org.springframework.ai.embedding.EmbeddingModel delegate) {
-        return new SpringAiEmbeddingModel(delegate);
+    @Profile("local")
+    public org.springframework.ai.embedding.EmbeddingModel localSpringAiEmbeddingModel(
+            @Value("${spring.ai.ollama.base-url:http://localhost:11434}") String baseUrl,
+            @Value("${spring.ai.ollama.embedding.options.model:nomic-embed-text}") String model) {
+        var api = org.springframework.ai.ollama.api.OllamaApi.builder().baseUrl(baseUrl).build();
+        var options = org.springframework.ai.ollama.api.OllamaEmbeddingOptions.builder().model(model).build();
+        return OllamaEmbeddingModel.builder().ollamaApi(api).defaultOptions(options).build();
+    }
+
+    @Bean
+    @Profile("cloud")
+    public org.springframework.ai.embedding.EmbeddingModel cloudSpringAiEmbeddingModel(
+            @Value("${spring.ai.openai.api-key:}") String apiKey,
+            @Value("${spring.ai.openai.embedding.options.model:text-embedding-3-small}") String model) {
+        var api = org.springframework.ai.openai.api.OpenAiApi.builder().apiKey(apiKey).build();
+        var options = org.springframework.ai.openai.OpenAiEmbeddingOptions.builder().model(model).build();
+        return new OpenAiEmbeddingModel(api, org.springframework.ai.document.MetadataMode.EMBED, options);
+    }
+
+    @Bean
+    public EmbeddingModel embeddingModel(org.springframework.ai.embedding.EmbeddingModel springAiEmbeddingModel) {
+        return new SpringAiEmbeddingModel(springAiEmbeddingModel);
+    }
+
+    @Bean
+    @Lazy
+    public PgVectorStore pgVectorStore(JdbcTemplate jdbcTemplate,
+                                       org.springframework.ai.embedding.EmbeddingModel springAiEmbeddingModel) {
+        return PgVectorStore.builder(jdbcTemplate, springAiEmbeddingModel).build();
     }
 
     @Bean
@@ -63,14 +97,11 @@ public class RagBasicConfig {
     public VectorStore vectorStore(
             @Value("${rag.vector-store.type:pgvector}") String type,
             EmbeddingModel embeddingModel,
-            org.springframework.ai.vectorstore.VectorStore springAiStore) {
+            ObjectProvider<PgVectorStore> pgVectorStore) {
         if ("simple".equalsIgnoreCase(type)) {
             return new InMemoryVectorStore(embeddingModel);
         }
-        if (springAiStore instanceof PgVectorStore) {
-            return new PgVectorStoreAdapter(springAiStore);
-        }
-        throw new IllegalStateException("Unsupported vector store type: " + type);
+        return new PgVectorStoreAdapter(pgVectorStore.getObject());
     }
 
     @Bean
@@ -82,6 +113,26 @@ public class RagBasicConfig {
     @Bean
     public RetrievalService retrievalService(VectorStore vectorStore) {
         return new RetrievalService(vectorStore);
+    }
+
+    @Bean
+    @Profile("local")
+    public org.springframework.ai.chat.model.ChatModel providerChatModel(
+            @Value("${spring.ai.ollama.base-url:http://localhost:11434}") String baseUrl,
+            @Value("${spring.ai.ollama.chat.options.model:qwen3:4b}") String model) {
+        var api = org.springframework.ai.ollama.api.OllamaApi.builder().baseUrl(baseUrl).build();
+        var options = org.springframework.ai.ollama.api.OllamaChatOptions.builder().model(model).build();
+        return OllamaChatModel.builder().ollamaApi(api).defaultOptions(options).build();
+    }
+
+    @Bean
+    @Profile("cloud")
+    public org.springframework.ai.chat.model.ChatModel cloudProviderChatModel(
+            @Value("${spring.ai.openai.api-key:}") String apiKey,
+            @Value("${spring.ai.openai.chat.options.model:gpt-4o}") String model) {
+        var api = org.springframework.ai.openai.api.OpenAiApi.builder().apiKey(apiKey).build();
+        var options = org.springframework.ai.openai.OpenAiChatOptions.builder().model(model).build();
+        return OpenAiChatModel.builder().openAiApi(api).defaultOptions(options).build();
     }
 
     @Bean

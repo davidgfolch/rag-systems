@@ -121,4 +121,43 @@ class ArchitectureTest {
                     .collect(Collectors.toSet());
         }
     }
+
+    @Test
+    void everyRunnableModuleHasApplicationContextTest() throws IOException {
+        List<String> missing = new ArrayList<>();
+        Path apps = repoRoot().resolve("apps");
+        if (!Files.isDirectory(apps)) {
+            return;
+        }
+        try (Stream<Path> modules = Files.list(apps)) {
+            var moduleEntries = modules.filter(Files::isDirectory).toList();
+            for (Path module : moduleEntries) {
+                List<Path> appFiles = findFile(module.resolve("src").resolve("main"),
+                        name -> name.endsWith("Application.java"));
+                for (Path app : appFiles) {
+                    String appName = app.getFileName().toString().replace(".java", "");
+                    String expectedTest = appName.replace("Application", "ApplicationContextTest") + ".java";
+                    if (findFile(module.resolve("src").resolve("test"), name -> name.equals(expectedTest)).isEmpty()) {
+                        missing.add(appName + " -> " + expectedTest);
+                    }
+                }
+            }
+        }
+        assertTrue(missing.isEmpty(),
+                "every runnable module must boot via a @SpringBootTest context test "
+                        + "(<Module>ApplicationContextTest) to prove wiring loads offline: " + missing);
+    }
+
+    private static List<Path> findFile(Path base, java.util.function.Predicate<String> matcher) throws IOException {
+        List<Path> matches = new ArrayList<>();
+        if (base == null || !Files.isDirectory(base)) {
+            return matches;
+        }
+        try (Stream<Path> walk = Files.walk(base)) {
+            walk.filter(Files::isRegularFile)
+                    .filter(p -> matcher.test(p.getFileName().toString()))
+                    .forEach(matches::add);
+        }
+        return matches;
+    }
 }

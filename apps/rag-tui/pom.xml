@@ -18,6 +18,11 @@
     <dependencies>
         <dependency>
             <groupId>com.rag</groupId>
+            <artifactId>rag-common</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.rag</groupId>
             <artifactId>rag-contract</artifactId>
         </dependency>
 

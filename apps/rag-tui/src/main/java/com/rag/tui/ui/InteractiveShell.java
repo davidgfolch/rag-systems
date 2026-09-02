@@ -26,12 +26,21 @@ public class InteractiveShell {
             write("RAG TUI - type 'help' for commands, 'quit' to exit\n");
             String line;
             while ((line = reader.readLine()) != null) {
-                CommandResult result = dispatcher.handle(line, this::writeToken);
-                write(result.message());
-                if (result.exit()) break;
+                if (runCommand(line)) break;
             }
         } catch (IOException e) {
             throw new ShellException("Terminal I/O error", e);
+        }
+    }
+
+    private boolean runCommand(String line) throws IOException {
+        try {
+            CommandResult result = dispatcher.handle(line, this::writeToken);
+            write(result.message());
+            return result.exit();
+        } catch (RuntimeException e) {
+            write("Error: " + e.getMessage());
+            return false;
         }
     }
 

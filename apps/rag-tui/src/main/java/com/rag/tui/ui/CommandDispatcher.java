@@ -4,11 +4,13 @@ import com.rag.contract.model.ConversationDTO;
 import com.rag.contract.model.IngestResponse;
 import com.rag.tui.client.ChatGateway;
 import com.rag.tui.client.MemoryClient;
+import com.rag.tui.client.ModuleHealthClient;
 import com.rag.tui.client.RagApiClient;
 import com.rag.tui.launcher.Module;
 import com.rag.tui.launcher.ModuleLifecycleManager;
 import com.rag.tui.launcher.ModuleRegistry;
-import com.rag.tui.services.FileDocumentLoader;
+import com.rag.common.services.FileDocumentLoader;
+import org.springframework.web.client.RestClientException;
 
 import java.util.List;
 import java.util.function.Consumer;
@@ -35,23 +37,14 @@ public class CommandDispatcher {
 
     private final ModuleRegistry registry;
     private final ModuleLifecycleManager lifecycle;
-    private final RagApiClient apiClient;
-    private final ChatGateway chatGateway;
-    private final MemoryClient memoryClient;
-    private final FileDocumentLoader fileLoader;
-    private final int topK;
+    private final RagClients clients;
+    private final Settings settings;
 
-    public CommandDispatcher(ModuleRegistry registry, ModuleLifecycleManager lifecycle,
-                             RagApiClient apiClient, ChatGateway chatGateway,
-                             MemoryClient memoryClient, FileDocumentLoader fileLoader,
-                             int topK) {
+    public CommandDispatcher(ModuleRegistry registry, ModuleLifecycleManager lifecycle, RagClients clients, Settings settings) {
         this.registry = registry;
         this.lifecycle = lifecycle;
-        this.apiClient = apiClient;
-        this.chatGateway = chatGateway;
-        this.memoryClient = memoryClient;
-        this.fileLoader = fileLoader;
-        this.topK = topK;
+        this.clients = clients;
+        this.settings = settings;
     }
 
     public CommandResult handle(String input, Consumer<String> tokenSink) {
@@ -64,28 +57,35 @@ public class CommandDispatcher {
 
         String[] parts = trimmed.split("\\s+", 2);
         String arg = parts.length > 1 ? parts[1].trim() : "";
-        return switch (parts[0].toLowerCase()) {
-            case "modules" -> modules();
-            case "use" -> use(arg);
-            case "start" -> start(arg);
-            case "stop" -> stop(arg);
-            case "add-file" -> addFile(arg);
-            case "add-url" -> addUrl(arg);
-            case "ask" -> ask(arg, tokenSink);
-            case "history" -> history();
-            default -> new CommandResult("Unknown command. Type 'help' for usage.\n\n" + USAGE, false);
-        };
+        try {
+            return switch (parts[0].toLowerCase()) {
+                case "modules" -> modules();
+                case "use" -> use(arg);
+                case "start" -> start(arg, tokenSink);
+                case "stop" -> stop(arg);
+                case "add-file" -> addFile(arg);
+                case "add-url" -> addUrl(arg);
+                case "ask" -> ask(arg, tokenSink);
+                case "history" -> history();
+                default -> new CommandResult("Unknown command. Type 'help' for usage.\n\n" + USAGE, false);
+            };
+        } catch (RestClientException e) {
+            return new CommandResult("Module unreachable: " + e.getMessage(), false);
+        } catch (ChatGateway.ChatException e) {
+            return new CommandResult("Chat error: " + e.getMessage(), false);
+        } catch (FileDocumentLoader.DocumentLoadException | ModuleLifecycleManager.StartException e) {
+            return new CommandResult(e.getMessage(), false);
+        }
     }
 
     private CommandResult modules() {
         Module active = registry.active();
-        List<Module> modules = registry.modules();
-        StringBuilder sb = new StringBuilder("Modules:\n");
-        for (Module module : modules) {
-            String state = lifecycle.isRunning(module.name()) ? "running" : "stopped";
-            String marker = module.name().equals(active.name()) ? " (active)" : "";
-            sb.append(" - ").append(module.name()).append(state).append(marker).append('\n');
-        }
+        var sb = new StringBuilder("Modules:\n");
+        registry.modules().stream().map(m -> {
+            String state = lifecycle.isRunning(m.name()) ? "running" : "stopped";
+            String marker = m.name().equals(active.name()) ? " (active)" : "";
+            return String.join(" ", m.name(), state, marker, "\n");
+        }).forEach(sb::append);
         return new CommandResult(sb.toString(), false);
     }
 
@@ -96,12 +96,22 @@ public class CommandDispatcher {
                 : new CommandResult("Unknown module: " + name, false);
     }
 
-    private CommandResult start(String name) {
+    private CommandResult start(String name, Consumer<String> tokenSink) {
         return registry.find(name)
                 .map(m -> lifecycle.start(m)
-                        ? new CommandResult("Started " + name, false)
+                        ? waitForReady(m, tokenSink)
                         : new CommandResult("Module already running: " + name, false))
                 .orElse(new CommandResult("Unknown module: " + name, false));
+    }
+
+    private CommandResult waitForReady(Module m, Consumer<String> tokenSink) {
+        tokenSink.accept("Waiting for " + m.name() + " to become ready...\n");
+        boolean ready = clients.healthClient().waitUntilUp(m.baseUrl(), settings.startTimeoutMs(), tokenSink);
+        return ready
+                ? new CommandResult("Started %s (ready)".formatted(m.name()), false)
+                : new CommandResult(("Started %s but not ready after %ds - module is still booting "
+                        + "or unhealthy; check docker/ollama and the module log, then retry.")
+                        .formatted(m.name(), settings.startTimeoutMs() / 1000), false);
     }
 
     private CommandResult stop(String name) {
@@ -111,35 +121,42 @@ public class CommandDispatcher {
 
     private CommandResult addFile(String path) {
         if (path.isEmpty()) return new CommandResult("Usage: add-file <path>", false);
-        FileDocumentLoader.LoadedFile file = fileLoader.load(path);
-        IngestResponse response = apiClient.ingest(file.content(), file.metadata());
+        FileDocumentLoader.LoadedFile file = clients.fileLoader().load(path);
+        IngestResponse response = clients.apiClient().ingest(file.content(), file.metadata());
         return new CommandResult("Ingested %s -> document %s, %d chunks"
                 .formatted(path, response.getDocumentId(), response.getChunkCount()), false);
     }
 
     private CommandResult addUrl(String url) {
         if (url.isEmpty()) return new CommandResult("Usage: add-url <url>", false);
-        IngestResponse response = apiClient.ingestUrl(url);
+        IngestResponse response = clients.apiClient().ingestUrl(url);
         return new CommandResult("Ingested %s -> document %s, %d chunks"
                 .formatted(url, response.getDocumentId(), response.getChunkCount()), false);
     }
 
     private CommandResult ask(String question, Consumer<String> tokenSink) {
         if (question.isEmpty()) return new CommandResult("Usage: ask <question>", false);
-        chatGateway.ask(question, topK, tokenSink);
+        clients.chatGateway().ask(question, settings.topK(), tokenSink);
         return new CommandResult("", false);
     }
 
     private CommandResult history() {
-        List<ConversationDTO> conversations = memoryClient.conversations();
+        List<ConversationDTO> conversations = clients.memoryClient().conversations();
         if (conversations.isEmpty()) return new CommandResult("No conversations yet.", false);
         StringBuilder sb = new StringBuilder("Conversations:\n");
         for (ConversationDTO conversation : conversations) {
-            int count = memoryClient.messages(conversation.getId()).size();
+            int count = clients.memoryClient().messages(conversation.getId()).size();
             sb.append(" - ").append(conversation.getId())
                     .append(" (").append(conversation.getTitle() == null ? "" : conversation.getTitle())
                     .append(", ").append(count).append(" messages)\n");
         }
         return new CommandResult(sb.toString(), false);
+    }
+
+    public record RagClients(RagApiClient apiClient, ChatGateway chatGateway, MemoryClient memoryClient,
+                             FileDocumentLoader fileLoader, ModuleHealthClient healthClient) {
+    }
+
+    public record Settings(long startTimeoutMs, int topK) {
     }
 }

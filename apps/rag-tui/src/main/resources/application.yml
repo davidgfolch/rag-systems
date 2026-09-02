@@ -4,9 +4,8 @@ spring:
     active: local
   application:
     name: rag-tui
-
-server:
-  port: ${SERVER_PORT:8086}
+  main:
+    web-application-type: none
 
 rag:
   vector-store:

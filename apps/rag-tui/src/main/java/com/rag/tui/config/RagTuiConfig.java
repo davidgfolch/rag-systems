@@ -3,11 +3,12 @@ package com.rag.tui.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rag.tui.client.ChatGateway;
 import com.rag.tui.client.MemoryClient;
+import com.rag.tui.client.ModuleHealthClient;
 import com.rag.tui.client.RagApiClient;
 import com.rag.tui.launcher.Module;
 import com.rag.tui.launcher.ModuleLifecycleManager;
 import com.rag.tui.launcher.ModuleRegistry;
-import com.rag.tui.services.FileDocumentLoader;
+import com.rag.common.services.FileDocumentLoader;
 import com.rag.tui.ui.CommandDispatcher;
 import com.rag.tui.ui.InteractiveShell;
 import org.springframework.beans.factory.annotation.Value;
@@ -69,6 +70,11 @@ public class RagTuiConfig {
     }
 
     @Bean
+    public ModuleHealthClient moduleHealthClient() {
+        return new ModuleHealthClient(RestClient.builder());
+    }
+
+    @Bean
     public ChatGateway chatGateway(ModuleRegistry registry, ObjectMapper objectMapper) {
         return new ChatGateway(registry, new StandardWebSocketClient(), objectMapper);
     }
@@ -82,9 +88,12 @@ public class RagTuiConfig {
     public CommandDispatcher commandDispatcher(ModuleRegistry registry, ModuleLifecycleManager lifecycle,
                                                RagApiClient apiClient, ChatGateway chatGateway,
                                                MemoryClient memoryClient, FileDocumentLoader fileLoader,
+                                               ModuleHealthClient healthClient,
+                                               @Value("${rag.tui.start-timeout-ms:120000}") long startTimeoutMs,
                                                @Value("${rag.chat.top-k:4}") int topK) {
-        return new CommandDispatcher(registry, lifecycle, apiClient, chatGateway,
-                memoryClient, fileLoader, topK);
+        var clients = new CommandDispatcher.RagClients(apiClient, chatGateway, memoryClient, fileLoader, healthClient);
+        var settings = new CommandDispatcher.Settings(startTimeoutMs, topK);
+        return new CommandDispatcher(registry, lifecycle, clients, settings);
     }
 
     @Bean

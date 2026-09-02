@@ -20,7 +20,7 @@ class TikaDocumentParserTest {
     @Test
     void extractsTextFromHtml() {
         String html = "<html><body><h1>Title</h1><p>Some <b>content</b> here.</p></body></html>";
-        Document doc = new Document("d1", "", Map.of("raw", html));
+        Document doc = new Document("d1", "", Map.of("raw", base64(html)));
 
         String result = parser.parse(doc);
 
@@ -33,5 +33,9 @@ class TikaDocumentParserTest {
     void throwsWhenRawIsNotString() {
         Document doc = new Document("d1", "", Map.of("raw", 123));
         assertThat(parser.parse(doc)).isEmpty();
+    }
+
+    private static String base64(String value) {
+        return java.util.Base64.getEncoder().encodeToString(value.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 }

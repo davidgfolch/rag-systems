@@ -11,14 +11,14 @@ import org.xml.sax.SAXException;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.regex.Pattern;
 
 /**
  * Tika-based parser for binary formats (PDF, DOCX, XLSX, PPTX, RTF, ...).
  *
  * <p>Uses Apache Tika's automatic content-type detection and extracts textual
- * content from the raw bytes carried in the document metadata.
+ * content from the raw bytes carried in the document metadata as base64.
  */
 public class TikaDocumentParser implements DocumentParser {
 
@@ -36,10 +36,10 @@ public class TikaDocumentParser implements DocumentParser {
             ParseContext parseContext = new ParseContext();
             ToXMLContentHandler handler = new ToXMLContentHandler();
             new AutoDetectParser().parse(
-                    new ByteArrayInputStream(rawContent.getBytes(StandardCharsets.UTF_8)),
+                    new ByteArrayInputStream(Base64.getDecoder().decode(rawContent)),
                     handler, metadata, parseContext);
             return HTML_TAG.matcher(handler.toString()).replaceAll(" ").trim();
-        } catch (TikaException | SAXException | IOException e) {
+        } catch (TikaException | SAXException | IOException | IllegalArgumentException e) {
             throw new IllegalStateException("Failed to parse document " + document.getId(), e);
         }
     }
