@@ -1,7 +1,7 @@
 # rag-basic default configuration (local profile = Ollama)
 spring:
   profiles:
-    active: local
+    active: local,observability
   application:
     name: rag-basic
   datasource:

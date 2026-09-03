@@ -46,6 +46,7 @@
 
         <!-- Observability -->
         <otel.version>1.45.0</otel.version>
+        <logstash-logback.version>8.0</logstash-logback.version>
 
         <!-- Static analysis -->
         <sonar.version>5.5.0.6356</sonar.version>
@@ -91,6 +92,13 @@
                 <version>${otel.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+
+            <!-- Logging -->
+            <dependency>
+                <groupId>net.logstash.logback</groupId>
+                <artifactId>logstash-logback-encoder</artifactId>
+                <version>${logstash-logback.version}</version>
             </dependency>
 
             <!-- Testing -->

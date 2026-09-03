@@ -14,3 +14,13 @@ management:
   otlp:
     tracing:
       endpoint: http://localhost:4318/v1/traces
+
+logging:
+  file:
+    path: ${LOG_DIR:./logs}
+  level:
+    root: INFO
+    com.rag: DEBUG
+    org.springframework.ai: DEBUG
+    org.springframework.web: WARN
+    org.hibernate.SQL: WARN
