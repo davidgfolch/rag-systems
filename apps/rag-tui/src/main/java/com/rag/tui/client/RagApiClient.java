@@ -2,6 +2,8 @@ package com.rag.tui.client;
 
 import com.rag.contract.model.IngestRequest;
 import com.rag.contract.model.IngestResponse;
+import com.rag.contract.model.IngestJobResponse;
+import com.rag.contract.model.IngestStatusDTO;
 import com.rag.contract.model.IngestUrlRequest;
 import com.rag.contract.model.QueryRequest;
 import com.rag.contract.model.QueryResponse;
@@ -54,6 +56,32 @@ public class RagApiClient {
                 .post().uri("/api/documents/ingest-file")
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .body(body).retrieve().body(IngestResponse.class);
+    }
+
+    /**
+     * Submits a file for asynchronous ingestion; returns immediately with a job
+     * id that the caller can poll via {@link #ingestStatus(String)}.
+     */
+    public IngestJobResponse submitIngestFile(byte[] bytes, String fileName, Map<String, Object> metadata) {
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("file", new ByteArrayResource(bytes) {
+            @Override
+            public String getFilename() {
+                return fileName;
+            }
+        });
+        HttpHeaders jsonHeaders = new HttpHeaders();
+        jsonHeaders.setContentType(MediaType.APPLICATION_JSON);
+        body.add("fileInfo", new HttpEntity<>(metadata, jsonHeaders));
+        return client()
+                .post().uri("/api/documents/ingest-file-async")
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(body).retrieve().body(IngestJobResponse.class);
+    }
+
+    public IngestStatusDTO ingestStatus(String documentId) {
+        return client().get().uri("/api/documents/ingest-status/{id}", documentId)
+                .retrieve().body(IngestStatusDTO.class);
     }
 
     public IngestResponse ingestUrl(String url) {

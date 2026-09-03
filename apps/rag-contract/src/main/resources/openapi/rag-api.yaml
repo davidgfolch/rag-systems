@@ -43,6 +43,58 @@ paths:
         '400':
           description: Invalid request (blank content)
 
+  /api/documents/ingest-file-async:
+    post:
+      tags: [documents]
+      operationId: ingestFileAsync
+      summary: >
+        Submit a binary file for asynchronous ingestion. Returns immediately so the
+        client (TUI) is not blocked while the document is parsed, embedded and stored;
+        poll /api/documents/ingest-status/{documentId} for the final result.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                fileInfo:
+                  type: object
+                  additionalProperties: true
+      responses:
+        '202':
+          description: Ingestion submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestJobResponse'
+        '400':
+          description: Invalid request (empty file)
+
+  /api/documents/ingest-status/{documentId}:
+    get:
+      tags: [documents]
+      operationId: ingestStatus
+      summary: Poll the state of an asynchronous ingestion job
+      parameters:
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Job status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestStatusDTO'
+        '404':
+          description: Unknown job
+
   /api/documents/ingest-url:
     post:
       tags: [documents]
@@ -216,6 +268,30 @@ components:
         chunkCount:
           type: integer
           format: int32
+
+    IngestJobResponse:
+      type: object
+      required: [documentId]
+      properties:
+        documentId:
+          type: string
+          description: Async ingestion job/document id to poll for status
+
+    IngestStatusDTO:
+      type: object
+      required: [documentId, state]
+      properties:
+        documentId:
+          type: string
+        state:
+          type: string
+          enum: [PENDING, RUNNING, COMPLETED, FAILED]
+        chunkCount:
+          type: integer
+          format: int32
+        message:
+          type: string
+          description: Failure detail when state is FAILED
 
     IngestUrlRequest:
       type: object

@@ -4,6 +4,8 @@ import com.rag.common.domain.Chunk;
 import com.rag.common.repositories.VectorStore;
 import org.springframework.ai.vectorstore.SearchRequest;
 
+import javax.sql.DataSource;
+import java.sql.Connection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,9 +22,34 @@ import java.util.Map;
 public class PgVectorStoreAdapter implements VectorStore {
 
     private final org.springframework.ai.vectorstore.VectorStore delegate;
+    private final DataSource dataSource;
 
     public PgVectorStoreAdapter(org.springframework.ai.vectorstore.VectorStore delegate) {
         this.delegate = delegate;
+        this.dataSource = null;
+    }
+
+    public PgVectorStoreAdapter(org.springframework.ai.vectorstore.VectorStore delegate, DataSource dataSource) {
+        this.delegate = delegate;
+        this.dataSource = dataSource;
+    }
+
+    @Override
+    public void checkAvailable() {
+        if (dataSource == null) {
+            return;
+        }
+        try (Connection connection = dataSource.getConnection()) {
+            try (var statement = connection.createStatement();
+                 var resultSet = statement.executeQuery("SELECT 1")) {
+                if (!resultSet.next()) {
+                    throw new IllegalStateException("Vector store did not respond to connectivity probe");
+                }
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                    "Vector store not available: " + e.getClass().getSimpleName() + ": " + e.getMessage(), e);
+        }
     }
 
     @Override

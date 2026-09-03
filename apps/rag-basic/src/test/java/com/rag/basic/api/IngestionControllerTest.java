@@ -1,7 +1,9 @@
 package com.rag.basic.api;
 
 import com.rag.basic.services.WebCrawlerClient;
+import com.rag.common.services.AsyncIngestionService;
 import com.rag.common.services.IngestionService;
+import com.rag.contract.model.IngestJobResponse;
 import com.rag.contract.model.IngestRequest;
 import com.rag.contract.model.IngestResponse;
 import com.rag.contract.model.IngestUrlRequest;
@@ -14,8 +16,10 @@ import org.springframework.mock.web.MockMultipartFile;
 import java.net.URI;
 import java.util.Base64;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -117,5 +121,46 @@ class IngestionControllerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         verify(service, never()).ingest(any());
+    }
+
+    @Test
+    void submitsFileAsyncReturningAccepted() throws Exception {
+        when(service.ingest(any())).thenReturn(new IngestionService.IngestionResult("j1", 7));
+        IngestionController asyncController = new IngestionController(service, webCrawlerClient,
+                new AsyncIngestionService(service));
+        MockMultipartFile file = new MockMultipartFile("file", "doc.pdf", "application/pdf",
+                new byte[]{0x25, 0x50, 0x44, 0x46});
+
+        ResponseEntity<IngestJobResponse> response =
+                asyncController.ingestFileAsync(file, Map.of("source", "x.pdf"));
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        assertThat(response.getBody().getDocumentId()).isNotBlank();
+        String documentId = response.getBody().getDocumentId();
+        assertThat(awaitState(asyncController, documentId)).isEqualTo("COMPLETED");
+    }
+
+    @Test
+    void rejectsEmptyFileAsync() throws Exception {
+        IngestionController asyncController = new IngestionController(service, webCrawlerClient,
+                new AsyncIngestionService(service));
+        MockMultipartFile file = new MockMultipartFile("file", "empty.pdf", "application/pdf", new byte[0]);
+
+        ResponseEntity<IngestJobResponse> response =
+                asyncController.ingestFileAsync(file, Map.of());
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        verify(service, never()).ingest(any());
+    }
+
+    private static String awaitState(IngestionController asyncController, String documentId) {
+        await().atMost(5, TimeUnit.SECONDS)
+                .until(() -> isTerminalState(asyncController, documentId));
+        return asyncController.ingestStatus(documentId).getBody().getState().getValue();
+    }
+
+    private static boolean isTerminalState(IngestionController asyncController, String documentId) {
+        String state = asyncController.ingestStatus(documentId).getBody().getState().getValue();
+        return "COMPLETED".equals(state) || "FAILED".equals(state);
     }
 }

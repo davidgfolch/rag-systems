@@ -22,8 +22,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.Mockito.mock;
 
 /**
@@ -66,9 +68,16 @@ class InteractiveShellIntegrationTest {
 
         new InteractiveShell(dispatcher, new StringReader("add-file " + pdf + "\nquit\n"), out).run();
 
-        assertThat(out.toString()).contains("document i-1", "2 chunks", "Bye.");
+        assertThat(out.toString()).contains("document i-1", "Bye.");
+        awaitContains(out, "2 chunks");
+        assertThat(out.toString()).contains("2 chunks");
         assertThat(new String(stub.lastIngestBody(), StandardCharsets.UTF_8)).contains(pdf.getFileName().toString());
         assertThat(stub.lastIngestContentType()).startsWith("multipart/form-data");
+    }
+
+    private static void awaitContains(StringWriter out, String needle) {
+        await().atMost(5, TimeUnit.SECONDS)
+                .until(() -> out.toString().contains(needle));
     }
 
     @Test

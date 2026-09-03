@@ -34,6 +34,18 @@ public interface VectorStore {
     List<Chunk> similaritySearch(String query, int topK);
 
     /**
+     * Probes whether the backing store is reachable so callers can fail fast
+     * (e.g. reject an ingestion up front) instead of only discovering an
+     * unreachable database after spending time parsing and embedding.
+     *
+     * <p>Stores without an external dependency (e.g. in-memory) do nothing.
+     *
+     * @throws IllegalStateException if the underlying store is not reachable
+     */
+    default void checkAvailable() {
+    }
+
+    /**
      * Finds the chunks most similar to the given query, scoped to a single
      * ingested document (for per-document retrieval).
      *

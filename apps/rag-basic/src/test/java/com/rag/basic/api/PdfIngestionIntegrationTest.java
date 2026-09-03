@@ -45,10 +45,12 @@ class PdfIngestionIntegrationTest {
 
     @Test
     void ingestsTextPdfIntoChunksAndRetrievesThem() throws Exception {
-        byte[] pdfBytes = textPdf("Learning Domain-Driven Design\n\n"
-                + "This book explains how to apply domain-driven design to software "
-                + "systems. It covers tactical patterns such as aggregates, value "
-                + "objects, and domain services, alongside strategic design.");
+        byte[] pdfBytes = textPdf("""
+                Learning Domain-Driven Design
+
+                This book explains how to apply domain-driven design to software
+                systems. It covers tactical patterns such as aggregates, value
+                objects, and domain services, alongside strategic design.""");
 
         ResponseEntity<IngestResponse> response = controller.ingestFile(
                 new MockMultipartFile("file", "book.pdf", "application/pdf", pdfBytes),
@@ -56,7 +58,7 @@ class PdfIngestionIntegrationTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody().getDocumentId()).isNotBlank();
-        assertThat(response.getBody().getChunkCount()).isGreaterThan(0);
+        assertThat(response.getBody().getChunkCount()).isPositive();
 
         List<Chunk> hits = retrievalService.retrieve("domain-driven design aggregates", 5);
         assertThat(hits).isNotEmpty();
@@ -74,7 +76,7 @@ class PdfIngestionIntegrationTest {
     }
 
     @Test
-    void rejectsBinaryFileWithNoExtractableText() throws Exception {
+    void rejectsBinaryFileWithNoExtractableText() {
         MockMultipartFile scanned = new MockMultipartFile(
                 "file", "scanned.pdf", "application/pdf", imageOnlyPdf());
 
@@ -135,7 +137,7 @@ class PdfIngestionIntegrationTest {
         public List<Float> embed(String text) {
             return text.chars()
                     .mapToObj(c -> (float) (c % 7))
-                    .collect(java.util.stream.Collectors.toList());
+                    .toList();
         }
     }
 }

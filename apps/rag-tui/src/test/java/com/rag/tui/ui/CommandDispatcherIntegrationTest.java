@@ -20,6 +20,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -64,13 +65,21 @@ class CommandDispatcherIntegrationTest {
         Path pdf = Files.createTempFile("doc", ".pdf");
         byte[] bytes = "%PDF-1.4 fake binary content \u0000\u0001\u0002".getBytes(StandardCharsets.UTF_8);
         Files.write(pdf, bytes);
+        List<String> tokens = new java.util.ArrayList<>();
 
-        CommandResult result = sut.handle("add-file " + pdf, token -> {});
+        CommandResult result = sut.handle("add-file " + pdf, tokens::add);
 
-        assertThat(result.message()).contains("i-1", "2 chunks");
+        assertThat(result.message()).contains("submitted", "i-1");
+        await(tokens, "2 chunks");
+        assertThat(tokens).anyMatch(t -> t.contains("complete") && t.contains("2 chunks"));
         assertThat(stub.lastIngestContentType()).startsWith("multipart/form-data");
         String body = new String(stub.lastIngestBody(), StandardCharsets.UTF_8);
         assertThat(body).contains(pdf.getFileName().toString());
+    }
+
+    private static void await(List<String> tokens, String needle) {
+        org.awaitility.Awaitility.await().atMost(5, TimeUnit.SECONDS)
+                .until(() -> tokens.stream().anyMatch(t -> t.contains(needle)));
     }
 
     @Test

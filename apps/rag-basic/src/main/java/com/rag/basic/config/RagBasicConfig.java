@@ -9,6 +9,7 @@ import com.rag.common.repositories.store.InMemoryVectorStore;
 import com.rag.common.repositories.store.PgVectorStoreAdapter;
 import com.rag.common.services.ChatModel;
 import com.rag.common.services.ChatService;
+import com.rag.common.services.AsyncIngestionService;
 import com.rag.common.services.DocumentParser;
 import com.rag.common.services.EmbeddingModel;
 import com.rag.common.services.IngestionService;
@@ -97,17 +98,23 @@ public class RagBasicConfig {
     public VectorStore vectorStore(
             @Value("${rag.vector-store.type:pgvector}") String type,
             EmbeddingModel embeddingModel,
-            ObjectProvider<PgVectorStore> pgVectorStore) {
+            ObjectProvider<PgVectorStore> pgVectorStore,
+            ObjectProvider<javax.sql.DataSource> dataSource) {
         if ("simple".equalsIgnoreCase(type)) {
             return new InMemoryVectorStore(embeddingModel);
         }
-        return new PgVectorStoreAdapter(pgVectorStore.getObject());
+        return new PgVectorStoreAdapter(pgVectorStore.getObject(), dataSource.getIfAvailable());
     }
 
     @Bean
     public IngestionService ingestionService(DocumentParser parser, TextSplitter splitter,
                                              EmbeddingModel embeddingModel, VectorStore vectorStore) {
         return new IngestionService(parser, splitter, embeddingModel, vectorStore);
+    }
+
+    @Bean
+    public AsyncIngestionService asyncIngestionService(IngestionService ingestionService, VectorStore vectorStore) {
+        return new AsyncIngestionService(ingestionService, vectorStore, null);
     }
 
     @Bean

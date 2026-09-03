@@ -1,6 +1,8 @@
 package com.rag.tui.ui;
 
 import com.rag.contract.model.ConversationDTO;
+import com.rag.contract.model.IngestJobResponse;
+import com.rag.contract.model.IngestStatusDTO;
 import com.rag.contract.model.IngestResponse;
 import com.rag.contract.model.ChatMessageDTO;
 import com.rag.tui.client.ChatGateway;
@@ -16,8 +18,8 @@ import org.springframework.web.client.RestClientException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -115,16 +117,22 @@ class CommandDispatcherTest {
     }
 
     @Test
-    void ingestsFileViaActiveModule() {
+    void ingestsFileViaActiveModuleAsync() {
         byte[] bytes = new byte[]{1, 2, 3};
         when(fileLoader.load("note.txt"))
                 .thenReturn(new FileDocumentLoader.LoadedFile(bytes, java.util.Map.of("fileName", "note.txt")));
-        when(apiClient.ingestFile(bytes, "note.txt", java.util.Map.of("fileName", "note.txt")))
-                .thenReturn(new IngestResponse().documentId("d1").chunkCount(3));
+        IngestJobResponse job = new IngestJobResponse().documentId("d1");
+        when(apiClient.submitIngestFile(bytes, "note.txt", java.util.Map.of("fileName", "note.txt")))
+                .thenReturn(job);
+        when(apiClient.ingestStatus("d1")).thenReturn(new IngestStatusDTO().documentId("d1")
+                .state(IngestStatusDTO.StateEnum.COMPLETED).chunkCount(3));
 
-        CommandResult result = handle("add-file note.txt");
+        List<String> tokens = new ArrayList<>();
+        CommandResult result = sut.handle("add-file note.txt", tokens::add);
 
-        assertThat(result.message()).contains("d1", "3");
+        assertThat(result.message()).contains("submitted", "d1", "keep typing");
+        await(tokens, "complete", 3);
+        assertThat(tokens).anyMatch(t -> t.contains("complete") && t.contains("3 chunks"));
     }
 
     @Test
@@ -193,13 +201,18 @@ class CommandDispatcherTest {
         byte[] bytes = new byte[]{1, 2, 3};
         when(fileLoader.load("note.txt"))
                 .thenReturn(new FileDocumentLoader.LoadedFile(bytes, java.util.Map.of("fileName", "note.txt")));
-        when(apiClient.ingestFile(eq(bytes), eq("note.txt"), any()))
+        when(apiClient.submitIngestFile(eq(bytes), eq("note.txt"), any()))
                 .thenThrow(new RestClientException("Connection refused"));
 
         CommandResult result = handle("add-file note.txt");
 
         assertThat(result.message()).contains("Module unreachable", "Connection refused");
         assertThat(result.exit()).isFalse();
+    }
+
+    private static void await(List<String> tokens, String needle, int timeoutSeconds) {
+        org.awaitility.Awaitility.await().atMost(timeoutSeconds, TimeUnit.SECONDS)
+                .until(() -> tokens.stream().anyMatch(t -> t.contains(needle)));
     }
 
     @Test

@@ -33,6 +33,14 @@ public final class StubModuleServer {
             lastIngestContentType.set(exchange.getRequestHeaders().getFirst("Content-Type"));
             respond(exchange, 200, "{\"documentId\":\"i-1\",\"chunkCount\":2}");
         });
+        server.createContext("/api/documents/ingest-file-async", exchange -> {
+            lastIngestBody.set(exchange.getRequestBody().readAllBytes());
+            lastIngestContentType.set(exchange.getRequestHeaders().getFirst("Content-Type"));
+            respond(exchange, 202, "{\"documentId\":\"i-1\"}");
+        });
+        server.createContext("/api/documents/ingest-status", exchange -> {
+            respond(exchange, 200, "{\"documentId\":\"i-1\",\"state\":\"COMPLETED\",\"chunkCount\":2}");
+        });
         server.createContext("/api/conversations", exchange -> {
             respond(exchange, 200, "[]");
         });

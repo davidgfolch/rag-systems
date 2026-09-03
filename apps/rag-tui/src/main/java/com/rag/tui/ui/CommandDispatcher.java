@@ -1,7 +1,9 @@
 package com.rag.tui.ui;
 
 import com.rag.contract.model.ConversationDTO;
+import com.rag.contract.model.IngestJobResponse;
 import com.rag.contract.model.IngestResponse;
+import com.rag.contract.model.IngestStatusDTO;
 import com.rag.tui.client.ChatGateway;
 import com.rag.tui.client.MemoryClient;
 import com.rag.tui.client.ModuleHealthClient;
@@ -63,7 +65,7 @@ public class CommandDispatcher {
                 case "use" -> use(arg);
                 case "start" -> start(arg, tokenSink);
                 case "stop" -> stop(arg);
-                case "add-file" -> addFile(arg);
+                case "add-file" -> addFile(arg, tokenSink);
                 case "add-url" -> addUrl(arg);
                 case "ask" -> ask(arg, tokenSink);
                 case "history" -> history();
@@ -119,14 +121,49 @@ public class CommandDispatcher {
         return new CommandResult(stopped ? "Stopped " + name : "Module not running: " + name, false);
     }
 
-    private CommandResult addFile(String path) {
+    private CommandResult addFile(String path, Consumer<String> tokenSink) {
         if (path.isEmpty()) return new CommandResult("Usage: add-file <path>", false);
         FileDocumentLoader.LoadedFile file = clients.fileLoader().load(path);
-        IngestResponse response = clients.apiClient().ingestFile(file.bytes(),
-                file.metadata().get("fileName").toString(), file.metadata());
-        return new CommandResult("Ingested %s -> document %s, %d chunks"
-                .formatted(path, response.getDocumentId(), response.getChunkCount()), false);
+        String fileName = file.metadata().get("fileName").toString();
+        IngestJobResponse job = clients.apiClient().submitIngestFile(file.bytes(), fileName, file.metadata());
+        String documentId = job.getDocumentId();
+        String message = ("Ingestion submitted for '%s' -> document %s. You can keep typing; "
+                + "I'll report when it completes.")
+                .formatted(path, documentId);
+        pollIngestUntilDone(documentId, tokenSink);
+        return new CommandResult(message, false);
     }
+
+    private void pollIngestUntilDone(String documentId, Consumer<String> tokenSink) {
+        Thread poller = new Thread(() -> {
+            try {
+                String label = "document " + documentId;
+                while (true) {
+                    Thread.sleep(POLL_MILLIS);
+                    IngestStatusDTO status = clients.apiClient().ingestStatus(documentId);
+                    IngestStatusDTO.StateEnum state = status.getState();
+                    if (IngestStatusDTO.StateEnum.COMPLETED == state) {
+                        tokenSink.accept("Ingestion of " + label + " complete: "
+                                + status.getChunkCount() + " chunks.\n");
+                        return;
+                    }
+                    if (IngestStatusDTO.StateEnum.FAILED == state) {
+                        tokenSink.accept("Ingestion of " + label + " failed: " + status.getMessage() + "\n");
+                        return;
+                    }
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } catch (RuntimeException e) {
+                tokenSink.accept("Ingestion of document " + documentId
+                        + " could not be checked: " + e.getMessage() + "\n");
+            }
+        }, "rag-ingest-poll");
+        poller.setDaemon(true);
+        poller.start();
+    }
+
+    private static final long POLL_MILLIS = 2_000;
 
     private CommandResult addUrl(String url) {
         if (url.isEmpty()) return new CommandResult("Usage: add-url <url>", false);
