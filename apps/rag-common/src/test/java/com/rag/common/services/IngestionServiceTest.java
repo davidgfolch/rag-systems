@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -59,6 +60,27 @@ class IngestionServiceTest {
     void returnsZeroChunksForEmptyDocument() {
         Document doc = new Document("d1", "content", Map.of());
         when(parser.parse(doc)).thenReturn("content");
+        when(splitter.split(doc)).thenReturn(List.of());
+
+        IngestionService.IngestionResult result = service.ingest(doc);
+
+        assertThat(result.chunkCount()).isZero();
+    }
+
+    @Test
+    void rejectsBinaryDocumentThatYieldsNoText() {
+        Document doc = new Document("d1", "", Map.of("rawBytes", new byte[]{0x25, 0x50, 0x44, 0x46}));
+        when(parser.parse(doc)).thenReturn("");
+
+        assertThatThrownBy(() -> service.ingest(doc))
+                .isInstanceOf(IngestionService.EmptyExtractionException.class)
+                .hasMessageContaining("No text could be extracted");
+    }
+
+    @Test
+    void doesNotRejectPlainTextDocumentWithEmptyContent() {
+        Document doc = new Document("d1", "", Map.of());
+        when(parser.parse(doc)).thenReturn("");
         when(splitter.split(doc)).thenReturn(List.of());
 
         IngestionService.IngestionResult result = service.ingest(doc);
