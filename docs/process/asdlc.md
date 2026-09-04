@@ -24,6 +24,14 @@ the commands from inside the clone you are working on. `dev auto-merge` (and
 its alias `dev merge`) deletes its own clone after a successful merge; add
 `-k` to keep it.
 
+Feature clones live outside the project root (as siblings of `rag-systems/`),
+so both opencode and Claude Code need explicit permission to access them.
+This is pre-configured in `.opencode/opencode.json`
+(`external_directory` rule) and `.claude/settings.json`
+(`allowedDirectories`). The pattern `~/projects/**` covers the parent
+directory that holds all clones. Do not remove these rules — without them
+every file operation in a clone triggers a manual permission prompt.
+
 ## Plan Approval
 
 Any new plan (feature, bug fix, or improvement) must be accepted before
@@ -36,7 +44,7 @@ follow every step below without shortcuts:
 3. **Execute all tests** after implementation (see Rule 1 and the Stop-gate
    hooks in `.claude/settings.json` and `.opencode/plugin/sdlc-gate.ts`).
 4. `dev check` (tests + SonarQube) must pass before merging.
-5. `dev push`, then `dev pr`.
+5. `dev commit "message"`, then `dev push`, then `dev pr`.
 6. `dev auto-merge` orchestrates the merge: poll checks, auto-merge green
    PRs, attempt to auto-resolve conflicts, and delete the clone on success.
 

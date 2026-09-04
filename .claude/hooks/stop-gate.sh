@@ -25,7 +25,7 @@ esac
 MODIFIED_SRC="$(git status --porcelain 2>/dev/null | grep -E '\.java$' | sed 's/^...//' || true)"
 
 if [ "$IS_FEATURE" = "1" ] && [ -n "$MODIFIED_SRC" ]; then
-    echo '{"continue":true,"stopReason":"SDLC gate: Java source files were modified on a feature branch. Before finishing, run the full test suite: scripts/test.sh (Unix) or scripts/test.bat (Windows), then `dev check [module]` (tests + SonarQube). Do not open a PR or merge until the tests pass. (Docs/skills/rules/config-only changes skip this gate per asdlc.md Rule 1.)"}'
+    echo '{"continue":true,"stopReason":"SDLC gate: Java source files were modified on a feature branch. Before finishing, run the full test suite: scripts/test.sh (Unix) or scripts/test.bat (Windows), then `dev check [module]` (tests + SonarQube). After tests pass, commit and push: dev commit \"message\" then dev push. Do not open a PR or merge until the tests pass. (Docs/skills/rules/config-only changes skip this gate per asdlc.md Rule 1.)"}'
 else
     echo '{"continue":true}'
 fi
