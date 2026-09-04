@@ -45,6 +45,7 @@ public class IngestionController {
 
     private static final Logger log = LoggerFactory.getLogger(IngestionController.class);
     private static final String SOURCE_TYPE = "sourceType";
+    private static final String TITLE = "title";
 
     private final IngestionService ingestionService;
     private final WebCrawlerClient webCrawlerClient;
@@ -80,7 +81,12 @@ public class IngestionController {
         if (request.getContent().isBlank() && !hasRawBytes(request)) {
             return ResponseEntity.badRequest().build();
         }
-        var document = new Document(UUID.randomUUID().toString(), request.getContent(), request.getMetadata());
+        Map<String, Object> metadata = new HashMap<>();
+        if (request.getMetadata() != null) {
+            metadata.putAll(request.getMetadata());
+        }
+        metadata.putIfAbsent(TITLE, "Untitled document");
+        var document = new Document(UUID.randomUUID().toString(), request.getContent(), metadata);
         return created(ingestionService.ingest(document));
     }
 
@@ -102,6 +108,7 @@ public class IngestionController {
         }
         metadata.putIfAbsent(SOURCE_TYPE, "file");
         metadata.putIfAbsent("fileName", file.getOriginalFilename());
+        metadata.putIfAbsent(TITLE, file.getOriginalFilename());
         metadata.put("rawBytes", bytes);
         var document = new Document(UUID.randomUUID().toString(), "", metadata);
         log.info("Ingest-file '{}' -> document {}: parsing content...", original, document.getId());
@@ -130,6 +137,7 @@ public class IngestionController {
         }
         metadata.putIfAbsent(SOURCE_TYPE, "file");
         metadata.putIfAbsent("fileName", file.getOriginalFilename());
+        metadata.putIfAbsent(TITLE, file.getOriginalFilename());
         metadata.put("rawBytes", bytes);
         var document = new Document(UUID.randomUUID().toString(), "", metadata);
         String documentId = asyncIngestionService.submit(document);
@@ -160,8 +168,10 @@ public class IngestionController {
     }
 
     private DocumentSummaryDTO toDocumentSummary(DocumentSummary summary) {
+        Object title = summary.metadata().get(TITLE);
         return new DocumentSummaryDTO()
                 .documentId(summary.documentId())
+                .title(title != null ? title.toString() : null)
                 .chunkCount(summary.chunkCount())
                 .metadata(summary.metadata());
     }
@@ -173,7 +183,7 @@ public class IngestionController {
         }
         PageDTO page = webCrawlerClient.fetch(request.getUrl().toString());
         var document = new Document(UUID.randomUUID().toString(), page.getText(),
-                Map.of(SOURCE_TYPE, "web", "source", page.getUrl()));
+                Map.of(SOURCE_TYPE, "web", "source", page.getUrl(), TITLE, page.getTitle()));
         return created(ingestionService.ingest(document));
     }
 

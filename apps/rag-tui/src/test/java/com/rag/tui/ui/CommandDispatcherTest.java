@@ -76,14 +76,13 @@ class CommandDispatcherTest {
         when(healthClient.isUp("http://localhost:8081")).thenReturn(true);
         when(healthClient.isUp("http://localhost:8082")).thenReturn(false);
         when(apiClient.listDocuments("http://localhost:8081")).thenReturn(List.of(
-                new DocumentSummaryDTO().documentId("d1").chunkCount(3)
-                        .putMetadataItem("fileName", "note.txt")));
+                new DocumentSummaryDTO().documentId("d1").title("note.txt").chunkCount(3)));
 
         CommandResult result = handle("documents");
 
         assertThat(result.message())
                 .contains("rag-basic")
-                .contains("d1", "3 chunks", "[note.txt]")
+                .contains("note.txt", "3 chunks", "[d1]")
                 .doesNotContain("rag-advanced");
     }
 

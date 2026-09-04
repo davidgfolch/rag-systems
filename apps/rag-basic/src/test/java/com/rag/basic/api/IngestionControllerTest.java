@@ -172,7 +172,7 @@ class IngestionControllerTest {
     void listsDocumentsViaRetrievalService() {
         RetrievalService retrievalService = mock(RetrievalService.class);
         when(retrievalService.listDocuments()).thenReturn(List.of(
-                new DocumentSummary("d1", 3, Map.of("fileName", "note.txt"))));
+                new DocumentSummary("d1", 3, Map.of("fileName", "note.txt", "title", "note.txt"))));
         IngestionController listController = new IngestionController(service, webCrawlerClient, null, retrievalService);
 
         ResponseEntity<List<DocumentSummaryDTO>> response = listController.listDocuments();
@@ -181,6 +181,7 @@ class IngestionControllerTest {
         assertThat(response.getBody()).hasSize(1);
         DocumentSummaryDTO dto = response.getBody().get(0);
         assertThat(dto.getDocumentId()).isEqualTo("d1");
+        assertThat(dto.getTitle()).isEqualTo("note.txt");
         assertThat(dto.getChunkCount()).isEqualTo(3);
         assertThat(dto.getMetadata()).containsEntry("fileName", "note.txt");
     }

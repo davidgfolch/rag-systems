@@ -5,6 +5,7 @@ import com.rag.common.domain.Document;
 import com.rag.common.services.TextSplitter;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -39,20 +40,30 @@ public class RecursiveCharacterChunker implements TextSplitter {
         List<String> rawChunks = new ArrayList<>();
         splitRecursively(content, SEPARATORS, 0, rawChunks);
 
+        Map<String, Object> baseMeta = documentMeta(document);
         List<Chunk> result = new ArrayList<>();
         int index = 0;
         for (String chunkContent : rawChunks) {
             if (chunkContent.isBlank()) continue;
+            Map<String, Object> meta = new HashMap<>(baseMeta);
+            meta.put("strategy", "recursive");
+            meta.put("maxChunkSize", maxChunkSize);
             result.add(new Chunk(
                     UUID.randomUUID().toString(),
                     document.getId(),
                     chunkContent.trim(),
                     index++,
-                    Map.of("strategy", "recursive", "maxChunkSize", maxChunkSize)
+                    Map.copyOf(meta)
             ));
         }
 
-        return applyOverlap(result, document.getId());
+        return applyOverlap(result, document.getId(), baseMeta);
+    }
+
+    private static Map<String, Object> documentMeta(Document document) {
+        Map<String, Object> meta = new HashMap<>(document.getMetadata());
+        meta.remove("rawBytes");
+        return meta;
     }
 
     private void splitRecursively(String text, String[] separators, int sepIndex, List<String> result) {
@@ -98,7 +109,8 @@ public class RecursiveCharacterChunker implements TextSplitter {
         }
     }
 
-    private List<Chunk> applyOverlap(List<Chunk> chunks, String documentId) {
+    private List<Chunk> applyOverlap(List<Chunk> chunks, String documentId,
+                                     Map<String, Object> baseMeta) {
         if (overlap <= 0 || chunks.size() <= 1) {
             return chunks;
         }
@@ -111,12 +123,15 @@ public class RecursiveCharacterChunker implements TextSplitter {
                 String overlapSuffix = prevContent.substring(Math.max(0, prevContent.length() - overlap));
                 content = overlapSuffix + " " + content;
             }
+            Map<String, Object> meta = new HashMap<>(baseMeta);
+            meta.put("strategy", "recursive");
+            meta.put("maxChunkSize", maxChunkSize);
             result.add(new Chunk(
                     UUID.randomUUID().toString(),
                     documentId,
                     content,
                     i,
-                    Map.of("strategy", "recursive", "maxChunkSize", maxChunkSize)
+                    Map.copyOf(meta)
             ));
         }
         return result;

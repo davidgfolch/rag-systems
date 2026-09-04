@@ -5,6 +5,7 @@ import com.rag.common.domain.Document;
 import com.rag.common.services.TextSplitter;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -34,6 +35,7 @@ public class FixedSizeChunker implements TextSplitter {
             return List.of();
         }
 
+        Map<String, Object> baseMeta = documentMeta(document);
         List<Chunk> chunks = new ArrayList<>();
         int start = 0;
         int index = 0;
@@ -43,12 +45,16 @@ public class FixedSizeChunker implements TextSplitter {
             String chunkContent = content.substring(start, end).trim();
 
             if (!chunkContent.isEmpty()) {
+                Map<String, Object> meta = new HashMap<>(baseMeta);
+                meta.put("strategy", "fixed");
+                meta.put("start", start);
+                meta.put("end", end);
                 chunks.add(new Chunk(
                         UUID.randomUUID().toString(),
                         document.getId(),
                         chunkContent,
                         index++,
-                        Map.of("strategy", "fixed", "start", start, "end", end)
+                        Map.copyOf(meta)
                 ));
             }
 
@@ -57,5 +63,11 @@ public class FixedSizeChunker implements TextSplitter {
         }
 
         return chunks;
+    }
+
+    private static Map<String, Object> documentMeta(Document document) {
+        Map<String, Object> meta = new HashMap<>(document.getMetadata());
+        meta.remove("rawBytes");
+        return meta;
     }
 }
