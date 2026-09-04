@@ -1,13 +1,16 @@
 package com.rag.common.repositories.store;
 
 import com.rag.common.domain.Chunk;
+import com.rag.common.domain.DocumentSummary;
 import com.rag.common.repositories.VectorStore;
 import com.rag.common.services.EmbeddingModel;
 
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * In-memory vector store using cosine similarity. Suitable for unit tests,
@@ -51,6 +54,23 @@ public class InMemoryVectorStore implements VectorStore {
 
     public int size() {
         return chunksById.size();
+    }
+
+    @Override
+    public List<DocumentSummary> listDocuments() {
+        Map<String, List<Chunk>> byDoc = chunksById.values().stream()
+                .collect(Collectors.groupingBy(Chunk::getDocumentId, LinkedHashMap::new, Collectors.toList()));
+        return byDoc.entrySet().stream()
+                .map(e -> new DocumentSummary(e.getKey(), e.getValue().size(), firstMetadata(e.getValue())))
+                .toList();
+    }
+
+    private static Map<String, Object> firstMetadata(List<Chunk> chunks) {
+        Chunk first = chunks.stream()
+                .filter(c -> !c.getMetadata().isEmpty())
+                .findFirst()
+                .orElse(null);
+        return first == null ? Map.of() : first.getMetadata();
     }
 
     private List<Chunk> search(List<Float> queryEmbedding, int topK) {

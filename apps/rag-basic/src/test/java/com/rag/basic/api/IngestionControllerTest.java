@@ -1,8 +1,11 @@
 package com.rag.basic.api;
 
+import com.rag.basic.services.RetrievalService;
 import com.rag.basic.services.WebCrawlerClient;
+import com.rag.common.domain.DocumentSummary;
 import com.rag.common.services.AsyncIngestionService;
 import com.rag.common.services.IngestionService;
+import com.rag.contract.model.DocumentSummaryDTO;
 import com.rag.contract.model.IngestJobResponse;
 import com.rag.contract.model.IngestRequest;
 import com.rag.contract.model.IngestResponse;
@@ -15,6 +18,7 @@ import org.springframework.mock.web.MockMultipartFile;
 
 import java.net.URI;
 import java.util.Base64;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -127,7 +131,7 @@ class IngestionControllerTest {
     void submitsFileAsyncReturningAccepted() throws Exception {
         when(service.ingest(any())).thenReturn(new IngestionService.IngestionResult("j1", 7));
         IngestionController asyncController = new IngestionController(service, webCrawlerClient,
-                new AsyncIngestionService(service));
+                new AsyncIngestionService(service), null);
         MockMultipartFile file = new MockMultipartFile("file", "doc.pdf", "application/pdf",
                 new byte[]{0x25, 0x50, 0x44, 0x46});
 
@@ -143,7 +147,7 @@ class IngestionControllerTest {
     @Test
     void rejectsEmptyFileAsync() throws Exception {
         IngestionController asyncController = new IngestionController(service, webCrawlerClient,
-                new AsyncIngestionService(service));
+                new AsyncIngestionService(service), null);
         MockMultipartFile file = new MockMultipartFile("file", "empty.pdf", "application/pdf", new byte[0]);
 
         ResponseEntity<IngestJobResponse> response =
@@ -162,5 +166,22 @@ class IngestionControllerTest {
     private static boolean isTerminalState(IngestionController asyncController, String documentId) {
         String state = asyncController.ingestStatus(documentId).getBody().getState().getValue();
         return "COMPLETED".equals(state) || "FAILED".equals(state);
+    }
+
+    @Test
+    void listsDocumentsViaRetrievalService() {
+        RetrievalService retrievalService = mock(RetrievalService.class);
+        when(retrievalService.listDocuments()).thenReturn(List.of(
+                new DocumentSummary("d1", 3, Map.of("fileName", "note.txt"))));
+        IngestionController listController = new IngestionController(service, webCrawlerClient, null, retrievalService);
+
+        ResponseEntity<List<DocumentSummaryDTO>> response = listController.listDocuments();
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).hasSize(1);
+        DocumentSummaryDTO dto = response.getBody().get(0);
+        assertThat(dto.getDocumentId()).isEqualTo("d1");
+        assertThat(dto.getChunkCount()).isEqualTo(3);
+        assertThat(dto.getMetadata()).containsEntry("fileName", "note.txt");
     }
 }

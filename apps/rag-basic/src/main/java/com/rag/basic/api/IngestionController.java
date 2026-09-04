@@ -1,15 +1,18 @@
 package com.rag.basic.api;
 
 import com.rag.common.domain.Document;
+import com.rag.common.domain.DocumentSummary;
 import com.rag.common.services.IngestionService;
 import com.rag.common.services.AsyncIngestionService;
+import com.rag.basic.services.RetrievalService;
+import com.rag.basic.services.WebCrawlerClient;
 import com.rag.contract.model.IngestRequest;
 import com.rag.contract.model.IngestResponse;
 import com.rag.contract.model.IngestUrlRequest;
 import com.rag.contract.model.IngestJobResponse;
 import com.rag.contract.model.IngestStatusDTO;
+import com.rag.contract.model.DocumentSummaryDTO;
 import com.rag.contract.model.PageDTO;
-import com.rag.basic.services.WebCrawlerClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -29,6 +32,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -45,17 +49,30 @@ public class IngestionController {
     private final IngestionService ingestionService;
     private final WebCrawlerClient webCrawlerClient;
     private final AsyncIngestionService asyncIngestionService;
+    private final RetrievalService retrievalService;
 
     public IngestionController(IngestionService ingestionService, WebCrawlerClient webCrawlerClient) {
-        this(ingestionService, webCrawlerClient, null);
+        this(ingestionService, webCrawlerClient, null, null);
     }
 
     @Autowired
     public IngestionController(IngestionService ingestionService, WebCrawlerClient webCrawlerClient,
-                               AsyncIngestionService asyncIngestionService) {
+                               AsyncIngestionService asyncIngestionService, RetrievalService retrievalService) {
         this.ingestionService = ingestionService;
         this.webCrawlerClient = webCrawlerClient;
         this.asyncIngestionService = asyncIngestionService;
+        this.retrievalService = retrievalService;
+    }
+
+    @GetMapping
+    public ResponseEntity<List<DocumentSummaryDTO>> listDocuments() {
+        if (retrievalService == null) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+        }
+        List<DocumentSummaryDTO> documents = retrievalService.listDocuments().stream()
+                .map(this::toDocumentSummary)
+                .toList();
+        return ResponseEntity.ok(documents);
     }
 
     @PostMapping("/ingest")
@@ -140,6 +157,13 @@ public class IngestionController {
 
     private boolean hasRawBytes(IngestRequest request) {
         return request.getMetadata() != null && request.getMetadata().get("raw") != null;
+    }
+
+    private DocumentSummaryDTO toDocumentSummary(DocumentSummary summary) {
+        return new DocumentSummaryDTO()
+                .documentId(summary.documentId())
+                .chunkCount(summary.chunkCount())
+                .metadata(summary.metadata());
     }
 
     @PostMapping("/ingest-url")

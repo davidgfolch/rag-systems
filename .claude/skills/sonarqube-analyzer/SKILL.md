@@ -21,20 +21,27 @@ Run local SonarQube static analysis on the monorepo, map findings to fixes, and 
 ## Workflow
 
 ### 1. Generate / reuse a token
-Token is passed as the 2nd arg or via `SONAR_TOKEN` env var. Generate one in the SonarQube UI: **My Account → Security** (only the very first run needs this).
+Token is passed as the 2nd arg or via `SONAR_TOKEN` env var. Generate one in the SonarQube UI (**My Account → Security**) only the very first time, or generate one programmatically via the REST API against the local instance (default credentials `admin`/`admin` on the local Community server):
 
 ```bash
+# Create a token via the API (returns the token in JSON)
+curl -s -u admin:admin -X POST "http://localhost:9000/api/user_tokens/generate" -d "name=rag-local-ci"
+
+# Set it for the scan
 export SONAR_TOKEN=squ_xxxx   # Linux/Mac
 set SONAR_TOKEN=squ_xxxx       # Windows (cmd)
+$env:SONAR_TOKEN="squ_xxxx"    # Windows (PowerShell)
 ```
+
+The token starts with `squ_` and is shown only once at creation; store it in your shell/env for reuse. Tokens can be revoked later under **My Account → Security**.
 
 ### 2. Start the server + run analysis
 Analysis always runs the full test suite first (`mvn verify` with JaCoCo), then the scanner:
 
 ```bash
-# Windows
-.\scripts\sonar.bat up-scan %SONAR_TOKEN%
-.\scripts\sonar.bat scan %SONAR_TOKEN%
+# Windows (PowerShell/cmd)
+.\scripts\sonar.bat up-scan $env:SONAR_TOKEN
+.\scripts\sonar.bat scan $env:SONAR_TOKEN
 
 # Linux/Mac
 ./scripts/sonar.sh up-scan $SONAR_TOKEN

@@ -2,6 +2,7 @@ package com.rag.tui.client;
 
 import com.rag.contract.model.IngestResponse;
 import com.rag.contract.model.QueryResponse;
+import com.rag.contract.model.DocumentSummaryDTO;
 import com.rag.tui.launcher.Module;
 import com.rag.tui.launcher.ModuleRegistry;
 import org.junit.jupiter.api.Test;
@@ -82,6 +83,22 @@ class RagApiClientTest {
         QueryResponse response = sut.query("q", 5);
 
         assertThat(response.getQuestion()).isEqualTo("q");
+        server.verify();
+    }
+
+    @Test
+    void listsDocumentsFromExplicitBaseUrl() {
+        server.expect(requestTo("http://localhost:8081/api/documents"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withSuccess("[{\"documentId\":\"d1\",\"chunkCount\":3,\"metadata\":{\"fileName\":\"n.txt\"}}]",
+                        MediaType.APPLICATION_JSON));
+
+        List<DocumentSummaryDTO> documents = sut.listDocuments("http://localhost:8081");
+
+        assertThat(documents).hasSize(1);
+        assertThat(documents.get(0).getDocumentId()).isEqualTo("d1");
+        assertThat(documents.get(0).getChunkCount()).isEqualTo(3);
+        assertThat(documents.get(0).getMetadata()).containsEntry("fileName", "n.txt");
         server.verify();
     }
 }

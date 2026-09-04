@@ -88,9 +88,17 @@ public class RagBasicConfig {
 
     @Bean
     @Lazy
-    public PgVectorStore pgVectorStore(JdbcTemplate jdbcTemplate,
-                                       org.springframework.ai.embedding.EmbeddingModel springAiEmbeddingModel) {
-        return PgVectorStore.builder(jdbcTemplate, springAiEmbeddingModel).build();
+    public PgVectorStore pgVectorStore(
+            JdbcTemplate jdbcTemplate,
+            org.springframework.ai.embedding.EmbeddingModel springAiEmbeddingModel,
+            @Value("${spring.ai.vectorstore.pgvector.schema-name:public}") String schema,
+            @Value("${spring.ai.vectorstore.pgvector.table-name:vector_store}") String tableName,
+            @Value("${spring.ai.vectorstore.pgvector.initialize-schema:true}") boolean initializeSchema) {
+        return PgVectorStore.builder(jdbcTemplate, springAiEmbeddingModel)
+                .schemaName(schema)
+                .vectorTableName(tableName)
+                .initializeSchema(initializeSchema)
+                .build();
     }
 
     @Bean
@@ -99,11 +107,13 @@ public class RagBasicConfig {
             @Value("${rag.vector-store.type:pgvector}") String type,
             EmbeddingModel embeddingModel,
             ObjectProvider<PgVectorStore> pgVectorStore,
-            ObjectProvider<javax.sql.DataSource> dataSource) {
+            ObjectProvider<javax.sql.DataSource> dataSource,
+            @Value("${spring.ai.vectorstore.pgvector.schema-name:public}") String schema,
+            @Value("${spring.ai.vectorstore.pgvector.table-name:vector_store}") String tableName) {
         if ("simple".equalsIgnoreCase(type)) {
             return new InMemoryVectorStore(embeddingModel);
         }
-        return new PgVectorStoreAdapter(pgVectorStore.getObject(), dataSource.getIfAvailable());
+        return new PgVectorStoreAdapter(pgVectorStore.getObject(), dataSource.getIfAvailable(), schema, tableName);
     }
 
     @Bean

@@ -22,6 +22,21 @@ tags:
     description: Intelligent web fetching tool
 
 paths:
+  /api/documents:
+    get:
+      tags: [documents]
+      operationId: listDocuments
+      summary: List ingested documents held by this rag-module
+      responses:
+        '200':
+          description: Documents held by this module
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DocumentSummaryDTO'
+
   /api/documents/ingest:
     post:
       tags: [documents]
@@ -268,6 +283,24 @@ components:
         chunkCount:
           type: integer
           format: int32
+
+    DocumentSummaryDTO:
+      type: object
+      properties:
+        documentId:
+          type: string
+        chunkCount:
+          type: integer
+          format: int32
+          description: Number of chunks this document is split into
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Representative document metadata (fileName, source, sourceType, etc.)
+        createdAt:
+          type: string
+          format: date-time
+          description: When the document was ingested
 
     IngestJobResponse:
       type: object

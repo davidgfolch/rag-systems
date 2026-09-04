@@ -7,6 +7,7 @@ import com.rag.contract.model.IngestStatusDTO;
 import com.rag.contract.model.IngestUrlRequest;
 import com.rag.contract.model.QueryRequest;
 import com.rag.contract.model.QueryResponse;
+import com.rag.contract.model.DocumentSummaryDTO;
 import com.rag.tui.launcher.ModuleRegistry;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
@@ -17,6 +18,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 
 import java.net.URI;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -92,6 +94,18 @@ public class RagApiClient {
     public QueryResponse query(String question, int topK) {
         return post("/api/query",
                 new QueryRequest().question(question).topK(topK), QueryResponse.class);
+    }
+
+    /**
+     * Lists ingested documents from a specific module, bypassing the active-module
+     * indirection so the TUI can probe every reachable rag-* instance as the
+     * {@code documents} command does.
+     */
+    public List<DocumentSummaryDTO> listDocuments(String baseUrl) {
+        DocumentSummaryDTO[] documents = builder.clone().baseUrl(baseUrl).build()
+                .get().uri("/api/documents")
+                .retrieve().body(DocumentSummaryDTO[].class);
+        return documents == null ? List.of() : List.of(documents);
     }
 
     private <T> T post(String path, Object body, Class<T> responseType) {

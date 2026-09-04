@@ -1,6 +1,7 @@
 package com.rag.tui.ui;
 
 import com.rag.contract.model.ConversationDTO;
+import com.rag.contract.model.DocumentSummaryDTO;
 import com.rag.contract.model.IngestJobResponse;
 import com.rag.contract.model.IngestStatusDTO;
 import com.rag.contract.model.IngestResponse;
@@ -58,6 +59,41 @@ class CommandDispatcherTest {
                 .contains("rag-basic", "running", "(active)")
                 .contains("rag-advanced", "stopped");
         assertThat(result.exit()).isFalse();
+    }
+
+    @Test
+    void marksExternallyStartedModuleAsRunning() {
+        when(lifecycle.isRunning("rag-advanced")).thenReturn(false);
+        when(healthClient.isUp("http://localhost:8082")).thenReturn(true);
+
+        CommandResult result = handle("modules");
+
+        assertThat(result.message()).contains("rag-advanced", "running (external)");
+    }
+
+    @Test
+    void listsDocumentsFromReachableModules() {
+        when(healthClient.isUp("http://localhost:8081")).thenReturn(true);
+        when(healthClient.isUp("http://localhost:8082")).thenReturn(false);
+        when(apiClient.listDocuments("http://localhost:8081")).thenReturn(List.of(
+                new DocumentSummaryDTO().documentId("d1").chunkCount(3)
+                        .putMetadataItem("fileName", "note.txt")));
+
+        CommandResult result = handle("documents");
+
+        assertThat(result.message())
+                .contains("rag-basic")
+                .contains("d1", "3 chunks", "[note.txt]")
+                .doesNotContain("rag-advanced");
+    }
+
+    @Test
+    void reportsNoReachableModulesForDocuments() {
+        when(healthClient.isUp(anyString())).thenReturn(false);
+
+        CommandResult result = handle("documents");
+
+        assertThat(result.message()).contains("No rag-* modules are reachable");
     }
 
     @Test

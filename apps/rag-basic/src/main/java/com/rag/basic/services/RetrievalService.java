@@ -1,6 +1,7 @@
 package com.rag.basic.services;
 
 import com.rag.common.domain.Chunk;
+import com.rag.common.domain.DocumentSummary;
 import com.rag.common.repositories.VectorStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,5 +32,11 @@ public class RetrievalService {
         List<Chunk> results = vectorStore.similaritySearch(query, topK, documentId);
         log.debug("Retrieved {} chunks for query scoped to {}", results.size(), documentId);
         return results;
+    }
+
+    public List<DocumentSummary> listDocuments() {
+        List<DocumentSummary> summaries = vectorStore.listDocuments();
+        log.debug("Listed {} documents", summaries.size());
+        return summaries;
     }
 }

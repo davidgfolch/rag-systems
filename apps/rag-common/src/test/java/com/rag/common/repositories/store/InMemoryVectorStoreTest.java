@@ -75,6 +75,30 @@ class InMemoryVectorStoreTest {
         assertThat(results).hasSize(2).allMatch(c -> c.getDocumentId().equals("d1"));
     }
 
+    @Test
+    void listsDocumentsGroupedByDocumentIdWithChunkCountAndMetadata() {
+        var a = new Chunk("c1", "d1", "text a", 0, Map.of("fileName", "note.txt"));
+        a.setEmbedding(List.of(1f, 0f));
+        var b = new Chunk("c2", "d1", "text b", 1, Map.of("fileName", "note.txt"));
+        b.setEmbedding(List.of(1f, 0f));
+        var c = new Chunk("c3", "d2", "text c", 0, Map.of("fileName", "other.txt"));
+        c.setEmbedding(List.of(1f, 0f));
+        store.add(List.of(a, b, c));
+
+        List<com.rag.common.domain.DocumentSummary> documents = store.listDocuments();
+
+        assertThat(documents).hasSize(2);
+        com.rag.common.domain.DocumentSummary d1 = documents.stream()
+                .filter(d -> d.documentId().equals("d1")).findFirst().orElseThrow();
+        assertThat(d1.chunkCount()).isEqualTo(2);
+        assertThat(d1.metadata()).containsEntry("fileName", "note.txt");
+    }
+
+    @Test
+    void listsNoDocumentsForEmptyStore() {
+        assertThat(store.listDocuments()).isEmpty();
+    }
+
     private static Chunk chunk(String id, float[] embedding) {
         var c = new Chunk(id, "d1", "text " + id, 0, Map.of());
         c.setEmbedding(floatList(embedding));

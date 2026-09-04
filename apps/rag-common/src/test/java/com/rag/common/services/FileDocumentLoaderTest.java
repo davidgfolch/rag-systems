@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -42,5 +43,45 @@ class FileDocumentLoaderTest {
     void throwsWhenFileMissing() {
         assertThatThrownBy(() -> sut.load("C:/does/not/exist.txt"))
                 .isInstanceOf(FileDocumentLoader.DocumentLoadException.class);
+    }
+
+    @Test
+    void loadedFileEqualsWhenBytesAndMetadataMatch() {
+        FileDocumentLoader.LoadedFile a = new FileDocumentLoader.LoadedFile(new byte[]{1, 2}, Map.of("k", "v"));
+        FileDocumentLoader.LoadedFile b = new FileDocumentLoader.LoadedFile(new byte[]{1, 2}, Map.of("k", "v"));
+
+        assertThat(a).isEqualTo(b).hasSameHashCodeAs(b);
+    }
+
+    @Test
+    void loadedFileNotEqualsWhenBytesDiffer() {
+        FileDocumentLoader.LoadedFile a = new FileDocumentLoader.LoadedFile(new byte[]{1, 2}, Map.of("k", "v"));
+        FileDocumentLoader.LoadedFile b = new FileDocumentLoader.LoadedFile(new byte[]{1}, Map.of("k", "v"));
+
+        assertThat(a).isNotEqualTo(b);
+    }
+
+    @Test
+    void loadedFileNotEqualsWhenMetadataDiffers() {
+        FileDocumentLoader.LoadedFile a = new FileDocumentLoader.LoadedFile(new byte[]{1}, Map.of("k", "v"));
+        FileDocumentLoader.LoadedFile other = new FileDocumentLoader.LoadedFile(new byte[]{1}, Map.of("k", "w"));
+
+        assertThat(a).isNotEqualTo(other);
+    }
+
+    @Test
+    void loadedFileEqualsIsReflexiveAndRejectsNullAndOtherTypes() {
+        FileDocumentLoader.LoadedFile a = new FileDocumentLoader.LoadedFile(new byte[]{1}, Map.of("k", "v"));
+
+        assertThat(a.equals(null)).isFalse();
+        assertThat(a.equals("not-a-loaded-file")).isFalse();
+        assertThat(a).isEqualTo(a);
+    }
+
+    @Test
+    void loadedFileToStringContainsBytesAndMetadata() {
+        FileDocumentLoader.LoadedFile f = new FileDocumentLoader.LoadedFile(new byte[]{1, 2}, Map.of("k", "v"));
+
+        assertThat(f.toString()).contains("[1, 2]").contains("k=v");
     }
 }

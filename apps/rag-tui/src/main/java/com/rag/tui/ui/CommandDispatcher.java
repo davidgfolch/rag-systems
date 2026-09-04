@@ -1,6 +1,7 @@
 package com.rag.tui.ui;
 
 import com.rag.contract.model.ConversationDTO;
+import com.rag.contract.model.DocumentSummaryDTO;
 import com.rag.contract.model.IngestJobResponse;
 import com.rag.contract.model.IngestResponse;
 import com.rag.contract.model.IngestStatusDTO;
@@ -30,6 +31,7 @@ public class CommandDispatcher {
               use <module>          switch the active module
               start <module>        start a module as a child process
               stop <module>         stop a running module
+              documents             list ingested documents from every reachable rag-* module
               add-file <path>       ingest a local document into the active module
               add-url <url>         ingest a web page via the active module
               ask <question>        stream a chat answer (Ctrl+C cancels via socket close)
@@ -65,6 +67,7 @@ public class CommandDispatcher {
                 case "use" -> use(arg);
                 case "start" -> start(arg, tokenSink);
                 case "stop" -> stop(arg);
+                case "documents" -> documents();
                 case "add-file" -> addFile(arg, tokenSink);
                 case "add-url" -> addUrl(arg);
                 case "ask" -> ask(arg, tokenSink);
@@ -84,11 +87,64 @@ public class CommandDispatcher {
         Module active = registry.active();
         var sb = new StringBuilder("Modules:\n");
         registry.modules().stream().map(m -> {
-            String state = lifecycle.isRunning(m.name()) ? "running" : "stopped";
+            boolean child = lifecycle.isRunning(m.name());
+            boolean up = clients.healthClient().isUp(m.baseUrl());
+            String state = (child || up) ? "running" : "stopped";
+            String origin = moduleOrigin(up, child);
             String marker = m.name().equals(active.name()) ? " (active)" : "";
-            return String.join(" ", m.name(), state, marker, "\n");
+            return String.join(" ", m.name(), state + origin, marker, "\n");
         }).forEach(sb::append);
         return new CommandResult(sb.toString(), false);
+    }
+
+    private static String moduleOrigin(boolean up, boolean child) {
+        if (!up) return "";
+        return child ? " (child)" : " (external)";
+    }
+
+    private CommandResult documents() {
+        var sb = new StringBuilder("Documents:\n");
+        boolean any = false;
+        for (Module m : registry.modules()) {
+            if (clients.healthClient().isUp(m.baseUrl())) {
+                any = true;
+                appendModuleDocuments(sb, m);
+            }
+        }
+        if (!any) {
+            return new CommandResult("No rag-* modules are reachable. Start one first (e.g. 'start rag-basic').", false);
+        }
+        return new CommandResult(sb.toString(), false);
+    }
+
+    private void appendModuleDocuments(StringBuilder sb, Module m) {
+        sb.append(" ").append(m.name()).append(" (").append(m.baseUrl()).append("):\n");
+        List<DocumentSummaryDTO> docs = clients.apiClient().listDocuments(m.baseUrl());
+        if (docs.isEmpty()) {
+            sb.append("   (no documents)\n");
+            return;
+        }
+        for (DocumentSummaryDTO doc : docs) {
+            appendDocumentSummary(sb, doc);
+        }
+    }
+
+    private static void appendDocumentSummary(StringBuilder sb, DocumentSummaryDTO doc) {
+        sb.append("   - ").append(doc.getDocumentId());
+        if (doc.getChunkCount() != null) {
+            sb.append(" (").append(doc.getChunkCount()).append(" chunks)");
+        }
+        Object source = doc.getMetadata() == null ? null : doc.getMetadata().get("fileName");
+        if (source == null && doc.getMetadata() != null) {
+            source = doc.getMetadata().get("source");
+        }
+        if (source != null) {
+            sb.append(" [").append(source).append("]");
+        }
+        if (doc.getCreatedAt() != null) {
+            sb.append(" ").append(doc.getCreatedAt());
+        }
+        sb.append("\n");
     }
 
     private CommandResult use(String name) {

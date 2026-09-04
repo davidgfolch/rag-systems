@@ -1,6 +1,7 @@
 package com.rag.common.repositories;
 
 import com.rag.common.domain.Chunk;
+import com.rag.common.domain.DocumentSummary;
 
 import java.util.List;
 
@@ -62,5 +63,16 @@ public interface VectorStore {
         return similaritySearch(query, topK).stream()
                 .filter(chunk -> chunk.getDocumentId().equals(documentId))
                 .toList();
+    }
+
+    /**
+     * Lists the distinct ingested documents held by this store, each with its
+     * chunk count and representative metadata. Used to answer "what documents
+     * exist here" without scanning the store with an embedding query.
+     *
+     * @return one {@link DocumentSummary} per stored document (empty if none)
+     */
+    default List<DocumentSummary> listDocuments() {
+        return List.of();
     }
 }
