@@ -32,7 +32,7 @@ class InteractiveShellTest {
 
         StringWriter out = new StringWriter();
         InteractiveShell sut =
-                new InteractiveShell(dispatcher, new StringReader("ask hi\nquit\n"), out);
+                new InteractiveShell(dispatcher, new StringReader("ask hi\nquit\n"), out, null);
 
         sut.run();
 
@@ -53,7 +53,7 @@ class InteractiveShellTest {
 
         StringWriter out = new StringWriter();
         InteractiveShell sut =
-                new InteractiveShell(dispatcher, new StringReader("ask a\n"), out);
+                new InteractiveShell(dispatcher, new StringReader("ask a\n"), out, null);
 
         sut.run();
 
@@ -74,7 +74,7 @@ class InteractiveShellTest {
             }
         };
 
-        InteractiveShell sut = new InteractiveShell(dispatcher, failing, new StringWriter());
+        InteractiveShell sut = new InteractiveShell(dispatcher, failing, new StringWriter(), null);
 
         assertThatThrownBy(sut::run)
                 .isInstanceOf(InteractiveShell.ShellException.class)
@@ -90,7 +90,7 @@ class InteractiveShellTest {
 
         StringWriter out = new StringWriter();
         InteractiveShell sut =
-                new InteractiveShell(dispatcher, new StringReader("add-file x\nquit\n"), out);
+                new InteractiveShell(dispatcher, new StringReader("add-file x\nquit\n"), out, null);
 
         sut.run();
 
