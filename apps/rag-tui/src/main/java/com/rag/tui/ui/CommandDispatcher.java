@@ -18,46 +18,32 @@ import org.springframework.web.client.RestClientException;
 import java.util.List;
 import java.util.function.Consumer;
 
-/**
- * Parses command lines and routes them to the active rag-module over REST/WS.
- * Pure routing and terminal formatting: no RAG logic runs here.
- */
 public class CommandDispatcher {
-
-    private static final String USAGE = """
-            Available commands:
-              help                  show this help
-              modules               list known rag-* modules
-              use <module>          switch the active module
-              start <module>        start a module as a child process
-              stop <module>         stop a running module
-              documents             list ingested documents from every reachable rag-* module
-              add-file <path>       ingest a local document into the active module
-              add-url <url>         ingest a web page via the active module
-              ask <question>        stream a chat answer (Ctrl+C cancels via socket close)
-              history               show conversation history from rag-memory
-              quit                  exit the terminal
-            """;
 
     private final ModuleRegistry registry;
     private final ModuleLifecycleManager lifecycle;
     private final RagClients clients;
     private final Settings settings;
+    private final CommandRegistry commandRegistry;
 
-    public CommandDispatcher(ModuleRegistry registry, ModuleLifecycleManager lifecycle, RagClients clients, Settings settings) {
+    public CommandDispatcher(ModuleRegistry registry, ModuleLifecycleManager lifecycle,
+                             RagClients clients, Settings settings, CommandRegistry commandRegistry) {
         this.registry = registry;
         this.lifecycle = lifecycle;
         this.clients = clients;
         this.settings = settings;
+        this.commandRegistry = commandRegistry;
     }
 
     public CommandResult handle(String input, Consumer<String> tokenSink) {
         String trimmed = input.trim();
-        if (trimmed.isEmpty()) return new CommandResult(USAGE, false);
+        if (trimmed.isEmpty()) return new CommandResult(commandRegistry.generateUsage(), false);
 
         String lower = trimmed.toLowerCase();
-        if (lower.equals("quit") || lower.equals("exit")) return new CommandResult("Bye.", true);
-        if (lower.equals("help")) return new CommandResult(USAGE, false);
+        if (lower.equals("quit") || lower.equals("exit")) {
+            return new CommandResult(TerminalStyle.success("Bye."), true);
+        }
+        if (lower.equals("help")) return new CommandResult(commandRegistry.generateUsage(), false);
 
         String[] parts = trimmed.split("\\s+", 2);
         String arg = parts.length > 1 ? parts[1].trim() : "";
@@ -72,14 +58,14 @@ public class CommandDispatcher {
                 case "add-url" -> addUrl(arg);
                 case "ask" -> ask(arg, tokenSink);
                 case "history" -> history();
-                default -> new CommandResult("Unknown command. Type 'help' for usage.\n\n" + USAGE, false);
+                default -> new CommandResult(TerminalStyle.error("Unknown command. Type 'help' for usage."), false);
             };
         } catch (RestClientException e) {
-            return new CommandResult("Module unreachable: " + e.getMessage(), false);
+            return new CommandResult(TerminalStyle.error("Module unreachable: " + e.getMessage()), false);
         } catch (ChatGateway.ChatException e) {
-            return new CommandResult("Chat error: " + e.getMessage(), false);
+            return new CommandResult(TerminalStyle.error("Chat error: " + e.getMessage()), false);
         } catch (FileDocumentLoader.DocumentLoadException | ModuleLifecycleManager.StartException e) {
-            return new CommandResult(e.getMessage(), false);
+            return new CommandResult(TerminalStyle.error(e.getMessage()), false);
         }
     }
 
@@ -151,8 +137,8 @@ public class CommandDispatcher {
     private CommandResult use(String name) {
         if (name.isEmpty()) return new CommandResult("Usage: use <module>", false);
         return registry.activate(name)
-                ? new CommandResult("Active module: " + name, false)
-                : new CommandResult("Unknown module: " + name, false);
+                ? new CommandResult(TerminalStyle.success("Active module: " + name), false)
+                : new CommandResult(TerminalStyle.error("Unknown module: " + name), false);
     }
 
     private CommandResult start(String name, Consumer<String> tokenSink) {
@@ -160,22 +146,24 @@ public class CommandDispatcher {
                 .map(m -> lifecycle.start(m)
                         ? waitForReady(m, tokenSink)
                         : new CommandResult("Module already running: " + name, false))
-                .orElse(new CommandResult("Unknown module: " + name, false));
+                .orElse(new CommandResult(TerminalStyle.error("Unknown module: " + name), false));
     }
 
     private CommandResult waitForReady(Module m, Consumer<String> tokenSink) {
         tokenSink.accept("Waiting for " + m.name() + " to become ready...\n");
         boolean ready = clients.healthClient().waitUntilUp(m.baseUrl(), settings.startTimeoutMs(), tokenSink);
         return ready
-                ? new CommandResult("Started %s (ready)".formatted(m.name()), false)
-                : new CommandResult(("Started %s but not ready after %ds - module is still booting "
+                ? new CommandResult(TerminalStyle.success("Started %s (ready)".formatted(m.name())), false)
+                : new CommandResult(TerminalStyle.error(("Started %s but not ready after %ds - module is still booting "
                         + "or unhealthy; check docker/ollama and the module log, then retry.")
-                        .formatted(m.name(), settings.startTimeoutMs() / 1000), false);
+                        .formatted(m.name(), settings.startTimeoutMs() / 1000)), false);
     }
 
     private CommandResult stop(String name) {
         boolean stopped = lifecycle.stop(name);
-        return new CommandResult(stopped ? "Stopped " + name : "Module not running: " + name, false);
+        return new CommandResult(stopped
+                ? TerminalStyle.success("Stopped " + name)
+                : "Module not running: " + name, false);
     }
 
     private CommandResult addFile(String path, Consumer<String> tokenSink) {
@@ -184,9 +172,8 @@ public class CommandDispatcher {
         String fileName = file.metadata().get("fileName").toString();
         IngestJobResponse job = clients.apiClient().submitIngestFile(file.bytes(), fileName, file.metadata());
         String documentId = job.getDocumentId();
-        String message = ("Ingestion submitted for '%s' -> document %s. You can keep typing; "
-                + "I'll report when it completes.")
-                .formatted(path, documentId);
+        String message = TerminalStyle.success(("Ingestion submitted for '%s' -> document %s. You can keep typing; "
+                + "I'll report when it completes.").formatted(path, documentId));
         pollIngestUntilDone(documentId, tokenSink);
         return new CommandResult(message, false);
     }
@@ -200,20 +187,20 @@ public class CommandDispatcher {
                     IngestStatusDTO status = clients.apiClient().ingestStatus(documentId);
                     IngestStatusDTO.StateEnum state = status.getState();
                     if (IngestStatusDTO.StateEnum.COMPLETED == state) {
-                        tokenSink.accept("Ingestion of " + label + " complete: "
-                                + status.getChunkCount() + " chunks.\n");
+                        tokenSink.accept(TerminalStyle.success("Ingestion of " + label + " complete: "
+                                + status.getChunkCount() + " chunks.\n"));
                         return;
                     }
                     if (IngestStatusDTO.StateEnum.FAILED == state) {
-                        tokenSink.accept("Ingestion of " + label + " failed: " + status.getMessage() + "\n");
+                        tokenSink.accept(TerminalStyle.error("Ingestion of " + label + " failed: " + status.getMessage() + "\n"));
                         return;
                     }
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             } catch (RuntimeException e) {
-                tokenSink.accept("Ingestion of document " + documentId
-                        + " could not be checked: " + e.getMessage() + "\n");
+                tokenSink.accept(TerminalStyle.error("Ingestion of document " + documentId
+                        + " could not be checked: " + e.getMessage() + "\n"));
             }
         }, "rag-ingest-poll");
         poller.setDaemon(true);
@@ -225,8 +212,8 @@ public class CommandDispatcher {
     private CommandResult addUrl(String url) {
         if (url.isEmpty()) return new CommandResult("Usage: add-url <url>", false);
         IngestResponse response = clients.apiClient().ingestUrl(url);
-        return new CommandResult("Ingested %s -> document %s, %d chunks"
-                .formatted(url, response.getDocumentId(), response.getChunkCount()), false);
+        return new CommandResult(TerminalStyle.success("Ingested %s -> document %s, %d chunks"
+                .formatted(url, response.getDocumentId(), response.getChunkCount())), false);
     }
 
     private CommandResult ask(String question, Consumer<String> tokenSink) {
@@ -249,9 +236,7 @@ public class CommandDispatcher {
     }
 
     public record RagClients(RagApiClient apiClient, ChatGateway chatGateway, MemoryClient memoryClient,
-                             FileDocumentLoader fileLoader, ModuleHealthClient healthClient) {
-    }
+                             FileDocumentLoader fileLoader, ModuleHealthClient healthClient) {}
 
-    public record Settings(long startTimeoutMs, int topK) {
-    }
+    public record Settings(long startTimeoutMs, int topK) {}
 }

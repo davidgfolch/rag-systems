@@ -52,7 +52,7 @@ class CommandDispatcherIntegrationTest {
         sut = new CommandDispatcher(registry, lifecycle,
                 new CommandDispatcher.RagClients(apiClient, chatGateway, memoryClient,
                         new FileDocumentLoader(), new ModuleHealthClient(RestClient.builder())),
-                new CommandDispatcher.Settings(5_000, 4));
+                new CommandDispatcher.Settings(5_000, 4), new CommandRegistry());
     }
 
     @AfterEach
@@ -101,7 +101,7 @@ class CommandDispatcherIntegrationTest {
                         new RagApiClient(deadRegistry, RestClient.builder()), chatGateway,
                         mock(MemoryClient.class), new FileDocumentLoader(),
                         new ModuleHealthClient(RestClient.builder())),
-                new CommandDispatcher.Settings(1_000, 4));
+                new CommandDispatcher.Settings(1_000, 4), new CommandRegistry());
 
         CommandResult result = dead.handle("add-file " + testFile(), token -> {});
 

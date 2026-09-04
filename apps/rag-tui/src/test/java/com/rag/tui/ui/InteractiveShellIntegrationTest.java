@@ -51,7 +51,7 @@ class InteractiveShellIntegrationTest {
         dispatcher = new CommandDispatcher(registry, mock(ModuleLifecycleManager.class),
                 new CommandDispatcher.RagClients(apiClient, chatGateway, memoryClient,
                         new FileDocumentLoader(), new ModuleHealthClient(RestClient.builder())),
-                new CommandDispatcher.Settings(5_000, 4));
+                new CommandDispatcher.Settings(5_000, 4), new CommandRegistry());
     }
 
     @AfterEach
@@ -66,7 +66,7 @@ class InteractiveShellIntegrationTest {
         Files.write(pdf, bytes);
         StringWriter out = new StringWriter();
 
-        new InteractiveShell(dispatcher, new StringReader("add-file " + pdf + "\nquit\n"), out).run();
+        new InteractiveShell(dispatcher, new StringReader("add-file " + pdf + "\nquit\n"), out, null).run();
 
         assertThat(out.toString()).contains("document i-1", "Bye.");
         awaitContains(out, "2 chunks");
@@ -85,7 +85,7 @@ class InteractiveShellIntegrationTest {
         StringWriter out = new StringWriter();
 
         new InteractiveShell(dispatcher,
-                new StringReader("add-file definitely-missing.pdf\nhelp\nquit\n"), out).run();
+                new StringReader("add-file definitely-missing.pdf\nhelp\nquit\n"), out, null).run();
 
         assertThat(out.toString()).contains("Failed to read file");
         assertThat(out.toString()).contains("Available commands");

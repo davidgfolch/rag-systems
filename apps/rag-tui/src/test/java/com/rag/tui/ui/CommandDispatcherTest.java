@@ -41,9 +41,10 @@ class CommandDispatcherTest {
     private final MemoryClient memoryClient = mock(MemoryClient.class);
     private final FileDocumentLoader fileLoader = mock(FileDocumentLoader.class);
     private final ModuleHealthClient healthClient = mock(ModuleHealthClient.class);
+    private final CommandRegistry commandRegistry = new CommandRegistry();
     private final CommandDispatcher sut = new CommandDispatcher(registry, lifecycle,
             new CommandDispatcher.RagClients(apiClient, chatGateway, memoryClient, fileLoader, healthClient),
-            new CommandDispatcher.Settings(10_000, 4));
+            new CommandDispatcher.Settings(10_000, 4), commandRegistry);
 
     private CommandResult handle(String input) {
         return sut.handle(input, token -> {});

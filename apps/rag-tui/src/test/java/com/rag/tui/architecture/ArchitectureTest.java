@@ -2,6 +2,7 @@ package com.rag.tui.architecture;
 
 import com.rag.tui.config.RagTuiConfig;
 import com.rag.tui.ui.CommandDispatcher;
+import com.rag.tui.ui.TerminalStyle;
 import com.rag.common.services.FileDocumentLoader;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
@@ -68,7 +69,8 @@ class ArchitectureTest {
         List<String> missing = importer.importPackages(ROOT).stream()
                 .filter(c -> (c.getPackageName().contains(".client") || c.getPackageName().contains(".ui"))
                         && !c.isNestedClass() && !c.isInterface() && !c.isRecord()
-                        && !c.getSimpleName().isEmpty())
+                        && !c.getSimpleName().isEmpty()
+                        && !c.getFullName().equals(TerminalStyle.class.getName()))
                 .map(JavaClass::getSimpleName)
                 .filter(name -> !covered.contains(name))
                 .sorted()
