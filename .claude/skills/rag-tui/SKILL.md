@@ -36,8 +36,7 @@ apps/rag-tui/src/main/java/com/rag/tui/
 1. Write a failing unit test first (`should[Behavior]When[Condition]`), mocking all
    external dependencies (models, stores, network).
 2. Implement the minimal code to pass it.
-3. Verify with `.\scripts\test.bat rag-tui` and architecture with
-   `.\scripts\test.bat rag-tui --architecture`.
+3. Verify with `.\scripts\test.bat rag-tui` (architecture tests run as part of the suite).
 
 ## Unit-testing the shell and fetchers
 
@@ -70,6 +69,5 @@ Profiles: `local` (Ollama), `cloud` (OpenAI).
 ## Definition of Done
 
 - Tests pass: `.\scripts\test.bat rag-tui`
-- Architecture passes: `.\scripts\test.bat rag-tui --architecture`
 - Coverage ≥ 85%: `.\scripts\test.bat rag-tui --coverage`
 - No file exceeds 200 lines; no circular dependencies; no hardcoded providers.

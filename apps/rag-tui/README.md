@@ -80,7 +80,6 @@ Profiles: `local` (Ollama) and `cloud` (OpenAI). See the root `application.yml` 
 
 ```bash
 .\scripts\test.bat rag-tui
-.\scripts\test.bat rag-tui --architecture
 .\scripts\test.bat rag-tui --coverage   # enforces >= 85%
 ```
 

@@ -41,5 +41,5 @@ Use [rag-evaluation](../rag-evaluation/README.md) to measure the retrieval-quali
 
 ```bash
 .\scripts\test.bat rag-advanced
-.\scripts\test.bat --architecture
+.\scripts\test.bat
 ```

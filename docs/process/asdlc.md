@@ -17,8 +17,8 @@ After any code modification:
    `new_coverage >= 80%`, `new_duplicated_lines_density < 3%`, `new_violations == 0`.
 
 Architecture rules are enforced automatically by the `ArchitectureTest` suites
-in every module - run `.\scripts\test.bat --architecture` (Windows) or
-`./scripts/test.sh --architecture` (Unix) after significant changes.
+in every module - they run as part of every test run. Use `.\scripts\test.bat`
+(Windows) or `./scripts/test.sh` (Unix) after significant changes.
 
 ### 2. Keep code simple
 

@@ -5,14 +5,22 @@
 #   ./sonar.sh scan [token]    - Run tests + JaCoCo + SonarQube analysis
 #   ./sonar.sh up-scan [token] - Start SonarQube, wait for ready, then scan
 #   ./sonar.sh down            - Stop SonarQube
-# Token: passed as 2nd arg or set SONAR_TOKEN env var.
+# Token: passed as 2nd arg, set SONAR_TOKEN env var, or loaded from .env.secrets.
 
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+# Bootstrap root .env files from scripts/.env*.example (idempotent)
+bash scripts/bootstrap-env.sh
+
 CMD="${1:-}"
 TOKEN="${2:-${SONAR_TOKEN:-}}"
+
+# Fallback: load token from .env.secrets if still empty
+if [ -z "$TOKEN" ] && [ -f .env.secrets ]; then
+    TOKEN=$(grep '^SONAR_TOKEN=' .env.secrets | head -1 | cut -d= -f2- || true)
+fi
 
 if [ -z "$CMD" ]; then
     echo "Usage: ./sonar.sh <command> [up|scan|up-scan|down] [token]"
@@ -34,8 +42,13 @@ case "$CMD" in
         docker compose $COMPOSE_SONAR up -d
         echo
         echo "SonarQube starting at http://localhost:9000"
-        echo "Default credentials: admin / admin"
-        echo "Wait ~30 seconds for the server to be ready before running scan."
+        echo "Waiting for server to be ready..."
+        until curl -sf http://localhost:9000/api/system/status > /dev/null 2>&1; do
+            sleep 5
+        done
+        echo "SonarQube is ready."
+        echo "Running bootstrap (password + token)..."
+        bash scripts/sonar-pw.sh
         ;;
     scan)
         if [ -z "$TOKEN" ]; then
@@ -54,6 +67,12 @@ case "$CMD" in
             sleep 5
         done
         echo "SonarQube is ready."
+        echo "Running bootstrap (password + token)..."
+        bash scripts/sonar-pw.sh
+        # Reload token after bootstrap may have written it to .env.secrets
+        if [ -z "$TOKEN" ] && [ -f .env.secrets ]; then
+            TOKEN=$(grep '^SONAR_TOKEN=' .env.secrets | head -1 | cut -d= -f2- || true)
+        fi
         if [ -z "$TOKEN" ]; then
             echo "Error: no token. Pass it as an argument or set SONAR_TOKEN."
             exit 1

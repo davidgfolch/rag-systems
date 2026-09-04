@@ -9,6 +9,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+# Bootstrap root .env files from scripts/.env*.example (idempotent)
+bash scripts/bootstrap-env.sh
+
 MODULE=""
 PROFILES="local"
 EXTRA_ARGS=""

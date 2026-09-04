@@ -24,13 +24,11 @@ Enforce the architecture rules defined in `.claude/rules/architecture-guidelines
 
 ## How to Run
 
-```bash
-# Run all architecture tests across modules
-.\scripts\test.bat --architecture   # Windows
-./scripts/test.sh --architecture    # Linux/Mac
+Architecture tests always run as part of every test run (no special flag needed):
 
-# Run architecture tests for a specific module
-.\scripts\test.bat rag-basic --architecture
+```bash
+.\scripts\test.bat   # Windows - all tests incl. architecture
+./scripts/test.sh    # Linux/Mac
 ```
 
 ## Architecture Test Structure
@@ -49,7 +47,7 @@ The class-based modules use `ClassFileImporter` (layer/interface rules). The `ra
 ## Definition of Done
 
 Refuse to mark a task complete until:
-1. `.\scripts\test.bat --architecture` passes (incl. the root-folder and portability checks)
+1. `.\scripts\test.bat` passes (incl. the architecture, root-folder, and portability checks)
 2. `.\scripts\test.bat --coverage` shows ≥ 85% coverage on changed modules
 3. No files exceed 200 lines
 4. No circular dependencies introduced

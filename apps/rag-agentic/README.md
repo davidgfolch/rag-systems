@@ -37,5 +37,5 @@ com.rag.agentic
 
 ```bash
 .\scripts\test.bat rag-agentic
-.\scripts\test.bat --architecture
+.\scripts\test.bat
 ```

@@ -37,8 +37,8 @@ All operations are centralized in the `scripts/` folder. Use the scripts, not di
 # Run specific module tests
 .\scripts\test.bat rag-basic
 
-# Run architecture tests
-.\scripts\test.bat --architecture
+# Architecture tests run as part of every test run
+.\scripts\test.bat
 
 # Run a module
 .\scripts\run.bat rag-basic --profile local
@@ -99,7 +99,7 @@ api/          - REST controllers (only in runnable modules)
 Always run after significant changes:
 
 ```bash
-.\scripts\test.bat --architecture
+.\scripts\test.bat
 ```
 
 This runs ArchUnit tests enforcing layer dependencies, layer file-length/quality conventions via the `rag-common` `ArchitectureTest`, and repository hygiene (minimal root, docs/scripts placement, script portability).
@@ -107,7 +107,7 @@ This runs ArchUnit tests enforcing layer dependencies, layer file-length/quality
 ## Definition of Done
 
 Before marking any task complete, verify:
-1. **No architecture violations**: Run `scripts\test.bat --architecture`
+1. **No architecture violations**: Run `scripts\test.bat`
 2. **All tests pass**: Run `scripts\test.bat [module]`
 3. **Coverage ≥ 85%** for changed modules
 4. **No duplicate code**: Common logic in rag-common

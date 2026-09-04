@@ -8,6 +8,9 @@ REM   install.bat rag-basic - Install specific module
 set "ROOT=%~dp0.."
 cd /d "%ROOT%"
 
+REM Bootstrap root .env files from scripts\.env*.example (idempotent)
+call scripts\bootstrap-env.bat
+
 if "%~1"=="" (
     echo Installing all RAG modules...
     call mvnw.cmd clean install -DskipTests

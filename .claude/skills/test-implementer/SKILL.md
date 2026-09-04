@@ -37,11 +37,11 @@ Use this skill when implementing or running tests for the RAG Systems monorepo.
 - **Architecture tests**: ArchUnit enforcing layer dependency rules. Tag with `@Tag("architecture")`.
 
 ## 6. Architecture Verification
-Refuse to complete the task without verifying architecture compliance:
+Refuse to complete the task without verifying architecture compliance (architecture tests always run as part of the suite):
 
 ```bash
-.\scripts\test.bat --architecture   # Windows
-./scripts/test.sh --architecture    # Linux/Mac
+.\scripts\test.bat   # Windows
+./scripts/test.sh    # Linux/Mac
 ```
 
 ## Usage

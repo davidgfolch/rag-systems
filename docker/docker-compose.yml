@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_DB: rag
       POSTGRES_USER: rag
-      POSTGRES_PASSWORD: rag
+      POSTGRES_PASSWORD: ${PGVECTOR_PASSWORD:-rag}
     ports:
       - "5432:5432"
     volumes:

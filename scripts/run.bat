@@ -9,6 +9,9 @@ REM   run.bat rag-basic --profile cloud - Run another module
 set "ROOT=%~dp0.."
 cd /d "%ROOT%"
 
+REM Bootstrap root .env files from scripts\.env*.example (idempotent)
+call scripts\bootstrap-env.bat
+
 set "PROFILES=local"
 set "EXTRA_ARGS="
 

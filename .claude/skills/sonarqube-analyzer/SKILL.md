@@ -12,7 +12,7 @@ Run local SonarQube static analysis on the monorepo, map findings to fixes, and 
 
 ## Key Facts
 
-- **Server**: local SonarQube Community 10.7 LTS at `http://localhost:9000` (`admin`/`admin` first login).
+- **Server**: local SonarQube Community 10.7 LTS at `http://localhost:9000` (first boot auto-provisioned by `scripts/sonar-pw.{bat,sh}`: fixed admin password from `SONAR_ADMIN_PASSWORD` in `.env.secrets`, plus a generated `rag-local-ci` analysis token in `SONAR_TOKEN`).
 - **Project key**: `com.rag:rag-systems` (derived from the parent POM GAV).
 - **Entry points**: `scripts/sonar.{bat,sh}` and the `sonar-maven-plugin`. Results are auto-exported to the README by `scripts/sonar-export.ps1` (Windows) / `scripts/sonar-export.sh` (Linux/Mac) after each scan.
 - **Config**: `sonar-project.properties` (exclusions, JRE-provisioning skip, report paths), `docker/docker-compose.sonarqube.yml`.
@@ -20,32 +20,26 @@ Run local SonarQube static analysis on the monorepo, map findings to fixes, and 
 
 ## Workflow
 
-### 1. Generate / reuse a token
-Token is passed as the 2nd arg or via `SONAR_TOKEN` env var. Generate one in the SonarQube UI (**My Account → Security**) only the very first time, or generate one programmatically via the REST API against the local instance (default credentials `admin`/`admin` on the local Community server):
+### 1. Token & password are auto-provisioned
+Run `sonar.bat up` / `sonar.sh up` once. The bootstrap (`scripts/sonar-pw.{bat,sh}`) sets the admin password to `SONAR_ADMIN_PASSWORD` (from `.env.secrets`, generated automatically by `scripts/bootstrap-env.{bat,sh}`) and generates a `rag-local-ci` token, saving it to `SONAR_TOKEN` in `.env.secrets`. The token and password are then read automatically by the `sonar` scripts — no manual step needed.
+
+`.env.secrets` is created automatically at the repo root (copied from `scripts/.env.secrets.example` with a random `SONAR_ADMIN_PASSWORD`) by every script. To re-provision (new password/token), delete the `.sonarqube/admin_pw_set` marker, then restart.
+
+Manually generating a token via the API (e.g. on an already-bootstrapped server) is still possible:
 
 ```bash
-# Create a token via the API (returns the token in JSON)
-curl -s -u admin:admin -X POST "http://localhost:9000/api/user_tokens/generate" -d "name=rag-local-ci"
+curl -s -u admin:<password> -X POST "http://localhost:9000/api/user_tokens/generate" -d "name=rag-local-ci"
 
-# Set it for the scan
-export SONAR_TOKEN=squ_xxxx   # Linux/Mac
-set SONAR_TOKEN=squ_xxxx       # Windows (cmd)
-$env:SONAR_TOKEN="squ_xxxx"    # Windows (PowerShell)
+# Set it for the scan (overrides .env.secrets)
+export SONAR_TOKEN=squ_xxxx
 ```
 
-The token starts with `squ_` and is shown only once at creation; store it in your shell/env for reuse. Tokens can be revoked later under **My Account → Security**.
-
 ### 2. Start the server + run analysis
-Analysis always runs the full test suite first (`mvn verify` with JaCoCo), then the scanner:
+Analysis always runs the full test suite first (`mvn verify` with JaCoCo), then the scanner. The token is auto-loaded from `.env.secrets`, so no token argument is required:
 
 ```bash
-# Windows (PowerShell/cmd)
-.\scripts\sonar.bat up-scan $env:SONAR_TOKEN
-.\scripts\sonar.bat scan $env:SONAR_TOKEN
-
-# Linux/Mac
-./scripts/sonar.sh up-scan $SONAR_TOKEN
-./scripts/sonar.sh scan $SONAR_TOKEN
+.\scripts\sonar.bat up-scan    # Windows
+./scripts/sonar.sh up-scan     # Linux/Mac
 ```
 
 ### 3. Read the results
@@ -85,10 +79,10 @@ The gate measures **new/modified lines**. Refactoring a method (e.g., splitting 
 ## Definition of Done
 
 Refuse to mark the task complete until:
-1. `.\scripts\sonar.bat scan <token>` (or `sonar.sh`) runs the full suite without errors.
+1. `.\scripts\sonar.bat scan` (or `sonar.sh`) runs the full suite without errors (token auto-loaded from `.env.secrets`).
 2. The SonarQube **quality gate is `OK`**.
 3. `new_coverage` on changed code is `≥ 80%`.
-4. Architecture tests still pass: `.\scripts\test.bat --architecture` (or run `ArchitectureTest` via Maven).
+4. Architecture tests still pass: `.\scripts\test.bat` (architecture tests always run as part of the suite).
 
 ## Gotchas
 

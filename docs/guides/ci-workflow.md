@@ -72,7 +72,7 @@ The CI commands mirror the local scripts:
 
 | CI | Local |
 |----|-------|
-| `./mvnw test -Dtest=ArchitectureTest` | `scripts\test.bat --architecture` |
+| `./mvnw test` (incl. `ArchitectureTest`) | `scripts\test.bat` |
 | `./mvnw -pl apps/<module> -am verify` | `scripts\test.bat <module> --coverage` |
 | `./mvnw clean package -DskipTests` | `scripts\build.bat` |
 

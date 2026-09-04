@@ -13,6 +13,9 @@ REM   docker.bat ps              - List running services
 set "ROOT=%~dp0.."
 cd /d "%ROOT%"
 
+REM Bootstrap root .env files from scripts\.env*.example (idempotent)
+call scripts\bootstrap-env.bat
+
 set "CMD=%~1"
 
 if "%CMD%"=="" (

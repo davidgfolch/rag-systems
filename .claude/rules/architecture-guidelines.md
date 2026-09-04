@@ -62,11 +62,11 @@ Rules for all code in this repository. These enforce quality, maintainability, a
 
 ## Verification
 
-Always run architecture tests after significant changes:
+Architecture tests always run as part of every test run (no special flag needed). Run the full suite after significant changes:
 
 ```bash
-.\scripts\test.bat --architecture   # Windows
-./scripts/test.sh --architecture    # Linux/Mac
+.\scripts\test.bat   # Windows
+./scripts/test.sh    # Linux/Mac
 ```
 
 ## Best Practices

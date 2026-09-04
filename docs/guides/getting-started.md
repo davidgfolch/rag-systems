@@ -28,17 +28,19 @@ ollama list
 
 ## 2. Configure Environment
 
-Copy the environment template:
+Environment files are bootstrapped automatically. Every operational script
+(`docker`, `run`, `sonar`, `install`, `build`, `test`) runs
+`scripts/bootstrap-env.{bat,sh}`, which copies the examples from `scripts/`
 
-```bash
-# Windows
-copy .env.example .env
+- `scripts/.env.example` → `.env`
+- `scripts/.env.secrets.example` → `.env.secrets`
 
-# Linux/Mac
-cp .env.example .env
-```
+to the repo root **only if they don't already exist**, and generates random
+passwords for any blank `PGVECTOR_PASSWORD` (`.env`) and
+`SONAR_ADMIN_PASSWORD` (`.env.secrets`). The generated files are gitignored.
 
-Edit `.env` to match your setup. Defaults point to Ollama local models.
+So no manual copy is needed — just run any script, then edit `.env` if you want
+to override defaults (e.g. cloud API keys). Defaults point to Ollama local models.
 
 ## 3. Install Dependencies
 
@@ -103,9 +105,6 @@ Use the interactive CLI to query without a web UI:
 ```bash
 # Run all tests with coverage
 .\scripts\test.bat --coverage
-
-# Run only architecture tests
-.\scripts\test.bat --architecture
 
 # Run a specific module
 .\scripts\test.bat rag-basic

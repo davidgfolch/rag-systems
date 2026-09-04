@@ -462,7 +462,7 @@ All operations centralized in `scripts/` folder with Windows (`.bat`) and Linux/
 | Script | Purpose |
 |--------|---------|
 | `install` | Install dependencies (mvn clean install) |
-| `test` | Run tests (with `--coverage`, `--architecture`, module selection) |
+| `test` | Run tests (with `--coverage`, module selection; architecture tests always run) |
 | `build` | Build all or specific modules |
 | `run` | Run a specific module (with optional observability profile) |
 | `docker` | Docker operations (base, observability, SonarQube, all services) |

@@ -56,5 +56,5 @@ Swagger UI: http://localhost:8080/swagger-ui.html
 ```bash
 .\scripts\test.bat rag-basic
 .\scripts\test.bat rag-basic --coverage
-.\scripts\test.bat --architecture
+.\scripts\test.bat
 ```

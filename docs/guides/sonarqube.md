@@ -69,19 +69,22 @@ Root-level properties used by the scanner:
 
 ## Usage
 
-### 1. Generate a token
+### 1. Configure secrets (optional but recommended)
 
-Only the first run needs a token. Log in at `http://localhost:9000` (default `admin` / `admin`), then go to **My Account → Security** and generate a token. Pass it to the scripts as an argument or export it:
+The local SonarQube Community server always starts with the default `admin` / `admin` credentials and **forces** a password change on first login. There is no declarative way to pre-set the admin password or disable the reset prompt in Community Edition. Instead, the bootstrap script auto-sets a fixed password **and** generates a reusable analysis token on first boot.
 
-```bash
-# Windows
-set SONAR_TOKEN=squ_xxxx
+`.env.secrets` is bootstrapped automatically: every script runs `scripts/bootstrap-env.{bat,sh}`, which copies `scripts/.env.secrets.example` to the repo root if it does not exist and generates a random `SONAR_ADMIN_PASSWORD` if it is blank. The file is gitignored. No manual copy is needed:
 
-# Linux/Mac
-export SONAR_TOKEN=squ_xxxx
+- To use the auto-generated (random) password, do nothing — it is created and saved for you.
+- To set a fixed password, edit the root `.env.secrets` and set `SONAR_ADMIN_PASSWORD` before the first `sonar up`.
+
+```
+SONAR_ADMIN_PASSWORD=your-secure-password
 ```
 
-### 2. Start SonarQube
+On first boot the script will fill in `SONAR_TOKEN` automatically — do **not** edit it manually.
+
+### 2. Start SonarQube (auto-provisions admin password + token)
 
 ```bash
 # Windows
@@ -91,30 +94,42 @@ export SONAR_TOKEN=squ_xxxx
 ./scripts/sonar.sh up
 ```
 
-Wait ~30 seconds for the server to be ready (`http://localhost:9000`). Alternatively start just SonarQube via Docker directly:
+The script waits for the server to be ready, then runs `scripts/sonar-pw.{bat,sh}`, which:
+1. Sets the admin password to `SONAR_ADMIN_PASSWORD` (from `.env.secrets` or the shell, default `admin`).
+2. Generates a `rag-local-ci` analysis token and saves it to `SONAR_TOKEN` in `.env.secrets`.
+3. Writes a `.sonarqube/admin_pw_set` marker so it only runs once (uses the persistent `sonarqube_data` volume).
+
+Subsequent `up`/`up-scan` runs skip bootstrap. To force a reset (new password/token), delete the `.sonarqube/admin_pw_set` marker and restart (the `sonarqube_data` volume is retained):
 
 ```bash
-.\scripts\docker.bat up-sonar   # Windows
-./scripts/docker.sh up-sonar    # Linux/Mac
+rm .sonarqube/admin_pw_set
+.\scripts\sonar.bat up    # Windows
+./scripts/sonar.sh up     # Linux/Mac
 ```
+
+Alternatively start just SonarQube via Docker directly (`docker.sh/bat up-sonar`); you'll need to run the bootstrap or set up a token manually.
+
+> **Note:** SonarQube Community Edition does **not** support disabling the "Forgot password" / password reset flow in the UI. Setting a known fixed password is the supported local equivalent.
 
 ### 3. Run analysis
 
-Analysis **always runs the full test suite first** (`mvn verify`), then the scanner:
+The token is now read automatically from `.env.secrets`, so no token argument is needed after the first bootstrap. Analysis **always runs the full test suite first** (`mvn verify`), then the scanner:
 
 ```bash
-# Windows
-.\scripts\sonar.bat scan %SONAR_TOKEN%
+# Windows (token auto-loaded from .env.secrets)
+.\scripts\sonar.bat scan
 
 # Linux/Mac
-./scripts/sonar.sh scan $SONAR_TOKEN
+./scripts/sonar.sh scan
 ```
 
-Or start the server and wait until it is ready, then scan, in one step:
+You can still override the token explicitly as an argument or via `SONAR_TOKEN`:
+
+Or start the server, wait until it is ready, bootstrap password + token, and scan, in one step:
 
 ```bash
-.\scripts\sonar.bat up-scan %SONAR_TOKEN%    # Windows
-./scripts/sonar.sh up-scan $SONAR_TOKEN      # Linux/Mac
+.\scripts\sonar.bat up-scan    # Windows (token auto-loaded)
+./scripts/sonar.sh up-scan     # Linux/Mac
 ```
 
 ### 3b. Results are exported to the README

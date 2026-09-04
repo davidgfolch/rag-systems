@@ -8,6 +8,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+# Bootstrap root .env files from scripts/.env*.example (idempotent)
+bash scripts/bootstrap-env.sh
+
 if [ -z "${1:-}" ]; then
     echo "Building all RAG modules..."
     mvn clean package

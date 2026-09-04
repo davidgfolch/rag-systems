@@ -27,7 +27,8 @@ class ArchitectureTest {
     private static final Set<String> ALLOWED_ROOT_ENTRIES = Set.of(
             ".claude", ".github", ".git", ".idea", ".mvn", ".opencode",
             "apps", "docs", "docker", "scripts", "target",
-            ".dockerignore", ".env.example", ".gitignore",
+            ".dockerignore", ".gitignore",
+            ".env", ".env.secrets",
             "mvnw", "mvnw.cmd", "pom.xml", "README.md", "sonar-project.properties");
 
     private final ClassFileImporter importer = new ClassFileImporter()
