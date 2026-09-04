@@ -77,3 +77,24 @@ The CI commands mirror the local scripts:
 | `./mvnw clean package -DskipTests` | `scripts\build.bat` |
 
 Run the same checks locally before pushing so CI stays green.
+
+## Local Developer Workflow
+
+For isolated, parallel feature development use the `dev` scripts
+(`scripts\dev.bat` on Windows, `scripts/dev.sh` on Linux/Mac). They clone the
+repo into a per-feature sibling folder, create a `feat/<name>` branch,
+propagate the auto-generated SonarQube token, and drive the full lifecycle:
+
+| `dev` command | Purpose | CI equivalent |
+|---------------|---------|---------------|
+| `dev new <name>` | Clone to `../rag-systems-<name>`, branch `feat/<name>` | — |
+| `dev test [module]` | Run tests | `tests` job |
+| `dev check [module]` | Tests + SonarQube scan | `tests` + quality gate |
+| `dev commit` / `dev push` | Stage all, commit, push branch | — |
+| `dev pr [title]` | Open PR vs `main` | — |
+| `dev merge` | Squash-merge PR, delete clone | — |
+
+Each feature lives in its own clone so several can run in parallel. The
+SonarQube token is copied from the original workspace into each clone on
+`dev new`, so scanning always works without manual setup. Merge deletes the
+clone automatically (use `dev merge -k` to keep it).

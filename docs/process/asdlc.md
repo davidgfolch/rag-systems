@@ -3,6 +3,25 @@
 The working process every change to this repository must follow. Anything an
 agent (or a human reviewer) modifies must stay verifiable and simple.
 
+## Parallel Development Quick Start
+
+Develop features in isolated per-feature clones so several can proceed in
+parallel, using `scripts\dev.bat` (Windows) / `scripts/dev.sh` (Linux/Mac):
+
+```bash
+.\scripts\dev.bat new my-feature   # clone to ..\rag-systems-my-feature, branch feat/my-feature
+.\scripts\dev.bat check [module]   # tests, then SonarQube scan if tests pass
+.\scripts\dev.bat commit "msg"     # stage all + commit
+.\scripts\dev.bat push             # push feat/my-feature
+.\scripts\dev.bat pr "title"       # open PR vs main
+.\scripts\dev.bat merge            # squash-merge, then delete the clone
+```
+
+`dev new` copies the auto-generated SonarQube token into the clone's
+`.env.secrets` so SonarQube always works there. Each clone is independent; run
+the commands from inside the clone you are working on. `dev merge` deletes its
+own clone after a successful merge (add `-k` to keep it).
+
 ## Rules
 
 ### 1. Every change must be verified
