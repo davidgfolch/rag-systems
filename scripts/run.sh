@@ -28,5 +28,7 @@ if [ -z "$MODULE" ]; then
     MODULE="rag-tui"
 fi
 
+echo "Building reactor (skip tests)..."
+mvn install -DskipTests
 echo "Running $MODULE with profile: $PROFILES"
 mvn spring-boot:run -pl "apps/$MODULE" -am -Dspring-boot.run.profiles="$PROFILES" -Dspring-boot.run.arguments="$EXTRA_ARGS"
