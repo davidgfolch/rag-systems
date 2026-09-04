@@ -9,7 +9,8 @@
 #   ./dev.sh commit "msg"     - git add -A && git commit
 #   ./dev.sh push             - git push -u origin <branch>
 #   ./dev.sh pr [title]       - Create PR against main
-#   ./dev.sh merge [-k]       - Squash-merge PR, then delete clone (keep with -k)
+#   ./dev.sh auto-merge [-k]  - Wait for green checks, auto-merge, auto-resolve conflicts, delete clone (keep with -k)
+#   ./dev.sh merge [-k]       - Alias of auto-merge
 #   ./dev.sh cleanup <name>   - Delete ../rag-systems-<name>
 #   ./dev.sh status           - Branch, dirty state, ahead/behind
 
@@ -91,12 +92,34 @@ case "$CMD" in
         if [ "$BR" = "main" ]; then echo "Refusing to open a PR from main."; exit 1; fi
         gh pr create --base main --head "$BR" --title "$TITLE" --body "Automated PR from the dev workflow for branch $BR."
         ;;
-    merge)
+    merge|auto-merge)
         KEEP="${2:-}"
         BR="$(curbranch)"
         if [ "$BR" = "main" ]; then echo "Cannot merge from main. Run inside a feature clone."; exit 1; fi
+        if ! command -v gh >/dev/null 2>&1; then echo "Error: 'gh' CLI is required. Install GitHub CLI and authenticate."; exit 1; fi
         PRNUM="$(gh pr list --head "$BR" --json number --jq '.[0].number' || true)"
         if [ -z "$PRNUM" ]; then echo "Error: no open PR found for branch $BR."; exit 1; fi
+
+        echo "Resolving PR #$PRNUM state..."
+        echo "Waiting for PR checks to be green..."
+        if ! timeout 900 gh pr checks "$PRNUM" --watch; then
+            echo "PR checks did not all pass within timeout. Clone kept for inspection."
+            exit 1
+        fi
+
+        if ! gh pr view "$PRNUM" --json mergeable --jq '.mergeable' | grep -q 'MERGEABLE'; then
+            echo "PR is not mergeable yet; attempting to auto-resolve conflicts..."
+            git fetch origin main >/dev/null 2>&1
+            if git rebase origin/main; then
+                echo "Rebase succeeded; conflict resolved automatically."
+                git push --force-with-lease origin "$BR" || { echo "Push after rebase failed. Clone kept."; exit 1; }
+            else
+                git rebase --abort >/dev/null 2>&1
+                echo "Error: could not auto-resolve conflicts (rebase failed). Resolve manually, then re-run auto-merge. Clone kept."
+                exit 1
+            fi
+        fi
+
         echo "Merging PR #$PRNUM..."
         if gh pr merge "$PRNUM" --squash; then
             echo "PR merged."
@@ -139,7 +162,7 @@ case "$CMD" in
         echo "Usage: ./dev.sh <command> [args]"
         echo "  new <name>  checkout <br>  test [module]  sonar [token]"
         echo "  check [module]  commit \"msg\"  push  pr [title]"
-        echo "  merge [-k]  cleanup <name>  status"
+        echo "  auto-merge [-k]  merge [-k]  cleanup <name>  status"
         exit 1
         ;;
 esac

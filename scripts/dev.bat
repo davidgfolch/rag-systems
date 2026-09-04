@@ -10,7 +10,8 @@ REM   dev.bat check [module]   - Tests, then SonarQube scan if tests pass
 REM   dev.bat commit "msg"     - git add -A && git commit
 REM   dev.bat push             - git push -u origin <branch>
 REM   dev.bat pr [title]       - Create PR against main
-REM   dev.bat merge [-k]       - Squash-merge PR, then delete clone (keep with -k)
+REM   dev.bat auto-merge [-k]  - Wait for green checks, auto-merge, auto-resolve conflicts, delete clone (keep with -k)
+REM   dev.bat merge [-k]       - Alias of auto-merge
 REM   dev.bat cleanup <name>   - Delete ..\rag-systems-<name>
 REM   dev.bat status           - Branch, dirty state, ahead/behind
 
@@ -26,6 +27,7 @@ if "%CMD%"=="commit"   goto :commit
 if "%CMD%"=="push"     goto :push
 if "%CMD%"=="pr"       goto :pr
 if "%CMD%"=="merge"    goto :merge
+if "%CMD%"=="auto-merge" goto :merge
 if "%CMD%"=="cleanup"  goto :cleanup
 if "%CMD%"=="status"   goto :status
 goto :usage
@@ -154,10 +156,40 @@ if "%CURBRANCH%"=="main" (
     echo Cannot merge from main. Run inside a feature clone.
     exit /b 1
 )
+where gh >nul 2>nul
+if errorlevel 1 (
+    echo Error: 'gh' CLI is required. Install GitHub CLI and authenticate.
+    exit /b 1
+)
 for /f "delims=" %%N in ('gh pr list --head "%CURBRANCH%" --json number --jq ".[0].number"') do set "PRNUM=%%N"
 if "%PRNUM%"=="" (
     echo Error: no open PR found for branch %CURBRANCH%.
     exit /b 1
+)
+echo Resolving PR #%PRNUM% state...
+echo Waiting for PR checks to be green...
+gh pr checks "%PRNUM%" --watch
+if errorlevel 1 (
+    echo PR checks did not all pass. Clone kept for inspection.
+    exit /b 1
+)
+for /f "delims=" %%M in ('gh pr view "%PRNUM%" --json mergeable --jq ".mergeable"') do set "MERGEABLE=%%M"
+if not "%MERGEABLE%"=="MERGEABLE" (
+    echo PR is not mergeable yet; attempting to auto-resolve conflicts...
+    git fetch origin main >nul 2>&1
+    git rebase origin/main
+    if not errorlevel 1 (
+        echo Rebase succeeded; conflict resolved automatically.
+        git push --force-with-lease origin "%CURBRANCH%"
+        if errorlevel 1 (
+            echo Push after rebase failed. Clone kept.
+            exit /b 1
+        )
+    ) else (
+        git rebase --abort >nul 2>&1
+        echo Error: could not auto-resolve conflicts ^(rebase failed^). Resolve manually, then re-run auto-merge. Clone kept.
+        exit /b 1
+    )
 )
 echo Merging PR #%PRNUM%...
 gh pr merge "%PRNUM%" --squash
@@ -206,5 +238,5 @@ exit /b 0
 echo Usage: dev.bat ^<command^> [args]
 echo   new ^<name^>  checkout ^<br^>  test [module]  sonar [token]
 echo   check [module]  commit "msg"  push  pr [title]
-echo   merge [-k]  cleanup ^<name^>  status
+echo   auto-merge [-k]  merge [-k]  cleanup ^<name^>  status
 exit /b 1

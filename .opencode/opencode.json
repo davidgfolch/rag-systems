@@ -3,5 +3,8 @@
   "instructions": [
     ".claude/rules/*.md",
     ".claude/CLAUDE.md"
+  ],
+  "plugin": [
+    "./plugin/sdlc-gate.ts"
   ]
 }

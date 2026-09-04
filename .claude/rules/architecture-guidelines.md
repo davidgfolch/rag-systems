@@ -90,10 +90,10 @@ After deciding on a feature to build, auto-execute:
 
 1. `dev new <feature>` — clones origin to `../rag-systems-<feature>` (sibling of the project root), creates branch `feat/<feature>`, and propagates the SonarQube token into the clone's `.env.secrets`.
 2. Implement changes inside that clone. Because the agent session working directory is fixed, run all commands against the clone via the `workdir` parameter (bash) and absolute paths (read/edit/write/glob/grep). The scripts self-resolve their root from their own location, so they operate on whichever clone they live in.
-3. Run the full ASDLC gate in the clone: `dev check [module]` (tests, then SonarQube if they pass) or `dev test` / `dev sonar scan` individually.
+3. **Always execute all tests after implementation.** Run the full gate in the clone: `dev check [module]` (tests, then SonarQube if they pass) or `dev test` / `dev sonar scan` individually. The gate hooks — `.claude/hooks/stop-gate.*` (Claude Code Stop) and `.opencode/plugin/sdlc-gate.ts` (opencode) — remind the agent to run the test suite before finishing; do not open a PR or merge until tests pass.
 4. `dev commit "message"` — stage all and commit on the feature branch.
 5. `dev push` — push the feature branch to origin.
 6. `dev pr [title]` — open a PR targeting `main` via `gh`.
-7. `dev merge` — squash-merge the PR; on success this deletes the clone (`../rag-systems-<feature>`) automatically. Use `dev merge -k` to keep it.
+7. `dev auto-merge` (alias `dev merge`) — waits for PR checks to be green, then squash-merges automatically; if the PR is not mergeable it attempts to auto-resolve conflicts by rebasing onto `origin/main`; on success it deletes the clone (`../rag-systems-<feature>`) automatically. Use `dev auto-merge -k` to keep it.
 
-Each feature is developed in its own clone so several can proceed in parallel. Only delete a clone via `dev merge` or `dev cleanup <name>` after the work is safely merged.
+Each feature is developed in its own clone so several can proceed in parallel. Only delete a clone via `dev auto-merge`/`dev merge` or `dev cleanup <name>` after the work is safely merged.
