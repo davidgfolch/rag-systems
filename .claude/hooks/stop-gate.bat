@@ -24,14 +24,26 @@ if defined BRANCH (
 )
 
 set "MODIFIED=0"
+set "MODIFIED_JAVA=0"
 for /f "usebackq delims=" %%F in (`git status --porcelain 2^>nul`) do (
-    echo %%F | findstr /r /c:"\.java" >nul && set "MODIFIED=1"
+    set "MODIFIED=1"
+    echo %%F | findstr /r /c:"\.java" >nul && set "MODIFIED_JAVA=1"
 )
 
-if "!IS_FEATURE!"=="1" if "!MODIFIED!"=="1" (
-    echo {"continue":true,"stopReason":"SDLC gate: Java source files were modified on a feature branch. Before finishing, run the full test suite: scripts/test.bat (Windows) or scripts/test.sh (Unix), then `dev check [module]` (tests + SonarQube). After tests pass, commit and push: dev commit "message" then dev push. Do not open a PR or merge until the tests pass. (Docs/skills/rules/config-only changes skip this gate per asdlc.md Rule 1.)"}
+if not "!IS_FEATURE!"=="1" (
+    if "!MODIFIED!"=="1" (
+        echo {"continue":true,"stopReason":"SDLC gate: changes detected. Commit and push them: dev commit "message" then dev push (never on main: use a feature clone)."}
+    ) else (
+        echo {"continue":true}
+    )
 ) else (
-    echo {"continue":true}
+    if "!MODIFIED_JAVA!"=="1" (
+        echo {"continue":true,"stopReason":"SDLC gate: Java source files were modified on a feature branch. Before finishing, run the full test suite: scripts/test.bat (Windows) or scripts/test.sh (Unix), then `dev check [module]` (tests + SonarQube). Then commit and push: dev commit "message" then dev push. Do not open a PR or merge until the tests pass."}
+    ) else if "!MODIFIED!"=="1" (
+        echo {"continue":true,"stopReason":"SDLC gate: working tree has non-Java (docs/rules/config) changes on a feature branch. Skip tests+SonarQube per asdlc.md Rule 1, but commit and push: dev commit "message" then dev push."}
+    ) else (
+        echo {"continue":true}
+    )
 )
 
 exit /b 0

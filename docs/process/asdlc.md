@@ -88,17 +88,17 @@ Architecture rules are enforced automatically by the `ArchitectureTest` suites
 in every module - they run as part of every test run. Use `.\scripts\test.bat`
 (Windows) or `./scripts/test.sh` (Unix) after significant changes.
 
-**Docs/skills/rules-only changes skip the test gate.** If a change touches only
-non-buildable artifacts — Markdown under `docs/`, files under `.claude/`
-(`rules/`, `skills/`, `settings.json`, `hooks/`), config in `.opencode/`, or
-`*.md` — and contains **no** `.java` source and **no** change to build files
-(`pom.xml`, `scripts/*`, `mvnw*`), then it does not affect compilation or
-tests. In that case the "execute all tests + SonarQube after implementation"
-rule is **explicitly waived**: do not run `scripts/test.bat`/`test.sh` or
-`dev check`/`sonar scan` for the change. (The gate hooks in
-`.claude/hooks/stop-gate.*` and `.opencode/plugin/sdlc-gate.ts` fire only on
-`.java` edits, so they already stay silent; this rule makes the waiver explicit
-for pure docs/rule/config edits.)
+**Docs/skills/rules-only changes skip the test gate but still commit & push.**
+If a change touches only non-buildable artifacts — Markdown under `docs/`, files
+under `.claude/` (`rules/`, `skills/`, `settings.json`, `hooks/`), config in
+`.opencode/`, or `*.md` — and contains **no** `.java` source and **no** change
+to build files (`pom.xml`, `scripts/*`, `mvnw*`), then it does not affect
+compilation or tests. In that case the "execute all tests + SonarQube after
+implementation" rule is **explicitly waived**: do not run
+`scripts/test.bat`/`test.sh` or `dev check`/`sonar scan` for the change. The
+change must still be **committed and pushed** (`dev commit`, `dev push`). (The
+gate hooks in `.claude/hooks/stop-gate.*` and `.opencode/plugin/sdlc-gate.ts`
+also remind the agent to commit+push for these config-only edits.)
 
 ### 2. Keep code simple
 

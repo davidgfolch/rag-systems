@@ -23,9 +23,16 @@ case "$BRANCH" in
 esac
 
 MODIFIED_SRC="$(git status --porcelain 2>/dev/null | grep -E '\.java$' | sed 's/^...//' || true)"
+MODIFIED_ANY="$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ' || true)"
 
-if [ "$IS_FEATURE" = "1" ] && [ -n "$MODIFIED_SRC" ]; then
-    echo '{"continue":true,"stopReason":"SDLC gate: Java source files were modified on a feature branch. Before finishing, run the full test suite: scripts/test.sh (Unix) or scripts/test.bat (Windows), then `dev check [module]` (tests + SonarQube). After tests pass, commit and push: dev commit \"message\" then dev push. Do not open a PR or merge until the tests pass. (Docs/skills/rules/config-only changes skip this gate per asdlc.md Rule 1.)"}'
+if [ -n "$MODIFIED_ANY" ] && [ "$MODIFIED_ANY" != "0" ]; then
+    if [ "$IS_FEATURE" = "1" ] && [ -n "$MODIFIED_SRC" ]; then
+        echo '{"continue":true,"stopReason":"SDLC gate: Java source files were modified on a feature branch. Before finishing, run the full test suite: scripts/test.sh (Unix) or scripts/test.bat (Windows), then `dev check [module]` (tests + SonarQube). Then commit and push: dev commit \"message\" then dev push. Do not open a PR or merge until the tests pass."}'
+    elif [ "$IS_FEATURE" = "1" ]; then
+        echo '{"continue":true,"stopReason":"SDLC gate: working tree has non-Java (docs/rules/config) changes on a feature branch. Skip tests+SonarQube per asdlc.md Rule 1, but commit and push: dev commit \"message\" then dev push."}'
+    else
+        echo '{"continue":true,"stopReason":"SDLC gate: changes detected. Commit and push them: dev commit \"message\" then dev push (never on main: use a feature clone)."}'
+    fi
 else
     echo '{"continue":true}'
 fi
