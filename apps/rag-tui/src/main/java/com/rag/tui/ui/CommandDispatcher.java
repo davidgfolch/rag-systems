@@ -130,16 +130,17 @@ public class CommandDispatcher {
     }
 
     private static void appendDocumentSummary(StringBuilder sb, DocumentSummaryDTO doc) {
-        sb.append("   - ").append(doc.getDocumentId());
+        sb.append("   - ");
+        String title = doc.getTitle();
+        if (title == null || title.isBlank()) {
+            title = doc.getDocumentId();
+        }
+        sb.append(title);
         if (doc.getChunkCount() != null) {
             sb.append(" (").append(doc.getChunkCount()).append(" chunks)");
         }
-        Object source = doc.getMetadata() == null ? null : doc.getMetadata().get("fileName");
-        if (source == null && doc.getMetadata() != null) {
-            source = doc.getMetadata().get("source");
-        }
-        if (source != null) {
-            sb.append(" [").append(source).append("]");
+        if (doc.getDocumentId() != null && !doc.getDocumentId().equals(title)) {
+            sb.append(" [").append(doc.getDocumentId()).append("]");
         }
         if (doc.getCreatedAt() != null) {
             sb.append(" ").append(doc.getCreatedAt());

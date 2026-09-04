@@ -289,6 +289,9 @@ components:
       properties:
         documentId:
           type: string
+        title:
+          type: string
+          description: Human-readable document title (filename, web page title, or user-provided)
         chunkCount:
           type: integer
           format: int32
