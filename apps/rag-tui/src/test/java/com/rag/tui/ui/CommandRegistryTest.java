@@ -49,9 +49,10 @@ class CommandRegistryTest {
     void generatesUsageWithAllCommands() {
         String usage = sut.generateUsage();
 
-        assertThat(usage).contains("Available commands:");
-        assertThat(usage).contains("help", "modules", "use", "start", "stop");
-        assertThat(usage).contains("documents", "add-file", "add-url", "ask", "history", "quit");
-        assertThat(usage).contains("/ to browse commands");
+        assertThat(usage)
+                .contains("Available commands:")
+                .contains("help", "modules", "use", "start", "stop")
+                .contains("documents", "add-file", "add-url", "ask", "history", "quit")
+                .contains("/ to browse commands");
     }
 }

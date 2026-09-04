@@ -6,12 +6,13 @@ import java.util.Optional;
 
 public class CommandRegistry {
 
+    private static final String MODULE_ARG = "<module>";
     private static final List<CommandDescriptor> COMMANDS = List.of(
             new CommandDescriptor("help", "show this help", ""),
             new CommandDescriptor("modules", "list known rag-* modules", ""),
-            new CommandDescriptor("use", "switch the active module", "<module>"),
-            new CommandDescriptor("start", "start a module as a child process", "<module>"),
-            new CommandDescriptor("stop", "stop a running module", "<module>"),
+            new CommandDescriptor("use", "switch the active module", MODULE_ARG),
+            new CommandDescriptor("start", "start a module as a child process", MODULE_ARG),
+            new CommandDescriptor("stop", "stop a running module", MODULE_ARG),
             new CommandDescriptor("documents", "list ingested documents", ""),
             new CommandDescriptor("add-file", "ingest a local document", "<path>"),
             new CommandDescriptor("add-url", "ingest a web page", "<url>"),
@@ -38,12 +39,12 @@ public class CommandRegistry {
     }
 
     public String generateUsage() {
-        var sb = new StringBuilder("Available commands:\n");
+        var sb = new StringBuilder("Available commands:").append(System.lineSeparator());
         for (CommandDescriptor cmd : COMMANDS) {
             String args = cmd.usage().isEmpty() ? "" : " " + cmd.usage();
-            sb.append(String.format("  /%-12s %s\n", cmd.name() + args, cmd.description()));
+            sb.append(String.format("  /%-12s %s%n", cmd.name() + args, cmd.description()));
         }
-        sb.append("\nType / to browse commands, or enter a command directly.");
+        sb.append(System.lineSeparator()).append("Type / to browse commands, or enter a command directly.");
         return sb.toString();
     }
 }

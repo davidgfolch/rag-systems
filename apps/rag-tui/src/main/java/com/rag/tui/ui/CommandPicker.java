@@ -20,49 +20,23 @@ public class CommandPicker {
     }
 
     public CommandDescriptor pick(String initialFilter) {
-        List<CommandDescriptor> filtered = registry.filter(initialFilter);
+        var filter = new StringBuilder(initialFilter);
+        List<CommandDescriptor> filtered = registry.filter(filter.toString());
         int selected = 0;
-        int displayedLines = 0;
-
+        int displayedLines = filtered.size() + 1;
         NonBlockingReader reader = terminal.reader();
+
         try {
             showList(filtered, selected);
-            displayedLines = filtered.size() + 1;
-
             while (true) {
-                int ch = reader.read(50);
-                if (ch == -1) return null;
-
-                if (ch == '\033') {
-                    int next = reader.read(50);
-                    if (next == -1) return null;
-                    if (next == '[') {
-                        int code = reader.read(50);
-                        if (code == 'A') {
-                            selected = Math.max(0, selected - 1);
-                        } else if (code == 'B') {
-                            selected = Math.min(filtered.size() - 1, selected + 1);
-                        }
-                    } else {
-                        return null;
-                    }
-                } else if (ch == '\n' || ch == '\r') {
-                    return selected < filtered.size() ? filtered.get(selected) : null;
-                } else if (ch == 27) {
-                    return null;
-                } else if (ch == 127 || ch == 8) {
-                    if (!initialFilter.isEmpty()) {
-                        initialFilter = initialFilter.substring(0, initialFilter.length() - 1);
-                    }
-                } else if (ch >= 32) {
-                    initialFilter += (char) ch;
-                } else {
-                    return null;
-                }
+                KeyResult result = handleKey(reader, filter, filtered, selected);
+                if (result.action() == Action.EXIT) return null;
+                if (result.action() == Action.SELECT) return result.command();
+                selected = result.selected();
 
                 clearLines(displayedLines);
-                filtered = registry.filter(initialFilter);
-                selected = Math.min(selected, Math.max(0, filtered.size() - 1));
+                filtered = registry.filter(filter.toString());
+                selected = Math.clamp(selected, 0, Math.max(0, filtered.size() - 1));
                 showList(filtered, selected);
                 displayedLines = filtered.size() + 1;
             }
@@ -71,28 +45,84 @@ public class CommandPicker {
         }
     }
 
-    private void showList(List<CommandDescriptor> commands, int selected) throws IOException {
-        terminal.writer().write(TerminalStyle.command("Commands:\n"));
+    private KeyResult handleKey(NonBlockingReader reader, StringBuilder filter,
+                                 List<CommandDescriptor> filtered, int selected) throws IOException {
+        int ch = reader.read(50);
+        if (ch == -1) return exit();
+        if (ch == '\033') return handleEscapeKey(reader, filtered.size(), selected);
+        if (ch == '\n' || ch == '\r') return select(selected, filtered);
+        if (ch == 127 || ch == 8) return backspace(filter, selected);
+        if (ch >= 32) return type(filter, ch, selected);
+        return exit();
+    }
+
+    private KeyResult handleEscapeKey(NonBlockingReader reader, int size, int selected) throws IOException {
+        if (size == 0) return KeyResult.continueSelection(selected);
+        int next = reader.read(50);
+        if (next == -1) return exit();
+        if (next == '[') {
+            int code = reader.read(50);
+            if (code == 'A') return KeyResult.continueSelection((int) Math.clamp((long) selected - 1, 0, (long) size - 1));
+            if (code == 'B') return KeyResult.continueSelection((int) Math.clamp((long) selected + 1, 0, (long) size - 1));
+            return KeyResult.continueSelection(selected);
+        }
+        return exit();
+    }
+
+    private KeyResult select(int selected, List<CommandDescriptor> filtered) {
+        return selected < filtered.size()
+                ? new KeyResult(Action.SELECT, filtered.get(selected), selected)
+                : exit();
+    }
+
+    private KeyResult backspace(StringBuilder filter, int selected) {
+        if (filter.length() > 0) filter.setLength(filter.length() - 1);
+        return KeyResult.continueSelection(selected);
+    }
+
+    private KeyResult type(StringBuilder filter, int ch, int selected) {
+        filter.append((char) ch);
+        return KeyResult.continueSelection(selected);
+    }
+
+    private static KeyResult exit() {
+        return new KeyResult(Action.EXIT, null, 0);
+    }
+
+    private void showList(List<CommandDescriptor> commands, int selected) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(TerminalStyle.command("Commands:\n"));
         for (int i = 0; i < commands.size(); i++) {
             CommandDescriptor cmd = commands.get(i);
             String marker = (i == selected) ? "> " : "  ";
-            String line = marker + cmd.name() + "  " + TerminalStyle.info(cmd.description()) + "\n";
-            terminal.writer().write(line);
+            sb.append(marker).append(cmd.name()).append("  ")
+              .append(TerminalStyle.info(cmd.description())).append("\n");
         }
         if (commands.isEmpty()) {
-            terminal.writer().write("  (no matching commands)\n");
+            sb.append("  (no matching commands)\n");
         }
-        terminal.writer().write("\nPress Enter to select, Esc to cancel\n");
+        sb.append("\nPress Enter to select, Esc to cancel\n");
+        terminal.writer().write(sb.toString());
         terminal.writer().flush();
     }
 
-    private void clearLines(int count) throws IOException {
+    private void clearLines(int count) {
+        StringBuilder sb = new StringBuilder();
         for (int i = 0; i < count; i++) {
-            terminal.writer().write(CLEAR_LINE);
-            if (i < count - 1) {
-                terminal.writer().write(MOVE_UP.formatted(1));
-            }
+            sb.append(CLEAR_LINE);
+            if (i < count - 1) sb.append(MOVE_UP.formatted(1));
         }
+        terminal.writer().write(sb.toString());
         terminal.writer().flush();
+    }
+
+    private enum Action {
+        NONE, EXIT, SELECT
+    }
+
+    private record KeyResult(Action action, CommandDescriptor command, int selected) {
+        static KeyResult continueSelection(int selected) {
+            return new KeyResult(Action.NONE, null, selected);
+        }
     }
 }
