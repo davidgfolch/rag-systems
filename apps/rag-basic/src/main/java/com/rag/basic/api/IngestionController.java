@@ -45,6 +45,7 @@ public class IngestionController {
 
     private static final Logger log = LoggerFactory.getLogger(IngestionController.class);
     private static final String SOURCE_TYPE = "sourceType";
+    private static final String TITLE = "title";
 
     private final IngestionService ingestionService;
     private final WebCrawlerClient webCrawlerClient;
@@ -84,7 +85,7 @@ public class IngestionController {
         if (request.getMetadata() != null) {
             metadata.putAll(request.getMetadata());
         }
-        metadata.putIfAbsent("title", "Untitled document");
+        metadata.putIfAbsent(TITLE, "Untitled document");
         var document = new Document(UUID.randomUUID().toString(), request.getContent(), metadata);
         return created(ingestionService.ingest(document));
     }
@@ -107,7 +108,7 @@ public class IngestionController {
         }
         metadata.putIfAbsent(SOURCE_TYPE, "file");
         metadata.putIfAbsent("fileName", file.getOriginalFilename());
-        metadata.putIfAbsent("title", file.getOriginalFilename());
+        metadata.putIfAbsent(TITLE, file.getOriginalFilename());
         metadata.put("rawBytes", bytes);
         var document = new Document(UUID.randomUUID().toString(), "", metadata);
         log.info("Ingest-file '{}' -> document {}: parsing content...", original, document.getId());
@@ -136,7 +137,7 @@ public class IngestionController {
         }
         metadata.putIfAbsent(SOURCE_TYPE, "file");
         metadata.putIfAbsent("fileName", file.getOriginalFilename());
-        metadata.putIfAbsent("title", file.getOriginalFilename());
+        metadata.putIfAbsent(TITLE, file.getOriginalFilename());
         metadata.put("rawBytes", bytes);
         var document = new Document(UUID.randomUUID().toString(), "", metadata);
         String documentId = asyncIngestionService.submit(document);
@@ -167,7 +168,7 @@ public class IngestionController {
     }
 
     private DocumentSummaryDTO toDocumentSummary(DocumentSummary summary) {
-        Object title = summary.metadata().get("title");
+        Object title = summary.metadata().get(TITLE);
         return new DocumentSummaryDTO()
                 .documentId(summary.documentId())
                 .title(title != null ? title.toString() : null)
@@ -182,8 +183,7 @@ public class IngestionController {
         }
         PageDTO page = webCrawlerClient.fetch(request.getUrl().toString());
         var document = new Document(UUID.randomUUID().toString(), page.getText(),
-                Map.of(SOURCE_TYPE, "web", "source", page.getUrl(),
-                        "title", page.getTitle() != null ? page.getTitle() : page.getUrl()));
+                Map.of(SOURCE_TYPE, "web", "source", page.getUrl(), TITLE, page.getTitle()));
         return created(ingestionService.ingest(document));
     }
 
