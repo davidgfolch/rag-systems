@@ -3,6 +3,7 @@ import type { Plugin } from "@opencode-ai/plugin"
 const SDLC_GATE = `SDLC GATE (RAG Systems):
 - Any accepted plan must go through the SDLC in docs/process/asdlc.md.
 - ALWAYS execute all tests after implementation before finishing: run scripts/test.bat (Windows) or scripts/test.sh (Unix), then dev check [module] (tests + SonarQube).
+- EXCEPTION: docs/skills/rules/config-only changes (no .java, no build/script/pom changes) skip the test+SonarQube gate — see asdlc.md Rule 1.
 - Never commit/push to main directly; work in a per-feature clone on branch feat/<name>.
 - Do not open a PR or merge until tests pass.
 - Use dev auto-merge (alias dev merge) to merge green PRs, auto-resolve conflicts, and delete the feature clone on success.`
