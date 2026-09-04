@@ -3,8 +3,11 @@ setlocal enabledelayedexpansion
 REM ===== RAG Systems Stop-gate hook (Windows) =====
 REM Enforces the SDLC rule "always execute all tests after implementation".
 REM Runs on the Stop event. Inspects the working tree.
-REM Emits an instructive stopReason when code was modified on a feature branch,
+REM Emits an instructive stopReason when JAVA code was modified on a feature branch,
 REM reminding the agent to run tests before done.
+REM Scope: only .java changes trigger the test reminder. Docs/skills/rules/config
+REM changes (no .java, no build/script/pom changes) skip the test gate per
+REM docs/process/asdlc.md Rule 1, so they are intentionally silent here.
 REM Returns 0 (continue:true) so normal workflows are never hard-blocked; the
 REM hard gate lives in `dev auto-merge` (merges only green PRs) and the rules.
 
@@ -26,7 +29,7 @@ for /f "usebackq delims=" %%F in (`git status --porcelain 2^>nul`) do (
 )
 
 if "!IS_FEATURE!"=="1" if "!MODIFIED!"=="1" (
-    echo {"continue":true,"stopReason":"SDLC gate: Java source files were modified on a feature branch. Before finishing, run the full test suite: scripts/test.bat (Windows) or scripts/test.sh (Unix), then `dev check [module]` (tests + SonarQube). Do not open a PR or merge until the tests pass."}
+    echo {"continue":true,"stopReason":"SDLC gate: Java source files were modified on a feature branch. Before finishing, run the full test suite: scripts/test.bat (Windows) or scripts/test.sh (Unix), then `dev check [module]` (tests + SonarQube). Do not open a PR or merge until the tests pass. (Docs/skills/rules/config-only changes skip this gate per asdlc.md Rule 1.)"}
 ) else (
     echo {"continue":true}
 )
