@@ -144,7 +144,7 @@ if "%CURBRANCH%"=="main" (
     echo Refusing to open a PR from main. Use a feature branch.
     exit /b 1
 )
-gh pr create --base main --head "%CURBRANCH%" --title "%PR_TITLE%"
+gh pr create --base main --head "%CURBRANCH%" --title "%PR_TITLE%" --body "Automated PR from the dev workflow for branch %CURBRANCH%."
 exit /b %errorlevel%
 
 :merge

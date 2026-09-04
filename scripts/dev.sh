@@ -89,7 +89,7 @@ case "$CMD" in
         TITLE="${2:-}"
         [ -n "$TITLE" ] || TITLE="$(git log -1 --pretty=%s)"
         if [ "$BR" = "main" ]; then echo "Refusing to open a PR from main."; exit 1; fi
-        gh pr create --base main --head "$BR" --title "$TITLE"
+        gh pr create --base main --head "$BR" --title "$TITLE" --body "Automated PR from the dev workflow for branch $BR."
         ;;
     merge)
         KEEP="${2:-}"
