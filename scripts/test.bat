@@ -22,7 +22,7 @@ if "%~1"=="" goto :done
 if "%~1"=="--coverage" (
     set "COVERAGE_GOAL=verify"
 ) else if "%~1"=="install" (
-    call mvnw.cmd install -DskipTests >nul 2>&1
+    call mvnw.cmd install -DskipTests -Djacoco.skip=true >nul 2>&1
 ) else (
     set "MODULE_SPEC=-pl apps/%~1 -am"
 )

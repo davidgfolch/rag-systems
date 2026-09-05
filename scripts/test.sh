@@ -20,7 +20,7 @@ MODULE_SPEC=""
 for arg in "$@"; do
     case "$arg" in
         --coverage) COVERAGE_GOAL="verify" ;;
-        install) mvn install -DskipTests >/dev/null 2>&1 ;;
+        install) mvn install -DskipTests -Djacoco.skip=true >/dev/null 2>&1 ;;
         *) MODULE_SPEC="-pl apps/$arg -am" ;;
     esac
 done

@@ -13,10 +13,10 @@ bash scripts/bootstrap-env.sh
 
 if [ -z "${1:-}" ]; then
     echo "Installing all RAG modules..."
-    mvn clean install -DskipTests
+    mvn clean install -DskipTests -Djacoco.skip=true
 else
     echo "Installing module: $1"
-    mvn clean install -pl "apps/$1" -am -DskipTests
+    mvn clean install -pl "apps/$1" -am -DskipTests -Djacoco.skip=true
 fi
 
 echo

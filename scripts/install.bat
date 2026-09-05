@@ -13,10 +13,10 @@ call scripts\bootstrap-env.bat
 
 if "%~1"=="" (
     echo Installing all RAG modules...
-    call mvnw.cmd clean install -DskipTests
+    call mvnw.cmd clean install -DskipTests -Djacoco.skip=true
 ) else (
     echo Installing module: %~1
-    call mvnw.cmd clean install -pl "apps/%~1" -am -DskipTests
+    call mvnw.cmd clean install -pl "apps/%~1" -am -DskipTests -Djacoco.skip=true
 )
 
 echo.
