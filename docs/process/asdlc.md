@@ -21,8 +21,8 @@ parallel, using `scripts\dev.bat` (Windows) / `scripts/dev.sh` (Linux/Mac):
 `dev new` copies the auto-generated SonarQube token into the clone's
 `.env.secrets` so SonarQube always works there. Each clone is independent; run
 the commands from inside the clone you are working on. `dev auto-merge` (and
-its alias `dev merge`) deletes its own clone after a successful merge; add
-`-k` to keep it.
+its alias `dev merge`) merges the green PR (deleting the remote branch) then
+deletes its own clone on success; add `-k` to keep it.
 
 ## Plan Approval
 
@@ -38,7 +38,8 @@ follow every step below without shortcuts:
 4. `dev check` (tests + SonarQube) must pass before merging.
 5. `dev push`, then `dev pr`.
 6. `dev auto-merge` orchestrates the merge: poll checks, auto-merge green
-   PRs, attempt to auto-resolve conflicts, and delete the clone on success.
+   PRs, attempt to auto-resolve conflicts, delete the remote branch, and
+   delete the clone on success.
 
 ## Gate Hooks
 

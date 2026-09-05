@@ -9,7 +9,7 @@
 #   ./dev.sh commit "msg"     - git add -A && git commit
 #   ./dev.sh push             - git push -u origin <branch>
 #   ./dev.sh pr [title]       - Create PR against main
-#   ./dev.sh auto-merge [-k]  - Wait for green checks, auto-merge, auto-resolve conflicts, delete clone (keep with -k)
+#   ./dev.sh auto-merge [-k]  - Wait for green checks, auto-merge, auto-resolve conflicts, delete remote branch + clone (keep clone with -k)
 #   ./dev.sh merge [-k]       - Alias of auto-merge
 #   ./dev.sh cleanup <name>   - Delete ../rag-systems-<name>
 #   ./dev.sh status           - Branch, dirty state, ahead/behind
@@ -121,7 +121,7 @@ case "$CMD" in
         fi
 
         echo "Merging PR #$PRNUM..."
-        if gh pr merge "$PRNUM" --squash; then
+        if gh pr merge "$PRNUM" --squash --delete-branch; then
             echo "PR merged."
             if [ "$KEEP" = "-k" ]; then
                 echo "Keeping clone."

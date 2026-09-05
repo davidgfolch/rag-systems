@@ -10,7 +10,7 @@ REM   dev.bat check [module]   - Tests, then SonarQube scan if tests pass
 REM   dev.bat commit "msg"     - git add -A && git commit
 REM   dev.bat push             - git push -u origin <branch>
 REM   dev.bat pr [title]       - Create PR against main
-REM   dev.bat auto-merge [-k]  - Wait for green checks, auto-merge, auto-resolve conflicts, delete clone (keep with -k)
+REM   dev.bat auto-merge [-k]  - Wait for green checks, auto-merge, auto-resolve conflicts, delete remote branch + clone (keep clone with -k)
 REM   dev.bat merge [-k]       - Alias of auto-merge
 REM   dev.bat cleanup <name>   - Delete ..\rag-systems-<name>
 REM   dev.bat status           - Branch, dirty state, ahead/behind
@@ -192,7 +192,7 @@ if not "%MERGEABLE%"=="MERGEABLE" (
     )
 )
 echo Merging PR #%PRNUM%...
-gh pr merge "%PRNUM%" --squash
+gh pr merge "%PRNUM%" --squash --delete-branch
 if not errorlevel 1 (
     echo PR merged.
     if /I "%KEEP%"=="-k" (
