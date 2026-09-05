@@ -79,22 +79,25 @@ git checkout "%~2"
 exit /b %errorlevel%
 
 :test
-shift
+set "ARGS=%*"
+for /f "tokens=1,* delims= " %%A in ("%ARGS%") do set "REST=%%B"
 cd /d "%ROOT%"
-call scripts\test.bat %*
+call scripts\test.bat %REST%
 exit /b %errorlevel%
 
 :sonar
-shift
+set "ARGS=%*"
+for /f "tokens=1,* delims= " %%A in ("%ARGS%") do set "REST=%%B"
 cd /d "%ROOT%"
-call scripts\sonar.bat %*
+call scripts\sonar.bat %REST%
 exit /b %errorlevel%
 
 :check
-shift
+set "ARGS=%*"
+for /f "tokens=1,* delims= " %%A in ("%ARGS%") do set "REST=%%B"
 cd /d "%ROOT%"
 echo Running tests...
-call scripts\test.bat %*
+call scripts\test.bat %REST%
 if not errorlevel 1 (
     echo Tests passed. Running SonarQube scan...
     call :token_or_regenerate
