@@ -45,7 +45,7 @@ dispatcher/services, keep I/O in the shell, and keep every file under 200 lines.
 ## Provider abstraction & profiles
 
 No concrete model/store is hardcoded. The `local` profile uses Ollama
-(`nomic-embed-text` embeddings, `qwen3:4b` chat); the `cloud` profile uses OpenAI.
+(`nomic-embed-text` embeddings, `phi4` chat); the `cloud` profile uses OpenAI.
 The vector store defaults to in-memory (no Postgres needed) and can be switched to
 PgVector with `rag.vector-store.type=pgvector`.
 

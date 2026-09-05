@@ -32,7 +32,7 @@ spring:
       on-profile: local
   ai:
     ollama:
-      base-url: http://localhost:11434
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
       init:
         pull-model-strategy: when-missing
         timeout: 60s
@@ -40,6 +40,9 @@ spring:
         embedding:
           options:
             model: ${OLLAMA_EMBEDDING_MODEL:nomic-embed-text}
+        chat:
+          options:
+            model: ${OLLAMA_CHAT_MODEL:phi4}
     vectorstore:
       pgvector:
         schema-name: ${PGVECTOR_SCHEMA:rag_basic}

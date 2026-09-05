@@ -136,7 +136,7 @@ public class RagBasicConfig {
     @Profile("local")
     public org.springframework.ai.chat.model.ChatModel providerChatModel(
             @Value("${spring.ai.ollama.base-url:http://localhost:11434}") String baseUrl,
-            @Value("${spring.ai.ollama.chat.options.model:qwen3:4b}") String model) {
+            @Value("${spring.ai.ollama.chat.options.model:phi4}") String model) {
         var api = org.springframework.ai.ollama.api.OllamaApi.builder().baseUrl(baseUrl).build();
         var options = org.springframework.ai.ollama.api.OllamaChatOptions.builder().model(model).build();
         return OllamaChatModel.builder().ollamaApi(api).defaultOptions(options).build();
