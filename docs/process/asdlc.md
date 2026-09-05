@@ -109,6 +109,30 @@ Use `var` for local variables when the type is obvious from the initializer,
 e.g. `var result = sut.createConversation("   ");`. Keep explicit types on
 method signatures, fields, and anywhere `var` would hide intent.
 
+### 3b. Use imports; avoid inline fully-qualified names
+
+Import every referenced type at the top of the file. Do not spell out
+fully-qualified names inline at the point of use (e.g. avoid
+`org.springframework.ai.vectorstore.VectorStore` or
+`com.fasterxml.jackson.databind.ObjectMapper` written inline in the body).
+Inline references are hard to read and easy to get wrong. The convention,
+including the `var` rule above, is detailed in
+`.claude/skills/rules/SKILL.md`.
+
+### 3c. Use common abbreviated names
+
+Use short, conventional names for locals/params/fields/loop variables:
+`req`=request, `res`=response, `conn`=connection, `ds`=dataSource,
+`docs`=documents, `doc`=document, `docSummary`=DocumentSummary,
+`docsSummaries`=List&lt;DocumentSummary&gt;, `chunks`=List&lt;Chunk&gt;,
+`rs`=resultSet, `pstmt`=preparedStatement, `md`=metadata (locals),
+`om`=objectMapper, `msg`/`msgs`=message(s),
+`docId`=documentId,
+`repo`=repository, `sb`=StringBuilder, `sources`=sources (kept full). Keep full
+names on domain/entity record fields, Spring bean/property bound fields, and
+where a short form would hurt clarity. Full list and rationale in
+`.claude/skills/rules/SKILL.md`.
+
 ### 4. Suffix bean classes; keep domain beans plain
 
 To avoid fully-qualified types and name collisions between layers:
@@ -132,4 +156,6 @@ These rules are enforced by the architecture tests:
 | Auto-merge green PRs + conflict resolution | `scripts/dev.bat`/`dev.sh` `auto-merge` |
 | Modern Java / no verbose constructors | This document, review checklist |
 | `var` when type is clear | This document |
+| Imports instead of inline fully-qualified names | `.claude/skills/rules/SKILL.md` |
+| Common abbreviated names (`req`, `res`, `conn`, `ds`, ...) | `.claude/skills/rules/SKILL.md` |
 | `Entity`/`DTO` bean suffixes | `rag-memory/.../ArchitectureTest`, `rag-contract/.../DtoNamingTest` |
