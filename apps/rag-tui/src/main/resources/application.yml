@@ -17,6 +17,7 @@ rag:
     overlap: ${CHUNK_OVERLAP:64}
   chat:
     top-k: ${CHAT_TOP_K:4}
+    timeout-seconds: ${CHAT_TIMEOUT_SECONDS:180}
 
 ---
 # Local profile - Ollama models (zero-cost, private, runs on CPU/GPU)

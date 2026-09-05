@@ -1,5 +1,8 @@
 package com.rag.tui.launcher;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -9,6 +12,8 @@ import java.util.Optional;
  * mutable active selection (switched at runtime with the "use" command).
  */
 public class ModuleRegistry {
+
+    private static final Logger log = LoggerFactory.getLogger(ModuleRegistry.class);
 
     private final List<Module> modules;
     private final Map<String, Module> byName;
@@ -34,6 +39,7 @@ public class ModuleRegistry {
 
     public boolean activate(String name) {
         if (!byName.containsKey(name)) return false;
+        log.info("Activated module {}", name);
         activeName = name;
         return true;
     }

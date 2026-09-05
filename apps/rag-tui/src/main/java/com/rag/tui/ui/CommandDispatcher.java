@@ -13,12 +13,16 @@ import com.rag.tui.launcher.Module;
 import com.rag.tui.launcher.ModuleLifecycleManager;
 import com.rag.tui.launcher.ModuleRegistry;
 import com.rag.common.services.FileDocumentLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClientException;
 
 import java.util.List;
 import java.util.function.Consumer;
 
 public class CommandDispatcher {
+
+    private static final Logger log = LoggerFactory.getLogger(CommandDispatcher.class);
 
     private final ModuleRegistry registry;
     private final ModuleLifecycleManager lifecycle;
@@ -47,8 +51,10 @@ public class CommandDispatcher {
 
         String[] parts = trimmed.split("\\s+", 2);
         String arg = parts.length > 1 ? parts[1].trim() : "";
+        String command = parts[0].toLowerCase();
+        log.debug("Command: '{}'", command);
         try {
-            return switch (parts[0].toLowerCase()) {
+            return switch (command) {
                 case "modules" -> modules();
                 case "use" -> use(arg);
                 case "start" -> start(arg, tokenSink);
@@ -61,10 +67,13 @@ public class CommandDispatcher {
                 default -> new CommandResult(TerminalStyle.error("Unknown command. Type 'help' for usage."), false);
             };
         } catch (RestClientException e) {
+            log.warn("Module unreachable on command '{}': {}", parts[0], e.getMessage());
             return new CommandResult(TerminalStyle.error("Module unreachable: " + e.getMessage()), false);
         } catch (ChatGateway.ChatException e) {
+            log.error("Chat failed on command '{}': {}", parts[0], e.getMessage());
             return new CommandResult(TerminalStyle.error("Chat error: " + e.getMessage()), false);
         } catch (FileDocumentLoader.DocumentLoadException | ModuleLifecycleManager.StartException e) {
+            log.error("Command '{}' failed: {}", parts[0], e.getMessage());
             return new CommandResult(TerminalStyle.error(e.getMessage()), false);
         }
     }
@@ -238,5 +247,5 @@ public class CommandDispatcher {
     public record RagClients(RagApiClient apiClient, ChatGateway chatGateway, MemoryClient memoryClient,
                              FileDocumentLoader fileLoader, ModuleHealthClient healthClient) {}
 
-    public record Settings(long startTimeoutMs, int topK) {}
+    public record Settings(long startTimeoutMs, int topK, long chatTimeoutSeconds) {}
 }

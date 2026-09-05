@@ -24,13 +24,13 @@ public class RetrievalService {
 
     public List<Chunk> retrieve(String query, int topK) {
         List<Chunk> results = vectorStore.similaritySearch(query, topK);
-        log.debug("Retrieved {} chunks for query", results.size());
+        log.info("Retrieved {} chunks for query", results.size());
         return results;
     }
 
     public List<Chunk> retrieve(String query, int topK, String documentId) {
         List<Chunk> results = vectorStore.similaritySearch(query, topK, documentId);
-        log.debug("Retrieved {} chunks for query scoped to {}", results.size(), documentId);
+        log.info("Retrieved {} chunks for query scoped to {}", results.size(), documentId);
         return results;
     }
 

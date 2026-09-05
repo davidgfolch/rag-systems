@@ -1,6 +1,8 @@
 package com.rag.webcrawler.services.ranking;
 
 import com.rag.common.services.ChatModel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,6 +15,8 @@ import java.util.regex.Pattern;
  * given or the model yields nothing usable.
  */
 public class LlmLinkPrioritizer implements LinkPrioritizer {
+
+    private static final Logger log = LoggerFactory.getLogger(LlmLinkPrioritizer.class);
 
     private static final String PROMPT = """
             Rank which of the following links are most likely to answer: %s
@@ -32,12 +36,16 @@ public class LlmLinkPrioritizer implements LinkPrioritizer {
 
     @Override
     public List<String> prioritize(List<String> links, String question) {
-        if (question == null || question.isBlank()) return fallback.prioritize(links, question);
+        if (question == null || question.isBlank()) {
+            log.debug("LLM prioritize skipped: no question");
+            return fallback.prioritize(links, question);
+        }
         List<String> matches = extractUrls(chatModel.complete(PROMPT.formatted(question, String.join("\n", links))));
         List<String> result = new ArrayList<>();
         for (String url : matches) {
             if (links.contains(url)) result.add(url);
         }
+        log.debug("LLM prioritized {} of {} links", result.size(), links.size());
         return result.isEmpty() ? fallback.prioritize(links, question) : result;
     }
 

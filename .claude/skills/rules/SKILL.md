@@ -115,6 +115,31 @@ Keep the full type name when:
 For types without a canonical short form, use `var` (section 2) and pick a
 concise plural (`msgs`) that stays readable.
 
+## 4. Structured logging is mandatory
+
+Every concrete service, controller, handler, adapter, and client class MUST log
+through a SLF4J logger. This is required for all features and modules.
+
+```java
+private static final Logger log = LoggerFactory.getLogger(ChatService.class);
+```
+
+Conventions:
+
+- Use `info` for lifecycle milestones (ask received, retrieval count,
+  generation start/complete, connection opened/closed).
+- Use `warn` for retryable/degraded conditions (timeouts, rejections,
+  close failures).
+- Use `error` for failures, always with the throwable as the last argument.
+- Use `debug` for internal details not needed at INFO.
+- Always `{}` placeholders with arguments; never string concatenation.
+- Never log sensitive content (credentials, full document bodies).
+- Do not add manual MDC keys for `trace_id`/`span_id` — OpenTelemetry injects
+  them; rely on that for correlation.
+
+Logger field name is always `log` (never `logger`), and it is
+`private static final`. Do not use Lombok `@Slf4j`.
+
 ## Enforcement
 
 Prefer consistency with the surrounding file. If an existing block already uses

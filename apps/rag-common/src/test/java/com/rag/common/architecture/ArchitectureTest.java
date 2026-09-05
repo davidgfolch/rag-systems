@@ -1,9 +1,14 @@
 package com.rag.common.architecture;
 
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
+import com.tngtech.archunit.lang.ArchCondition;
+import com.tngtech.archunit.lang.ConditionEvents;
+import com.tngtech.archunit.lang.SimpleConditionEvent;
 import com.tngtech.archunit.library.Architectures;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -14,6 +19,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
 
 /**
  * Architecture rules for rag-common. Domain contains only pure, dependency-free
@@ -53,6 +59,31 @@ class ArchitectureTest {
                 .that().resideInAPackage("..domain..")
                 .should().dependOnClassesThat().resideInAnyPackage("..services..", "..repositories..")
                 .check(importer.importPackages(ROOT));
+    }
+
+    @Test
+    void everyBusinessClassHasLogger() {
+        classes()
+                .that().resideInAnyPackage("..services..", "..api..", "..client..",
+                        "..launcher..", "..adapter..", "..repositories.store..")
+                .and().areNotInterfaces()
+                .and().areNotNestedClasses()
+                .and().areNotRecords()
+                .should(new ArchCondition<>("declare an SLF4J logger field named 'log'") {
+                    @Override
+                    public void check(JavaClass item, ConditionEvents events) {
+                        boolean hasLogger = item.getFields().stream()
+                                .anyMatch(f -> "log".equals(f.getName())
+                                        && f.getRawType().isEquivalentTo(Logger.class));
+                        if (!hasLogger) {
+                            events.add(SimpleConditionEvent.violated(item,
+                                    item.getDescription() + " has no SLF4J logger field 'log'"));
+                        }
+                    }
+                })
+                .because("structured logging is mandatory: every concrete service/controller/handler/"
+                        + "client/adapter must declare a SLF4J logger field named 'log'")
+                .check(importer.importPackages("com.rag"));
     }
 
     @Test

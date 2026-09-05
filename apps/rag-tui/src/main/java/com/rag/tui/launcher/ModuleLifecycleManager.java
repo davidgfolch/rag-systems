@@ -1,5 +1,8 @@
 package com.rag.tui.launcher;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Map;
@@ -10,6 +13,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * their liveness. Kept thin: no RAG logic, only process management.
  */
 public class ModuleLifecycleManager {
+
+    private static final Logger log = LoggerFactory.getLogger(ModuleLifecycleManager.class);
 
     private final Path projectDir;
     private final ProcessStarter starter;
@@ -35,6 +40,7 @@ public class ModuleLifecycleManager {
     public boolean start(Module module) {
         if (isRunning(module.name())) return false;
         try {
+            log.info("Starting module {}", module.name());
             running.put(module.name(), starter.start(script(), module.name()));
             return true;
         } catch (IOException e) {
@@ -45,6 +51,7 @@ public class ModuleLifecycleManager {
     public boolean stop(String name) {
         Process process = running.remove(name);
         if (process == null) return false;
+        log.info("Stopping module {}", name);
         process.destroy();
         return true;
     }

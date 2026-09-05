@@ -32,12 +32,15 @@ public class ChatGateway {
     private final ModuleRegistry registry;
     private final WebSocketClient webSocketClient;
     private final ObjectMapper objectMapper;
+    private final long timeoutSeconds;
     private final AtomicReference<WebSocketSession> active = new AtomicReference<>();
 
-    public ChatGateway(ModuleRegistry registry, WebSocketClient webSocketClient, ObjectMapper objectMapper) {
+    public ChatGateway(ModuleRegistry registry, WebSocketClient webSocketClient, ObjectMapper objectMapper,
+                       long timeoutSeconds) {
         this.registry = registry;
         this.webSocketClient = webSocketClient;
         this.objectMapper = objectMapper;
+        this.timeoutSeconds = timeoutSeconds;
     }
 
     public String ask(String question, int topK, Consumer<String> onToken) {
@@ -100,7 +103,9 @@ public class ChatGateway {
 
     private void await(CountDownLatch done, AtomicReference<String> error) {
         try {
-            if (!done.await(60, TimeUnit.SECONDS)) {
+            if (!done.await(timeoutSeconds, TimeUnit.SECONDS)) {
+                log.warn("Chat response pending after {}s (first-time model load may take longer); "
+                        + "override rag.chat.timeout-seconds to increase", timeoutSeconds);
                 throw new ChatException("Timed out waiting for chat answer", null);
             }
         } catch (InterruptedException e) {

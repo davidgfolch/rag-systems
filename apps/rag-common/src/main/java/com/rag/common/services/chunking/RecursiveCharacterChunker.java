@@ -3,6 +3,8 @@ package com.rag.common.services.chunking;
 import com.rag.common.domain.Chunk;
 import com.rag.common.domain.Document;
 import com.rag.common.services.TextSplitter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -18,6 +20,8 @@ import java.util.UUID;
  * Recommended as the default for most production workloads (~82% retrieval precision).
  */
 public class RecursiveCharacterChunker implements TextSplitter {
+
+    private static final Logger log = LoggerFactory.getLogger(RecursiveCharacterChunker.class);
 
     private static final String[] SEPARATORS = {"\n\n", "\n", ". ", "? ", "! ", " ", ""};
 
@@ -57,7 +61,9 @@ public class RecursiveCharacterChunker implements TextSplitter {
             ));
         }
 
-        return applyOverlap(result, document.getId(), baseMeta);
+        List<Chunk> chunked = applyOverlap(result, document.getId(), baseMeta);
+        log.debug("Recursive-chunked document {} into {} chunks", document.getId(), chunked.size());
+        return chunked;
     }
 
     private static Map<String, Object> documentMeta(Document document) {

@@ -2,6 +2,8 @@ package com.rag.basic.services;
 
 import com.rag.contract.model.FetchRequest;
 import com.rag.contract.model.PageDTO;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClient;
 
 import java.net.URI;
@@ -12,6 +14,8 @@ import java.net.URI;
  */
 public class WebCrawlerClient {
 
+    private static final Logger log = LoggerFactory.getLogger(WebCrawlerClient.class);
+
     private final RestClient restClient;
 
     public WebCrawlerClient(RestClient restClient) {
@@ -19,6 +23,7 @@ public class WebCrawlerClient {
     }
 
     public PageDTO fetch(String url) {
+        log.info("Fetching URL {} via webcrawler", url);
         FetchRequest request = new FetchRequest(URI.create(url));
         return restClient.post()
                 .uri("/api/fetch")

@@ -3,6 +3,8 @@ package com.rag.common.repositories.store;
 import com.rag.common.domain.Chunk;
 import com.rag.common.domain.DocumentSummary;
 import com.rag.common.repositories.VectorStore;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.vectorstore.SearchRequest;
 
 import javax.sql.DataSource;
@@ -25,6 +27,8 @@ import java.util.Map;
  * embedding model, so this adapter does not handle embeddings directly.
  */
 public class PgVectorStoreAdapter implements VectorStore {
+
+    private static final Logger log = LoggerFactory.getLogger(PgVectorStoreAdapter.class);
 
     static final String DEFAULT_SCHEMA = "public";
     static final String DEFAULT_TABLE = "vector_store";
@@ -80,6 +84,7 @@ public class PgVectorStoreAdapter implements VectorStore {
                     throw new IllegalStateException("Vector store did not respond to connectivity probe");
                 }
             }
+            log.debug("Vector store connectivity probe succeeded");
         } catch (Exception e) {
             throw new IllegalStateException(
                     "Vector store not available: " + e.getClass().getSimpleName() + ": " + e.getMessage(), e);
@@ -88,6 +93,7 @@ public class PgVectorStoreAdapter implements VectorStore {
 
     @Override
     public void add(List<Chunk> chunks) {
+        log.debug("Adding {} chunks to vector store {}", chunks.size(), table);
         List<org.springframework.ai.document.Document> docs = chunks.stream()
                 .map(this::toSpringDocument)
                 .toList();
@@ -100,9 +106,11 @@ public class PgVectorStoreAdapter implements VectorStore {
                 .query(query)
                 .topK(topK)
                 .build();
-        return delegate.similaritySearch(request).stream()
+        List<Chunk> hits = delegate.similaritySearch(request).stream()
                 .map(this::toChunk)
                 .toList();
+        log.debug("Vector store returned {} chunks for query", hits.size());
+        return hits;
     }
 
     @Override
@@ -112,9 +120,11 @@ public class PgVectorStoreAdapter implements VectorStore {
                 .topK(topK)
                 .filterExpression("documentId == '%s'".formatted(documentId))
                 .build();
-        return delegate.similaritySearch(request).stream()
+        List<Chunk> hits = delegate.similaritySearch(request).stream()
                 .map(this::toChunk)
                 .toList();
+        log.debug("Vector store returned {} chunks for query scoped to {}", hits.size(), documentId);
+        return hits;
     }
 
     @Override
@@ -146,6 +156,7 @@ public class PgVectorStoreAdapter implements VectorStore {
             throw new IllegalStateException("Failed to list documents from vector store: "
                     + e.getClass().getSimpleName() + ": " + e.getMessage(), e);
         }
+        log.debug("Listed {} documents from vector store", result.size());
         return result;
     }
 

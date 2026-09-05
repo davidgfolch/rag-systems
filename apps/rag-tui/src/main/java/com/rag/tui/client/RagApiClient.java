@@ -9,6 +9,8 @@ import com.rag.contract.model.QueryRequest;
 import com.rag.contract.model.QueryResponse;
 import com.rag.contract.model.DocumentSummaryDTO;
 import com.rag.tui.launcher.ModuleRegistry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -26,6 +28,8 @@ import java.util.Map;
  * using the shared contract DTOs. The active module is resolved per call.
  */
 public class RagApiClient {
+
+    private static final Logger log = LoggerFactory.getLogger(RagApiClient.class);
 
     private final ModuleRegistry registry;
     private final RestClient.Builder builder;
@@ -82,6 +86,7 @@ public class RagApiClient {
     }
 
     public IngestStatusDTO ingestStatus(String documentId) {
+        log.debug("Polling ingest status for {}", documentId);
         return client().get().uri("/api/documents/ingest-status/{id}", documentId)
                 .retrieve().body(IngestStatusDTO.class);
     }

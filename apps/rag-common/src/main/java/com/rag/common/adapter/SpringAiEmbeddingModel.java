@@ -1,6 +1,8 @@
 package com.rag.common.adapter;
 
 import com.rag.common.services.EmbeddingModel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.embedding.EmbeddingRequest;
 import org.springframework.ai.embedding.EmbeddingResponse;
 
@@ -14,6 +16,8 @@ import java.util.List;
  */
 public class SpringAiEmbeddingModel implements EmbeddingModel {
 
+    private static final Logger log = LoggerFactory.getLogger(SpringAiEmbeddingModel.class);
+
     private final org.springframework.ai.embedding.EmbeddingModel delegate;
 
     public SpringAiEmbeddingModel(org.springframework.ai.embedding.EmbeddingModel delegate) {
@@ -24,6 +28,7 @@ public class SpringAiEmbeddingModel implements EmbeddingModel {
     public List<Float> embed(String text) {
         EmbeddingResponse response = delegate.call(new EmbeddingRequest(List.of(text), null));
         float[] output = response.getResult().getOutput();
+        log.debug("Embedded text ({} chars) -> {} dimensions", text.length(), output.length);
         java.util.List<Float> out = new java.util.ArrayList<>(output.length);
         for (float v : output) out.add(v);
         return out;
