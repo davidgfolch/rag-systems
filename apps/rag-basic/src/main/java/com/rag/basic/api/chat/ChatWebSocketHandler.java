@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rag.common.services.ChatService;
 import com.rag.contract.ws.ChatEvent;
 import com.rag.contract.ws.ChatRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -21,6 +23,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Per-session disposal cancels the underlying LLM stream on disconnect or cancel.
  */
 public class ChatWebSocketHandler extends TextWebSocketHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(ChatWebSocketHandler.class);
 
     private final ChatService chatService;
     private final ObjectMapper objectMapper;
@@ -49,6 +53,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         conversationBySession.put(session.getId(), request.conversationId());
         StringBuilder answer = new StringBuilder();
         int topK = request.topK() == null ? 5 : request.topK();
+        log.info("Ask request: conversationId={}, topK={}", request.conversationId(), topK);
         AtomicBoolean finished = new AtomicBoolean();
         Disposable disposable = chatService.askStream(request.question(), topK)
                 .doOnNext(answer::append)
@@ -57,11 +62,17 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                         token -> send(session, new ChatEvent("token", token, request.conversationId())),
                         error -> {
                             finished.set(true);
+                            log.error("Stream error: conversationId={}, error={}",
+                                    request.conversationId(), error.getMessage(), error);
                             send(session, new ChatEvent("error", error.getMessage(), request.conversationId()));
                         },
                         () -> {
                             if (finished.compareAndSet(false, true)) {
+                                log.info("Stream complete: conversationId={}, answerLength={}",
+                                        request.conversationId(), answer.length());
                                 send(session, new ChatEvent("done", answer.toString(), request.conversationId()));
+                            } else {
+                                log.info("Stream cancelled: conversationId={}", request.conversationId());
                             }
                         });
         streams.put(request.conversationId(), disposable);
@@ -78,6 +89,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         String conversationId = conversationBySession.remove(session.getId());
         if (conversationId != null) {
+            log.info("Connection closed: conversationId={}, status={}", conversationId, status);
             cancel(conversationId);
         }
     }

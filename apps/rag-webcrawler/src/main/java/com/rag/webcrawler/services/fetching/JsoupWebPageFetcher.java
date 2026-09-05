@@ -3,6 +3,8 @@ package com.rag.webcrawler.services.fetching;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -15,6 +17,8 @@ import com.rag.contract.model.PageDTO;
  * {@link Connection} so tests can supply a mock without network access.
  */
 public class JsoupWebPageFetcher implements WebPageFetcher {
+
+    private static final Logger log = LoggerFactory.getLogger(JsoupWebPageFetcher.class);
 
     private final Connection connection;
 
@@ -33,7 +37,9 @@ public class JsoupWebPageFetcher implements WebPageFetcher {
             Document doc = conn.get();
             List<String> links = new ArrayList<>();
             doc.select("a[href]").forEach(a -> links.add(a.absUrl("href")));
-            return new PageDTO(url, doc.title(), doc.text()).links(links);
+            String title = doc.title();
+            log.info("Fetched {} (title='{}', links={})", url, title, links.size());
+            return new PageDTO(url, title, doc.text()).links(links);
         } catch (IOException e) {
             throw new WebFetchException("Failed to fetch URL: " + url, e);
         }

@@ -4,6 +4,8 @@ import com.rag.common.domain.Chunk;
 import com.rag.common.domain.DocumentSummary;
 import com.rag.common.repositories.VectorStore;
 import com.rag.common.services.EmbeddingModel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -22,6 +24,8 @@ import java.util.stream.Collectors;
  */
 public class InMemoryVectorStore implements VectorStore {
 
+    private static final Logger log = LoggerFactory.getLogger(InMemoryVectorStore.class);
+
     private final Map<String, Chunk> chunksById = new ConcurrentHashMap<>();
     private final EmbeddingModel embeddingModel;
 
@@ -37,6 +41,7 @@ public class InMemoryVectorStore implements VectorStore {
             }
             chunksById.put(chunk.getId(), chunk);
         }
+        log.debug("In-memory store now holds {} chunks", chunksById.size());
     }
 
     @Override
@@ -74,12 +79,14 @@ public class InMemoryVectorStore implements VectorStore {
     }
 
     private List<Chunk> search(List<Float> queryEmbedding, int topK) {
-        return chunksById.values().stream()
+        List<Chunk> hits = chunksById.values().stream()
                 .map(chunk -> new Scored(chunk, cosine(queryEmbedding, chunk.getEmbedding())))
                 .sorted(Comparator.comparingDouble(Scored::score).reversed())
                 .limit(topK)
                 .map(Scored::chunk)
                 .toList();
+        log.debug("In-memory search returned {} hits", hits.size());
+        return hits;
     }
 
     private static double cosine(List<Float> a, List<Float> b) {

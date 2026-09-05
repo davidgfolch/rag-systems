@@ -2,6 +2,8 @@ package com.rag.common.services;
 
 import com.rag.common.domain.Chunk;
 import com.rag.common.repositories.VectorStore;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 
 import java.util.List;
@@ -12,6 +14,8 @@ import java.util.List;
  * streaming answers (cancellable by disposing the returned {@link Flux}).
  */
 public class ChatService {
+
+    private static final Logger log = LoggerFactory.getLogger(ChatService.class);
 
     private static final String PROMPT_TEMPLATE = """
             You are a helpful assistant. Answer the question using ONLY the provided
@@ -34,16 +38,20 @@ public class ChatService {
     public Flux<String> askStream(String question, int topK) {
         List<Chunk> sources = retrieve(question, topK);
         String prompt = PROMPT_TEMPLATE.formatted(context(sources), question);
+        log.info("askStream: topK={}, sources={}, questionLength={}", topK, sources.size(), question.length());
+        log.debug("askStream prompt length: {} chars", prompt.length());
         return chatModel.completeStream(prompt);
     }
 
     public ChatResult ask(String question, int topK) {
         List<Chunk> sources = retrieve(question, topK);
         String answer = chatModel.complete(PROMPT_TEMPLATE.formatted(context(sources), question));
+        log.info("ask: topK={}, sources={}, answerLength={}", topK, sources.size(), answer.length());
         return new ChatResult(answer, sources);
     }
 
     private List<Chunk> retrieve(String question, int topK) {
+        log.info("Retrieving up to {} chunks for ask", topK);
         return vectorStore.similaritySearch(question, topK);
     }
 

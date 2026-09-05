@@ -3,6 +3,8 @@ package com.rag.common.services.chunking;
 import com.rag.common.domain.Chunk;
 import com.rag.common.domain.Document;
 import com.rag.common.services.TextSplitter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,6 +19,8 @@ import java.util.UUID;
  * Baseline for comparison against recursive and semantic chunking strategies.
  */
 public class FixedSizeChunker implements TextSplitter {
+
+    private static final Logger log = LoggerFactory.getLogger(FixedSizeChunker.class);
 
     private final int chunkSize;
     private final int overlap;
@@ -62,6 +66,7 @@ public class FixedSizeChunker implements TextSplitter {
             if (start >= content.length()) break;
         }
 
+        log.debug("Fixed-size chunked document {} into {} chunks", document.getId(), chunks.size());
         return chunks;
     }
 

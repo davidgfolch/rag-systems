@@ -3,6 +3,8 @@ package com.rag.common.services.chunking;
 import com.rag.common.domain.Chunk;
 import com.rag.common.domain.Document;
 import com.rag.common.services.TextSplitter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -21,6 +23,8 @@ import java.util.regex.Pattern;
  * windows, at the cost of occasionally splitting mid-sentence.
  */
 public class TokenChunker implements TextSplitter {
+
+    private static final Logger log = LoggerFactory.getLogger(TokenChunker.class);
 
     private static final Pattern TOKEN_PATTERN = Pattern.compile("\\S+\\s*");
 
@@ -73,6 +77,7 @@ public class TokenChunker implements TextSplitter {
             if (start >= tokens.size()) break;
         }
 
+        log.debug("Token-chunked document {} into {} chunks", document.getId(), chunks.size());
         return chunks;
     }
 

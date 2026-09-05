@@ -7,6 +7,8 @@ import org.apache.tika.metadata.Metadata;
 import org.apache.tika.parser.AutoDetectParser;
 import org.apache.tika.parser.ParseContext;
 import org.apache.tika.sax.ToXMLContentHandler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
 
 import java.io.ByteArrayInputStream;
@@ -24,6 +26,8 @@ import java.util.regex.Pattern;
  */
 public class TikaDocumentParser implements DocumentParser {
 
+    private static final Logger log = LoggerFactory.getLogger(TikaDocumentParser.class);
+
     private static final Pattern HTML_TAG = Pattern.compile("<[^>]+>");
 
     @Override
@@ -33,7 +37,9 @@ public class TikaDocumentParser implements DocumentParser {
             return document.getContent();
         }
         try {
-            return HTML_TAG.matcher(parseText(rawBytes)).replaceAll(" ").trim();
+            String parsed = HTML_TAG.matcher(parseText(rawBytes)).replaceAll(" ").trim();
+            log.debug("Parsed document {} ({} raw bytes -> {} chars)", document.getId(), rawBytes.length, parsed.length());
+            return parsed;
         } catch (TikaException | SAXException | IOException e) {
             throw new IllegalStateException("Failed to parse document " + document.getId(), e);
         }

@@ -72,8 +72,9 @@ public class RagTuiConfig {
     }
 
     @Bean
-    public ChatGateway chatGateway(ModuleRegistry registry, ObjectMapper objectMapper) {
-        return new ChatGateway(registry, new StandardWebSocketClient(), objectMapper);
+    public ChatGateway chatGateway(ModuleRegistry registry, ObjectMapper objectMapper,
+                                   @Value("${rag.chat.timeout-seconds:180}") long chatTimeoutSeconds) {
+        return new ChatGateway(registry, new StandardWebSocketClient(), objectMapper, chatTimeoutSeconds);
     }
 
     @Bean
@@ -92,9 +93,10 @@ public class RagTuiConfig {
                                                MemoryClient memoryClient, FileDocumentLoader fileLoader,
                                                ModuleHealthClient healthClient, CommandRegistry commandRegistry,
                                                @Value("${rag.tui.start-timeout-ms:120000}") long startTimeoutMs,
-                                               @Value("${rag.chat.top-k:4}") int topK) {
+                                               @Value("${rag.chat.top-k:4}") int topK,
+                                               @Value("${rag.chat.timeout-seconds:180}") long chatTimeoutSeconds) {
         var clients = new CommandDispatcher.RagClients(apiClient, chatGateway, memoryClient, fileLoader, healthClient);
-        var settings = new CommandDispatcher.Settings(startTimeoutMs, topK);
+        var settings = new CommandDispatcher.Settings(startTimeoutMs, topK, chatTimeoutSeconds);
         return new CommandDispatcher(registry, lifecycle, clients, settings, commandRegistry);
     }
 

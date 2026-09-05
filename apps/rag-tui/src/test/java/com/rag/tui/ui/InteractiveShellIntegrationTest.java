@@ -45,13 +45,14 @@ class InteractiveShellIntegrationTest {
                 List.of(new Module("rag-basic", stub.baseUrl())), "rag-basic");
         var apiClient = new RagApiClient(registry, RestClient.builder());
         var chatGateway = new ChatGateway(registry,
-                new org.springframework.web.socket.client.standard.StandardWebSocketClient(), new ObjectMapper());
+                new org.springframework.web.socket.client.standard.StandardWebSocketClient(),
+                new ObjectMapper(), 60);
         var memoryClient = new MemoryClient(
                 RestClient.builder().baseUrl(stub.baseUrl()).build());
         dispatcher = new CommandDispatcher(registry, mock(ModuleLifecycleManager.class),
                 new CommandDispatcher.RagClients(apiClient, chatGateway, memoryClient,
                         new FileDocumentLoader(), new ModuleHealthClient(RestClient.builder())),
-                new CommandDispatcher.Settings(5_000, 4), new CommandRegistry());
+                new CommandDispatcher.Settings(5_000, 4, 60), new CommandRegistry());
     }
 
     @AfterEach

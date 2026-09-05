@@ -46,13 +46,14 @@ class CommandDispatcherIntegrationTest {
         lifecycle = mock(ModuleLifecycleManager.class);
         RagApiClient apiClient = new RagApiClient(registry, RestClient.builder());
         ChatGateway chatGateway = new ChatGateway(
-                registry, new org.springframework.web.socket.client.standard.StandardWebSocketClient(), new ObjectMapper());
+                registry, new org.springframework.web.socket.client.standard.StandardWebSocketClient(),
+                new ObjectMapper(), 60);
         MemoryClient memoryClient = new MemoryClient(
                 RestClient.builder().baseUrl(stub.baseUrl()).build());
         sut = new CommandDispatcher(registry, lifecycle,
                 new CommandDispatcher.RagClients(apiClient, chatGateway, memoryClient,
                         new FileDocumentLoader(), new ModuleHealthClient(RestClient.builder())),
-                new CommandDispatcher.Settings(5_000, 4), new CommandRegistry());
+                new CommandDispatcher.Settings(5_000, 4, 60), new CommandRegistry());
     }
 
     @AfterEach
@@ -95,13 +96,14 @@ class CommandDispatcherIntegrationTest {
         ModuleRegistry deadRegistry = new ModuleRegistry(
                 List.of(new Module("rag-basic", "http://localhost:1")), "rag-basic");
         ChatGateway chatGateway = new ChatGateway(
-                deadRegistry, new org.springframework.web.socket.client.standard.StandardWebSocketClient(), new ObjectMapper());
+                deadRegistry, new org.springframework.web.socket.client.standard.StandardWebSocketClient(),
+                new ObjectMapper(), 60);
         CommandDispatcher dead = new CommandDispatcher(deadRegistry, lifecycle,
                 new CommandDispatcher.RagClients(
                         new RagApiClient(deadRegistry, RestClient.builder()), chatGateway,
                         mock(MemoryClient.class), new FileDocumentLoader(),
                         new ModuleHealthClient(RestClient.builder())),
-                new CommandDispatcher.Settings(1_000, 4), new CommandRegistry());
+                new CommandDispatcher.Settings(1_000, 4, 60), new CommandRegistry());
 
         CommandResult result = dead.handle("add-file " + testFile(), token -> {});
 

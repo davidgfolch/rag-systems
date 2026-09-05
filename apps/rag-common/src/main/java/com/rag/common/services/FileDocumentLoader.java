@@ -1,5 +1,8 @@
 package com.rag.common.services;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,10 +16,13 @@ import java.util.Map;
  */
 public class FileDocumentLoader {
 
+    private static final Logger log = LoggerFactory.getLogger(FileDocumentLoader.class);
+
     public LoadedFile load(String path) {
         try {
             Path p = Path.of(path);
             byte[] bytes = Files.readAllBytes(p);
+            log.info("Loaded file '{}' ({} bytes)", p.getFileName(), bytes.length);
             return new LoadedFile(bytes, Map.of(
                     "sourceType", "file",
                     "source", path,

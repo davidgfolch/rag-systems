@@ -42,6 +42,20 @@ Rules for all code in this repository. These enforce quality, maintainability, a
 - **Test Classes**: `[ClassName]Test` (e.g., `DocumentIngestionServiceTest`)
 - **Test Methods**: `should[Behavior]When[Condition]` (e.g., `shouldReturnChunksWhenQueryIsRelevant`)
 
+## Logging Rules
+
+**Structured logging is mandatory for all features and modules.**
+
+1. **Logger field**: Every concrete service, controller, handler, adapter, and client class MUST declare `private static final Logger log = LoggerFactory.getLogger(ClassName.class);`. No Lombok `@Slf4j`; use explicit SLF4J, matching the existing pattern.
+2. **Levels**:
+   - `info`: lifecycle milestones (ask/query received, retrieval count, generation start/complete, ingestion start/complete, connection opened/closed)
+   - `warn`: retryable or degraded conditions (timeouts, rejections, close failures)
+   - `error`: failures, always with the throwable as the last argument
+   - `debug`: internal details (prompt length, per-event routing)
+3. **Format**: Always use `{}` placeholders with arguments; never string concatenation (`+`). Never log sensitive content.
+4. **Correlation**: `trace_id`/`span_id` are injected by OpenTelemetry; do not add manual MDC keys for these.
+5. **Enforcement**: Enforced by the patch rule in `rag-common` `ArchitectureTest` (`everyServiceAndHandlerHasLogger`) and by code review.
+
 ## Test Rules
 
 1. **Test location**: Tests in `src/test/java/[module]/[layer]/` parallel to source.

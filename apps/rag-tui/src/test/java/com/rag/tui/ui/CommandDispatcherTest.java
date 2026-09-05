@@ -44,7 +44,7 @@ class CommandDispatcherTest {
     private final CommandRegistry commandRegistry = new CommandRegistry();
     private final CommandDispatcher sut = new CommandDispatcher(registry, lifecycle,
             new CommandDispatcher.RagClients(apiClient, chatGateway, memoryClient, fileLoader, healthClient),
-            new CommandDispatcher.Settings(10_000, 4), commandRegistry);
+            new CommandDispatcher.Settings(10_000, 4, 60), commandRegistry);
 
     private CommandResult handle(String input) {
         return sut.handle(input, token -> {});

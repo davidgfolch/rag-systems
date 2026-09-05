@@ -1,5 +1,7 @@
 package com.rag.tui.client;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClient;
 
@@ -11,6 +13,8 @@ import java.util.function.Consumer;
  * is actually accepting requests instead of failing on a connection refused.
  */
 public class ModuleHealthClient {
+
+    private static final Logger log = LoggerFactory.getLogger(ModuleHealthClient.class);
 
     private static final long POLL_MILLIS = 500;
     private static final long PROGRESS_MILLIS = 5_000;
@@ -36,8 +40,12 @@ public class ModuleHealthClient {
     public boolean waitUntilUp(String baseUrl, long timeoutMs, Consumer<String> progress) {
         long deadline = System.currentTimeMillis() + timeoutMs;
         long lastReport = 0;
+        log.info("Waiting for {} health within {}ms", baseUrl, timeoutMs);
         while (System.currentTimeMillis() < deadline) {
-            if (isUp(baseUrl)) return true;
+            if (isUp(baseUrl)) {
+                log.info("Module {} is ready", baseUrl);
+                return true;
+            }
             long now = System.currentTimeMillis();
             if (progress != null && now - lastReport >= PROGRESS_MILLIS) {
                 lastReport = now;
@@ -46,6 +54,7 @@ public class ModuleHealthClient {
             }
             sleep(POLL_MILLIS);
         }
+        log.warn("Module {} did not become ready within {}ms", baseUrl, timeoutMs);
         return isUp(baseUrl);
     }
 
@@ -54,6 +63,7 @@ public class ModuleHealthClient {
             builder.clone().baseUrl(baseUrl).build().get().uri(healthPath).retrieve().toBodilessEntity();
             return true;
         } catch (RestClientException e) {
+            log.debug("Health probe failed for {}: {}", baseUrl, e.getMessage());
             return false;
         }
     }

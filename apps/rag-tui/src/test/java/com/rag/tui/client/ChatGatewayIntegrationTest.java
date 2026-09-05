@@ -33,7 +33,7 @@ class ChatGatewayIntegrationTest {
     void streamsTokensAndFinalAnswerOverWebSocket() {
         ModuleRegistry registry = new ModuleRegistry(
                 List.of(new Module("rag-basic", "http://localhost:" + port)), "rag-basic");
-        ChatGateway sut = new ChatGateway(registry, new StandardWebSocketClient(), new ObjectMapper());
+        ChatGateway sut = new ChatGateway(registry, new StandardWebSocketClient(), new ObjectMapper(), 60);
         List<String> tokens = new ArrayList<>();
 
         String answer = sut.ask("what is rag", 4, tokens::add);

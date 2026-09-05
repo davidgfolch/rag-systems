@@ -1,5 +1,8 @@
 package com.rag.webcrawler.services.ranking;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -10,13 +13,17 @@ import java.util.Locale;
  */
 public class DeterministicLinkPrioritizer implements LinkPrioritizer {
 
+    private static final Logger log = LoggerFactory.getLogger(DeterministicLinkPrioritizer.class);
+
     @Override
     public List<String> prioritize(List<String> links, String question) {
         String query = question == null ? "" : question.toLowerCase(Locale.ROOT);
-        return links.stream()
+        List<String> ranked = links.stream()
                 .sorted(Comparator.comparing((String link) -> score(link, query))
                         .reversed().thenComparing(links::indexOf))
                 .toList();
+        log.debug("Deterministic prioritization of {} links", ranked.size());
+        return ranked;
     }
 
     private int score(String link, String query) {
