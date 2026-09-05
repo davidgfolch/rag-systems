@@ -10,11 +10,8 @@ import com.rag.tui.launcher.ModuleLifecycleManager;
 import com.rag.tui.launcher.ModuleRegistry;
 import com.rag.common.services.FileDocumentLoader;
 import com.rag.tui.ui.CommandDispatcher;
-import com.rag.tui.ui.CommandPicker;
 import com.rag.tui.ui.CommandRegistry;
 import com.rag.tui.ui.InteractiveShell;
-import org.jline.terminal.Terminal;
-import org.jline.terminal.TerminalBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
@@ -22,7 +19,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.nio.file.Files;
@@ -53,7 +49,7 @@ public class RagTuiConfig {
 
     private String repoRoot() {
         String script = System.getProperty("os.name", "").toLowerCase().contains("win") ? "run.bat" : "run.sh";
-        Path dir = Path.of(System.getProperty("user.dir"));
+        var dir = Path.of(System.getProperty("user.dir"));
         while (dir != null && !Files.isRegularFile(dir.resolve("scripts").resolve(script))) {
             dir = dir.getParent();
         }
@@ -91,16 +87,6 @@ public class RagTuiConfig {
     }
 
     @Bean
-    public Terminal terminal() throws IOException {
-        return TerminalBuilder.builder().system(true).build();
-    }
-
-    @Bean
-    public CommandPicker commandPicker(CommandRegistry commandRegistry, Terminal terminal) {
-        return new CommandPicker(commandRegistry, terminal);
-    }
-
-    @Bean
     public CommandDispatcher commandDispatcher(ModuleRegistry registry, ModuleLifecycleManager lifecycle,
                                                RagApiClient apiClient, ChatGateway chatGateway,
                                                MemoryClient memoryClient, FileDocumentLoader fileLoader,
@@ -113,8 +99,8 @@ public class RagTuiConfig {
     }
 
     @Bean
-    public ApplicationRunner tuiRunner(CommandDispatcher dispatcher, CommandPicker picker) {
+    public ApplicationRunner tuiRunner(CommandDispatcher dispatcher) {
         return args -> new InteractiveShell(dispatcher,
-                new InputStreamReader(System.in), new OutputStreamWriter(System.out), picker).run(); // NOSONAR java:S106
+                new InputStreamReader(System.in), new OutputStreamWriter(System.out)).run(); // NOSONAR java:S106
     }
 }

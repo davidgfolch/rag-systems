@@ -10,41 +10,23 @@ public class InteractiveShell {
     private final CommandDispatcher dispatcher;
     private final BufferedReader reader;
     private final Writer writer;
-    private final CommandPicker picker;
 
-    public InteractiveShell(CommandDispatcher dispatcher, Reader reader, Writer writer, CommandPicker picker) {
+    public InteractiveShell(CommandDispatcher dispatcher, Reader reader, Writer writer) {
         this.dispatcher = dispatcher;
         this.reader = reader instanceof BufferedReader b ? b : new BufferedReader(reader);
         this.writer = writer;
-        this.picker = picker;
     }
 
     public void run() {
         try {
-            write(TerminalStyle.welcome("RAG TUI - type 'help' for commands, 'quit' to exit, '/' to browse commands"));
+            write(TerminalStyle.welcome("RAG TUI - type 'help' for commands, 'quit' to exit"));
             String line;
             while ((line = reader.readLine()) != null) {
-                if (runLine(line)) break;
+                if (runCommand(line)) break;
             }
         } catch (IOException e) {
             throw new ShellException("Terminal I/O error", e);
         }
-    }
-
-    private boolean runLine(String line) throws IOException {
-        String trimmed = line.trim();
-        if (trimmed.startsWith("/")) {
-            return runPicker(trimmed.substring(1).trim());
-        }
-        return runCommand(trimmed);
-    }
-
-    private boolean runPicker(String filter) throws IOException {
-        if (picker == null) return runCommand("/" + filter);
-        CommandDescriptor selected = picker.pick(filter);
-        if (selected == null) return false;
-        write(TerminalStyle.info("/" + selected.name()));
-        return runCommand("/" + selected.name());
     }
 
     private boolean runCommand(String line) throws IOException {

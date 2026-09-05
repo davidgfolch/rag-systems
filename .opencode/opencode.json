@@ -6,5 +6,10 @@
   ],
   "plugin": [
     "./plugin/sdlc-gate.ts"
-  ]
+  ],
+  "permission": {
+    "external_directory": {
+      "~/projects/rag-systems-*/**": "allow"
+    }
+  }
 }
