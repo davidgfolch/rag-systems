@@ -42,9 +42,8 @@ public class CommandRegistry {
         var sb = new StringBuilder("Available commands:").append(System.lineSeparator());
         for (CommandDescriptor cmd : COMMANDS) {
             String args = cmd.usage().isEmpty() ? "" : " " + cmd.usage();
-            sb.append(String.format("  /%-12s %s%n", cmd.name() + args, cmd.description()));
+            sb.append(String.format("  %-16s %s%n", cmd.name() + args, cmd.description()));
         }
-        sb.append(System.lineSeparator()).append("Type / to browse commands, or enter a command directly.");
         return sb.toString();
     }
 }

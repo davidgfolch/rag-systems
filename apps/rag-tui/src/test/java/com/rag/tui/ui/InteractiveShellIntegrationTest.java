@@ -41,12 +41,12 @@ class InteractiveShellIntegrationTest {
     @BeforeEach
     void setUp() throws IOException {
         stub = new StubModuleServer();
-        ModuleRegistry registry = new ModuleRegistry(
+        var registry = new ModuleRegistry(
                 List.of(new Module("rag-basic", stub.baseUrl())), "rag-basic");
-        RagApiClient apiClient = new RagApiClient(registry, RestClient.builder());
-        ChatGateway chatGateway = new ChatGateway(
-                registry, new org.springframework.web.socket.client.standard.StandardWebSocketClient(), new ObjectMapper());
-        MemoryClient memoryClient = new MemoryClient(
+        var apiClient = new RagApiClient(registry, RestClient.builder());
+        var chatGateway = new ChatGateway(registry,
+                new org.springframework.web.socket.client.standard.StandardWebSocketClient(), new ObjectMapper());
+        var memoryClient = new MemoryClient(
                 RestClient.builder().baseUrl(stub.baseUrl()).build());
         dispatcher = new CommandDispatcher(registry, mock(ModuleLifecycleManager.class),
                 new CommandDispatcher.RagClients(apiClient, chatGateway, memoryClient,
@@ -66,7 +66,7 @@ class InteractiveShellIntegrationTest {
         Files.write(pdf, bytes);
         StringWriter out = new StringWriter();
 
-        new InteractiveShell(dispatcher, new StringReader("add-file " + pdf + "\nquit\n"), out, null).run();
+        new InteractiveShell(dispatcher, new StringReader("add-file " + pdf + "\nquit\n"), out).run();
 
         assertThat(out.toString()).contains("document i-1", "Bye.");
         awaitContains(out, "2 chunks");
@@ -82,10 +82,10 @@ class InteractiveShellIntegrationTest {
 
     @Test
     void survivesFailedCommandAndContinuesToQuit() {
-        StringWriter out = new StringWriter();
+        var out = new StringWriter();
 
         new InteractiveShell(dispatcher,
-                new StringReader("add-file definitely-missing.pdf\nhelp\nquit\n"), out, null).run();
+                new StringReader("add-file definitely-missing.pdf\nhelp\nquit\n"), out).run();
 
         assertThat(out.toString()).contains("Failed to read file");
         assertThat(out.toString()).contains("Available commands");

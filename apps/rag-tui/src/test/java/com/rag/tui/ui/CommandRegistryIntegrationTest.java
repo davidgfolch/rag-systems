@@ -13,7 +13,7 @@ class CommandRegistryIntegrationTest {
         String usage = sut.generateUsage();
 
         for (CommandDescriptor cmd : sut.all()) {
-            assertThat(usage).contains("/" + cmd.name());
+            assertThat(usage).contains(cmd.name());
         }
     }
 

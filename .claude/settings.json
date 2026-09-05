@@ -1,4 +1,11 @@
 {
+  "permissions": {
+    "allow": [
+      "Read(~/projects/rag-systems-*/**)",
+      "Write(~/projects/rag-systems-*/**)",
+      "Edit(~/projects/rag-systems-*/**)"
+    ]
+  },
   "hooks": {
     "Stop": [
       {

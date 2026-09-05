@@ -30,9 +30,8 @@ class InteractiveShellTest {
         when(dispatcher.handle(eq("quit"), any()))
                 .thenReturn(new CommandResult("bye", true));
 
-        StringWriter out = new StringWriter();
-        InteractiveShell sut =
-                new InteractiveShell(dispatcher, new StringReader("ask hi\nquit\n"), out, null);
+        var out = new StringWriter();
+        var sut = new InteractiveShell(dispatcher, new StringReader("ask hi\nquit\n"), out);
 
         sut.run();
 
@@ -51,9 +50,8 @@ class InteractiveShellTest {
                     return new CommandResult("done", true);
                 });
 
-        StringWriter out = new StringWriter();
-        InteractiveShell sut =
-                new InteractiveShell(dispatcher, new StringReader("ask a\n"), out, null);
+        var out = new StringWriter();
+        var sut = new InteractiveShell(dispatcher, new StringReader("ask a\n"), out);
 
         sut.run();
 
@@ -74,7 +72,7 @@ class InteractiveShellTest {
             }
         };
 
-        InteractiveShell sut = new InteractiveShell(dispatcher, failing, new StringWriter(), null);
+        var sut = new InteractiveShell(dispatcher, failing, new StringWriter());
 
         assertThatThrownBy(sut::run)
                 .isInstanceOf(InteractiveShell.ShellException.class)
@@ -88,9 +86,8 @@ class InteractiveShellTest {
         when(dispatcher.handle(eq("quit"), any()))
                 .thenReturn(new CommandResult("bye", true));
 
-        StringWriter out = new StringWriter();
-        InteractiveShell sut =
-                new InteractiveShell(dispatcher, new StringReader("add-file x\nquit\n"), out, null);
+        var out = new StringWriter();
+        var sut = new InteractiveShell(dispatcher, new StringReader("add-file x\nquit\n"), out);
 
         sut.run();
 

@@ -53,6 +53,6 @@ class CommandRegistryTest {
                 .contains("Available commands:")
                 .contains("help", "modules", "use", "start", "stop")
                 .contains("documents", "add-file", "add-url", "ask", "history", "quit")
-                .contains("/ to browse commands");
+                .doesNotContain("/ to browse commands");
     }
 }
