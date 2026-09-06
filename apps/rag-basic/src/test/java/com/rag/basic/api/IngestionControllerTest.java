@@ -185,4 +185,22 @@ class IngestionControllerTest {
         assertThat(dto.getChunkCount()).isEqualTo(3);
         assertThat(dto.getMetadata()).containsEntry("fileName", "note.txt");
     }
+
+    @Test
+    void deletesDocumentViaRetrievalService() {
+        RetrievalService retrievalService = mock(RetrievalService.class);
+        IngestionController deleteController = new IngestionController(service, webCrawlerClient, null, retrievalService);
+
+        ResponseEntity<Void> response = deleteController.deleteDocument("d1");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        verify(retrievalService).delete("d1");
+    }
+
+    @Test
+    void deleteReturnsUnavailableWhenRetrievalServiceMissing() {
+        ResponseEntity<Void> response = controller.deleteDocument("d1");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+    }
 }

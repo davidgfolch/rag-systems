@@ -46,6 +46,50 @@ class FileDocumentLoaderTest {
     }
 
     @Test
+    void loadsAllFilesRecursivelyWithRelativeSources(@TempDir Path dir) throws IOException {
+        Path sub = dir.resolve("sub");
+        Files.createDirectories(sub);
+        Files.write(dir.resolve("a.txt"), "a".getBytes(StandardCharsets.UTF_8));
+        Files.write(sub.resolve("b.md"), "b".getBytes(StandardCharsets.UTF_8));
+
+        var loaded = sut.loadFolder(dir.toString());
+
+        assertThat(loaded).hasSize(2);
+        assertThat(loaded).extracting(f -> f.metadata().get("fileName"))
+                .containsExactlyInAnyOrder("a.txt", "b.md");
+        assertThat(loaded).extracting(f -> normalize(f.metadata().get("source").toString()))
+                .containsExactlyInAnyOrder("a.txt", "sub/b.md");
+    }
+
+    private static String normalize(String path) {
+        return path.replace('\\', '/');
+    }
+
+    @Test
+    void loadFolderSkipsHiddenFilesAndReturnsEmptyWhenOnlyHidden(@TempDir Path dir) throws IOException {
+        Files.write(dir.resolve(".hidden.txt"), "x".getBytes(StandardCharsets.UTF_8));
+
+        var loaded = sut.loadFolder(dir.toString());
+
+        assertThat(loaded).isEmpty();
+    }
+
+    @Test
+    void loadFolderThrowsWhenPathIsNotADirectory(@TempDir Path dir) throws IOException {
+        Path file = dir.resolve("note.txt");
+        Files.write(file, "hi".getBytes(StandardCharsets.UTF_8));
+
+        assertThatThrownBy(() -> sut.loadFolder(file.toString()))
+                .isInstanceOf(FileDocumentLoader.DocumentLoadException.class);
+    }
+
+    @Test
+    void loadFolderThrowsWhenDirectoryMissing() {
+        assertThatThrownBy(() -> sut.loadFolder("C:/does/not/exist"))
+                .isInstanceOf(FileDocumentLoader.DocumentLoadException.class);
+    }
+
+    @Test
     void loadedFileEqualsWhenBytesAndMetadataMatch() {
         FileDocumentLoader.LoadedFile a = new FileDocumentLoader.LoadedFile(new byte[]{1, 2}, Map.of("k", "v"));
         FileDocumentLoader.LoadedFile b = new FileDocumentLoader.LoadedFile(new byte[]{1, 2}, Map.of("k", "v"));

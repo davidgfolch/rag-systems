@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -19,16 +20,43 @@ public class FileDocumentLoader {
     private static final Logger log = LoggerFactory.getLogger(FileDocumentLoader.class);
 
     public LoadedFile load(String path) {
+        return loadFile(Path.of(path), path);
+    }
+
+    /**
+     * Loads every regular, non-hidden file under the given directory
+     * (recursively), preserving each file's path relative to the root in its
+     * {@code source} metadata.
+     *
+     * @param root the directory to walk
+     * @return one {@link LoadedFile} per ingestible file (empty if none)
+     */
+    public List<LoadedFile> loadFolder(String root) {
+        var rootPath = Path.of(root);
+        if (!Files.isDirectory(rootPath)) {
+            throw new DocumentLoadException("Not a directory: " + root, null);
+        }
+        try (var stream = Files.walk(rootPath)) {
+            return stream
+                    .filter(Files::isRegularFile)
+                    .filter(p -> !p.getFileName().toString().startsWith("."))
+                    .map(p -> loadFile(p, rootPath.relativize(p).toString()))
+                    .toList();
+        } catch (IOException e) {
+            throw new DocumentLoadException("Failed to read folder: " + root, e);
+        }
+    }
+
+    private LoadedFile loadFile(Path file, String source) {
         try {
-            var p = Path.of(path);
-            var bytes = Files.readAllBytes(p);
-            log.info("Loaded file '{}' ({} bytes)", p.getFileName(), bytes.length);
+            var bytes = Files.readAllBytes(file);
+            log.info("Loaded file '{}' ({} bytes)", file.getFileName(), bytes.length);
             return new LoadedFile(bytes, Map.of(
                     "sourceType", "file",
-                    "source", path,
-                    "fileName", p.getFileName().toString()));
+                    "source", source,
+                    "fileName", file.getFileName().toString()));
         } catch (IOException e) {
-            throw new DocumentLoadException("Failed to read file: " + path, e);
+            throw new DocumentLoadException("Failed to read file: " + source, e);
         }
     }
 
