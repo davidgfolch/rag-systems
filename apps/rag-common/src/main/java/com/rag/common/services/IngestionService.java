@@ -6,6 +6,8 @@ import com.rag.common.repositories.VectorStorePort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
+
 /**
  * Orchestrates the ingestion pipeline: parse → split → embed → store.
  *
@@ -29,56 +31,40 @@ public class IngestionService {
         this.vectorStore = vectorStore;
     }
 
-    public IngestionResult ingest(Document document) {
+    public IngestionResult ingest(Document doc) {
         log.info("Ingestion start: document {} (content chars={}, metadata keys={})",
-                document.getId(), document.getContent().length(), document.getMetadata().keySet());
-
-        var parsed = parser.parse(document);
-        log.info("Ingestion {} parsed: {} characters extracted", document.getId(), parsed.length());
-        if (shouldFailOnBlankExtraction(document, parsed)) {
-            log.warn("Ingestion {} aborted: binary document yielded no extractable text", document.getId());
-            throw new EmptyExtractionException(document);
-        }
-        var clean = parsed.equals(document.getContent())
-                ? document
-                : new Document(document.getId(), parsed, document.getMetadata());
-
-        var chunks = splitter.split(clean);
-        log.info("Ingestion {} split: {} chunks", document.getId(), chunks.size());
-
-        for (Chunk chunk : chunks) {
-            chunk.setEmbedding(embeddingModel.embed(chunk.getContent()));
-        }
-        log.info("Ingestion {} embedded: {} chunks", document.getId(), chunks.size());
-
+                doc.getId(), doc.getContent().length(), doc.getMetadata().keySet());
+        var chunks = getChunks(doc);
         vectorStore.add(chunks);
-        log.info("Ingested document {} -> {} chunks", document.getId(), chunks.size());
+        log.info("Ingested document {} -> {} chunks", doc.getId(), chunks.size());
+        return new IngestionResult(doc.getId(), chunks.size());
+    }
 
-        return new IngestionResult(document.getId(), chunks.size());
+    private List<Chunk> getChunks(Document doc) {
+        String parsed = parser.parse(doc);
+        log.info("Ingestion {} parsed: {} characters extracted", doc.getId(), parsed.length());
+        validateParseOrThrow(doc, parsed);
+        var cleanDoc = parsed.equals(doc.getContent()) ? doc : new Document(doc.getId(), parsed, doc.getMetadata());
+        var chunks = splitter.split(cleanDoc);
+        log.info("Ingestion {} split: {} chunks", doc.getId(), chunks.size());
+        chunks.forEach(c -> c.setEmbedding(embeddingModel.embed(c.getContent())));
+        log.info("Ingestion {} embedded: {} chunks", doc.getId(), chunks.size());
+        return chunks;
     }
 
     public record IngestionResult(String documentId, int chunkCount) {}
 
-    /**
-     * A binary document (carrying raw bytes for the parser) that yields no
-     * text almost always means content extraction failed (e.g. a scanned/image
-     * PDF with no text layer). Refuse to silently ingest zero chunks and make
-     * the cause explicit instead.
-     */
-    private boolean shouldFailOnBlankExtraction(Document document, String parsed) {
-        if (!parsed.isBlank()) {
-            return false;
+    private void validateParseOrThrow(Document doc, String parsed) {
+        if (parsed.isBlank()) {
+            log.warn("Ingestion {} aborted: extracted text is empty or blank", doc.getId());
+            throw new EmptyExtractionException(doc);
         }
-        return document.getMetadata().containsKey("rawBytes") || document.getMetadata().containsKey("raw");
     }
 
-    /**
-     * Thrown when a binary document could not be reduced to any indexed text.
-     */
     public static class EmptyExtractionException extends RuntimeException {
-        public EmptyExtractionException(Document document) {
-            super("No text could be extracted from binary document " + document.getId()
-                    + " (it may be a scanned/image-based file without a text layer).");
+        public static final String MSG = "No text could be extracted from document ";
+        public EmptyExtractionException(Document doc) {
+            super(MSG + doc.getId());
         }
     }
 }

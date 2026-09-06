@@ -3,6 +3,7 @@ package com.rag.common.services;
 import com.rag.common.domain.Chunk;
 import com.rag.common.domain.Document;
 import com.rag.common.repositories.VectorStorePort;
+import com.rag.common.services.IngestionService.EmptyExtractionException;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -57,14 +58,13 @@ class IngestionServiceTest {
     }
 
     @Test
-    void returnsZeroChunksForEmptyDocument() {
-        var doc = new Document("d1", "content", Map.of());
-        when(parser.parse(doc)).thenReturn("content");
-        when(splitter.split(doc)).thenReturn(List.of());
+    void rejectsAnyDocumentThatYieldsNoText() {
+        var doc = new Document("d1", "", Map.of());
+        when(parser.parse(doc)).thenReturn("");
 
-        var result = service.ingest(doc);
-
-        assertThat(result.chunkCount()).isZero();
+        assertThatThrownBy(() -> service.ingest(doc))
+                .isInstanceOf(EmptyExtractionException.class)
+                .hasMessageContaining(EmptyExtractionException.MSG);
     }
 
     @Test
@@ -73,18 +73,7 @@ class IngestionServiceTest {
         when(parser.parse(doc)).thenReturn("");
 
         assertThatThrownBy(() -> service.ingest(doc))
-                .isInstanceOf(IngestionService.EmptyExtractionException.class)
-                .hasMessageContaining("No text could be extracted");
-    }
-
-    @Test
-    void doesNotRejectPlainTextDocumentWithEmptyContent() {
-        var doc = new Document("d1", "", Map.of());
-        when(parser.parse(doc)).thenReturn("");
-        when(splitter.split(doc)).thenReturn(List.of());
-
-        var result = service.ingest(doc);
-
-        assertThat(result.chunkCount()).isZero();
+                .isInstanceOf(EmptyExtractionException.class)
+                .hasMessageContaining(EmptyExtractionException.MSG);
     }
 }

@@ -15,9 +15,9 @@ public class PlainTextParser implements DocumentParser {
     private static final Logger log = LoggerFactory.getLogger(PlainTextParser.class);
 
     @Override
-    public String parse(Document document) {
-        log.debug("Plain-text passthrough for document {} ({} chars)", document.getId(),
-                document.getContent() == null ? 0 : document.getContent().length());
-        return document.getContent();
+    public String parse(Document doc) {
+        log.debug("Plain-text passthrough for document {} ({} chars)", doc.getId(),
+                doc.getContent() == null ? 0 : doc.getContent().length());
+        return doc.getContent();
     }
 }

@@ -27,7 +27,6 @@ import java.util.regex.Pattern;
 public class TikaDocumentParser implements DocumentParser {
 
     private static final Logger log = LoggerFactory.getLogger(TikaDocumentParser.class);
-
     private static final Pattern HTML_TAG = Pattern.compile("<[^>]+>");
 
     @Override

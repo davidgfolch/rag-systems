@@ -7,6 +7,7 @@ import com.rag.common.repositories.store.InMemoryVectorStore;
 import com.rag.common.services.DocumentParser;
 import com.rag.common.services.EmbeddingModelPort;
 import com.rag.common.services.IngestionService;
+import com.rag.common.services.IngestionService.EmptyExtractionException;
 import com.rag.common.services.TextSplitter;
 import com.rag.common.services.chunking.RecursiveCharacterChunker;
 import com.rag.common.services.parsing.TikaDocumentParser;
@@ -22,6 +23,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * End-to-end integration test of the file-ingestion pipeline exactly as the
@@ -52,38 +54,35 @@ class PdfIngestionIntegrationTest {
                 systems. It covers tactical patterns such as aggregates, value
                 objects, and domain services, alongside strategic design.""");
 
-        ResponseEntity<IngestResponse> response = controller.ingestFile(
+        ResponseEntity<IngestResponse> res = controller.ingestFile(
                 new MockMultipartFile("file", "book.pdf", "application/pdf", pdfBytes),
                 Map.of("sourceType", "file", "fileName", "book.pdf"));
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(response.getBody().getDocumentId()).isNotBlank();
-        assertThat(response.getBody().getChunkCount()).isPositive();
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(res.getBody().getDocumentId()).isNotBlank();
+        assertThat(res.getBody().getChunkCount()).isPositive();
 
         List<Chunk> hits = retrievalService.retrieve("domain-driven design aggregates", 5);
         assertThat(hits).isNotEmpty();
-        assertThat(hits.stream().map(Chunk::getContent).anyMatch(c -> c.contains("domain-driven design")))
-                .isTrue();
+        assertTrue(hits.stream().map(Chunk::getContent).anyMatch(c -> c.contains("domain-driven design")));
     }
 
     @Test
     void rejectsEmptyFileWithBadRequest() throws Exception {
-        ResponseEntity<IngestResponse> response = controller.ingestFile(
+        ResponseEntity<IngestResponse> res = controller.ingestFile(
                 new MockMultipartFile("file", "empty.pdf", "application/pdf", new byte[0]),
                 Map.of());
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test
     void rejectsBinaryFileWithNoExtractableText() {
-        MockMultipartFile scanned = new MockMultipartFile(
-                "file", "scanned.pdf", "application/pdf", imageOnlyPdf());
-
-        assertThatThrownBy(() -> controller.ingestFile(scanned,
-                Map.of("sourceType", "file", "fileName", "scanned.pdf")))
-                .isInstanceOf(IngestionService.EmptyExtractionException.class)
-                .hasMessageContaining("No text could be extracted");
+        var scanned = new MockMultipartFile("file", "scanned.pdf", "application/pdf", imageOnlyPdf());
+        Map<String, Object> fileInfo = Map.of("sourceType", "file", "fileName", "scanned.pdf");
+        assertThatThrownBy(() -> controller.ingestFile(scanned, fileInfo))
+                .isInstanceOf(EmptyExtractionException.class)
+                .hasMessageContaining(EmptyExtractionException.MSG);
     }
 
     /**
