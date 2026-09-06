@@ -3,6 +3,7 @@ package com.rag.tui.launcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Map;
@@ -22,7 +23,7 @@ public class ModuleLifecycleManager {
 
     public ModuleLifecycleManager(String projectDir) {
         this(Path.of(projectDir), command -> new ProcessBuilder(command)
-                .directory(new java.io.File(projectDir))
+                .directory(new File(projectDir))
                 .redirectErrorStream(true)
                 .redirectOutput(ProcessBuilder.Redirect.INHERIT)
                 .start());

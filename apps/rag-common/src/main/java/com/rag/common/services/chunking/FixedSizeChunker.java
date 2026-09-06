@@ -34,22 +34,22 @@ public class FixedSizeChunker implements TextSplitter {
 
     @Override
     public List<Chunk> split(Document document) {
-        String content = document.getContent();
+        var content = document.getContent();
         if (content == null || content.isBlank()) {
             return List.of();
         }
 
-        Map<String, Object> baseMeta = documentMeta(document);
-        List<Chunk> chunks = new ArrayList<>();
+        var baseMeta = documentMeta(document);
+        var chunks = new ArrayList<Chunk>();
         int start = 0;
         int index = 0;
 
         while (start < content.length()) {
             int end = Math.min(start + chunkSize, content.length());
-            String chunkContent = content.substring(start, end).trim();
+            var chunkContent = content.substring(start, end).trim();
 
             if (!chunkContent.isEmpty()) {
-                Map<String, Object> meta = new HashMap<>(baseMeta);
+                var meta = new HashMap<>(baseMeta);
                 meta.put("strategy", "fixed");
                 meta.put("start", start);
                 meta.put("end", end);
@@ -71,7 +71,7 @@ public class FixedSizeChunker implements TextSplitter {
     }
 
     private static Map<String, Object> documentMeta(Document document) {
-        Map<String, Object> meta = new HashMap<>(document.getMetadata());
+        var meta = new HashMap<>(document.getMetadata());
         meta.remove("rawBytes");
         return meta;
     }

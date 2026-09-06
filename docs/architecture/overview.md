@@ -60,7 +60,7 @@ Each runnable module follows a strict layered architecture with **one-way depend
 ## Cross-Cutting Concerns
 
 ### Provider Abstraction (Critical)
-The `EmbeddingModel` and chat model abstractions must allow swapping between OpenAI, Ollama, and HuggingFace via **configuration profiles**, not code changes.
+The `EmbeddingModelPort` and `ChatModelPort` abstractions must allow swapping between OpenAI, Ollama, and HuggingFace via **configuration profiles**, not code changes.
 
 | Profile | Embeddings | LLM | Use case |
 |---------|-----------|-----|----------|
@@ -70,12 +70,12 @@ The `EmbeddingModel` and chat model abstractions must allow swapping between Ope
 ### Strategy Pattern
 Pluggable strategies via interfaces:
 - `TextSplitter` - chunking strategies
-- `EmbeddingModel` - embedding providers
+- `EmbeddingModelPort` - embedding providers
 - `Retriever` - retrieval strategies
-- `VectorStore` - storage backends
+- `VectorStorePort` - storage backends
 
 ### Repository Pattern
-The `VectorStore` interface abstracts storage so PgVector, in-memory stores can be swapped transparently.
+The `VectorStorePort` interface abstracts storage so PgVector, in-memory stores can be swapped transparently.
 
 ### Reactive/Parallel
 - Java 21 virtual threads for blocking I/O (LLM/embedding calls)
@@ -86,7 +86,7 @@ The `VectorStore` interface abstracts storage so PgVector, in-memory stores can 
 
 ### Ingestion Pipeline
 ```
-Document → Parser → TextSplitter → EmbeddingModel → VectorStore
+Document → Parser → TextSplitter → EmbeddingModelPort → VectorStorePort
 ```
 
 ### Retrieval Pipeline

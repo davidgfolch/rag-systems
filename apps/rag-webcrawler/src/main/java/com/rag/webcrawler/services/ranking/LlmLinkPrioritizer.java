@@ -1,12 +1,11 @@
 package com.rag.webcrawler.services.ranking;
 
-import com.rag.common.services.ChatModel;
+import com.rag.common.services.ChatModelPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -26,10 +25,10 @@ public class LlmLinkPrioritizer implements LinkPrioritizer {
 
     private static final Pattern URL_LINE = Pattern.compile("\\b(https?://\\S+)");
 
-    private final ChatModel chatModel;
+    private final ChatModelPort chatModel;
     private final LinkPrioritizer fallback;
 
-    public LlmLinkPrioritizer(ChatModel chatModel, LinkPrioritizer fallback) {
+    public LlmLinkPrioritizer(ChatModelPort chatModel, LinkPrioritizer fallback) {
         this.chatModel = chatModel;
         this.fallback = fallback;
     }
@@ -40,8 +39,8 @@ public class LlmLinkPrioritizer implements LinkPrioritizer {
             log.debug("LLM prioritize skipped: no question");
             return fallback.prioritize(links, question);
         }
-        List<String> matches = extractUrls(chatModel.complete(PROMPT.formatted(question, String.join("\n", links))));
-        List<String> result = new ArrayList<>();
+        var matches = extractUrls(chatModel.complete(PROMPT.formatted(question, String.join("\n", links))));
+        var result = new ArrayList<String>();
         for (String url : matches) {
             if (links.contains(url)) result.add(url);
         }
@@ -50,9 +49,9 @@ public class LlmLinkPrioritizer implements LinkPrioritizer {
     }
 
     private List<String> extractUrls(String answer) {
-        List<String> matches = new ArrayList<>();
+        var matches = new ArrayList<String>();
         if (answer == null) return matches;
-        Matcher matcher = URL_LINE.matcher(answer);
+        var matcher = URL_LINE.matcher(answer);
         while (matcher.find()) {
             matches.add(matcher.group(1).replaceAll("[.,;:)]$", ""));
         }

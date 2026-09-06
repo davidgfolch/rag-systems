@@ -1,5 +1,6 @@
 package com.rag.webcrawler.api;
 
+import com.rag.contract.model.FetchLinksRequest;
 import com.rag.contract.model.FetchRequest;
 import com.rag.contract.model.PageDTO;
 import com.rag.webcrawler.services.WebCrawlService;
@@ -36,8 +37,8 @@ class FetchControllerTest {
         when(service.fetchRelevantLinks("https://ex.com", "q", 5))
                 .thenReturn(List.of(new PageDTO("https://ex.com/a", "A", "a")));
 
-        com.rag.contract.model.FetchLinksRequest request =
-                new com.rag.contract.model.FetchLinksRequest(URI.create("https://ex.com")).question("q");
+        FetchLinksRequest request =
+                new FetchLinksRequest(URI.create("https://ex.com")).question("q");
         ResponseEntity<List<PageDTO>> result = sut.fetchLinks(request);
 
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.CREATED);

@@ -34,7 +34,7 @@ public class RagTuiConfig {
             @Value("${RAG_BASIC_URL:http://localhost:8081}") String basicUrl,
             @Value("${RAG_ADVANCED_URL:http://localhost:8082}") String advancedUrl,
             @Value("${RAG_AGENTIC_URL:http://localhost:8083}") String agenticUrl) {
-        List<Module> modules = List.of(
+        var modules = List.of(
                 new Module("rag-basic", basicUrl),
                 new Module("rag-advanced", advancedUrl),
                 new Module("rag-agentic", agenticUrl));
@@ -48,7 +48,7 @@ public class RagTuiConfig {
     }
 
     private String repoRoot() {
-        String script = System.getProperty("os.name", "").toLowerCase().contains("win") ? "run.bat" : "run.sh";
+        var script = System.getProperty("os.name", "").toLowerCase().contains("win") ? "run.bat" : "run.sh";
         var dir = Path.of(System.getProperty("user.dir"));
         while (dir != null && !Files.isRegularFile(dir.resolve("scripts").resolve(script))) {
             dir = dir.getParent();

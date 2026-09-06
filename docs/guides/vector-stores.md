@@ -46,7 +46,7 @@ This is the default. Runs locally on CPU, no GPU needed.
 
 ## Abstraction
 
-All stores implement the `VectorStore` interface in `rag-common`. Swap via configuration, not code:
+All stores implement the `VectorStorePort` interface in `rag-common`. Swap via configuration, not code:
 
 ```yaml
 # application.yml
@@ -58,7 +58,7 @@ rag:
 ```java
 Service
 public class RetrievalService {
-    private final VectorStore vectorStore; // Swappable
+    private final VectorStorePort vectorStore; // Swappable
 
     public List<Document> search(String query, int topK) {
         return vectorStore.similaritySearch(query, topK);

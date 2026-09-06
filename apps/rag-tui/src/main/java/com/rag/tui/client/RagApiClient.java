@@ -40,7 +40,7 @@ public class RagApiClient {
     }
 
     public IngestResponse ingest(String content, Map<String, Object> metadata) {
-        IngestRequest request = new IngestRequest().content(content);
+        var request = new IngestRequest().content(content);
         if (metadata != null) {
             request.metadata(metadata);
         }
@@ -55,7 +55,7 @@ public class RagApiClient {
                 return fileName;
             }
         });
-        HttpHeaders jsonHeaders = new HttpHeaders();
+        var jsonHeaders = new HttpHeaders();
         jsonHeaders.setContentType(MediaType.APPLICATION_JSON);
         body.add("fileInfo", new HttpEntity<>(metadata, jsonHeaders));
         return client()
@@ -76,7 +76,7 @@ public class RagApiClient {
                 return fileName;
             }
         });
-        HttpHeaders jsonHeaders = new HttpHeaders();
+        var jsonHeaders = new HttpHeaders();
         jsonHeaders.setContentType(MediaType.APPLICATION_JSON);
         body.add("fileInfo", new HttpEntity<>(metadata, jsonHeaders));
         return client()
@@ -107,7 +107,7 @@ public class RagApiClient {
      * {@code documents} command does.
      */
     public List<DocumentSummaryDTO> listDocuments(String baseUrl) {
-        DocumentSummaryDTO[] documents = builder.clone().baseUrl(baseUrl).build()
+        var documents = builder.clone().baseUrl(baseUrl).build()
                 .get().uri("/api/documents")
                 .retrieve().body(DocumentSummaryDTO[].class);
         return documents == null ? List.of() : List.of(documents);

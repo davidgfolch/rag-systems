@@ -36,7 +36,8 @@ Rules for all code in this repository. These enforce quality, maintainability, a
 
 - **Packages**: `com.rag.[module].[layer]`
 - **Classes**: PascalCase (e.g., `DocumentIngestionService`)
-- **Bean suffixes**: JPA `@Entity` classes end with `Entity` (e.g., `ConversationEntity`); OpenAPI contract DTOs end with `DTO` or a transfer suffix `Request`/`Response`/`Result` (e.g., `ConversationDTO`, `PageDTO`); pure domain beans (non-entity, non-DTO) keep plain names (e.g., `Chunk`, `Document`). This prevents same-name collisions between layers (enforced by `rag-memory` `ArchitectureTest` and `rag-contract` `DtoNamingTest`).
+- **Bean suffixes**: JPA `@Entity` classes end with `Entity` (e.g., `ConversationEntity`); OpenAPI contract DTOs end with `DTO` or a transfer suffix `Request`/`Response`/`Result` (e.g., `ConversationDTO`, `PageDTO`); WebSocket frames also end with a transfer suffix (`Request`/`Response`); pure domain beans (non-entity, non-DTO) keep plain names (e.g., `Chunk`, `Document`). This prevents same-name collisions between layers (enforced by `rag-memory` `ArchitectureTest` and `rag-contract` `DtoNamingTest`).
+- **Port interfaces**: Strategy interfaces (ports) that would otherwise collide with a same-named third-party/provider type end with `Port` (e.g., `EmbeddingModelPort`, `ChatModelPort`, `VectorStorePort`) so the domain abstraction can be imported alongside e.g. Spring AI's `EmbeddingModel` in one file without ambiguity.
 - **Methods**: camelCase (e.g., `ingestDocument()`)
 - **Constants**: UPPER_SNAKE_CASE (e.g., `MAX_CHUNK_SIZE`)
 - **Test Classes**: `[ClassName]Test` (e.g., `DocumentIngestionServiceTest`)

@@ -10,15 +10,18 @@ import com.rag.tui.launcher.Module;
 import com.rag.tui.launcher.ModuleLifecycleManager;
 import com.rag.tui.launcher.ModuleRegistry;
 import com.rag.tui.support.StubModuleServer;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -46,7 +49,7 @@ class CommandDispatcherIntegrationTest {
         lifecycle = mock(ModuleLifecycleManager.class);
         RagApiClient apiClient = new RagApiClient(registry, RestClient.builder());
         ChatGateway chatGateway = new ChatGateway(
-                registry, new org.springframework.web.socket.client.standard.StandardWebSocketClient(),
+                registry, new StandardWebSocketClient(),
                 new ObjectMapper(), 60);
         MemoryClient memoryClient = new MemoryClient(
                 RestClient.builder().baseUrl(stub.baseUrl()).build());
@@ -66,7 +69,7 @@ class CommandDispatcherIntegrationTest {
         Path pdf = Files.createTempFile("doc", ".pdf");
         byte[] bytes = "%PDF-1.4 fake binary content \u0000\u0001\u0002".getBytes(StandardCharsets.UTF_8);
         Files.write(pdf, bytes);
-        List<String> tokens = new java.util.ArrayList<>();
+        List<String> tokens = new ArrayList<>();
 
         CommandResult result = sut.handle("add-file " + pdf, tokens::add);
 
@@ -79,7 +82,7 @@ class CommandDispatcherIntegrationTest {
     }
 
     private static void await(List<String> tokens, String needle) {
-        org.awaitility.Awaitility.await().atMost(5, TimeUnit.SECONDS)
+        Awaitility.await().atMost(5, TimeUnit.SECONDS)
                 .until(() -> tokens.stream().anyMatch(t -> t.contains(needle)));
     }
 
@@ -96,8 +99,7 @@ class CommandDispatcherIntegrationTest {
         ModuleRegistry deadRegistry = new ModuleRegistry(
                 List.of(new Module("rag-basic", "http://localhost:1")), "rag-basic");
         ChatGateway chatGateway = new ChatGateway(
-                deadRegistry, new org.springframework.web.socket.client.standard.StandardWebSocketClient(),
-                new ObjectMapper(), 60);
+                deadRegistry, new StandardWebSocketClient(), new ObjectMapper(), 60);
         CommandDispatcher dead = new CommandDispatcher(deadRegistry, lifecycle,
                 new CommandDispatcher.RagClients(
                         new RagApiClient(deadRegistry, RestClient.builder()), chatGateway,

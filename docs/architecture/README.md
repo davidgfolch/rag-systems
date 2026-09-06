@@ -13,5 +13,5 @@ Documentation on the RAG Systems architecture — layered design, module roles, 
 - **Layered Architecture per module**: domain → services → repositories → config
 - **Strategy Pattern**: interchangeable chunking, embedding, and retrieval via interfaces
 - **Provider Abstraction**: swap OpenAI / Ollama / HuggingFace via configuration, not code
-- **Repository Pattern**: `VectorStore` interface abstracts PgVector and in-memory stores
+- **Repository Pattern**: `VectorStorePort` interface abstracts PgVector and in-memory stores
 - **Composition over Inheritance**: pipelines compose strategy implementations

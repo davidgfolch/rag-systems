@@ -20,8 +20,8 @@ public class FileDocumentLoader {
 
     public LoadedFile load(String path) {
         try {
-            Path p = Path.of(path);
-            byte[] bytes = Files.readAllBytes(p);
+            var p = Path.of(path);
+            var bytes = Files.readAllBytes(p);
             log.info("Loaded file '{}' ({} bytes)", p.getFileName(), bytes.length);
             return new LoadedFile(bytes, Map.of(
                     "sourceType", "file",

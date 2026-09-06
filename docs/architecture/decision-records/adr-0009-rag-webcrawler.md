@@ -13,7 +13,7 @@ Add a dedicated **`rag-webcrawler`** Spring Boot module (tool only - no RAG pipe
 
 - `POST /api/fetch {url}` → `Page` (url, title, text, links) via jsoup
 - `POST /api/fetch/links {url, question?}` → fetched pages for the most relevant outbound links
-- `LinkPrioritizer` strategy: an **LLM-driven** ranker (via the shared `ChatModel` contract) scores candidate links against an optional user question; a deterministic fallback (domain score, text density) is used when no LLM is configured
+- `LinkPrioritizer` strategy: an **LLM-driven** ranker (via the shared `ChatModelPort` contract) scores candidate links against an optional user question; a deterministic fallback (domain score, text density) is used when no LLM is configured
 - Consumes the shared `rag-contract` `Page`/`FetchRequest`/`FetchLinksRequest` types
 
 Orchestration note: the active rag-module calls `rag-webcrawler` during `ingest-url` (see [ADR-0007](adr-0007-tui-interface.md)). The TUI never talks to `rag-webcrawler` directly.

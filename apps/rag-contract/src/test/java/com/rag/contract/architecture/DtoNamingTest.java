@@ -9,14 +9,16 @@ import org.junit.jupiter.api.Test;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 
 /**
- * Naming rules for the generated OpenAPI transfer beans. Every top-level
- * contract model carries a transfer suffix (DTO/Request/Response/Result) so
- * its simple name can never collide with a rag-* domain/entity class (see
- * architecture-guidelines). Nested types (e.g. generated enums) are exempt.
+ * Naming rules for the OpenAPI transfer beans and the WebSocket frames. Every
+ * top-level contract type carries a transfer suffix (DTO/Request/Response/
+ * Result) so its simple name can never collide with a rag-* domain/entity
+ * class (see architecture-guidelines). Nested types (e.g. generated enums)
+ * are exempt.
  */
 class DtoNamingTest {
 
     private static final String MODEL_PACKAGE = "com.rag.contract.model..";
+    private static final String WS_PACKAGE = "com.rag.contract.ws..";
 
     private static final DescribedPredicate<JavaClass> TOP_LEVEL =
             new DescribedPredicate<>("top-level classes") {
@@ -40,5 +42,16 @@ class DtoNamingTest {
                 .orShould().haveSimpleNameEndingWith("Result")
                 .because("API beans need an explicit transfer suffix to avoid naming collisions")
                 .check(importer.importPackages(MODEL_PACKAGE));
+    }
+
+    @Test
+    void webSocketFramesCarryAnExplicitSuffix() {
+        classes()
+                .that().resideInAPackage(WS_PACKAGE)
+                .and(TOP_LEVEL)
+                .should().haveSimpleNameEndingWith("Request")
+                .orShould().haveSimpleNameEndingWith("Response")
+                .because("WS frames also need an explicit transfer suffix to avoid naming collisions")
+                .check(importer.importPackages(WS_PACKAGE));
     }
 }

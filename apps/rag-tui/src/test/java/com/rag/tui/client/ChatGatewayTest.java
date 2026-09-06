@@ -19,6 +19,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -77,6 +78,6 @@ class ChatGatewayTest {
     @Test
     void cancelWithoutActiveSessionDoesNothing() throws Exception {
         sut.cancel();
-        verify(session, org.mockito.Mockito.never()).close();
+        verify(session, never()).close();
     }
 }

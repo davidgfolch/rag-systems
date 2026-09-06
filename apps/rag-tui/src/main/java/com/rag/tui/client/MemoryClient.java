@@ -22,7 +22,7 @@ public class MemoryClient {
     }
 
     public List<ConversationDTO> conversations() {
-        ConversationDTO[] conversations = restClient.get()
+        var conversations = restClient.get()
                 .uri("/api/conversations")
                 .retrieve()
                 .body(ConversationDTO[].class);
@@ -31,7 +31,7 @@ public class MemoryClient {
     }
 
     public List<ChatMessageDTO> messages(String conversationId) {
-        ChatMessageDTO[] messages = restClient.get()
+        var messages = restClient.get()
                 .uri("/api/conversations/{id}/messages", conversationId)
                 .retrieve()
                 .body(ChatMessageDTO[].class);

@@ -1,16 +1,17 @@
 package com.rag.common.repositories.store;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rag.common.domain.Chunk;
 import com.rag.common.domain.DocumentSummary;
-import com.rag.common.repositories.VectorStore;
+import com.rag.common.repositories.VectorStorePort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
+import org.springframework.ai.vectorstore.VectorStore;
 
 import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -18,38 +19,39 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Adapter bridging the domain {@link VectorStore} interface onto Spring AI's
- * {@link org.springframework.ai.vectorstore.VectorStore} (backed by PgVector).
+ * Adapter bridging the domain {@link VectorStorePort} interface onto Spring AI's
+ * {@link VectorStore} (backed by PgVector).
  * Maps our {@link Chunk} model to Spring AI documents for storage and back for
  * retrieval.
  *
  * <p>Spring AI embeds documents and queries internally via its own injected
  * embedding model, so this adapter does not handle embeddings directly.
  */
-public class PgVectorStoreAdapter implements VectorStore {
+public class PgVectorStoreAdapter implements VectorStorePort {
 
     private static final Logger log = LoggerFactory.getLogger(PgVectorStoreAdapter.class);
+    private static final ObjectMapper om = new ObjectMapper();
 
     static final String DEFAULT_SCHEMA = "public";
     static final String DEFAULT_TABLE = "vector_store";
 
-    private final org.springframework.ai.vectorstore.VectorStore delegate;
+    private final VectorStore delegate;
     private final DataSource dataSource;
     private final String table;
 
-    public PgVectorStoreAdapter(org.springframework.ai.vectorstore.VectorStore delegate) {
+    public PgVectorStoreAdapter(VectorStore delegate) {
         this(delegate, null, DEFAULT_SCHEMA, DEFAULT_TABLE);
     }
 
-    public PgVectorStoreAdapter(org.springframework.ai.vectorstore.VectorStore delegate, DataSource dataSource) {
+    public PgVectorStoreAdapter(VectorStore delegate, DataSource dataSource) {
         this(delegate, dataSource, DEFAULT_SCHEMA, DEFAULT_TABLE);
     }
 
-    public PgVectorStoreAdapter(org.springframework.ai.vectorstore.VectorStore delegate, DataSource dataSource, String table) {
+    public PgVectorStoreAdapter(VectorStore delegate, DataSource dataSource, String table) {
         this(delegate, dataSource, DEFAULT_SCHEMA, table);
     }
 
-    public PgVectorStoreAdapter(org.springframework.ai.vectorstore.VectorStore delegate, DataSource dataSource,
+    public PgVectorStoreAdapter(VectorStore delegate, DataSource dataSource,
                                 String schema, String table) {
         this.delegate = delegate;
         this.dataSource = dataSource;
@@ -77,10 +79,10 @@ public class PgVectorStoreAdapter implements VectorStore {
         if (dataSource == null) {
             return;
         }
-        try (Connection connection = dataSource.getConnection()) {
-            try (var statement = connection.createStatement();
-                 var resultSet = statement.executeQuery("SELECT 1")) {
-                if (!resultSet.next()) {
+        try (var conn = dataSource.getConnection()) {
+            try (var stmt = conn.createStatement();
+                 var rs = stmt.executeQuery("SELECT 1")) {
+                if (!rs.next()) {
                     throw new IllegalStateException("Vector store did not respond to connectivity probe");
                 }
             }
@@ -94,7 +96,7 @@ public class PgVectorStoreAdapter implements VectorStore {
     @Override
     public void add(List<Chunk> chunks) {
         log.debug("Adding {} chunks to vector store {}", chunks.size(), table);
-        List<org.springframework.ai.document.Document> docs = chunks.stream()
+        var docs = chunks.stream()
                 .map(this::toSpringDocument)
                 .toList();
         delegate.add(docs);
@@ -102,11 +104,11 @@ public class PgVectorStoreAdapter implements VectorStore {
 
     @Override
     public List<Chunk> similaritySearch(String query, int topK) {
-        SearchRequest request = SearchRequest.builder()
+        var req = SearchRequest.builder()
                 .query(query)
                 .topK(topK)
                 .build();
-        List<Chunk> hits = delegate.similaritySearch(request).stream()
+        var hits = delegate.similaritySearch(req).stream()
                 .map(this::toChunk)
                 .toList();
         log.debug("Vector store returned {} chunks for query", hits.size());
@@ -115,12 +117,12 @@ public class PgVectorStoreAdapter implements VectorStore {
 
     @Override
     public List<Chunk> similaritySearch(String query, int topK, String documentId) {
-        SearchRequest request = SearchRequest.builder()
+        var req = SearchRequest.builder()
                 .query(query)
                 .topK(topK)
                 .filterExpression("documentId == '%s'".formatted(documentId))
                 .build();
-        List<Chunk> hits = delegate.similaritySearch(request).stream()
+        var hits = delegate.similaritySearch(req).stream()
                 .map(this::toChunk)
                 .toList();
         log.debug("Vector store returned {} chunks for query scoped to {}", hits.size(), documentId);
@@ -130,24 +132,24 @@ public class PgVectorStoreAdapter implements VectorStore {
     @Override
     @SuppressWarnings("java:S2077")
     public List<DocumentSummary> listDocuments() {
-        List<DocumentSummary> result = new ArrayList<>();
+        var result = new ArrayList<DocumentSummary>();
         if (dataSource == null) {
             return result;
         }
-        String sql = "SELECT metadata->>'documentId' AS document_id, " +
+        var sql = "SELECT metadata->>'documentId' AS document_id, " +
                 "count(*) AS chunk_count, " +
                 "(array_agg(metadata ORDER BY metadata->>'chunkIndex'))[1] AS first_meta " +
                 "FROM " + table + " " +
                 "WHERE metadata->>'documentId' IS NOT NULL " +
                 "GROUP BY metadata->>'documentId'";
-        try (Connection connection = dataSource.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql);
-             ResultSet rs = statement.executeQuery()) {
+        try (var conn = dataSource.getConnection();
+             var pstmt = conn.prepareStatement(sql);
+             var rs = pstmt.executeQuery()) {
             while (rs.next()) {
-                String documentId = rs.getString("document_id");
-                int chunkCount = rs.getInt("chunk_count");
-                Map<String, Object> metadata = toMetadata(rs.getString("first_meta"));
-                result.add(new DocumentSummary(documentId, chunkCount, metadata));
+                var docId = rs.getString("document_id");
+                var chunkCount = rs.getInt("chunk_count");
+                var metadata = toMetadata(rs.getString("first_meta"));
+                result.add(new DocumentSummary(docId, chunkCount, metadata));
             }
         } catch (SQLException e) {
             if (isMissingTable(e)) {
@@ -169,20 +171,20 @@ public class PgVectorStoreAdapter implements VectorStore {
         return "42P01".equals(e.getSQLState());
     }
 
-    private org.springframework.ai.document.Document toSpringDocument(Chunk chunk) {
-        Map<String, Object> metadata = new HashMap<>(chunk.getMetadata());
+    private Document toSpringDocument(Chunk chunk) {
+        var metadata = new HashMap<>(chunk.getMetadata());
         metadata.put("documentId", chunk.getDocumentId());
         metadata.put("chunkIndex", chunk.getIndex());
-        return org.springframework.ai.document.Document.builder()
+        return Document.builder()
                 .id(chunk.getId())
                 .text(chunk.getContent())
                 .metadata(metadata)
                 .build();
     }
 
-    private Chunk toChunk(org.springframework.ai.document.Document doc) {
-        Object docId = doc.getMetadata().get("documentId");
-        Object index = doc.getMetadata().get("chunkIndex");
+    private Chunk toChunk(Document doc) {
+        var docId = doc.getMetadata().get("documentId");
+        var index = doc.getMetadata().get("chunkIndex");
         return new Chunk(
                 doc.getId(),
                 docId == null ? "unknown" : String.valueOf(docId),
@@ -205,10 +207,9 @@ public class PgVectorStoreAdapter implements VectorStore {
             return (Map<String, Object>) map;
         }
         try {
-            return new com.fasterxml.jackson.databind.ObjectMapper()
-                    .readValue(String.valueOf(raw),
-                            new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {
-                            });
+            return om.readValue(String.valueOf(raw),
+                    new TypeReference<Map<String, Object>>() {
+                    });
         } catch (Exception e) {
             return Map.of();
         }

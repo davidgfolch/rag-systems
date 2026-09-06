@@ -2,7 +2,7 @@ package com.rag.common.services;
 
 import com.rag.common.domain.Chunk;
 import com.rag.common.domain.Document;
-import com.rag.common.repositories.VectorStore;
+import com.rag.common.repositories.VectorStorePort;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -21,8 +21,8 @@ class AsyncIngestionServiceTest {
 
     private final DocumentParser parser = mock(DocumentParser.class);
     private final TextSplitter splitter = mock(TextSplitter.class);
-    private final EmbeddingModel embeddingModel = mock(EmbeddingModel.class);
-    private final VectorStore vectorStore = mock(VectorStore.class);
+    private final EmbeddingModelPort embeddingModel = mock(EmbeddingModelPort.class);
+    private final VectorStorePort vectorStore = mock(VectorStorePort.class);
 
     private IngestionService ingestionService() {
         return new IngestionService(parser, splitter, embeddingModel, vectorStore);
@@ -30,44 +30,44 @@ class AsyncIngestionServiceTest {
 
     @Test
     void submitsAndTransitionsToCompletedWithChunkCount() {
-        IngestionService delegate = ingestionService();
+        var delegate = ingestionService();
         when(parser.parse(any())).thenReturn("hello world");
-        Chunk chunk = new Chunk("c1", "d1", "hello world", 0, Map.of());
+        var chunk = new Chunk("c1", "d1", "hello world", 0, Map.of());
         when(splitter.split(any())).thenReturn(List.of(chunk));
         when(embeddingModel.embed("hello world")).thenReturn(List.of(1.0f, 0.0f));
 
-        AsyncIngestionService service = new AsyncIngestionService(delegate);
-        String id = service.submit(new Document("d1", "", Map.of("rawBytes", new byte[]{1})));
+        var service = new AsyncIngestionService(delegate);
+        var id = service.submit(new Document("d1", "", Map.of("rawBytes", new byte[]{1})));
 
-        AsyncIngestionService.JobStatus status = await(service, id);
+        var status = await(service, id);
         assertThat(status.state()).isEqualTo("COMPLETED");
         assertThat(status.chunkCount()).isEqualTo(1);
     }
 
     @Test
     void marksFailedWhenIngestionThrows() {
-        IngestionService delegate = mock(IngestionService.class);
+        var delegate = mock(IngestionService.class);
         when(delegate.ingest(any())).thenThrow(new IllegalStateException("boom"));
 
-        AsyncIngestionService service = new AsyncIngestionService(delegate);
-        String id = service.submit(new Document("d1", "content", Map.of()));
+        var service = new AsyncIngestionService(delegate);
+        var id = service.submit(new Document("d1", "content", Map.of()));
 
-        AsyncIngestionService.JobStatus status = await(service, id);
+        var status = await(service, id);
         assertThat(status.state()).isEqualTo("FAILED");
         assertThat(status.message()).contains("boom");
     }
 
     @Test
     void failsFastWithoutIngestingWhenVectorStoreUnavailable() {
-        IngestionService delegate = mock(IngestionService.class);
-        VectorStore store = mock(VectorStore.class);
+        var delegate = mock(IngestionService.class);
+        var store = mock(VectorStorePort.class);
         doThrow(new IllegalStateException("Vector store not available: DataAccessResourceFailureException: Connection refused"))
                 .when(store).checkAvailable();
 
-        AsyncIngestionService service = new AsyncIngestionService(delegate, store, null);
-        String id = service.submit(new Document("d1", "content", Map.of()));
+        var service = new AsyncIngestionService(delegate, store, null);
+        var id = service.submit(new Document("d1", "content", Map.of()));
 
-        AsyncIngestionService.JobStatus status = await(service, id);
+        var status = await(service, id);
         assertThat(status.state()).isEqualTo("FAILED");
         assertThat(status.message()).contains("Connection refused");
         verify(delegate, never()).ingest(any());
@@ -75,9 +75,9 @@ class AsyncIngestionServiceTest {
 
     @Test
     void reportsFailedForUnknownJob() {
-        AsyncIngestionService service = new AsyncIngestionService(mock(IngestionService.class));
+        var service = new AsyncIngestionService(mock(IngestionService.class));
 
-        AsyncIngestionService.JobStatus status = service.status("nope");
+        var status = service.status("nope");
 
         assertThat(status.state()).isEqualTo("FAILED");
         assertThat(status.message()).contains("No such ingestion job");

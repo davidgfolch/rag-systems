@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Registry of known rag-* modules plus the currently active one. Immutable list,
@@ -21,7 +22,7 @@ public class ModuleRegistry {
 
     public ModuleRegistry(List<Module> modules, String defaultActive) {
         this.modules = List.copyOf(modules);
-        this.byName = modules.stream().collect(java.util.stream.Collectors.toMap(Module::name, m -> m));
+        this.byName = modules.stream().collect(Collectors.toMap(Module::name, m -> m));
         this.activeName = byName.containsKey(defaultActive) ? defaultActive : modules.get(0).name();
     }
 

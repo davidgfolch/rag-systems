@@ -12,16 +12,16 @@ class VectorStoreTest {
 
     @Test
     void defaultDocumentScopedSearchFiltersByDocumentId() {
-        Chunk other = new Chunk("c1", "d1", "text one", 0, Map.of());
-        Chunk wanted = new Chunk("c2", "d2", "text two", 1, Map.of());
-        VectorStore store = new ChunkStore(List.of(other, wanted));
+        var other = new Chunk("c1", "d1", "text one", 0, Map.of());
+        var wanted = new Chunk("c2", "d2", "text two", 1, Map.of());
+        VectorStorePort store = new ChunkStore(List.of(other, wanted));
 
-        List<Chunk> result = store.similaritySearch("query", 5, "d2");
+        var result = store.similaritySearch("query", 5, "d2");
 
         assertThat(result).containsExactly(wanted);
     }
 
-    private record ChunkStore(List<Chunk> chunks) implements VectorStore {
+    private record ChunkStore(List<Chunk> chunks) implements VectorStorePort {
         @Override
         public void add(List<Chunk> toAdd) {
             // no-op: this fixture only serves pre-populated chunks to similaritySearch

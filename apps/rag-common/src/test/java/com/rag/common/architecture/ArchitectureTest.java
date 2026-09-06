@@ -16,6 +16,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
@@ -180,7 +181,7 @@ class ArchitectureTest {
                         + "(<Module>ApplicationContextTest) to prove wiring loads offline: " + missing);
     }
 
-    private static List<Path> findFile(Path base, java.util.function.Predicate<String> matcher) throws IOException {
+    private static List<Path> findFile(Path base, Predicate<String> matcher) throws IOException {
         List<Path> matches = new ArrayList<>();
         if (base == null || !Files.isDirectory(base)) {
             return matches;

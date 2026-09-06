@@ -2,7 +2,7 @@ package com.rag.basic;
 
 import com.rag.basic.api.IngestionController;
 import com.rag.basic.services.RetrievalService;
-import com.rag.common.services.EmbeddingModel;
+import com.rag.common.services.EmbeddingModelPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +12,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.anyString;
@@ -26,7 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Proves the rag-basic application context boots without external services and
  * that the full ingestion-retrieval pipeline works end-to-end. The vector store
  * is switched to the in-memory provider ({@code simple}) and the domain
- * {@link EmbeddingModel} is mocked with deterministic stubs so no external
+ * {@link EmbeddingModelPort} is mocked with deterministic stubs so no external
  * services are required.
  */
 @SpringBootTest(classes = RagBasicApplication.class,
@@ -41,7 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class RagBasicApplicationContextTest {
 
     @MockitoBean
-    private EmbeddingModel domainEmbeddingModel;
+    private EmbeddingModelPort domainEmbeddingModel;
 
     @Autowired private MockMvc mockMvc;
     @Autowired private IngestionController ingestionController;
@@ -50,7 +51,7 @@ class RagBasicApplicationContextTest {
     @BeforeEach
     void stubDeterministicEmbeddings() {
         when(domainEmbeddingModel.embed(anyString())).thenAnswer(inv -> {
-            String text = inv.getArgument(0, String.class);
+            var text = inv.getArgument(0, String.class);
             return toEmbeddingList(text);
         });
     }
@@ -60,7 +61,7 @@ class RagBasicApplicationContextTest {
         for (int i = 0; i < text.length(); i++) {
             vec[i] = (float) (text.charAt(i) % 7);
         }
-        var result = new java.util.ArrayList<Float>(vec.length);
+        var result = new ArrayList<Float>(vec.length);
         for (float v : vec) result.add(v);
         return result;
     }

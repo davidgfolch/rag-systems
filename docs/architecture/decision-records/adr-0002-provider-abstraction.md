@@ -9,7 +9,7 @@ RAG needs embedding generation and LLM text generation. Multiple providers exist
 
 ## Decision
 
-Use **interfaces** (`EmbeddingModel`, chat model wrapper) defined in `rag-common`, with provider implementations selected via **Spring configuration profiles** (`local` for Ollama, `cloud` for OpenAI). No provider-specific code in business services.
+Use **interfaces** (`EmbeddingModelPort`, `ChatModelPort`) defined in `rag-common`, with provider implementations selected via **Spring configuration profiles** (`local` for Ollama, `cloud` for OpenAI). No provider-specific code in business services.
 
 - `local` profile → Ollama (nomic-embed-text, phi4/qwen3)
 - `cloud` profile → OpenAI (text-embedding-3-small, gpt-4o)

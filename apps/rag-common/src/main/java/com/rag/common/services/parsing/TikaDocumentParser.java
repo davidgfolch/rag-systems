@@ -32,12 +32,12 @@ public class TikaDocumentParser implements DocumentParser {
 
     @Override
     public String parse(Document document) {
-        byte[] rawBytes = getRawBytes(document);
+        var rawBytes = getRawBytes(document);
         if (rawBytes.length == 0) {
             return document.getContent();
         }
         try {
-            String parsed = HTML_TAG.matcher(parseText(rawBytes)).replaceAll(" ").trim();
+            var parsed = HTML_TAG.matcher(parseText(rawBytes)).replaceAll(" ").trim();
             log.debug("Parsed document {} ({} raw bytes -> {} chars)", document.getId(), rawBytes.length, parsed.length());
             return parsed;
         } catch (TikaException | SAXException | IOException e) {
@@ -46,11 +46,11 @@ public class TikaDocumentParser implements DocumentParser {
     }
 
     private byte[] getRawBytes(Document document) {
-        Object raw = document.getMetadata().get("rawBytes");
+        var raw = document.getMetadata().get("rawBytes");
         if (raw instanceof byte[] bytes) {
             return bytes;
         }
-        Object legacy = document.getMetadata().get("raw");
+        var legacy = document.getMetadata().get("raw");
         if (legacy instanceof String rawContent) {
             return Base64.getDecoder().decode(rawContent);
         }
@@ -58,9 +58,9 @@ public class TikaDocumentParser implements DocumentParser {
     }
 
     private String parseText(byte[] rawBytes) throws SAXException, IOException, TikaException {
-        Metadata metadata = new Metadata();
-        ParseContext parseContext = new ParseContext();
-        ToXMLContentHandler handler = new ToXMLContentHandler();
+        var metadata = new Metadata();
+        var parseContext = new ParseContext();
+        var handler = new ToXMLContentHandler();
         new AutoDetectParser().parse(new ByteArrayInputStream(rawBytes), handler, metadata, parseContext);
         return handler.toString();
     }

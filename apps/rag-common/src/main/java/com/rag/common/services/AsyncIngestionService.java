@@ -1,7 +1,7 @@
 package com.rag.common.services;
 
 import com.rag.common.domain.Document;
-import com.rag.common.repositories.VectorStore;
+import com.rag.common.repositories.VectorStorePort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,7 +28,7 @@ public class AsyncIngestionService {
 
     private final IngestionService delegate;
     private final ExecutorService executor;
-    private final VectorStore preflight;
+    private final VectorStorePort preflight;
     private final Map<String, Job> jobs = new ConcurrentHashMap<>();
 
     public AsyncIngestionService(IngestionService delegate) {
@@ -39,7 +39,7 @@ public class AsyncIngestionService {
         this(delegate, null, executor);
     }
 
-    public AsyncIngestionService(IngestionService delegate, VectorStore preflight, ExecutorService executor) {
+    public AsyncIngestionService(IngestionService delegate, VectorStorePort preflight, ExecutorService executor) {
         this.delegate = delegate;
         this.preflight = preflight;
         this.executor = executor != null ? executor : Executors.newCachedThreadPool(runnable -> {

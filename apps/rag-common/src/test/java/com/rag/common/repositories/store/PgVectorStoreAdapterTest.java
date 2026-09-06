@@ -1,7 +1,6 @@
 package com.rag.common.repositories.store;
 
 import com.rag.common.domain.Chunk;
-import com.rag.common.domain.DocumentSummary;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.ai.document.Document;
@@ -15,7 +14,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -31,7 +29,7 @@ class PgVectorStoreAdapterTest {
 
     @Test
     void addsChunksAsSpringDocuments() {
-        Map<String, Object> meta = new HashMap<>();
+        var meta = new HashMap<String, Object>();
         meta.put("source", "test");
         var chunk = new Chunk("c1", "d1", "content", 3, meta);
 
@@ -42,7 +40,7 @@ class PgVectorStoreAdapterTest {
 
     @Test
     void convertsSearchResultsToChunks() {
-        Map<String, Object> meta = new HashMap<>();
+        var meta = new HashMap<String, Object>();
         meta.put("documentId", "d1");
         meta.put("chunkIndex", 2);
         var springDoc = new Document.Builder()
@@ -52,10 +50,10 @@ class PgVectorStoreAdapterTest {
                 .build();
         when(delegate.similaritySearch(any(SearchRequest.class))).thenReturn(List.of(springDoc));
 
-        List<Chunk> result = adapter.similaritySearch("query", 5);
+        var result = adapter.similaritySearch("query", 5);
 
         assertThat(result).hasSize(1);
-        Chunk c = result.getFirst();
+        var c = result.getFirst();
         assertThat(c.getId()).isEqualTo("c1");
         assertThat(c.getDocumentId()).isEqualTo("d1");
         assertThat(c.getIndex()).isEqualTo(2);
@@ -67,7 +65,7 @@ class PgVectorStoreAdapterTest {
         var springDoc = new Document.Builder().id("c1").text("text").build();
         when(delegate.similaritySearch(any(SearchRequest.class))).thenReturn(List.of(springDoc));
 
-        List<Chunk> result = adapter.similaritySearch("query", 5);
+        var result = adapter.similaritySearch("query", 5);
 
         assertThat(result).hasSize(1);
         assertThat(result.getFirst().getDocumentId()).isEqualTo("unknown");
@@ -79,7 +77,7 @@ class PgVectorStoreAdapterTest {
         var springDoc = new Document.Builder().id("c1").text("text").build();
         when(delegate.similaritySearch(any(SearchRequest.class))).thenReturn(List.of(springDoc));
 
-        List<Chunk> result = adapter.similaritySearch("query", 5, "d1");
+        var result = adapter.similaritySearch("query", 5, "d1");
 
         assertThat(result).hasSize(1);
     }
@@ -100,7 +98,7 @@ class PgVectorStoreAdapterTest {
         when(rs.getString("first_meta")).thenReturn("{\"fileName\":\"note.txt\"}", (String)null);
 
         var pgAdapter = new PgVectorStoreAdapter(delegate, ds, "rag_basic", "chunks");
-        List<DocumentSummary> docs = pgAdapter.listDocuments();
+        var docs = pgAdapter.listDocuments();
 
         assertThat(docs).hasSize(2);
         assertThat(docs.getFirst().documentId()).isEqualTo("d1");
@@ -116,10 +114,10 @@ class PgVectorStoreAdapterTest {
 
     @Test
     void treatsMissingTableAsNoDocuments() throws Exception {
-        DataSource ds = mock(DataSource.class);
-        Connection conn = mock(Connection.class);
-        PreparedStatement statement = mock(PreparedStatement.class);
-        SQLException missing = mock(SQLException.class);
+        var ds = mock(DataSource.class);
+        var conn = mock(Connection.class);
+        var statement = mock(PreparedStatement.class);
+        var missing = mock(SQLException.class);
         when(missing.getSQLState()).thenReturn("42P01");
 
         when(ds.getConnection()).thenReturn(conn);

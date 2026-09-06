@@ -1,9 +1,10 @@
 package com.rag.common.repositories.store;
 
 import com.rag.common.domain.Chunk;
-import com.rag.common.services.EmbeddingModel;
+import com.rag.common.services.EmbeddingModelPort;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -15,7 +16,7 @@ import static org.mockito.Mockito.when;
 
 class InMemoryVectorStoreTest {
 
-    private final EmbeddingModel embeddingModel = mock(EmbeddingModel.class);
+    private final EmbeddingModelPort embeddingModel = mock(EmbeddingModelPort.class);
     private final InMemoryVectorStore store = new InMemoryVectorStore(embeddingModel);
 
     @Test
@@ -25,7 +26,7 @@ class InMemoryVectorStoreTest {
         var aboutCats = chunk("c2", new float[]{0, 1});
         store.add(List.of(aboutDogs, aboutCats));
 
-        List<Chunk> results = store.similaritySearch("dogs", 1);
+        var results = store.similaritySearch("dogs", 1);
 
         assertThat(results).hasSize(1);
         assertThat(results.getFirst().getId()).isEqualTo("c1");
@@ -50,7 +51,7 @@ class InMemoryVectorStoreTest {
     @Test
     void rejectsChunkWithoutEmbedding() {
         var noEmbedding = new Chunk("c1", "d1", "text", 0, Map.of());
-        List<Chunk> chunks = List.of(noEmbedding);
+        var chunks = List.of(noEmbedding);
         assertThatThrownBy(() -> store.add(chunks))
                 .isInstanceOf(IllegalArgumentException.class);
     }
@@ -70,7 +71,7 @@ class InMemoryVectorStoreTest {
         otherDoc.setEmbedding(List.of(1f, 0f));
         store.add(List.of(a, b, otherDoc));
 
-        List<Chunk> results = store.similaritySearch("q", 5, "d1");
+        var results = store.similaritySearch("q", 5, "d1");
 
         assertThat(results).hasSize(2).allMatch(c -> c.getDocumentId().equals("d1"));
     }
@@ -85,10 +86,10 @@ class InMemoryVectorStoreTest {
         c.setEmbedding(List.of(1f, 0f));
         store.add(List.of(a, b, c));
 
-        List<com.rag.common.domain.DocumentSummary> documents = store.listDocuments();
+        var documents = store.listDocuments();
 
         assertThat(documents).hasSize(2);
-        com.rag.common.domain.DocumentSummary d1 = documents.stream()
+        var d1 = documents.stream()
                 .filter(d -> d.documentId().equals("d1")).findFirst().orElseThrow();
         assertThat(d1.chunkCount()).isEqualTo(2);
         assertThat(d1.metadata()).containsEntry("fileName", "note.txt");
@@ -106,7 +107,7 @@ class InMemoryVectorStoreTest {
     }
 
     private static List<Float> floatList(float[] values) {
-        List<Float> out = new java.util.ArrayList<>(values.length);
+        var out = new ArrayList<Float>(values.length);
         for (float v : values) out.add(v);
         return out;
     }

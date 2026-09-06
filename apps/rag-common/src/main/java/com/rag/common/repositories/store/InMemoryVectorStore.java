@@ -2,8 +2,8 @@ package com.rag.common.repositories.store;
 
 import com.rag.common.domain.Chunk;
 import com.rag.common.domain.DocumentSummary;
-import com.rag.common.repositories.VectorStore;
-import com.rag.common.services.EmbeddingModel;
+import com.rag.common.repositories.VectorStorePort;
+import com.rag.common.services.EmbeddingModelPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,18 +18,18 @@ import java.util.stream.Collectors;
  * In-memory vector store using cosine similarity. Suitable for unit tests,
  * demos, and comparing strategies without requiring a running PgVector instance.
  *
- * <p>Embeds queries via the injected {@link EmbeddingModel}. Not persisted; for
+ * <p>Embeds queries via the injected {@link EmbeddingModelPort}. Not persisted; for
  * durable storage use {@link PgVectorStoreAdapter} (Spring AI), selected via
  * configuration.
  */
-public class InMemoryVectorStore implements VectorStore {
+public class InMemoryVectorStore implements VectorStorePort {
 
     private static final Logger log = LoggerFactory.getLogger(InMemoryVectorStore.class);
 
     private final Map<String, Chunk> chunksById = new ConcurrentHashMap<>();
-    private final EmbeddingModel embeddingModel;
+    private final EmbeddingModelPort embeddingModel;
 
-    public InMemoryVectorStore(EmbeddingModel embeddingModel) {
+    public InMemoryVectorStore(EmbeddingModelPort embeddingModel) {
         this.embeddingModel = embeddingModel;
     }
 
@@ -51,7 +51,7 @@ public class InMemoryVectorStore implements VectorStore {
 
     @Override
     public List<Chunk> similaritySearch(String query, int topK, String documentId) {
-        List<Float> queryEmbedding = embeddingModel.embed(query);
+        var queryEmbedding = embeddingModel.embed(query);
         return search(queryEmbedding, topK).stream()
                 .filter(chunk -> chunk.getDocumentId().equals(documentId))
                 .toList();
@@ -63,7 +63,7 @@ public class InMemoryVectorStore implements VectorStore {
 
     @Override
     public List<DocumentSummary> listDocuments() {
-        Map<String, List<Chunk>> byDoc = chunksById.values().stream()
+        var byDoc = chunksById.values().stream()
                 .collect(Collectors.groupingBy(Chunk::getDocumentId, LinkedHashMap::new, Collectors.toList()));
         return byDoc.entrySet().stream()
                 .map(e -> new DocumentSummary(e.getKey(), e.getValue().size(), firstMetadata(e.getValue())))
@@ -71,7 +71,7 @@ public class InMemoryVectorStore implements VectorStore {
     }
 
     private static Map<String, Object> firstMetadata(List<Chunk> chunks) {
-        Chunk first = chunks.stream()
+        var first = chunks.stream()
                 .filter(c -> !c.getMetadata().isEmpty())
                 .findFirst()
                 .orElse(null);
@@ -79,7 +79,7 @@ public class InMemoryVectorStore implements VectorStore {
     }
 
     private List<Chunk> search(List<Float> queryEmbedding, int topK) {
-        List<Chunk> hits = chunksById.values().stream()
+        var hits = chunksById.values().stream()
                 .map(chunk -> new Scored(chunk, cosine(queryEmbedding, chunk.getEmbedding())))
                 .sorted(Comparator.comparingDouble(Scored::score).reversed())
                 .limit(topK)

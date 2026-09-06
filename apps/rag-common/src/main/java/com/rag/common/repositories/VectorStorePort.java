@@ -6,13 +6,13 @@ import com.rag.common.domain.DocumentSummary;
 import java.util.List;
 
 /**
- * Strategy interface for vector storage and similarity search (Repository pattern).
+ * Strategy interface (port) for vector storage and similarity search (Repository pattern).
  *
  * <p>Concrete stores (PgVector, SimpleVectorStore) implement this interface and
  * are swappable via configuration, keeping the retrieval layer decoupled from
  * any specific vector database.
  */
-public interface VectorStore {
+public interface VectorStorePort {
 
     /**
      * Stores the given chunks (with their embeddings) in the vector store.

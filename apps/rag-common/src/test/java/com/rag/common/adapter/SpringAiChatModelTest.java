@@ -1,6 +1,6 @@
 package com.rag.common.adapter;
 
-import com.rag.common.services.ChatModel;
+import com.rag.common.services.ChatModelPort;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.chat.client.ChatClient;
 
@@ -21,7 +21,7 @@ class SpringAiChatModelTest {
         when(requestSpec.call()).thenReturn(responseSpec);
         when(responseSpec.content()).thenReturn("the answer");
 
-        ChatModel sut = new SpringAiChatModel(chatClient);
+        ChatModelPort sut = new SpringAiChatModel(chatClient);
 
         assertThat(sut.complete("prompt text")).isEqualTo("the answer");
         verify(chatClient).prompt();
