@@ -2,7 +2,12 @@ package com.rag.tui.launcher;
 
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+import java.nio.file.Path;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -28,7 +33,7 @@ class ModuleLifecycleManagerTest {
     void doesNotStartTwice() throws Exception {
         Process process = mock(Process.class);
         when(process.isAlive()).thenReturn(true);
-        when(starter.start(org.mockito.ArgumentMatchers.any(String[].class))).thenReturn(process);
+        when(starter.start(any(String[].class))).thenReturn(process);
         sut.start(module);
 
         boolean second = sut.start(module);
@@ -54,19 +59,19 @@ class ModuleLifecycleManagerTest {
 
 @Test
     void throwsStartExceptionWhenLaunchFails() throws Exception {
-        when(starter.start(org.mockito.ArgumentMatchers.any(String[].class)))
-                .thenThrow(new java.io.IOException("boom"));
+        when(starter.start(any(String[].class)))
+                .thenThrow(new IOException("boom"));
 
-        org.assertj.core.api.Assertions.assertThatThrownBy(() -> sut.start(module))
+        assertThatThrownBy(() -> sut.start(module))
                 .isInstanceOf(ModuleLifecycleManager.StartException.class);
     }
 
     @Test
     void defaultStarterFailsFastWhenScriptMissing() {
-        java.nio.file.Path projectDir = java.nio.file.Path.of(System.getProperty("java.io.tmpdir"));
+        Path projectDir = Path.of(System.getProperty("java.io.tmpdir"));
         ModuleLifecycleManager raw = new ModuleLifecycleManager(projectDir.toString());
 
-        org.assertj.core.api.Assertions.assertThatThrownBy(() -> raw.start(module))
+        assertThatThrownBy(() -> raw.start(module))
                 .isInstanceOf(ModuleLifecycleManager.StartException.class);
     }
 
@@ -79,7 +84,7 @@ class ModuleLifecycleManagerTest {
         try {
             Process process = mock(Process.class);
             when(process.isAlive()).thenReturn(true);
-            when(starter.start(org.mockito.ArgumentMatchers.any(String[].class))).thenReturn(process);
+            when(starter.start(any(String[].class))).thenReturn(process);
             sut.start(module);
         } catch (Exception e) {
             throw new RuntimeException(e);

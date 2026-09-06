@@ -3,7 +3,6 @@ package com.rag.common.services.chunking;
 import com.rag.common.domain.Document;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -17,7 +16,7 @@ class FixedSizeChunkerTest {
     void splitsLongTextIntoFixedPieces() {
         Document doc = new Document("d1", "This is a fairly long piece of content that needs splitting.", Map.of());
 
-        List<com.rag.common.domain.Chunk> chunks = chunker.split(doc);
+        var chunks = chunker.split(doc);
 
         assertThat(chunks).hasSizeGreaterThan(1);
         assertThat(chunks.get(0).getDocumentId()).isEqualTo("d1");

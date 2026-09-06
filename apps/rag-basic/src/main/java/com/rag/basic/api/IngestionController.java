@@ -12,7 +12,6 @@ import com.rag.contract.model.IngestUrlRequest;
 import com.rag.contract.model.IngestJobResponse;
 import com.rag.contract.model.IngestStatusDTO;
 import com.rag.contract.model.DocumentSummaryDTO;
-import com.rag.contract.model.PageDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -70,7 +69,7 @@ public class IngestionController {
         if (retrievalService == null) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
-        List<DocumentSummaryDTO> documents = retrievalService.listDocuments().stream()
+        var documents = retrievalService.listDocuments().stream()
                 .map(this::toDocumentSummary)
                 .toList();
         return ResponseEntity.ok(documents);
@@ -94,12 +93,12 @@ public class IngestionController {
     public ResponseEntity<IngestResponse> ingestFile(
             @RequestPart("file") MultipartFile file,
             @RequestPart(value = "fileInfo", required = false) Map<String, Object> fileInfo) throws IOException {
-        String original = file.getOriginalFilename();
+        var original = file.getOriginalFilename();
         if (file.isEmpty()) {
             log.warn("Ingest-file rejected: '{}' is empty ({} bytes)", original, file.getSize());
             return ResponseEntity.badRequest().build();
         }
-        byte[] bytes = file.getBytes();
+        var bytes = file.getBytes();
         log.info("Ingest-file received: '{}' ({} bytes, type={}). Starting ingestion pipeline...",
                 original, bytes.length, file.getContentType());
         Map<String, Object> metadata = new HashMap<>();
@@ -112,7 +111,7 @@ public class IngestionController {
         metadata.put("rawBytes", bytes);
         var document = new Document(UUID.randomUUID().toString(), "", metadata);
         log.info("Ingest-file '{}' -> document {}: parsing content...", original, document.getId());
-        IngestionService.IngestionResult result = ingestionService.ingest(document);
+        var result = ingestionService.ingest(document);
         log.info("Ingest-file '{}' -> document {}: complete ({} chunks).",
                 original, result.documentId(), result.chunkCount());
         return created(result);
@@ -122,7 +121,7 @@ public class IngestionController {
     public ResponseEntity<IngestJobResponse> ingestFileAsync(
             @RequestPart("file") MultipartFile file,
             @RequestPart(value = "fileInfo", required = false) Map<String, Object> fileInfo) throws IOException {
-        String original = file.getOriginalFilename();
+        var original = file.getOriginalFilename();
         if (asyncIngestionService == null) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
@@ -130,7 +129,7 @@ public class IngestionController {
             log.warn("Ingest-file-async rejected: '{}' is empty ({} bytes)", original, file.getSize());
             return ResponseEntity.badRequest().build();
         }
-        byte[] bytes = file.getBytes();
+        var bytes = file.getBytes();
         Map<String, Object> metadata = new HashMap<>();
         if (fileInfo != null) {
             metadata.putAll(fileInfo);
@@ -140,7 +139,7 @@ public class IngestionController {
         metadata.putIfAbsent(TITLE, file.getOriginalFilename());
         metadata.put("rawBytes", bytes);
         var document = new Document(UUID.randomUUID().toString(), "", metadata);
-        String documentId = asyncIngestionService.submit(document);
+        var documentId = asyncIngestionService.submit(document);
         log.info("Ingest-file-async submitted: '{}' ({} bytes) -> document {}", original, bytes.length, documentId);
         return ResponseEntity.accepted()
                 .body(new IngestJobResponse().documentId(documentId));
@@ -151,7 +150,7 @@ public class IngestionController {
         if (asyncIngestionService == null) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
-        AsyncIngestionService.JobStatus status = asyncIngestionService.status(documentId);
+        var status = asyncIngestionService.status(documentId);
         if (AsyncIngestionService.STATE_FAILED.equals(status.state())
                 && "No such ingestion job".equals(status.message())) {
             return ResponseEntity.notFound().build();
@@ -168,7 +167,7 @@ public class IngestionController {
     }
 
     private DocumentSummaryDTO toDocumentSummary(DocumentSummary summary) {
-        Object title = summary.metadata().get(TITLE);
+        var title = summary.metadata().get(TITLE);
         return new DocumentSummaryDTO()
                 .documentId(summary.documentId())
                 .title(title != null ? title.toString() : null)
@@ -181,7 +180,7 @@ public class IngestionController {
         if (request.getUrl().toString().isBlank()) {
             return ResponseEntity.badRequest().build();
         }
-        PageDTO page = webCrawlerClient.fetch(request.getUrl().toString());
+        var page = webCrawlerClient.fetch(request.getUrl().toString());
         var document = new Document(UUID.randomUUID().toString(), page.getText(),
                 Map.of(SOURCE_TYPE, "web", "source", page.getUrl(), TITLE, page.getTitle()));
         return created(ingestionService.ingest(document));

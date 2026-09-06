@@ -2,8 +2,6 @@ package com.rag.tui.ui;
 
 import com.rag.contract.model.ConversationDTO;
 import com.rag.contract.model.DocumentSummaryDTO;
-import com.rag.contract.model.IngestJobResponse;
-import com.rag.contract.model.IngestResponse;
 import com.rag.contract.model.IngestStatusDTO;
 import com.rag.tui.client.ChatGateway;
 import com.rag.tui.client.MemoryClient;
@@ -17,7 +15,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClientException;
 
-import java.util.List;
 import java.util.function.Consumer;
 
 public class CommandDispatcher {
@@ -40,18 +37,18 @@ public class CommandDispatcher {
     }
 
     public CommandResult handle(String input, Consumer<String> tokenSink) {
-        String trimmed = input.trim();
+        var trimmed = input.trim();
         if (trimmed.isEmpty()) return new CommandResult(commandRegistry.generateUsage(), false);
 
-        String lower = trimmed.toLowerCase();
+        var lower = trimmed.toLowerCase();
         if (lower.equals("quit") || lower.equals("exit")) {
             return new CommandResult(TerminalStyle.success("Bye."), true);
         }
         if (lower.equals("help")) return new CommandResult(commandRegistry.generateUsage(), false);
 
-        String[] parts = trimmed.split("\\s+", 2);
-        String arg = parts.length > 1 ? parts[1].trim() : "";
-        String command = parts[0].toLowerCase();
+        var parts = trimmed.split("\\s+", 2);
+        var arg = parts.length > 1 ? parts[1].trim() : "";
+        var command = parts[0].toLowerCase();
         log.debug("Command: '{}'", command);
         try {
             return switch (command) {
@@ -79,7 +76,7 @@ public class CommandDispatcher {
     }
 
     private CommandResult modules() {
-        Module active = registry.active();
+        var active = registry.active();
         var sb = new StringBuilder("Modules:\n");
         registry.modules().stream().map(m -> {
             boolean child = lifecycle.isRunning(m.name());
@@ -114,7 +111,7 @@ public class CommandDispatcher {
 
     private void appendModuleDocuments(StringBuilder sb, Module m) {
         sb.append(" ").append(m.name()).append(" (").append(m.baseUrl()).append("):\n");
-        List<DocumentSummaryDTO> docs = clients.apiClient().listDocuments(m.baseUrl());
+        var docs = clients.apiClient().listDocuments(m.baseUrl());
         if (docs.isEmpty()) {
             sb.append("   (no documents)\n");
             return;
@@ -126,7 +123,7 @@ public class CommandDispatcher {
 
     private static void appendDocumentSummary(StringBuilder sb, DocumentSummaryDTO doc) {
         sb.append("   - ");
-        String title = doc.getTitle();
+        var title = doc.getTitle();
         if (title == null || title.isBlank()) {
             title = doc.getDocumentId();
         }
@@ -177,10 +174,10 @@ public class CommandDispatcher {
 
     private CommandResult addFile(String path, Consumer<String> tokenSink) {
         if (path.isEmpty()) return new CommandResult("Usage: add-file <path>", false);
-        FileDocumentLoader.LoadedFile file = clients.fileLoader().load(path);
-        String fileName = file.metadata().get("fileName").toString();
-        IngestJobResponse job = clients.apiClient().submitIngestFile(file.bytes(), fileName, file.metadata());
-        String documentId = job.getDocumentId();
+        var file = clients.fileLoader().load(path);
+        var fileName = file.metadata().get("fileName").toString();
+        var job = clients.apiClient().submitIngestFile(file.bytes(), fileName, file.metadata());
+        var documentId = job.getDocumentId();
         String message = TerminalStyle.success(("Ingestion submitted for '%s' -> document %s. You can keep typing; "
                 + "I'll report when it completes.").formatted(path, documentId));
         pollIngestUntilDone(documentId, tokenSink);
@@ -188,13 +185,13 @@ public class CommandDispatcher {
     }
 
     private void pollIngestUntilDone(String documentId, Consumer<String> tokenSink) {
-        Thread poller = new Thread(() -> {
+        var poller = new Thread(() -> {
             try {
-                String label = "document " + documentId;
+                var label = "document " + documentId;
                 while (true) {
                     Thread.sleep(POLL_MILLIS);
-                    IngestStatusDTO status = clients.apiClient().ingestStatus(documentId);
-                    IngestStatusDTO.StateEnum state = status.getState();
+                    var status = clients.apiClient().ingestStatus(documentId);
+                    var state = status.getState();
                     if (IngestStatusDTO.StateEnum.COMPLETED == state) {
                         tokenSink.accept(TerminalStyle.success("Ingestion of " + label + " complete: "
                                 + status.getChunkCount() + " chunks.\n"));
@@ -220,7 +217,7 @@ public class CommandDispatcher {
 
     private CommandResult addUrl(String url) {
         if (url.isEmpty()) return new CommandResult("Usage: add-url <url>", false);
-        IngestResponse response = clients.apiClient().ingestUrl(url);
+        var response = clients.apiClient().ingestUrl(url);
         return new CommandResult(TerminalStyle.success("Ingested %s -> document %s, %d chunks"
                 .formatted(url, response.getDocumentId(), response.getChunkCount())), false);
     }
@@ -232,9 +229,9 @@ public class CommandDispatcher {
     }
 
     private CommandResult history() {
-        List<ConversationDTO> conversations = clients.memoryClient().conversations();
+        var conversations = clients.memoryClient().conversations();
         if (conversations.isEmpty()) return new CommandResult("No conversations yet.", false);
-        StringBuilder sb = new StringBuilder("Conversations:\n");
+        var sb = new StringBuilder("Conversations:\n");
         for (ConversationDTO conversation : conversations) {
             int count = clients.memoryClient().messages(conversation.getId()).size();
             sb.append(" - ").append(conversation.getId())

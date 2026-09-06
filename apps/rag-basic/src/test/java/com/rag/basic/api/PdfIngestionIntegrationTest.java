@@ -5,7 +5,7 @@ import com.rag.basic.services.WebCrawlerClient;
 import com.rag.common.domain.Chunk;
 import com.rag.common.repositories.store.InMemoryVectorStore;
 import com.rag.common.services.DocumentParser;
-import com.rag.common.services.EmbeddingModel;
+import com.rag.common.services.EmbeddingModelPort;
 import com.rag.common.services.IngestionService;
 import com.rag.common.services.TextSplitter;
 import com.rag.common.services.chunking.RecursiveCharacterChunker;
@@ -32,7 +32,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 class PdfIngestionIntegrationTest {
 
-    private final EmbeddingModel stubEmbedding = new HashEmbeddingModel();
+    private final EmbeddingModelPort stubEmbedding = new HashEmbeddingModel();
 
     private final InMemoryVectorStore store = new InMemoryVectorStore(stubEmbedding);
     private final DocumentParser parser = new TikaDocumentParser();
@@ -45,7 +45,7 @@ class PdfIngestionIntegrationTest {
 
     @Test
     void ingestsTextPdfIntoChunksAndRetrievesThem() throws Exception {
-        byte[] pdfBytes = textPdf("""
+        var pdfBytes = textPdf("""
                 Learning Domain-Driven Design
 
                 This book explains how to apply domain-driven design to software
@@ -132,7 +132,7 @@ class PdfIngestionIntegrationTest {
     }
 
     /** Deterministic, collision-safe-enough embedding for integration testing. */
-    private static final class HashEmbeddingModel implements EmbeddingModel {
+    private static final class HashEmbeddingModel implements EmbeddingModelPort {
         @Override
         public List<Float> embed(String text) {
             return text.chars()

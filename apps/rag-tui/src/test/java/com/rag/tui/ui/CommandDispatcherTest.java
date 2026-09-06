@@ -14,13 +14,16 @@ import com.rag.tui.launcher.Module;
 import com.rag.tui.launcher.ModuleLifecycleManager;
 import com.rag.tui.launcher.ModuleRegistry;
 import com.rag.common.services.FileDocumentLoader;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.client.RestClientException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -156,9 +159,9 @@ class CommandDispatcherTest {
     void ingestsFileViaActiveModuleAsync() {
         byte[] bytes = new byte[]{1, 2, 3};
         when(fileLoader.load("note.txt"))
-                .thenReturn(new FileDocumentLoader.LoadedFile(bytes, java.util.Map.of("fileName", "note.txt")));
+                .thenReturn(new FileDocumentLoader.LoadedFile(bytes, Map.of("fileName", "note.txt")));
         IngestJobResponse job = new IngestJobResponse().documentId("d1");
-        when(apiClient.submitIngestFile(bytes, "note.txt", java.util.Map.of("fileName", "note.txt")))
+        when(apiClient.submitIngestFile(bytes, "note.txt", Map.of("fileName", "note.txt")))
                 .thenReturn(job);
         when(apiClient.ingestStatus("d1")).thenReturn(new IngestStatusDTO().documentId("d1")
                 .state(IngestStatusDTO.StateEnum.COMPLETED).chunkCount(3));
@@ -236,7 +239,7 @@ class CommandDispatcherTest {
     void reportsUnreachableModuleInsteadOfCrashing() {
         byte[] bytes = new byte[]{1, 2, 3};
         when(fileLoader.load("note.txt"))
-                .thenReturn(new FileDocumentLoader.LoadedFile(bytes, java.util.Map.of("fileName", "note.txt")));
+                .thenReturn(new FileDocumentLoader.LoadedFile(bytes, Map.of("fileName", "note.txt")));
         when(apiClient.submitIngestFile(eq(bytes), eq("note.txt"), any()))
                 .thenThrow(new RestClientException("Connection refused"));
 
@@ -247,7 +250,7 @@ class CommandDispatcherTest {
     }
 
     private static void await(List<String> tokens, String needle, int timeoutSeconds) {
-        org.awaitility.Awaitility.await().atMost(timeoutSeconds, TimeUnit.SECONDS)
+        Awaitility.await().atMost(timeoutSeconds, TimeUnit.SECONDS)
                 .until(() -> tokens.stream().anyMatch(t -> t.contains(needle)));
     }
 

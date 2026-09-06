@@ -24,7 +24,7 @@ public class WebCrawlerClient {
 
     public PageDTO fetch(String url) {
         log.info("Fetching URL {} via webcrawler", url);
-        FetchRequest request = new FetchRequest(URI.create(url));
+        var request = new FetchRequest(URI.create(url));
         return restClient.post()
                 .uri("/api/fetch")
                 .body(request)

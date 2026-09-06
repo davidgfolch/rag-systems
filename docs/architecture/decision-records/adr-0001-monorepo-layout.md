@@ -11,7 +11,7 @@ The project must implement multiple RAG architectures (basic, advanced, agentic)
 
 Use a **Maven multi-module monorepo** with a shared `rag-common` library and decoupled runnable modules in `apps/`:
 
-- `rag-common` - shared domain models, interfaces (DocumentParser, TextSplitter, EmbeddingModel, VectorStore)
+- `rag-common` - shared domain models, interfaces (DocumentParser, TextSplitter, EmbeddingModelPort, VectorStorePort)
 - `rag-basic`, `rag-advanced`, `rag-agentic` - distinct RAG bounded contexts
 - `rag-observability`, `rag-evaluation`, `rag-cli` - cross-cutting concerns
 

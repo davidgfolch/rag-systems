@@ -14,6 +14,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 
 import java.io.IOException;
 import java.io.StringReader;
@@ -45,8 +46,7 @@ class InteractiveShellIntegrationTest {
                 List.of(new Module("rag-basic", stub.baseUrl())), "rag-basic");
         var apiClient = new RagApiClient(registry, RestClient.builder());
         var chatGateway = new ChatGateway(registry,
-                new org.springframework.web.socket.client.standard.StandardWebSocketClient(),
-                new ObjectMapper(), 60);
+                new StandardWebSocketClient(), new ObjectMapper(), 60);
         var memoryClient = new MemoryClient(
                 RestClient.builder().baseUrl(stub.baseUrl()).build());
         dispatcher = new CommandDispatcher(registry, mock(ModuleLifecycleManager.class),

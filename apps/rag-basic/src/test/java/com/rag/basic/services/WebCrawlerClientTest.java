@@ -2,6 +2,7 @@ package com.rag.basic.services;
 
 import com.rag.contract.model.PageDTO;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
@@ -23,7 +24,7 @@ class WebCrawlerClientTest {
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         WebCrawlerClient sut = new WebCrawlerClient(builder.build());
         server.expect(requestTo("http://localhost:8085/api/fetch"))
-                .andExpect(method(org.springframework.http.HttpMethod.POST))
+                .andExpect(method(HttpMethod.POST))
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andRespond(withSuccess("""
                         {"url":"https://example.com","title":"Example","text":"page text"}

@@ -1,7 +1,7 @@
 package com.rag.common.services;
 
 import com.rag.common.domain.Chunk;
-import com.rag.common.repositories.VectorStore;
+import com.rag.common.repositories.VectorStorePort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
@@ -10,7 +10,7 @@ import java.util.List;
 
 /**
  * Retrieval-augmented chat: retrieve relevant chunks, build a grounded prompt,
- * and generate an answer via the {@link ChatModel}. Supports both one-shot and
+ * and generate an answer via the {@link ChatModelPort}. Supports both one-shot and
  * streaming answers (cancellable by disposing the returned {@link Flux}).
  */
 public class ChatService {
@@ -27,25 +27,25 @@ public class ChatService {
             Question: %s
             Answer:""";
 
-    private final VectorStore vectorStore;
-    private final ChatModel chatModel;
+    private final VectorStorePort vectorStore;
+    private final ChatModelPort chatModel;
 
-    public ChatService(VectorStore vectorStore, ChatModel chatModel) {
+    public ChatService(VectorStorePort vectorStore, ChatModelPort chatModel) {
         this.vectorStore = vectorStore;
         this.chatModel = chatModel;
     }
 
     public Flux<String> askStream(String question, int topK) {
-        List<Chunk> sources = retrieve(question, topK);
-        String prompt = PROMPT_TEMPLATE.formatted(context(sources), question);
+        var sources = retrieve(question, topK);
+        var prompt = PROMPT_TEMPLATE.formatted(context(sources), question);
         log.info("askStream: topK={}, sources={}, questionLength={}", topK, sources.size(), question.length());
         log.debug("askStream prompt length: {} chars", prompt.length());
         return chatModel.completeStream(prompt);
     }
 
     public ChatResult ask(String question, int topK) {
-        List<Chunk> sources = retrieve(question, topK);
-        String answer = chatModel.complete(PROMPT_TEMPLATE.formatted(context(sources), question));
+        var sources = retrieve(question, topK);
+        var answer = chatModel.complete(PROMPT_TEMPLATE.formatted(context(sources), question));
         log.info("ask: topK={}, sources={}, answerLength={}", topK, sources.size(), answer.length());
         return new ChatResult(answer, sources);
     }

@@ -2,11 +2,9 @@ package com.rag.common.services;
 
 import com.rag.common.domain.Chunk;
 import com.rag.common.domain.Document;
-import com.rag.common.repositories.VectorStore;
+import com.rag.common.repositories.VectorStorePort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.List;
 
 /**
  * Orchestrates the ingestion pipeline: parse → split → embed → store.
@@ -20,11 +18,11 @@ public class IngestionService {
 
     private final DocumentParser parser;
     private final TextSplitter splitter;
-    private final EmbeddingModel embeddingModel;
-    private final VectorStore vectorStore;
+    private final EmbeddingModelPort embeddingModel;
+    private final VectorStorePort vectorStore;
 
     public IngestionService(DocumentParser parser, TextSplitter splitter,
-                            EmbeddingModel embeddingModel, VectorStore vectorStore) {
+                            EmbeddingModelPort embeddingModel, VectorStorePort vectorStore) {
         this.parser = parser;
         this.splitter = splitter;
         this.embeddingModel = embeddingModel;
@@ -35,17 +33,17 @@ public class IngestionService {
         log.info("Ingestion start: document {} (content chars={}, metadata keys={})",
                 document.getId(), document.getContent().length(), document.getMetadata().keySet());
 
-        String parsed = parser.parse(document);
+        var parsed = parser.parse(document);
         log.info("Ingestion {} parsed: {} characters extracted", document.getId(), parsed.length());
         if (shouldFailOnBlankExtraction(document, parsed)) {
             log.warn("Ingestion {} aborted: binary document yielded no extractable text", document.getId());
             throw new EmptyExtractionException(document);
         }
-        Document clean = parsed.equals(document.getContent())
+        var clean = parsed.equals(document.getContent())
                 ? document
                 : new Document(document.getId(), parsed, document.getMetadata());
 
-        List<Chunk> chunks = splitter.split(clean);
+        var chunks = splitter.split(clean);
         log.info("Ingestion {} split: {} chunks", document.getId(), chunks.size());
 
         for (Chunk chunk : chunks) {

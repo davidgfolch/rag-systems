@@ -1,6 +1,6 @@
 package com.rag.webcrawler.config;
 
-import com.rag.common.services.ChatModel;
+import com.rag.common.services.ChatModelPort;
 import com.rag.webcrawler.services.WebCrawlService;
 import com.rag.webcrawler.services.fetching.JsoupWebPageFetcher;
 import com.rag.webcrawler.services.fetching.WebPageFetcher;
@@ -30,10 +30,10 @@ public class WebcrawlerConfig {
     @Primary
     public LinkPrioritizer linkPrioritizer(
             LinkPrioritizer deterministicLinkPrioritizer,
-            ObjectProvider<ChatModel> chatModelProvider,
+            ObjectProvider<ChatModelPort> chatModelProvider,
             @Value("${rag.crawler.prioritizer:deterministic}") String mode) {
         if ("llm".equalsIgnoreCase(mode)) {
-            ChatModel chatModel = chatModelProvider.getIfAvailable();
+            var chatModel = chatModelProvider.getIfAvailable();
             if (chatModel != null) return new LlmLinkPrioritizer(chatModel, deterministicLinkPrioritizer);
         }
         return deterministicLinkPrioritizer;

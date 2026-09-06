@@ -1,8 +1,8 @@
 package com.rag.tui.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rag.contract.ws.ChatEvent;
 import com.rag.contract.ws.ChatRequest;
+import com.rag.contract.ws.ChatResponse;
 import com.rag.tui.launcher.Module;
 import com.rag.tui.launcher.ModuleRegistry;
 import org.springframework.web.socket.TextMessage;
@@ -57,7 +57,7 @@ public class ChatGateway {
     }
 
     public void cancel() {
-        WebSocketSession session = active.get();
+        var session = active.get();
         if (session != null) {
             try {
                 session.close();
@@ -72,18 +72,18 @@ public class ChatGateway {
         WebSocketHandler handler = new TextWebSocketHandler() {
             @Override
             protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-                ChatEvent event = objectMapper.readValue(message.getPayload(), ChatEvent.class);
-                switch (event.type()) {
-                    case "token" -> onToken.accept(event.content());
+                ChatResponse response = objectMapper.readValue(message.getPayload(), ChatResponse.class);
+                switch (response.type()) {
+                    case "token" -> onToken.accept(response.content());
                     case "done" -> {
-                        answer.set(event.content());
+                        answer.set(response.content());
                         done.countDown();
                     }
                     case "error" -> {
-                        error.set(event.content());
+                        error.set(response.content());
                         done.countDown();
                     }
-                    default -> log.debug("Unknown chat event type '{}'", event.type());
+                    default -> log.debug("Unknown chat event type '{}'", response.type());
                 }
             }
         };

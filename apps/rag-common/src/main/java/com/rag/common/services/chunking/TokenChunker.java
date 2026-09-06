@@ -11,7 +11,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -39,28 +38,28 @@ public class TokenChunker implements TextSplitter {
 
     @Override
     public List<Chunk> split(Document document) {
-        String content = document.getContent();
+        var content = document.getContent();
         if (content == null || content.isBlank()) {
             return List.of();
         }
 
-        List<String> tokens = new ArrayList<>();
-        Matcher matcher = TOKEN_PATTERN.matcher(content);
+        var tokens = new ArrayList<String>();
+        var matcher = TOKEN_PATTERN.matcher(content);
         while (matcher.find()) {
             tokens.add(matcher.group().trim());
         }
 
-        Map<String, Object> baseMeta = documentMeta(document);
-        List<Chunk> chunks = new ArrayList<>();
+        var baseMeta = documentMeta(document);
+        var chunks = new ArrayList<Chunk>();
         int index = 0;
         int start = 0;
 
         while (start < tokens.size()) {
             int end = Math.min(start + maxTokens, tokens.size());
-            String chunkContent = String.join(" ", tokens.subList(start, end)).trim();
+            var chunkContent = String.join(" ", tokens.subList(start, end)).trim();
 
             if (!chunkContent.isEmpty()) {
-                Map<String, Object> meta = new HashMap<>(baseMeta);
+                var meta = new HashMap<>(baseMeta);
                 meta.put("strategy", "token");
                 meta.put("maxTokens", maxTokens);
                 meta.put("tokenCount", end - start);
@@ -82,7 +81,7 @@ public class TokenChunker implements TextSplitter {
     }
 
     private static Map<String, Object> documentMeta(Document document) {
-        Map<String, Object> meta = new HashMap<>(document.getMetadata());
+        var meta = new HashMap<>(document.getMetadata());
         meta.remove("rawBytes");
         return meta;
     }

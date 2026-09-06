@@ -3,13 +3,13 @@ package com.rag.common.services;
 import reactor.core.publisher.Flux;
 
 /**
- * Strategy interface for LLM chat generation.
+ * Strategy interface (port) for LLM chat generation.
  *
  * <p>Implementations wrap different providers (Ollama, OpenAI), selected via
  * configuration profiles. Business logic depends only on this interface (DIP,
  * OCP), keeping the generation layer decoupled from any concrete provider.
  */
-public interface ChatModel {
+public interface ChatModelPort {
 
     /**
      * Generates a completion for the given prompt.

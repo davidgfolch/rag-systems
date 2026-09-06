@@ -37,7 +37,7 @@ public class QueryController {
         List<Chunk> chunks = documentId == null
                 ? retrievalService.retrieve(request.getQuestion(), topK)
                 : retrievalService.retrieve(request.getQuestion(), topK, documentId);
-        List<ChunkResult> results = chunks.stream()
+        var results = chunks.stream()
                 .map(QueryController::toResult)
                 .toList();
         log.info("Query returned {} results", results.size());

@@ -56,8 +56,8 @@ VECTOR_STORE_TYPE=pgvector .\scripts\run.bat --profile local
 
 ## Testing
 
-- Unit tests mock `DocumentParser`, `TextSplitter`, `EmbeddingModel`, `VectorStore`,
-  and `ChatModel` — never call real providers.
+- Unit tests mock `DocumentParser`, `TextSplitter`, `EmbeddingModelPort`, `VectorStorePort`,
+  and `ChatModelPort` — never call real providers.
 - `JsoupWebPageFetcherTest` injects a mock jsoup `Connection` (no network).
 - `InteractiveShellTest` drives a `StringReader` and checks `StringWriter` output.
 - `ArchitectureTest` enforces layer rules and interface implementations.

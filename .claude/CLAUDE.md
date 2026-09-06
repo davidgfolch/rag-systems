@@ -61,9 +61,9 @@ api/          - REST controllers (only in runnable modules)
 
 ### Interfaces / Strategy Pattern
 - Chunking strategies are interchangeable via the `TextSplitter` interface
-- Embedding models are interchangeable via the `EmbeddingModel` interface
+- Embedding models are interchangeable via the `EmbeddingModelPort` interface
 - Retrieval strategies are interchangeable via the `Retriever` interface
-- Vector stores are interchangeable via the `VectorStore` interface
+- Vector stores are interchangeable via the `VectorStorePort` interface
 
 ### Dependency Rules
 - `domain` depends on nothing
