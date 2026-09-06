@@ -29,7 +29,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class CommandDispatcherTest {
@@ -182,6 +185,84 @@ class CommandDispatcherTest {
         CommandResult result = handle("add-url https://example.com");
 
         assertThat(result.message()).contains("d1", "3");
+    }
+
+    @Test
+    void deletesDocumentOnActiveModule() {
+        CommandResult result = handle("delete d1");
+
+        assertThat(result.message()).contains("Deleted document d1");
+        verify(apiClient).deleteDocument("d1");
+    }
+
+    @Test
+    void deleteWithoutArgumentShowsUsage() {
+        CommandResult result = handle("delete");
+
+        assertThat(result.message()).contains("Usage: delete <document-id>");
+        verify(apiClient, never()).deleteDocument(anyString());
+    }
+
+    @Test
+    void deleteReportsUnreachableModule() {
+        doThrow(new RestClientException("Connection refused"))
+                .when(apiClient).deleteDocument("d1");
+
+        CommandResult result = handle("delete d1");
+
+        assertThat(result.message()).contains("Module unreachable", "Connection refused");
+        assertThat(result.exit()).isFalse();
+    }
+
+    @Test
+    void ingestsFolderSubmittingEachFileAsync() {
+        byte[] bytes = new byte[]{1, 2, 3};
+        when(fileLoader.loadFolder("notes"))
+                .thenReturn(List.of(
+                        new FileDocumentLoader.LoadedFile(bytes, Map.of("fileName", "a.txt")),
+                        new FileDocumentLoader.LoadedFile(bytes, Map.of("fileName", "b.txt"))));
+        when(apiClient.submitIngestFile(eq(bytes), eq("a.txt"), any()))
+                .thenReturn(new IngestJobResponse().documentId("da"));
+        when(apiClient.submitIngestFile(eq(bytes), eq("b.txt"), any()))
+                .thenReturn(new IngestJobResponse().documentId("db"));
+        when(apiClient.ingestStatus(anyString())).thenReturn(new IngestStatusDTO().documentId("da")
+                .state(IngestStatusDTO.StateEnum.COMPLETED).chunkCount(2));
+
+        List<String> tokens = new ArrayList<>();
+        CommandResult result = sut.handle("add-folder notes", tokens::add);
+
+        assertThat(result.message()).contains("Submitted 2 files", "notes");
+        verify(apiClient).submitIngestFile(eq(bytes), eq("a.txt"), any());
+        verify(apiClient).submitIngestFile(eq(bytes), eq("b.txt"), any());
+        await(tokens, "complete", 3);
+    }
+
+    @Test
+    void addFolderWithoutArgumentShowsUsage() {
+        CommandResult result = handle("add-folder");
+
+        assertThat(result.message()).contains("Usage: add-folder <path>");
+        verify(fileLoader, never()).loadFolder(anyString());
+    }
+
+    @Test
+    void addFolderReportsEmptyFolder() {
+        when(fileLoader.loadFolder("empty")).thenReturn(List.of());
+
+        CommandResult result = handle("add-folder empty");
+
+        assertThat(result.message()).contains("No ingestible files found");
+    }
+
+    @Test
+    void addFolderReportsUnreadableFolder() {
+        when(fileLoader.loadFolder("missing"))
+                .thenThrow(new FileDocumentLoader.DocumentLoadException("Failed to read folder: missing", null));
+
+        CommandResult result = handle("add-folder missing");
+
+        assertThat(result.message()).contains("Failed to read folder");
+        assertThat(result.exit()).isFalse();
     }
 
     @Test

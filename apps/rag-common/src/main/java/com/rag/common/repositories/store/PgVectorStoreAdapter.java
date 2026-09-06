@@ -171,6 +171,27 @@ public class PgVectorStoreAdapter implements VectorStorePort {
         return "42P01".equals(e.getSQLState());
     }
 
+    @Override
+    @SuppressWarnings("java:S2077")
+    public void delete(String documentId) {
+        if (dataSource == null) {
+            return;
+        }
+        var sql = "DELETE FROM " + table + " WHERE metadata->>'documentId' = ?";
+        try (var conn = dataSource.getConnection();
+             var pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, documentId);
+            int deleted = pstmt.executeUpdate();
+            log.debug("Deleted {} chunks for document {} from vector store", deleted, documentId);
+        } catch (SQLException e) {
+            if (isMissingTable(e)) {
+                return;
+            }
+            throw new IllegalStateException("Failed to delete document " + documentId
+                    + " from vector store: " + e.getClass().getSimpleName() + ": " + e.getMessage(), e);
+        }
+    }
+
     private Document toSpringDocument(Chunk chunk) {
         var metadata = new HashMap<>(chunk.getMetadata());
         metadata.put("documentId", chunk.getDocumentId());

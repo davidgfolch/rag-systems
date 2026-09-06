@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withNoContent;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 class RagApiClientTest {
@@ -99,6 +100,17 @@ class RagApiClientTest {
         assertThat(documents.get(0).getDocumentId()).isEqualTo("d1");
         assertThat(documents.get(0).getChunkCount()).isEqualTo(3);
         assertThat(documents.get(0).getMetadata()).containsEntry("fileName", "n.txt");
+        server.verify();
+    }
+
+    @Test
+    void deletesDocumentOnActiveModule() {
+        server.expect(requestTo("http://localhost:8081/api/documents/d1"))
+                .andExpect(method(HttpMethod.DELETE))
+                .andRespond(withNoContent());
+
+        sut.deleteDocument("d1");
+
         server.verify();
     }
 }

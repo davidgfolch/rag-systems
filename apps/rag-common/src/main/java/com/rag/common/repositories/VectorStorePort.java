@@ -75,4 +75,12 @@ public interface VectorStorePort {
     default List<DocumentSummary> listDocuments() {
         return List.of();
     }
+
+    /**
+     * Removes every chunk belonging to the given document from the store.
+     * Deleting an unknown document is a no-op (idempotent).
+     *
+     * @param documentId the document to remove
+     */
+    void delete(String documentId);
 }

@@ -39,4 +39,9 @@ public class RetrievalService {
         log.debug("Listed {} documents", summaries.size());
         return summaries;
     }
+
+    public void delete(String documentId) {
+        vectorStore.delete(documentId);
+        log.info("Deleted document {}", documentId);
+    }
 }

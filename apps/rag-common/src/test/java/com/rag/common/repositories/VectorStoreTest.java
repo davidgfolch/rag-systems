@@ -31,5 +31,10 @@ class VectorStoreTest {
         public List<Chunk> similaritySearch(String query, int topK) {
             return chunks;
         }
+
+        @Override
+        public void delete(String documentId) {
+            // no-op: this fixture only serves pre-populated chunks to similaritySearch
+        }
     }
 }
