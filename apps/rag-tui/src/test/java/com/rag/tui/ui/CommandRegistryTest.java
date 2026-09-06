@@ -10,10 +10,10 @@ class CommandRegistryTest {
 
     @Test
     void containsAllExpectedCommands() {
-        assertThat(sut.all()).hasSize(11);
+        assertThat(sut.all()).hasSize(13);
         assertThat(sut.all().stream().map(CommandDescriptor::name))
                 .contains("help", "modules", "use", "start", "stop",
-                        "documents", "add-file", "add-url", "ask", "history", "quit");
+                        "documents", "delete", "add-file", "add-folder", "add-url", "ask", "history", "quit");
     }
 
     @Test
@@ -30,19 +30,19 @@ class CommandRegistryTest {
 
     @Test
     void filtersCommandsByPrefix() {
-        assertThat(sut.filter("a")).hasSize(3);
+        assertThat(sut.filter("a")).hasSize(4);
         assertThat(sut.filter("a").stream().map(CommandDescriptor::name))
-                .contains("add-file", "add-url", "ask");
+                .contains("add-file", "add-folder", "add-url", "ask");
     }
 
     @Test
     void filtersCommandsCaseInsensitive() {
-        assertThat(sut.filter("ADD")).hasSize(2);
+        assertThat(sut.filter("ADD")).hasSize(3);
     }
 
     @Test
     void returnsAllCommandsForEmptyPrefix() {
-        assertThat(sut.filter("")).hasSize(11);
+        assertThat(sut.filter("")).hasSize(13);
     }
 
     @Test
@@ -52,7 +52,7 @@ class CommandRegistryTest {
         assertThat(usage)
                 .contains("Available commands:")
                 .contains("help", "modules", "use", "start", "stop")
-                .contains("documents", "add-file", "add-url", "ask", "history", "quit")
+                .contains("documents", "delete", "add-file", "add-folder", "add-url", "ask", "history", "quit")
                 .doesNotContain("/ to browse commands");
     }
 }

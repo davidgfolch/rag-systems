@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -132,5 +133,49 @@ class PgVectorStoreAdapterTest {
     @Test
     void listsNoDocumentsWhenNoDataSourceConfigured() {
         assertThat(adapter.listDocuments()).isEmpty();
+    }
+
+    @Test
+    void deletesDocumentChunksByDocumentId() throws Exception {
+        var ds = mock(DataSource.class);
+        var conn = mock(Connection.class);
+        var statement = mock(PreparedStatement.class);
+
+        when(ds.getConnection()).thenReturn(conn);
+        when(conn.prepareStatement(anyString())).thenReturn(statement);
+        when(statement.executeUpdate()).thenReturn(3);
+
+        var pgAdapter = new PgVectorStoreAdapter(delegate, ds, "rag_basic", "chunks");
+        pgAdapter.delete("d1");
+
+        var captor = ArgumentCaptor.forClass(String.class);
+        verify(conn).prepareStatement(captor.capture());
+        assertThat(captor.getValue())
+                .contains("DELETE FROM")
+                .contains("\"rag_basic\".\"chunks\"")
+                .contains("metadata->>'documentId'");
+        verify(statement).setString(1, "d1");
+        verify(statement).executeUpdate();
+    }
+
+    @Test
+    void deleteTreatsMissingTableAsNoop() throws Exception {
+        var ds = mock(DataSource.class);
+        var conn = mock(Connection.class);
+        var statement = mock(PreparedStatement.class);
+        var missing = mock(SQLException.class);
+        when(missing.getSQLState()).thenReturn("42P01");
+
+        when(ds.getConnection()).thenReturn(conn);
+        when(conn.prepareStatement(anyString())).thenReturn(statement);
+        when(statement.executeUpdate()).thenThrow(missing);
+
+        var pgAdapter = new PgVectorStoreAdapter(delegate, ds, "rag_basic", "chunks");
+        assertThatCode(() -> pgAdapter.delete("d1")).doesNotThrowAnyException();
+    }
+
+    @Test
+    void deleteIsNoopWithoutDataSource() {
+        assertThatCode(() -> adapter.delete("d1")).doesNotThrowAnyException();
     }
 }

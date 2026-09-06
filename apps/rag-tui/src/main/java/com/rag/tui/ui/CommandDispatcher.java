@@ -57,7 +57,9 @@ public class CommandDispatcher {
                 case "start" -> start(arg, tokenSink);
                 case "stop" -> stop(arg);
                 case "documents" -> documents();
+                case "delete" -> delete(arg);
                 case "add-file" -> addFile(arg, tokenSink);
+                case "add-folder" -> addFolder(arg, tokenSink);
                 case "add-url" -> addUrl(arg);
                 case "ask" -> ask(arg, tokenSink);
                 case "history" -> history();
@@ -147,6 +149,13 @@ public class CommandDispatcher {
                 : new CommandResult(TerminalStyle.error("Unknown module: " + name), false);
     }
 
+    private CommandResult delete(String documentId) {
+        if (documentId.isEmpty()) return new CommandResult("Usage: delete <document-id>", false);
+        clients.apiClient().deleteDocument(documentId);
+        log.info("Deleted document {}", documentId);
+        return new CommandResult(TerminalStyle.success("Deleted document " + documentId), false);
+    }
+
     private CommandResult start(String name, Consumer<String> tokenSink) {
         return registry.find(name)
                 .map(m -> lifecycle.start(m)
@@ -182,6 +191,21 @@ public class CommandDispatcher {
                 + "I'll report when it completes.").formatted(path, documentId));
         pollIngestUntilDone(documentId, tokenSink);
         return new CommandResult(message, false);
+    }
+
+    private CommandResult addFolder(String path, Consumer<String> tokenSink) {
+        if (path.isEmpty()) return new CommandResult("Usage: add-folder <path>", false);
+        var files = clients.fileLoader().loadFolder(path);
+        if (files.isEmpty()) {
+            return new CommandResult(TerminalStyle.error("No ingestible files found in: " + path), false);
+        }
+        for (var file : files) {
+            var fileName = file.metadata().get("fileName").toString();
+            var job = clients.apiClient().submitIngestFile(file.bytes(), fileName, file.metadata());
+            pollIngestUntilDone(job.getDocumentId(), tokenSink);
+        }
+        return new CommandResult(TerminalStyle.success("Submitted %d files from '%s'; I'll report as each completes."
+                .formatted(files.size(), path)), false);
     }
 
     private void pollIngestUntilDone(String documentId, Consumer<String> tokenSink) {

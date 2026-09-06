@@ -100,6 +100,27 @@ class InMemoryVectorStoreTest {
         assertThat(store.listDocuments()).isEmpty();
     }
 
+    @Test
+    void deletesAllChunksOfDocument() {
+        var otherDoc = new Chunk("c2", "d2", "text", 0, Map.of());
+        otherDoc.setEmbedding(List.of(1f, 0f));
+        store.add(List.of(chunk("c1", new float[]{1, 0}), otherDoc));
+
+        store.delete("d1");
+
+        assertThat(store.listDocuments()).hasSize(1);
+        assertThat(store.listDocuments().getFirst().documentId()).isEqualTo("d2");
+    }
+
+    @Test
+    void deleteIsIdempotentForUnknownDocument() {
+        store.add(List.of(chunk("c1", new float[]{1, 0})));
+
+        store.delete("no-such-doc");
+
+        assertThat(store.listDocuments()).hasSize(1);
+    }
+
     private static Chunk chunk(String id, float[] embedding) {
         var c = new Chunk(id, "d1", "text " + id, 0, Map.of());
         c.setEmbedding(floatList(embedding));

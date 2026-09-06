@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -73,6 +74,16 @@ public class IngestionController {
                 .map(this::toDocumentSummary)
                 .toList();
         return ResponseEntity.ok(documents);
+    }
+
+    @DeleteMapping("/{documentId}")
+    public ResponseEntity<Void> deleteDocument(@PathVariable String documentId) {
+        if (retrievalService == null) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+        }
+        log.info("Delete request for document {}", documentId);
+        retrievalService.delete(documentId);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/ingest")

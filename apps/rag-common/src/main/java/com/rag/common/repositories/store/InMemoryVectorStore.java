@@ -62,6 +62,12 @@ public class InMemoryVectorStore implements VectorStorePort {
     }
 
     @Override
+    public void delete(String documentId) {
+        chunksById.values().removeIf(chunk -> chunk.getDocumentId().equals(documentId));
+        log.debug("Deleted document {} from in-memory store ({} chunks remain)", documentId, chunksById.size());
+    }
+
+    @Override
     public List<DocumentSummary> listDocuments() {
         var byDoc = chunksById.values().stream()
                 .collect(Collectors.groupingBy(Chunk::getDocumentId, LinkedHashMap::new, Collectors.toList()));

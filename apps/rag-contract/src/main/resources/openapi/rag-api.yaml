@@ -110,6 +110,23 @@ paths:
         '404':
           description: Unknown job
 
+  /api/documents/{documentId}:
+    delete:
+      tags: [documents]
+      operationId: deleteDocument
+      summary: Delete an ingested document and all of its chunks
+      parameters:
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Document deleted
+        '404':
+          description: Document not found
+
   /api/documents/ingest-url:
     post:
       tags: [documents]

@@ -96,6 +96,14 @@ public class RagApiClient {
                 new IngestUrlRequest().url(URI.create(url)), IngestResponse.class);
     }
 
+    /**
+     * Deletes an ingested document and all of its chunks from the active module.
+     */
+    public void deleteDocument(String documentId) {
+        client().delete().uri("/api/documents/{documentId}", documentId)
+                .retrieve().toBodilessEntity();
+    }
+
     public QueryResponse query(String question, int topK) {
         return post("/api/query",
                 new QueryRequest().question(question).topK(topK), QueryResponse.class);

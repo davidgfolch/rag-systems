@@ -9,6 +9,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class RetrievalServiceTest {
@@ -39,5 +40,12 @@ class RetrievalServiceTest {
         when(vectorStore.similaritySearch("query", 5, "d1")).thenReturn(List.of());
 
         assertThat(service.retrieve("query", 5, "d1")).isEmpty();
+    }
+
+    @Test
+    void delegatesDeleteToVectorStore() {
+        service.delete("d1");
+
+        verify(vectorStore).delete("d1");
     }
 }
