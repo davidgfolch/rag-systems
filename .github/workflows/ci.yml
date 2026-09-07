@@ -122,16 +122,9 @@ jobs:
         with:
           pattern: coverage-*
           path: coverage-artifacts
-          merge-multiple: true
 
-      - name: Merge JaCoCo reports
+      - name: Reconstruct per-module JaCoCo CSVs
         run: |
-          find coverage-artifacts -name "jacoco.csv" -exec cat {} + | sort | uniq > jacoco-merged.csv
-          mkdir -p merged-coverage
-          cp coverage-artifacts/*/jacoco.csv merged-coverage/ 2>/dev/null || true
-          # We need the CSV files per module for the badge script to read them
-          # The script reads from apps/<module>/target/site/jacoco/jacoco.csv
-          # So we'll recreate that structure
           for csv in coverage-artifacts/*/jacoco.csv; do
             module=$(basename $(dirname "$csv"))
             mkdir -p "apps/$module/target/site/jacoco"
