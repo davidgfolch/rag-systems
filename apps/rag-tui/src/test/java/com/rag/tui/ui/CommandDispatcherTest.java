@@ -30,7 +30,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -294,7 +293,7 @@ class CommandDispatcherTest {
             return "tok1tok2";
         });
 
-        var result = sut.handle("ask what is rag", tokens::add);
+        sut.handle("ask what is rag", tokens::add);
 
         assertThat(tokens).containsExactly("tok1", "tok2");
     }

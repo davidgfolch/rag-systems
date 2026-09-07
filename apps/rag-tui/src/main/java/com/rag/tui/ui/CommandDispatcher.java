@@ -132,7 +132,11 @@ public class CommandDispatcher {
     private static void appendDocumentSummary(StringBuilder sb, DocumentSummaryDTO doc, int maxChunksLength) {
         sb.append("   - ");
         if (doc.getChunkCount() != null) {
-            sb.append(String.format(" (%" + maxChunksLength + "d chunks)", doc.getChunkCount()));
+            var chunkCount = String.valueOf(doc.getChunkCount());
+            sb.append(" (")
+                    .append(" ".repeat(Math.max(0, maxChunksLength - chunkCount.length())))
+                    .append(chunkCount)
+                    .append(" chunks)");
         }
         sb.append(String.format(" [%s]", doc.getDocumentId()));
         if (doc.getCreatedAt() != null)

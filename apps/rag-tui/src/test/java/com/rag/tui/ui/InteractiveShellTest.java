@@ -51,8 +51,9 @@ class InteractiveShellTest {
         sut.run();
 
         var text = out.toString();
-        assertThat(text).contains("\033[36mDocuments:");
-        assertThat(text).contains("Bye.");
+        assertThat(text)
+                .contains("\033[36mDocuments:")
+                .contains("Bye.");
     }
 
     @Test
