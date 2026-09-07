@@ -94,3 +94,61 @@ jobs:
         with:
           name: coverage-${{ matrix.module }}
           path: apps/${{ matrix.module }}/target/site/jacoco/
+
+  coverage-badges:
+    name: Coverage Badges
+    runs-on: ubuntu-latest
+    needs: tests
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Make mvnw executable
+        run: chmod +x ./mvnw
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+          cache: maven
+
+      - name: Download all coverage artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-*
+          path: coverage-artifacts
+          merge-multiple: true
+
+      - name: Merge JaCoCo reports
+        run: |
+          find coverage-artifacts -name "jacoco.csv" -exec cat {} + | sort | uniq > jacoco-merged.csv
+          mkdir -p merged-coverage
+          cp coverage-artifacts/*/jacoco.csv merged-coverage/ 2>/dev/null || true
+          # We need the CSV files per module for the badge script to read them
+          # The script reads from apps/<module>/target/site/jacoco/jacoco.csv
+          # So we'll recreate that structure
+          for csv in coverage-artifacts/*/jacoco.csv; do
+            module=$(basename $(dirname "$csv"))
+            mkdir -p "apps/$module/target/site/jacoco"
+            cp "$csv" "apps/$module/target/site/jacoco/jacoco.csv"
+          done
+
+      - name: Generate coverage badges
+        run: bash scripts/coverage-badges.sh
+
+      - name: Commit and push if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet README.md; then
+            git add README.md
+            git commit -m "chore: update coverage badges [skip ci]"
+            git push
+          else
+            echo "No changes to coverage badges"
+          fi

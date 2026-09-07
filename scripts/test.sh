@@ -33,5 +33,12 @@ else
     mvn $MODULE_SPEC "$COVERAGE_GOAL"
 fi
 
+# If coverage was run, regenerate badges
+if [ "$COVERAGE_GOAL" = "verify" ]; then
+    if [ -x "$ROOT/scripts/coverage-badges.sh" ]; then
+        bash "$ROOT/scripts/coverage-badges.sh"
+    fi
+fi
+
 echo
 echo "Test complete."

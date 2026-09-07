@@ -38,6 +38,13 @@ if "%MODULE_SPEC%"=="" (
     call mvnw.cmd %MODULE_SPEC% %COVERAGE_GOAL%
 )
 
+REM If coverage was run, regenerate badges
+if "%COVERAGE_GOAL%"=="verify" (
+    if exist "scripts\coverage-badges.bat" (
+        call scripts\coverage-badges.bat
+    )
+)
+
 echo.
 echo Test complete.
 endlocal
