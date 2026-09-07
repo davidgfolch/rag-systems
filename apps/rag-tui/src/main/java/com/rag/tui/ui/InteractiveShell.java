@@ -31,9 +31,11 @@ public class InteractiveShell {
 
     private boolean runCommand(String line) throws IOException {
         try {
-            CommandResult result = dispatcher.handle(line, this::writeToken);
-            write(result.message());
-            return result.exit();
+            write(dispatcher.handle(line, this::writeToken));
+            return false;
+        } catch (ShellExitException e) {
+            write(TerminalStyle.success("Bye."));
+            return true;
         } catch (RuntimeException e) {
             write(TerminalStyle.error("Error: " + e.getMessage()));
             return false;
@@ -41,18 +43,22 @@ public class InteractiveShell {
     }
 
     private void write(String text) throws IOException {
-        writer.write(text);
+        writer.write(decorate(text));
         writer.write(System.lineSeparator());
         writer.flush();
     }
 
     private void writeToken(String token) {
         try {
-            writer.write(token);
+            writer.write(decorate(token));
             writer.flush();
         } catch (IOException e) {
             throw new ShellException("Terminal I/O error", e);
         }
+    }
+
+    private static String decorate(String text) {
+        return text.indexOf('\u001B') >= 0 ? text : TerminalStyle.response(text);
     }
 
     public static class ShellException extends RuntimeException {

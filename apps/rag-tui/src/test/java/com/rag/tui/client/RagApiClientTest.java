@@ -113,4 +113,15 @@ class RagApiClientTest {
 
         server.verify();
     }
+
+    @Test
+    void deletesDocumentFromExplicitBaseUrl() {
+        server.expect(requestTo("http://localhost:8081/api/documents/d1"))
+                .andExpect(method(HttpMethod.DELETE))
+                .andRespond(withNoContent());
+
+        sut.deleteDocument("http://localhost:8081", "d1");
+
+        server.verify();
+    }
 }

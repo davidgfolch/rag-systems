@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -52,7 +53,7 @@ class CommandDispatcherTest {
             new CommandDispatcher.RagClients(apiClient, chatGateway, memoryClient, fileLoader, healthClient),
             new CommandDispatcher.Settings(10_000, 4, 60), commandRegistry);
 
-    private CommandResult handle(String input) {
+    private String handle(String input) {
         return sut.handle(input, token -> {});
     }
 
@@ -60,12 +61,11 @@ class CommandDispatcherTest {
     void listsModulesWithActiveAndState() {
         when(lifecycle.isRunning("rag-basic")).thenReturn(true);
 
-        CommandResult result = handle("modules");
+        var result = handle("modules");
 
-        assertThat(result.message())
+        assertThat(result)
                 .contains("rag-basic", "running", "(active)")
                 .contains("rag-advanced", "stopped");
-        assertThat(result.exit()).isFalse();
     }
 
     @Test
@@ -73,9 +73,9 @@ class CommandDispatcherTest {
         when(lifecycle.isRunning("rag-advanced")).thenReturn(false);
         when(healthClient.isUp("http://localhost:8082")).thenReturn(true);
 
-        CommandResult result = handle("modules");
+        var result = handle("modules");
 
-        assertThat(result.message()).contains("rag-advanced", "running (external)");
+        assertThat(result).contains("rag-advanced", "running (external)");
     }
 
     @Test
@@ -85,9 +85,9 @@ class CommandDispatcherTest {
         when(apiClient.listDocuments("http://localhost:8081")).thenReturn(List.of(
                 new DocumentSummaryDTO().documentId("d1").title("note.txt").chunkCount(3)));
 
-        CommandResult result = handle("documents");
+        var result = handle("documents");
 
-        assertThat(result.message())
+        assertThat(result)
                 .contains("rag-basic")
                 .contains("note.txt", "3 chunks", "[d1]")
                 .doesNotContain("rag-advanced");
@@ -97,24 +97,24 @@ class CommandDispatcherTest {
     void reportsNoReachableModulesForDocuments() {
         when(healthClient.isUp(anyString())).thenReturn(false);
 
-        CommandResult result = handle("documents");
+        var result = handle("documents");
 
-        assertThat(result.message()).contains("No rag-* modules are reachable");
+        assertThat(result).contains("No rag-* modules are reachable");
     }
 
     @Test
     void switchesActiveModule() {
-        CommandResult result = handle("use rag-advanced");
+        var result = handle("use rag-advanced");
 
-        assertThat(result.message()).contains("Active module: rag-advanced");
+        assertThat(result).contains("Active module: rag-advanced");
         assertThat(registry.active().name()).isEqualTo("rag-advanced");
     }
 
     @Test
     void rejectsUnknownModule() {
-        CommandResult result = handle("use nope");
+        var result = handle("use nope");
 
-        assertThat(result.message()).contains("Unknown module");
+        assertThat(result).contains("Unknown module");
     }
 
     @Test
@@ -122,9 +122,9 @@ class CommandDispatcherTest {
         when(lifecycle.start(registry.find("rag-basic").get())).thenReturn(true);
         when(healthClient.waitUntilUp(anyString(), anyLong(), any())).thenReturn(true);
 
-        CommandResult result = handle("start rag-basic");
+        var result = handle("start rag-basic");
 
-        assertThat(result.message()).contains("Started rag-basic", "ready");
+        assertThat(result).contains("Started rag-basic", "ready");
     }
 
     @Test
@@ -132,9 +132,9 @@ class CommandDispatcherTest {
         when(lifecycle.start(registry.find("rag-basic").get())).thenReturn(true);
         when(healthClient.waitUntilUp(anyString(), anyLong(), any())).thenReturn(false);
 
-        CommandResult result = handle("start rag-basic");
+        var result = handle("start rag-basic");
 
-        assertThat(result.message()).contains("Started rag-basic", "not ready");
+        assertThat(result).contains("Started rag-basic", "not ready");
     }
 
     @Test
@@ -143,19 +143,19 @@ class CommandDispatcherTest {
         when(healthClient.waitUntilUp(anyString(), anyLong(), any())).thenReturn(true);
 
         List<String> tokens = new ArrayList<>();
-        CommandResult result = sut.handle("start rag-basic", tokens::add);
+        var result = sut.handle("start rag-basic", tokens::add);
 
         assertThat(tokens).containsExactly("Waiting for rag-basic to become ready...\n");
-        assertThat(result.message()).contains("Started rag-basic", "ready");
+        assertThat(result).contains("Started rag-basic", "ready");
     }
 
     @Test
     void stopsModule() {
         when(lifecycle.stop("rag-basic")).thenReturn(true);
 
-        CommandResult result = handle("stop rag-basic");
+        var result = handle("stop rag-basic");
 
-        assertThat(result.message()).contains("Stopped rag-basic");
+        assertThat(result).contains("Stopped rag-basic");
     }
 
     @Test
@@ -170,9 +170,9 @@ class CommandDispatcherTest {
                 .state(IngestStatusDTO.StateEnum.COMPLETED).chunkCount(3));
 
         List<String> tokens = new ArrayList<>();
-        CommandResult result = sut.handle("add-file note.txt", tokens::add);
+        var result = sut.handle("add-file note.txt", tokens::add);
 
-        assertThat(result.message()).contains("submitted", "d1", "keep typing");
+        assertThat(result).contains("submitted", "d1", "keep typing");
         await(tokens, "complete", 3);
         assertThat(tokens).anyMatch(t -> t.contains("complete") && t.contains("3 chunks"));
     }
@@ -182,36 +182,56 @@ class CommandDispatcherTest {
         when(apiClient.ingestUrl("https://example.com"))
                 .thenReturn(new IngestResponse().documentId("d1").chunkCount(3));
 
-        CommandResult result = handle("add-url https://example.com");
+        var result = handle("add-url https://example.com");
 
-        assertThat(result.message()).contains("d1", "3");
+        assertThat(result).contains("d1", "3");
     }
 
     @Test
-    void deletesDocumentOnActiveModule() {
-        CommandResult result = handle("delete d1");
+    void deletesDocumentFromItsModuleWhenActiveModuleHasIt() {
+        when(healthClient.isUp("http://localhost:8081")).thenReturn(true);
+        when(apiClient.listDocuments("http://localhost:8081")).thenReturn(List.of(
+                new DocumentSummaryDTO().documentId("d1").title("note.txt").chunkCount(3)));
 
-        assertThat(result.message()).contains("Deleted document d1");
-        verify(apiClient).deleteDocument("d1");
+        var result = handle("delete d1");
+
+        assertThat(result).contains("Deleted document d1", "rag-basic");
+        verify(apiClient).deleteDocument("http://localhost:8081", "d1");
+    }
+
+    @Test
+    void deletesDocumentFromNonActiveModule() {
+        when(healthClient.isUp("http://localhost:8081")).thenReturn(true);
+        when(healthClient.isUp("http://localhost:8082")).thenReturn(true);
+        when(apiClient.listDocuments("http://localhost:8081")).thenReturn(List.of());
+        when(apiClient.listDocuments("http://localhost:8082")).thenReturn(List.of(
+                new DocumentSummaryDTO().documentId("d1").title("note.txt").chunkCount(3)));
+
+        var result = handle("delete d1");
+
+        assertThat(result).contains("Deleted document d1", "rag-advanced");
+        verify(apiClient).deleteDocument("http://localhost:8082", "d1");
     }
 
     @Test
     void deleteWithoutArgumentShowsUsage() {
-        CommandResult result = handle("delete");
+        var result = handle("delete");
 
-        assertThat(result.message()).contains("Usage: delete <document-id>");
+        assertThat(result).contains("Usage: delete <document-id>");
         verify(apiClient, never()).deleteDocument(anyString());
+        verify(apiClient, never()).deleteDocument(anyString(), anyString());
     }
 
     @Test
-    void deleteReportsUnreachableModule() {
-        doThrow(new RestClientException("Connection refused"))
-                .when(apiClient).deleteDocument("d1");
+    void deleteReportsDocumentNotFoundOnReachableModules() {
+        when(healthClient.isUp("http://localhost:8081")).thenReturn(true);
+        when(apiClient.listDocuments("http://localhost:8081")).thenReturn(List.of(
+                new DocumentSummaryDTO().documentId("other").title("note.txt").chunkCount(3)));
 
-        CommandResult result = handle("delete d1");
+        var result = handle("delete d1");
 
-        assertThat(result.message()).contains("Module unreachable", "Connection refused");
-        assertThat(result.exit()).isFalse();
+        assertThat(result).contains("Document d1 not found");
+        verify(apiClient, never()).deleteDocument(anyString(), anyString());
     }
 
     @Test
@@ -229,9 +249,9 @@ class CommandDispatcherTest {
                 .state(IngestStatusDTO.StateEnum.COMPLETED).chunkCount(2));
 
         List<String> tokens = new ArrayList<>();
-        CommandResult result = sut.handle("add-folder notes", tokens::add);
+        var result = sut.handle("add-folder notes", tokens::add);
 
-        assertThat(result.message()).contains("Submitted 2 files", "notes");
+        assertThat(result).contains("Submitted 2 files", "notes");
         verify(apiClient).submitIngestFile(eq(bytes), eq("a.txt"), any());
         verify(apiClient).submitIngestFile(eq(bytes), eq("b.txt"), any());
         await(tokens, "complete", 3);
@@ -239,9 +259,9 @@ class CommandDispatcherTest {
 
     @Test
     void addFolderWithoutArgumentShowsUsage() {
-        CommandResult result = handle("add-folder");
+        var result = handle("add-folder");
 
-        assertThat(result.message()).contains("Usage: add-folder <path>");
+        assertThat(result).contains("Usage: add-folder <path>");
         verify(fileLoader, never()).loadFolder(anyString());
     }
 
@@ -249,9 +269,9 @@ class CommandDispatcherTest {
     void addFolderReportsEmptyFolder() {
         when(fileLoader.loadFolder("empty")).thenReturn(List.of());
 
-        CommandResult result = handle("add-folder empty");
+        var result = handle("add-folder empty");
 
-        assertThat(result.message()).contains("No ingestible files found");
+        assertThat(result).contains("No ingestible files found");
     }
 
     @Test
@@ -259,10 +279,9 @@ class CommandDispatcherTest {
         when(fileLoader.loadFolder("missing"))
                 .thenThrow(new FileDocumentLoader.DocumentLoadException("Failed to read folder: missing", null));
 
-        CommandResult result = handle("add-folder missing");
+        var result = handle("add-folder missing");
 
-        assertThat(result.message()).contains("Failed to read folder");
-        assertThat(result.exit()).isFalse();
+        assertThat(result).contains("Failed to read folder");
     }
 
     @Test
@@ -275,10 +294,9 @@ class CommandDispatcherTest {
             return "tok1tok2";
         });
 
-        CommandResult result = sut.handle("ask what is rag", tokens::add);
+        var result = sut.handle("ask what is rag", tokens::add);
 
         assertThat(tokens).containsExactly("tok1", "tok2");
-        assertThat(result.exit()).isFalse();
     }
 
     @Test
@@ -288,32 +306,31 @@ class CommandDispatcherTest {
         when(memoryClient.messages("c1")).thenReturn(List.of(
                 new ChatMessageDTO().content("hi")));
 
-        CommandResult result = handle("history");
+        var result = handle("history");
 
-        assertThat(result.message()).contains("c1", "t1", "1 messages");
+        assertThat(result).contains("c1", "t1", "1 messages");
     }
 
     @Test
     void showsEmptyHistory() {
         when(memoryClient.conversations()).thenReturn(List.of());
 
-        CommandResult result = handle("history");
+        var result = handle("history");
 
-        assertThat(result.message()).contains("No conversations yet");
+        assertThat(result).contains("No conversations yet");
     }
 
     @Test
     void quits() {
-        CommandResult result = handle("quit");
-
-        assertThat(result.exit()).isTrue();
+        assertThatThrownBy(() -> handle("quit"))
+                .isInstanceOf(ShellExitException.class);
     }
 
     @Test
     void rejectsUnknownCommand() {
-        CommandResult result = handle("frobnicate");
+        var result = handle("frobnicate");
 
-        assertThat(result.message()).contains("Unknown command");
+        assertThat(result).contains("Unknown command");
     }
 
     @Test
@@ -324,10 +341,9 @@ class CommandDispatcherTest {
         when(apiClient.submitIngestFile(eq(bytes), eq("note.txt"), any()))
                 .thenThrow(new RestClientException("Connection refused"));
 
-        CommandResult result = handle("add-file note.txt");
+        var result = handle("add-file note.txt");
 
-        assertThat(result.message()).contains("Module unreachable", "Connection refused");
-        assertThat(result.exit()).isFalse();
+        assertThat(result).contains("Module unreachable", "Connection refused");
     }
 
     private static void await(List<String> tokens, String needle, int timeoutSeconds) {
@@ -340,10 +356,9 @@ class CommandDispatcherTest {
         when(fileLoader.load("missing.pdf")).thenThrow(
                 new FileDocumentLoader.DocumentLoadException("Failed to read file: missing.pdf", null));
 
-        CommandResult result = handle("add-file missing.pdf");
+        var result = handle("add-file missing.pdf");
 
-        assertThat(result.message()).contains("Failed to read file");
-        assertThat(result.exit()).isFalse();
+        assertThat(result).contains("Failed to read file");
     }
 
     @Test
@@ -351,9 +366,8 @@ class CommandDispatcherTest {
         when(chatGateway.ask(eq("hello"), eq(4), any()))
                 .thenThrow(new ChatGateway.ChatException("Module ws://localhost:8081/ws/chat unreachable", null));
 
-        CommandResult result = handle("ask hello");
+        var result = handle("ask hello");
 
-        assertThat(result.message()).contains("Chat error", "unreachable");
-        assertThat(result.exit()).isFalse();
+        assertThat(result).contains("Chat error", "unreachable");
     }
 }

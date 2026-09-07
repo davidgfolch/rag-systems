@@ -26,9 +26,9 @@ class InteractiveShellTest {
     @Test
     void loopsUntilQuit() {
         when(dispatcher.handle(eq("ask hi"), any()))
-                .thenReturn(new CommandResult("answer: hi", false));
+                .thenReturn("answer: hi");
         when(dispatcher.handle(eq("quit"), any()))
-                .thenReturn(new CommandResult("bye", true));
+                .thenThrow(new ShellExitException());
 
         var out = new StringWriter();
         var sut = new InteractiveShell(dispatcher, new StringReader("ask hi\nquit\n"), out);
@@ -37,7 +37,22 @@ class InteractiveShellTest {
 
         verify(dispatcher, times(2)).handle(anyString(), any());
         assertThat(out.toString()).contains("answer: hi");
-        assertThat(out.toString()).contains("bye");
+        assertThat(out.toString()).contains("Bye.");
+    }
+
+    @Test
+    void colorsPlainResponsesButKeepsStyledOutputUnchanged() {
+        when(dispatcher.handle(eq("documents"), any())).thenReturn("Documents:\n - d1");
+        when(dispatcher.handle(eq("quit"), any())).thenThrow(new ShellExitException());
+
+        var out = new StringWriter();
+        var sut = new InteractiveShell(dispatcher, new StringReader("documents\nquit\n"), out);
+
+        sut.run();
+
+        var text = out.toString();
+        assertThat(text).contains("\033[36mDocuments:");
+        assertThat(text).contains("Bye.");
     }
 
     @Test
@@ -47,7 +62,7 @@ class InteractiveShellTest {
                     Consumer<String> token = invocation.getArgument(1);
                     token.accept("Hel");
                     token.accept("lo");
-                    return new CommandResult("done", true);
+                    return "done";
                 });
 
         var out = new StringWriter();
@@ -84,7 +99,7 @@ class InteractiveShellTest {
         when(dispatcher.handle(eq("add-file x"), any()))
                 .thenThrow(new RuntimeException("Module unreachable: Connection refused"));
         when(dispatcher.handle(eq("quit"), any()))
-                .thenReturn(new CommandResult("bye", true));
+                .thenThrow(new ShellExitException());
 
         var out = new StringWriter();
         var sut = new InteractiveShell(dispatcher, new StringReader("add-file x\nquit\n"), out);
@@ -92,6 +107,6 @@ class InteractiveShellTest {
         sut.run();
 
         assertThat(out.toString()).contains("Error: Module unreachable");
-        assertThat(out.toString()).contains("bye");
+        assertThat(out.toString()).contains("Bye.");
     }
 }

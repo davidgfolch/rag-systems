@@ -71,9 +71,9 @@ class CommandDispatcherIntegrationTest {
         Files.write(pdf, bytes);
         List<String> tokens = new ArrayList<>();
 
-        CommandResult result = sut.handle("add-file " + pdf, tokens::add);
+        var result = sut.handle("add-file " + pdf, tokens::add);
 
-        assertThat(result.message()).contains("submitted", "i-1");
+        assertThat(result).contains("submitted", "i-1");
         await(tokens, "2 chunks");
         assertThat(tokens).anyMatch(t -> t.contains("complete") && t.contains("2 chunks"));
         assertThat(stub.lastIngestContentType()).startsWith("multipart/form-data");
@@ -88,10 +88,9 @@ class CommandDispatcherIntegrationTest {
 
     @Test
     void readsHistoryFromStubbedModule() {
-        CommandResult history = sut.handle("history", token -> {});
+        var history = sut.handle("history", token -> {});
 
-        assertThat(history.message()).contains("No conversations yet");
-        assertThat(history.exit()).isFalse();
+        assertThat(history).contains("No conversations yet");
     }
 
     @Test
@@ -107,10 +106,9 @@ class CommandDispatcherIntegrationTest {
                         new ModuleHealthClient(RestClient.builder())),
                 new CommandDispatcher.Settings(1_000, 4, 60), new CommandRegistry());
 
-        CommandResult result = dead.handle("add-file " + testFile(), token -> {});
+        var result = dead.handle("add-file " + testFile(), token -> {});
 
-        assertThat(result.message()).contains("Module unreachable");
-        assertThat(result.exit()).isFalse();
+        assertThat(result).contains("Module unreachable");
     }
 
     @Test
@@ -118,9 +116,9 @@ class CommandDispatcherIntegrationTest {
         when(lifecycle.start(registry.active())).thenReturn(true);
         when(lifecycle.isRunning("rag-basic")).thenReturn(true);
 
-        CommandResult result = sut.handle("start rag-basic", token -> {});
+        var result = sut.handle("start rag-basic", token -> {});
 
-        assertThat(result.message()).contains("ready");
+        assertThat(result).contains("ready");
     }
 
     private String testFile() throws IOException {

@@ -9,6 +9,7 @@ import com.rag.contract.model.QueryRequest;
 import com.rag.contract.model.QueryResponse;
 import com.rag.contract.model.DocumentSummaryDTO;
 import com.rag.tui.launcher.ModuleRegistry;
+import jakarta.annotation.Nonnull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ByteArrayResource;
@@ -48,6 +49,15 @@ public class RagApiClient {
     }
 
     public IngestResponse ingestFile(byte[] bytes, String fileName, Map<String, Object> metadata) {
+        return client()
+                .post().uri("/api/documents/ingest-file")
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(buildBody(bytes, fileName, metadata))
+                .retrieve().body(IngestResponse.class);
+    }
+
+    @Nonnull
+    private static MultiValueMap<String, Object> buildBody(byte[] bytes, String fileName, Map<String, Object> metadata) {
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
         body.add("file", new ByteArrayResource(bytes) {
             @Override
@@ -58,10 +68,7 @@ public class RagApiClient {
         var jsonHeaders = new HttpHeaders();
         jsonHeaders.setContentType(MediaType.APPLICATION_JSON);
         body.add("fileInfo", new HttpEntity<>(metadata, jsonHeaders));
-        return client()
-                .post().uri("/api/documents/ingest-file")
-                .contentType(MediaType.MULTIPART_FORM_DATA)
-                .body(body).retrieve().body(IngestResponse.class);
+        return body;
     }
 
     /**
@@ -69,20 +76,11 @@ public class RagApiClient {
      * id that the caller can poll via {@link #ingestStatus(String)}.
      */
     public IngestJobResponse submitIngestFile(byte[] bytes, String fileName, Map<String, Object> metadata) {
-        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-        body.add("file", new ByteArrayResource(bytes) {
-            @Override
-            public String getFilename() {
-                return fileName;
-            }
-        });
-        var jsonHeaders = new HttpHeaders();
-        jsonHeaders.setContentType(MediaType.APPLICATION_JSON);
-        body.add("fileInfo", new HttpEntity<>(metadata, jsonHeaders));
         return client()
                 .post().uri("/api/documents/ingest-file-async")
                 .contentType(MediaType.MULTIPART_FORM_DATA)
-                .body(body).retrieve().body(IngestJobResponse.class);
+                .body(buildBody(bytes, fileName, metadata))
+                .retrieve().body(IngestJobResponse.class);
     }
 
     public IngestStatusDTO ingestStatus(String documentId) {
@@ -101,6 +99,15 @@ public class RagApiClient {
      */
     public void deleteDocument(String documentId) {
         client().delete().uri("/api/documents/{documentId}", documentId)
+                .retrieve().toBodilessEntity();
+    }
+
+    /**
+     * Deletes an ingested document and all of its chunks from a specific module.
+     */
+    public void deleteDocument(String baseUrl, String documentId) {
+        builder.clone().baseUrl(baseUrl).build()
+                .delete().uri("/api/documents/{documentId}", documentId)
                 .retrieve().toBodilessEntity();
     }
 

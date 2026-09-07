@@ -23,6 +23,10 @@ public final class TerminalStyle {
         return styled(text, AttributedStyle.DEFAULT.foreground(AttributedStyle.CYAN));
     }
 
+    public static String response(String text) {
+        return styled(text, AttributedStyle.DEFAULT.foreground(AttributedStyle.CYAN));
+    }
+
     public static String command(String text) {
         return styled(text, AttributedStyle.BOLD.foreground(AttributedStyle.YELLOW));
     }

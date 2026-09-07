@@ -31,6 +31,12 @@ class TerminalStyleTest {
     }
 
     @Test
+    void responseWrapsTextInCyan() {
+        String result = TerminalStyle.response("list");
+        assertThat(result).contains("list").contains("\033[");
+    }
+
+    @Test
     void commandWrapsTextInBoldYellow() {
         String result = TerminalStyle.command("/help");
         assertThat(result).contains("/help").contains("\033[");
