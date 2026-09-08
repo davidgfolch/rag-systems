@@ -25,3 +25,7 @@ rag:
     defaults:
       chat-provider: ${DEFAULT_CHAT_PROVIDER:ollama}
       embedding-provider: ${DEFAULT_EMBEDDING_PROVIDER:ollama}
+    catalog:
+      url: ${MODEL_CATALOG_URL:https://models.dev/api.json}
+      ttl: ${MODEL_CATALOG_TTL:86400}
+      enabled: ${MODEL_CATALOG_ENABLED:true}

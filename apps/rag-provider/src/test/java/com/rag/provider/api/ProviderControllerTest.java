@@ -3,6 +3,7 @@ package com.rag.provider.api;
 import com.rag.contract.provider.ConfigureProviderRequest;
 import com.rag.contract.provider.ModelSpecDTO;
 import com.rag.contract.provider.ProviderStatusDTO;
+import com.rag.provider.services.ModelCatalogService;
 import com.rag.provider.services.ModelRouter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,11 +28,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ProviderControllerTest {
 
     @Mock private ModelRouter router;
+    @Mock private ModelCatalogService catalogService;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new ProviderController(router))
+        mockMvc = MockMvcBuilders.standaloneSetup(new ProviderController(router, catalogService))
                 .setControllerAdvice(new ApiExceptionHandler())
                 .build();
     }
@@ -52,6 +54,8 @@ class ProviderControllerTest {
 
     @Test
     void shouldSwitchChatModel() throws Exception {
+        when(catalogService.isKnown("ollama", "qwen3")).thenReturn(true);
+
         mockMvc.perform(post("/api/provider/chat")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"providerId\":\"ollama\",\"model\":\"qwen3\"}"))
@@ -61,7 +65,33 @@ class ProviderControllerTest {
     }
 
     @Test
+    void shouldStillSwitchChatModelNotInCatalog() throws Exception {
+        when(catalogService.isKnown("ollama", "custom-model")).thenReturn(false);
+
+        mockMvc.perform(post("/api/provider/chat")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"providerId\":\"ollama\",\"model\":\"custom-model\"}"))
+                .andExpect(status().isNoContent());
+
+        verify(router).switchChat(new ModelSpecDTO("ollama", "custom-model"));
+    }
+
+    @Test
+    void shouldStillSwitchEmbeddingModelNotInCatalog() throws Exception {
+        when(catalogService.isKnown("ollama", "local-embed")).thenReturn(false);
+
+        mockMvc.perform(post("/api/provider/embedding")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"providerId\":\"ollama\",\"model\":\"local-embed\"}"))
+                .andExpect(status().isNoContent());
+
+        verify(router).switchEmbedding(new ModelSpecDTO("ollama", "local-embed"));
+    }
+
+    @Test
     void shouldSwitchEmbeddingModel() throws Exception {
+        when(catalogService.isKnown("ollama", "nomic-embed-text")).thenReturn(true);
+
         mockMvc.perform(post("/api/provider/embedding")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"providerId\":\"ollama\",\"model\":\"nomic-embed-text\"}"))
