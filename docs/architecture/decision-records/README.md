@@ -11,6 +11,7 @@ This directory records significant architecture decisions for the RAG Systems pr
 | [ADR-0003](adr-0003-local-first.md) | Accepted | Local-first development with Ollama |
 | [ADR-0004](adr-0004-sonarqube-static-analysis.md) | Accepted | SonarQube static analysis for code quality |
 | [ADR-0010](adr-0010-rag-provider.md) | Accepted | Dedicated rag-provider service for model switching |
+| [ADR-0011](adr-0011-model-catalog.md) | Accepted | Refreshable model catalog (Models.dev) |
 
 ## How to add an ADR
 
