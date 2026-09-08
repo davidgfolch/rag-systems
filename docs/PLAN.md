@@ -119,6 +119,7 @@ This architecture evolves around a **thin TUI + switchable RAG modules**. Each d
 | **TUI** | Thin interface over a control plane: starts/stops rag-* modules as child processes, routes REST/WebSocket to the active module | [ADR-0007](architecture/decision-records/adr-0007-tui-interface.md) |
 | **Conversation state** | `rag-memory` module owns chat/conversation history (schema `rag_memory`, non-vector) | [ADR-0008](architecture/decision-records/adr-0008-rag-memory.md) |
 | **Web ingestion** | `rag-webcrawler` module: intelligent fetching with LLM-driven link selection | [ADR-0009](architecture/decision-records/adr-0009-rag-webcrawler.md) |
+| **Model switching** | `rag-provider` companion service + refreshable models.dev catalog; TUI `connect` command browses and switches chat/embedding models | [ADR-0010](architecture/decision-records/adr-0010-rag-provider.md), [ADR-0011](architecture/decision-records/adr-0011-model-catalog.md), [ADR-0012](architecture/decision-records/adr-0012-tui-connect.md) |
 
 Core invariants:
 
@@ -517,6 +518,13 @@ See [guides/sonarqube.md](guides/sonarqube.md) and [ADR-0004](architecture/decis
 - [ ] Grafana dashboards + Prometheus
 - [ ] Evaluation/benchmarking; comparison reports
 - [ ] README + docs updated (ADR-0005..0009)
+
+### Phase 8: Provider Connect Workflow
+- [x] `rag-provider` companion service - runtime model/embedding switching ([ADR-0010](architecture/decision-records/adr-0010-rag-provider.md))
+- [x] Refreshable models.dev catalog with advisory switch checks ([ADR-0011](architecture/decision-records/adr-0011-model-catalog.md))
+- [x] TUI `connect` command: status, catalog browse, chat/embedding switch, refresh ([ADR-0012](architecture/decision-records/adr-0012-tui-connect.md))
+- [ ] **Live verification** - run rag-provider + a rag-* module, browse the real catalog, switch chat/embedding, and ask a question end-to-end
+- [ ] **Model-preference persistence** - remember the chosen chat/embedding model per environment and restore it on boot (survives rag-provider restarts); surface in `connect` status
 
 ## Success Criteria
 
