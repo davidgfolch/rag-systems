@@ -45,6 +45,12 @@ case "$CMD" in
         else
             echo "Note: no .env.secrets in the original. SonarQube token will be auto-generated on first scan."
         fi
+        if command -v codegraph >/dev/null 2>&1; then
+            echo "Building CodeGraph index in $CLONE..."
+            (cd "$CLONE" && codegraph init -y) || echo "Warning: CodeGraph index build failed for $CLONE."
+        else
+            echo "CodeGraph CLI not found; skipping clone index build."
+        fi
         echo
         echo "Clone ready: $CLONE"
         echo "Branch: $BRANCH"

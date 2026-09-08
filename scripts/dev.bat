@@ -57,6 +57,7 @@ git checkout -b "%BRANCH%" origin/main 2>nul || git checkout "%BRANCH%" 2>nul ||
     exit /b 1
 )
 call :propagate_token "%ROOT%"
+call :codegraph_index "%CLONE%"
 echo.
 echo Clone ready: %CLONE%
 echo Branch: %BRANCH%
@@ -71,6 +72,20 @@ if exist "%SRC%" (
 ) else (
     echo Note: no .env.secrets in the original. SonarQube token will be auto-generated on first scan.
 )
+goto :eof
+
+:codegraph_index
+where codegraph >nul 2>nul
+if errorlevel 1 (
+    echo CodeGraph CLI not found; skipping clone index build.
+    goto :eof
+)
+echo Building CodeGraph index in %~1...
+pushd "%~1"
+call codegraph init -y
+set "CGERR=%errorlevel%"
+popd
+if not "%CGERR%"=="0" echo Warning: CodeGraph index build failed for %~1.
 goto :eof
 
 :checkout
