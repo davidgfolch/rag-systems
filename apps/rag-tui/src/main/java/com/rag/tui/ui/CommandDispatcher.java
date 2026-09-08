@@ -1,7 +1,6 @@
 package com.rag.tui.ui;
 
 import com.rag.contract.model.ConversationDTO;
-import com.rag.contract.model.DocumentSummaryDTO;
 import com.rag.contract.model.IngestStatusDTO;
 import com.rag.tui.client.ChatGateway;
 import com.rag.tui.client.MemoryClient;
@@ -16,6 +15,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClientException;
 
+import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 import static com.rag.tui.ui.TerminalStyle.error;
@@ -30,14 +31,19 @@ public class CommandDispatcher {
     private final RagClients clients;
     private final Settings settings;
     private final CommandRegistry commandRegistry;
+    private final Prompter prompter;
+    private final DocumentLister documentLister;
 
     public CommandDispatcher(ModuleRegistry registry, ModuleLifecycleManager lifecycle,
-                             RagClients clients, Settings settings, CommandRegistry commandRegistry) {
+                             RagClients clients, Settings settings, CommandRegistry commandRegistry,
+                             Prompter prompter) {
         this.registry = registry;
         this.lifecycle = lifecycle;
         this.clients = clients;
         this.settings = settings;
         this.commandRegistry = commandRegistry;
+        this.prompter = prompter;
+        this.documentLister = new DocumentLister(registry, clients.apiClient(), clients.healthClient());
     }
 
     public String handle(String input, Consumer<String> tokenSink) {
@@ -68,7 +74,7 @@ public class CommandDispatcher {
                         case "add-url" -> addUrl(arg);
                         case "ask" -> ask(arg, tokenSink);
                         case "history" -> history();
-                        case "connect" -> new ConnectCommand(clients.providerClient()).execute(arg);
+                        case "connect" -> new ConnectCommand(clients.providerClient(), prompter).execute(arg);
                         default -> error("Unknown command. Type 'help' for usage.");
                     };
                 } catch (RestClientException e) {
@@ -83,6 +89,124 @@ public class CommandDispatcher {
                 }
             }
         }
+    }
+
+    private List<Prompter.Choice> moduleChoices() {
+        return registry.modules().stream()
+                .map(m -> new Prompter.Choice(m.name(), m.name()))
+                .toList();
+    }
+
+    private String use(String name) {
+        if (name.isEmpty()) {
+            name = prompter.pick("Switch active module", moduleChoices()).orElse("");
+            if (name.isEmpty()) return "";
+        }
+        return registry.activate(name)
+                ? success("Active module: " + name)
+                : error("Unknown module: " + name);
+    }
+
+    private String start(String name, Consumer<String> tokenSink) {
+        if (name.isEmpty()) {
+            name = prompter.pick("Start module", moduleChoices()).orElse("");
+            if (name.isEmpty()) return "";
+        }
+        final String moduleName = name;
+        return registry.find(moduleName)
+                .map(m -> lifecycle.start(m)
+                        ? waitForReady(m, tokenSink)
+                        : "Module already running: " + moduleName)
+                .orElse(error("Unknown module: " + moduleName));
+    }
+
+    private String stop(String name) {
+        if (name.isEmpty()) {
+            name = prompter.pick("Stop module", moduleChoices()).orElse("");
+            if (name.isEmpty()) return "";
+        }
+        return lifecycle.stop(name) ? success("Stopped " + name) : "Module not running: " + name;
+    }
+
+    private String delete(String documentId) {
+        if (documentId.isEmpty()) {
+            documentId = pickDocumentId().orElse("");
+            if (documentId.isEmpty()) return "";
+        }
+        final String id = documentId;
+        for (Module module : registry.modules()) {
+            if (!clients.healthClient().isUp(module.baseUrl())) continue;
+            boolean found = clients.apiClient().listDocuments(module.baseUrl()).stream()
+                    .anyMatch(d -> id.equals(d.getDocumentId()));
+            if (found) {
+                clients.apiClient().deleteDocument(module.baseUrl(), id);
+                log.info("Deleted document {} from {}", id, module.name());
+                return success("Deleted document " + id + " from " + module.name());
+            }
+        }
+        return error("Document " + id + " not found on any reachable module.");
+    }
+
+    private Optional<String> pickDocumentId() {
+        var choices = registry.modules().stream()
+                .filter(m -> clients.healthClient().isUp(m.baseUrl()))
+                .flatMap(m -> clients.apiClient().listDocuments(m.baseUrl()).stream())
+                .map(d -> new Prompter.Choice(d.getTitle(), d.getDocumentId(),
+                        d.getChunkCount() == null ? "" : d.getChunkCount() + " chunks"))
+                .toList();
+        return choices.isEmpty() ? Optional.empty() : prompter.pick("Delete document", choices);
+    }
+
+    private String addFile(String path, Consumer<String> tokenSink) {
+        if (path.isEmpty()) {
+            path = orEmpty(prompter.prompt("File path: "));
+            if (path.isEmpty()) return "Usage: add-file <path>";
+        }
+        var file = clients.fileLoader().load(path);
+        var fileName = file.metadata().get("fileName").toString();
+        var job = clients.apiClient().submitIngestFile(file.bytes(), fileName, file.metadata());
+        var documentId = job.getDocumentId();
+        pollIngestUntilDone(documentId, tokenSink);
+        return success(("Ingestion submitted for '%s' -> document %s. You can keep typing; I'll report when it completes.")
+                .formatted(path, documentId));
+    }
+
+    private String addFolder(String path, Consumer<String> tokenSink) {
+        if (path.isEmpty()) {
+            path = orEmpty(prompter.prompt("Folder path: "));
+            if (path.isEmpty()) return "Usage: add-folder <path>";
+        }
+        var files = clients.fileLoader().loadFolder(path);
+        if (files.isEmpty())
+            return error("No ingestible files found in: " + path);
+        for (var file : files) {
+            var fileName = file.metadata().get("fileName").toString();
+            var job = clients.apiClient().submitIngestFile(file.bytes(), fileName, file.metadata());
+            pollIngestUntilDone(job.getDocumentId(), tokenSink);
+        }
+        return success("Submitted %d files from '%s'; I'll report as each completes.".formatted(files.size(), path));
+    }
+
+    private String addUrl(String url) {
+        if (url.isEmpty()) {
+            url = orEmpty(prompter.prompt("URL: "));
+            if (url.isEmpty()) return "Usage: add-url <url>";
+        }
+        var res = clients.apiClient().ingestUrl(url);
+        return success("Ingested %s -> document %s, %d chunks".formatted(url, res.getDocumentId(), res.getChunkCount()));
+    }
+
+    private String ask(String question, Consumer<String> tokenSink) {
+        if (question.isEmpty()) {
+            question = orEmpty(prompter.prompt("Question: "));
+            if (question.isEmpty()) return "Usage: ask <question>";
+        }
+        clients.chatGateway().ask(question, settings.topK(), tokenSink);
+        return "";
+    }
+
+    private static String orEmpty(String value) {
+        return value == null ? "" : value;
     }
 
     private String modules() {
@@ -105,76 +229,7 @@ public class CommandDispatcher {
     }
 
     private String documents() {
-        var sb = new StringBuilder("Documents:\n");
-        boolean any = false;
-        for (Module m : registry.modules()) {
-            if (clients.healthClient().isUp(m.baseUrl())) {
-                any = true;
-                appendModuleDocuments(sb, m);
-            }
-        }
-        return any ? sb.toString()
-                : "No rag-* modules are reachable. Start one first (e.g. 'start rag-basic').";
-    }
-
-    private void appendModuleDocuments(StringBuilder sb, Module m) {
-        sb.append(" ").append(m.name()).append(" (").append(m.baseUrl()).append("):\n");
-        var docs = clients.apiClient().listDocuments(m.baseUrl());
-        if (docs.isEmpty()) {
-            sb.append("   (no documents)\n");
-            return;
-        }
-        int maxChunksLength = docs.stream().map(DocumentSummaryDTO::getChunkCount).max(Integer::compareTo)
-                .map(String::valueOf).map(String::length).orElse(0);
-        for (DocumentSummaryDTO doc : docs) {
-            appendDocumentSummary(sb, doc, maxChunksLength);
-        }
-    }
-
-    private static void appendDocumentSummary(StringBuilder sb, DocumentSummaryDTO doc, int maxChunksLength) {
-        sb.append("   - ");
-        if (doc.getChunkCount() != null) {
-            var chunkCount = String.valueOf(doc.getChunkCount());
-            sb.append(" (")
-                    .append(" ".repeat(Math.max(0, maxChunksLength - chunkCount.length())))
-                    .append(chunkCount)
-                    .append(" chunks)");
-        }
-        sb.append(String.format(" [%s]", doc.getDocumentId()));
-        if (doc.getCreatedAt() != null)
-            sb.append(" ").append(doc.getCreatedAt());
-        sb.append(" ").append(doc.getTitle());
-        sb.append("\n");
-    }
-
-    private String use(String name) {
-        if (name.isEmpty()) return "Usage: use <module>";
-        return registry.activate(name)
-                ? success("Active module: " + name)
-                : error("Unknown module: " + name);
-    }
-
-    private String delete(String documentId) {
-        if (documentId.isEmpty()) return "Usage: delete <document-id>";
-        for (Module module : registry.modules()) {
-            if (!clients.healthClient().isUp(module.baseUrl())) continue;
-            boolean found = clients.apiClient().listDocuments(module.baseUrl()).stream()
-                    .anyMatch(d -> documentId.equals(d.getDocumentId()));
-            if (found) {
-                clients.apiClient().deleteDocument(module.baseUrl(), documentId);
-                log.info("Deleted document {} from {}", documentId, module.name());
-                return success("Deleted document " + documentId + " from " + module.name());
-            }
-        }
-        return error("Document " + documentId + " not found on any reachable module.");
-    }
-
-    private String start(String name, Consumer<String> tokenSink) {
-        return registry.find(name)
-                .map(m -> lifecycle.start(m)
-                        ? waitForReady(m, tokenSink)
-                        : "Module already running: " + name)
-                .orElse(error("Unknown module: " + name));
+        return documentLister.list();
     }
 
     private String waitForReady(Module m, Consumer<String> tokenSink) {
@@ -183,34 +238,6 @@ public class CommandDispatcher {
         return ready ? success("Started %s (ready)".formatted(m.name()))
                 : error(("Started %s but not ready after %ds - module is still booting or unhealthy; check docker/ollama and the module log, then retry.")
                 .formatted(m.name(), settings.startTimeoutMs() / 1000));
-    }
-
-    private String stop(String name) {
-        return lifecycle.stop(name) ? success("Stopped " + name) : "Module not running: " + name;
-    }
-
-    private String addFile(String path, Consumer<String> tokenSink) {
-        if (path.isEmpty()) return "Usage: add-file <path>";
-        var file = clients.fileLoader().load(path);
-        var fileName = file.metadata().get("fileName").toString();
-        var job = clients.apiClient().submitIngestFile(file.bytes(), fileName, file.metadata());
-        var documentId = job.getDocumentId();
-        pollIngestUntilDone(documentId, tokenSink);
-        return success(("Ingestion submitted for '%s' -> document %s. You can keep typing; I'll report when it completes.")
-                .formatted(path, documentId));
-    }
-
-    private String addFolder(String path, Consumer<String> tokenSink) {
-        if (path.isEmpty()) return "Usage: add-folder <path>";
-        var files = clients.fileLoader().loadFolder(path);
-        if (files.isEmpty())
-            return error("No ingestible files found in: " + path);
-        for (var file : files) {
-            var fileName = file.metadata().get("fileName").toString();
-            var job = clients.apiClient().submitIngestFile(file.bytes(), fileName, file.metadata());
-            pollIngestUntilDone(job.getDocumentId(), tokenSink);
-        }
-        return success("Submitted %d files from '%s'; I'll report as each completes.".formatted(files.size(), path));
     }
 
     private static final long POLL_MILLIS = 2_000;
@@ -235,23 +262,11 @@ public class CommandDispatcher {
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             } catch (RuntimeException e) {
-                tokenSink.accept(error("Ingestion of document " + documentId +" could not be checked: " + e.getMessage() + "\n"));
+                tokenSink.accept(error("Ingestion of document " + documentId + " could not be checked: " + e.getMessage() + "\n"));
             }
         }, "rag-ingest-poll");
         poller.setDaemon(true);
         poller.start();
-    }
-
-    private String addUrl(String url) {
-        if (url.isEmpty()) return "Usage: add-url <url>";
-        var res = clients.apiClient().ingestUrl(url);
-        return success("Ingested %s -> document %s, %d chunks".formatted(url, res.getDocumentId(), res.getChunkCount()));
-    }
-
-    private String ask(String question, Consumer<String> tokenSink) {
-        if (question.isEmpty()) return "Usage: ask <question>";
-        clients.chatGateway().ask(question, settings.topK(), tokenSink);
-        return "";
     }
 
     private String history() {

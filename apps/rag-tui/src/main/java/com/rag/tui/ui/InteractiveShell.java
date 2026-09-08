@@ -1,19 +1,17 @@
 package com.rag.tui.ui;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.Reader;
 import java.io.Writer;
 
 public class InteractiveShell {
 
     private final CommandDispatcher dispatcher;
-    private final BufferedReader reader;
+    private final Prompter prompter;
     private final Writer writer;
 
-    public InteractiveShell(CommandDispatcher dispatcher, Reader reader, Writer writer) {
+    public InteractiveShell(CommandDispatcher dispatcher, Prompter prompter, Writer writer) {
         this.dispatcher = dispatcher;
-        this.reader = reader instanceof BufferedReader b ? b : new BufferedReader(reader);
+        this.prompter = prompter;
         this.writer = writer;
     }
 
@@ -21,7 +19,8 @@ public class InteractiveShell {
         try {
             write(TerminalStyle.welcome("RAG TUI - type 'help' for commands, 'quit' to exit"));
             String line;
-            while ((line = reader.readLine()) != null) {
+            while ((line = prompter.prompt("> ")) != null) {
+                if (line.isEmpty()) continue;
                 if (runCommand(line)) break;
             }
         } catch (IOException e) {

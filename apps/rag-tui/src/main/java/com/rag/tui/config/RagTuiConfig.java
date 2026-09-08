@@ -11,8 +11,13 @@ import com.rag.tui.launcher.ModuleLifecycleManager;
 import com.rag.tui.launcher.ModuleRegistry;
 import com.rag.common.services.FileDocumentLoader;
 import com.rag.tui.ui.CommandDispatcher;
+import com.rag.tui.ui.CommandDescriptor;
 import com.rag.tui.ui.CommandRegistry;
+import com.rag.tui.ui.InteractivePrompter;
 import com.rag.tui.ui.InteractiveShell;
+import com.rag.tui.ui.NoopPrompter;
+import com.rag.tui.ui.Prompter;
+import org.jline.terminal.TerminalBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
@@ -20,7 +25,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 
-import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -96,23 +100,38 @@ public class RagTuiConfig {
     }
 
     @Bean
+    public Prompter prompter(CommandRegistry commandRegistry) {
+        if (System.console() == null) {
+            return new NoopPrompter(new java.io.InputStreamReader(System.in));
+        }
+        try {
+            var terminal = TerminalBuilder.builder().build();
+            return new InteractivePrompter(terminal, () -> commandRegistry.all().stream()
+                    .map(CommandDescriptor::name)
+                    .toList());
+        } catch (Exception e) {
+            return new NoopPrompter(new java.io.InputStreamReader(System.in));
+        }
+    }
+
+    @Bean
     public CommandDispatcher commandDispatcher(ModuleRegistry registry, ModuleLifecycleManager lifecycle,
                                                RagApiClient apiClient, ChatGateway chatGateway,
                                                MemoryClient memoryClient, FileDocumentLoader fileLoader,
                                                ModuleHealthClient healthClient, ProviderClient providerClient,
-                                               CommandRegistry commandRegistry,
+                                               CommandRegistry commandRegistry, Prompter prompter,
                                                @Value("${rag.tui.start-timeout-ms:120000}") long startTimeoutMs,
                                                @Value("${rag.chat.top-k:4}") int topK,
                                                @Value("${rag.chat.timeout-seconds:180}") long chatTimeoutSeconds) {
         var clients = new CommandDispatcher.RagClients(apiClient, chatGateway, memoryClient, fileLoader, healthClient,
                 providerClient);
         var settings = new CommandDispatcher.Settings(startTimeoutMs, topK, chatTimeoutSeconds);
-        return new CommandDispatcher(registry, lifecycle, clients, settings, commandRegistry);
+        return new CommandDispatcher(registry, lifecycle, clients, settings, commandRegistry, prompter);
     }
 
     @Bean
-    public ApplicationRunner tuiRunner(CommandDispatcher dispatcher) {
-        return args -> new InteractiveShell(dispatcher,
-                new InputStreamReader(System.in), new OutputStreamWriter(System.out)).run(); // NOSONAR java:S106
+    public ApplicationRunner tuiRunner(CommandDispatcher dispatcher, Prompter prompter) {
+        return args -> new InteractiveShell(dispatcher, prompter,
+                new OutputStreamWriter(System.out)).run(); // NOSONAR java:S106
     }
 }
