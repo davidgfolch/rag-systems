@@ -21,6 +21,11 @@
             <artifactId>spring-boot-starter</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.rag</groupId>
+            <artifactId>rag-contract</artifactId>
+        </dependency>
+
         <!-- Spring AI core (interfaces only, no provider) -->
         <dependency>
             <groupId>org.springframework.ai</groupId>

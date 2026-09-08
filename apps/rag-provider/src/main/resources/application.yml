@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: rag-provider
+
+server:
+  port: ${RAG_PROVIDER_PORT:8086}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+
+rag:
+  provider:
+    ollama:
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+      chat-model: ${OLLAMA_CHAT_MODEL:phi4}
+      embedding-model: ${OLLAMA_EMBEDDING_MODEL:nomic-embed-text}
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      base-url: ${OPENAI_BASE_URL:}
+      chat-model: ${OPENAI_CHAT_MODEL:gpt-4o}
+      embedding-model: ${OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
+    defaults:
+      chat-provider: ${DEFAULT_CHAT_PROVIDER:ollama}
+      embedding-provider: ${DEFAULT_EMBEDDING_PROVIDER:ollama}

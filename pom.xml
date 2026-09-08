@@ -22,6 +22,7 @@
         <module>apps/rag-contract</module>
         <module>apps/rag-common</module>
         <module>apps/rag-basic</module>
+        <module>apps/rag-provider</module>
         <module>apps/rag-memory</module>
         <module>apps/rag-webcrawler</module>
         <module>apps/rag-advanced</module>
