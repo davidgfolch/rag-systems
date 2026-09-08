@@ -20,6 +20,8 @@ public class CommandRegistry {
             new CommandDescriptor("add-url", "ingest a web page", "<url>"),
             new CommandDescriptor("ask", "stream a chat answer", "<question>"),
             new CommandDescriptor("history", "show conversation history", ""),
+            new CommandDescriptor("connect", "browse the model catalog and switch chat/embedding models via rag-provider",
+                    "[catalog [<provider>] | chat <provider> <model> | embedding <provider> <model> | refresh]"),
             new CommandDescriptor("quit", "exit the terminal", "")
     );
 

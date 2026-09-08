@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rag.tui.client.ChatGateway;
 import com.rag.tui.client.MemoryClient;
 import com.rag.tui.client.ModuleHealthClient;
+import com.rag.tui.client.ProviderClient;
 import com.rag.tui.client.RagApiClient;
 import com.rag.tui.launcher.Module;
 import com.rag.tui.launcher.ModuleLifecycleManager;
@@ -33,11 +34,13 @@ public class RagTuiConfig {
             @Value("${rag.tui.active:rag-basic}") String active,
             @Value("${RAG_BASIC_URL:http://localhost:8081}") String basicUrl,
             @Value("${RAG_ADVANCED_URL:http://localhost:8082}") String advancedUrl,
-            @Value("${RAG_AGENTIC_URL:http://localhost:8083}") String agenticUrl) {
+            @Value("${RAG_AGENTIC_URL:http://localhost:8083}") String agenticUrl,
+            @Value("${RAG_PROVIDER_URL:http://localhost:8086}") String providerUrl) {
         var modules = List.of(
                 new Module("rag-basic", basicUrl),
                 new Module("rag-advanced", advancedUrl),
-                new Module("rag-agentic", agenticUrl));
+                new Module("rag-agentic", agenticUrl),
+                new Module("rag-provider", providerUrl));
         return new ModuleRegistry(modules, active);
     }
 
@@ -72,6 +75,11 @@ public class RagTuiConfig {
     }
 
     @Bean
+    public ProviderClient providerClient(@Value("${RAG_PROVIDER_URL:http://localhost:8086}") String providerUrl) {
+        return new ProviderClient(providerUrl, RestClient.builder());
+    }
+
+    @Bean
     public ChatGateway chatGateway(ModuleRegistry registry, ObjectMapper objectMapper,
                                    @Value("${rag.chat.timeout-seconds:180}") long chatTimeoutSeconds) {
         return new ChatGateway(registry, new StandardWebSocketClient(), objectMapper, chatTimeoutSeconds);
@@ -91,11 +99,13 @@ public class RagTuiConfig {
     public CommandDispatcher commandDispatcher(ModuleRegistry registry, ModuleLifecycleManager lifecycle,
                                                RagApiClient apiClient, ChatGateway chatGateway,
                                                MemoryClient memoryClient, FileDocumentLoader fileLoader,
-                                               ModuleHealthClient healthClient, CommandRegistry commandRegistry,
+                                               ModuleHealthClient healthClient, ProviderClient providerClient,
+                                               CommandRegistry commandRegistry,
                                                @Value("${rag.tui.start-timeout-ms:120000}") long startTimeoutMs,
                                                @Value("${rag.chat.top-k:4}") int topK,
                                                @Value("${rag.chat.timeout-seconds:180}") long chatTimeoutSeconds) {
-        var clients = new CommandDispatcher.RagClients(apiClient, chatGateway, memoryClient, fileLoader, healthClient);
+        var clients = new CommandDispatcher.RagClients(apiClient, chatGateway, memoryClient, fileLoader, healthClient,
+                providerClient);
         var settings = new CommandDispatcher.Settings(startTimeoutMs, topK, chatTimeoutSeconds);
         return new CommandDispatcher(registry, lifecycle, clients, settings, commandRegistry);
     }

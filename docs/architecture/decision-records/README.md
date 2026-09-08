@@ -12,6 +12,7 @@ This directory records significant architecture decisions for the RAG Systems pr
 | [ADR-0004](adr-0004-sonarqube-static-analysis.md) | Accepted | SonarQube static analysis for code quality |
 | [ADR-0010](adr-0010-rag-provider.md) | Accepted | Dedicated rag-provider service for model switching |
 | [ADR-0011](adr-0011-model-catalog.md) | Accepted | Refreshable model catalog (Models.dev) |
+| [ADR-0012](adr-0012-tui-connect.md) | Accepted | TUI `connect` command |
 
 ## How to add an ADR
 
