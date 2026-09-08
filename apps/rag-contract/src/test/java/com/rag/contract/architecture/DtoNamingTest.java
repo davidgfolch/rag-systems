@@ -19,6 +19,7 @@ class DtoNamingTest {
 
     private static final String MODEL_PACKAGE = "com.rag.contract.model..";
     private static final String WS_PACKAGE = "com.rag.contract.ws..";
+    private static final String PROVIDER_PACKAGE = "com.rag.contract.provider..";
 
     private static final DescribedPredicate<JavaClass> TOP_LEVEL =
             new DescribedPredicate<>("top-level classes") {
@@ -53,5 +54,17 @@ class DtoNamingTest {
                 .orShould().haveSimpleNameEndingWith("Response")
                 .because("WS frames also need an explicit transfer suffix to avoid naming collisions")
                 .check(importer.importPackages(WS_PACKAGE));
+    }
+
+    @Test
+    void providerTransferBeansCarryAnExplicitSuffix() {
+        classes()
+                .that().resideInAPackage(PROVIDER_PACKAGE)
+                .and(TOP_LEVEL)
+                .should().haveSimpleNameEndingWith("DTO")
+                .orShould().haveSimpleNameEndingWith("Request")
+                .orShould().haveSimpleNameEndingWith("Response")
+                .because("provider API beans need an explicit transfer suffix to avoid naming collisions")
+                .check(importer.importPackages(PROVIDER_PACKAGE));
     }
 }

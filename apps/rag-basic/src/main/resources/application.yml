@@ -1,4 +1,4 @@
-# rag-basic default configuration (local profile = Ollama)
+# rag-basic default configuration (providers consumed via the rag-provider service)
 spring:
   profiles:
     active: local,observability
@@ -14,6 +14,14 @@ spring:
       max-request-size: 50MB
   webcrawler:
     url: ${RAG_WEBCRAWLER_URL:http://localhost:8085}
+  ai:
+    vectorstore:
+      pgvector:
+        # blank -> schema is derived from the active embedding dimension (rag_<dim>)
+        schema-name: ${PGVECTOR_SCHEMA:}
+        table-name: chunks
+        schema-validation: true
+        initialize-schema: true
 
 server:
   port: ${SERVER_PORT:8081}
@@ -24,63 +32,9 @@ management:
       exposure:
         include: health,info,prometheus,metrics
 
----
-# Local profile - Ollama models (zero-cost, private, runs on CPU/GPU)
-spring:
-  config:
-    activate:
-      on-profile: local
-  ai:
-    ollama:
-      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
-      init:
-        pull-model-strategy: when-missing
-        timeout: 60s
-        keep-alive: 5m
-        embedding:
-          options:
-            model: ${OLLAMA_EMBEDDING_MODEL:nomic-embed-text}
-        chat:
-          options:
-            model: ${OLLAMA_CHAT_MODEL:phi4}
-    vectorstore:
-      pgvector:
-        schema-name: ${PGVECTOR_SCHEMA:rag_basic}
-        table-name: chunks
-        schema-validation: true
-        initialize-schema: true
-
 rag:
-  vector-store:
-    type: ${VECTOR_STORE_TYPE:pgvector}
-  chunking:
-    strategy: recursive
-    size: ${CHUNK_SIZE:512}
-    overlap: ${CHUNK_OVERLAP:128}
-
----
-# Cloud profile - OpenAI models (frontier quality, per-token cost)
-spring:
-  config:
-    activate:
-      on-profile: cloud
-  ai:
-    openai:
-      api-key: ${OPENAI_API_KEY:}
-      chat:
-        options:
-          model: ${OPENAI_CHAT_MODEL:gpt-4o}
-      embedding:
-        options:
-          model: ${OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
-    vectorstore:
-      pgvector:
-        schema-name: ${PGVECTOR_SCHEMA:rag_basic}
-        table-name: chunks
-        schema-validation: true
-        initialize-schema: true
-
-rag:
+  provider:
+    url: ${RAG_PROVIDER_URL:http://localhost:8086}
   vector-store:
     type: ${VECTOR_STORE_TYPE:pgvector}
   chunking:

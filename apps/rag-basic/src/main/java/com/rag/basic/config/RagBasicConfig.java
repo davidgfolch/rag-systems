@@ -4,7 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rag.basic.api.chat.ChatWebSocketHandler;
 import com.rag.basic.services.RetrievalService;
 import com.rag.basic.services.WebCrawlerClient;
-import com.rag.common.adapter.SpringAiChatModel;
+import com.rag.common.adapter.ProviderHttpClient;
+import com.rag.common.adapter.RemoteChatModelPort;
+import com.rag.common.adapter.RemoteEmbeddingModel;
 import com.rag.common.adapter.SpringAiEmbeddingModel;
 import com.rag.common.repositories.VectorStorePort;
 import com.rag.common.repositories.store.InMemoryVectorStore;
@@ -21,27 +23,13 @@ import com.rag.common.services.chunking.RecursiveCharacterChunker;
 import com.rag.common.services.chunking.TokenChunker;
 import com.rag.common.services.parsing.PlainTextParser;
 import com.rag.common.services.parsing.TikaDocumentParser;
-import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.ai.document.MetadataMode;
 import org.springframework.ai.embedding.EmbeddingModel;
-import org.springframework.ai.ollama.OllamaChatModel;
-import org.springframework.ai.ollama.OllamaEmbeddingModel;
-import org.springframework.ai.ollama.api.OllamaApi;
-import org.springframework.ai.ollama.api.OllamaChatOptions;
-import org.springframework.ai.ollama.api.OllamaEmbeddingOptions;
-import org.springframework.ai.openai.OpenAiChatModel;
-import org.springframework.ai.openai.OpenAiEmbeddingModel;
-import org.springframework.ai.openai.OpenAiChatOptions;
-import org.springframework.ai.openai.OpenAiEmbeddingOptions;
-import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.client.RestClient;
 
@@ -50,10 +38,13 @@ import javax.sql.DataSource;
 /**
  * Wiring for the rag-basic module. Exposes the domain strategy interfaces so its
  * consumers can depend on abstractions, and picks concrete implementations from
- * {@code application.yml} properties (SoC, DIP, extensible via new strategies).
+ * {@code application.yml} properties. Chat + embedding models are consumed as
+ * remote bridges to the rag-provider service.
  */
 @Configuration
 public class RagBasicConfig {
+
+    private static final String DEFAULT_SCHEMA = "public";
 
     @Bean
     public TextSplitter textSplitter(
@@ -74,23 +65,15 @@ public class RagBasicConfig {
     }
 
     @Bean
-    @Profile("local")
-    public EmbeddingModel localSpringAiEmbeddingModel(
-            @Value("${spring.ai.ollama.base-url:http://localhost:11434}") String baseUrl,
-            @Value("${spring.ai.ollama.embedding.options.model:nomic-embed-text}") String model) {
-        var api = OllamaApi.builder().baseUrl(baseUrl).build();
-        var options = OllamaEmbeddingOptions.builder().model(model).build();
-        return OllamaEmbeddingModel.builder().ollamaApi(api).defaultOptions(options).build();
+    public ProviderHttpClient providerHttpClient(
+            @Value("${rag.provider.url:http://localhost:8086}") String baseUrl,
+            ObjectMapper objectMapper) {
+        return new ProviderHttpClient(baseUrl, objectMapper);
     }
 
     @Bean
-    @Profile("cloud")
-    public EmbeddingModel cloudSpringAiEmbeddingModel(
-            @Value("${spring.ai.openai.api-key:}") String apiKey,
-            @Value("${spring.ai.openai.embedding.options.model:text-embedding-3-small}") String model) {
-        var api = OpenAiApi.builder().apiKey(apiKey).build();
-        var options = OpenAiEmbeddingOptions.builder().model(model).build();
-        return new OpenAiEmbeddingModel(api, MetadataMode.EMBED, options);
+    public RemoteEmbeddingModel remoteEmbeddingModel(ProviderHttpClient providerHttpClient) {
+        return new RemoteEmbeddingModel(providerHttpClient);
     }
 
     @Bean
@@ -103,9 +86,12 @@ public class RagBasicConfig {
     public PgVectorStore pgVectorStore(
             JdbcTemplate jdbcTemplate,
             EmbeddingModel springAiEmbeddingModel,
-            @Value("${spring.ai.vectorstore.pgvector.schema-name:public}") String schema,
+            @Value("${spring.ai.vectorstore.pgvector.schema-name:}") String schemaOverride,
             @Value("${spring.ai.vectorstore.pgvector.table-name:vector_store}") String tableName,
             @Value("${spring.ai.vectorstore.pgvector.initialize-schema:true}") boolean initializeSchema) {
+        var schema = schemaOverride.isBlank()
+                ? embeddingSchema(springAiEmbeddingModel)
+                : schemaOverride.trim();
         return PgVectorStore.builder(jdbcTemplate, springAiEmbeddingModel)
                 .schemaName(schema)
                 .vectorTableName(tableName)
@@ -118,14 +104,30 @@ public class RagBasicConfig {
     public VectorStorePort vectorStore(
             @Value("${rag.vector-store.type:pgvector}") String type,
             EmbeddingModelPort embeddingModel,
+            EmbeddingModel springAiEmbeddingModel,
             ObjectProvider<PgVectorStore> pgVectorStore,
             ObjectProvider<DataSource> dataSource,
-            @Value("${spring.ai.vectorstore.pgvector.schema-name:public}") String schema,
+            @Value("${spring.ai.vectorstore.pgvector.schema-name:}") String schemaOverride,
             @Value("${spring.ai.vectorstore.pgvector.table-name:vector_store}") String tableName) {
         if ("simple".equalsIgnoreCase(type)) {
             return new InMemoryVectorStore(embeddingModel);
         }
+        var schema = schemaOverride.isBlank()
+                ? embeddingSchema(springAiEmbeddingModel)
+                : schemaOverride.trim();
         return new PgVectorStoreAdapter(pgVectorStore.getObject(), dataSource.getIfAvailable(), schema, tableName);
+    }
+
+    /**
+     * Derives the pgvector schema from the active embedding dimension so the
+     * store always matches the model actually in use (a dimension switch lands
+     * in a fresh schema instead of colliding with vectors of another length).
+     */
+    private static String embeddingSchema(EmbeddingModel model) {
+        if (model instanceof RemoteEmbeddingModel remote) {
+            return "rag_" + remote.dimensions();
+        }
+        return DEFAULT_SCHEMA;
     }
 
     @Bean
@@ -145,28 +147,13 @@ public class RagBasicConfig {
     }
 
     @Bean
-    @Profile("local")
-    public ChatModel providerChatModel(
-            @Value("${spring.ai.ollama.base-url:http://localhost:11434}") String baseUrl,
-            @Value("${spring.ai.ollama.chat.options.model:phi4}") String model) {
-        var api = OllamaApi.builder().baseUrl(baseUrl).build();
-        var options = OllamaChatOptions.builder().model(model).build();
-        return OllamaChatModel.builder().ollamaApi(api).defaultOptions(options).build();
+    public ChatModelPort chatModel(RemoteChatModelPort remoteChatModelPort) {
+        return remoteChatModelPort;
     }
 
     @Bean
-    @Profile("cloud")
-    public ChatModel cloudProviderChatModel(
-            @Value("${spring.ai.openai.api-key:}") String apiKey,
-            @Value("${spring.ai.openai.chat.options.model:gpt-4o}") String model) {
-        var api = OpenAiApi.builder().apiKey(apiKey).build();
-        var options = OpenAiChatOptions.builder().model(model).build();
-        return OpenAiChatModel.builder().openAiApi(api).defaultOptions(options).build();
-    }
-
-    @Bean
-    public ChatModelPort chatModel(ChatClient.Builder builder) {
-        return new SpringAiChatModel(builder.build());
+    public RemoteChatModelPort remoteChatModelPort(ProviderHttpClient providerHttpClient, ObjectMapper objectMapper) {
+        return new RemoteChatModelPort(providerHttpClient, objectMapper);
     }
 
     @Bean
