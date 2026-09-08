@@ -1,20 +1,21 @@
 package com.rag.tui.ui;
 
-import org.jline.terminal.Terminal;
-import org.jline.terminal.TerminalBuilder;
 import org.junit.jupiter.api.Test;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.nio.charset.StandardCharsets;
+import java.io.IOException;
 import java.util.List;
 
+import static com.rag.tui.ui.Key.KeyType.DOWN;
+import static com.rag.tui.ui.Key.KeyType.ENTER;
+import static com.rag.tui.ui.Key.KeyType.ESC;
+import static com.rag.tui.ui.Key.KeyType.TYPE;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * End-to-end drive of {@link InteractivePrompter} through a real JLine terminal
- * backed by piped byte streams: typing filters the list, Enter returns the
- * selected value, and Esc cancels.
+ * Drives {@link InteractivePrompter#pick(String, List)} end-to-end through an
+ * injected, scripted {@link InteractivePrompter.PickSource}. The selection loop
+ * is real; only the key stream is scripted, so the test is deterministic and
+ * needs no live terminal.
  */
 class InteractivePrompterIntegrationTest {
 
@@ -24,30 +25,34 @@ class InteractivePrompterIntegrationTest {
             new Prompter.Choice("Anthropic", "anthropic"));
 
     @Test
-    void typesToFilterAndSelectsWithEnter() throws Exception {
-        var out = new ByteArrayOutputStream();
-        byte[] input = "op\n".getBytes(StandardCharsets.UTF_8);
-        Terminal terminal = TerminalBuilder.builder()
-                .streams(new ByteArrayInputStream(input), out)
-                .system(false)
-                .build();
-        var sut = new InteractivePrompter(terminal, () -> List.of());
+    void typesToFilterAndSelectsWithEnter() throws IOException {
+        var sink = new StringBuilder();
+        var sut = new InteractivePrompter(
+                keys(typeChar('o'), typeChar('p'), key(ENTER)),
+                sink::append, 8);
 
         var result = sut.pick("Provider", CHOICES);
 
         assertThat(result).hasValue("openai");
-        assertThat(out.toString(StandardCharsets.UTF_8)).contains("[filter: op]");
+        assertThat(sink).contains("[filter: op]");
     }
 
     @Test
-    void escCancelsSelection() throws Exception {
-        var out = new ByteArrayOutputStream();
-        byte[] input = new byte[]{27, 0};
-        Terminal terminal = TerminalBuilder.builder()
-                .streams(new ByteArrayInputStream(input), out)
-                .system(false)
-                .build();
-        var sut = new InteractivePrompter(terminal, () -> List.of());
+    void filterThenNavigateDownSelectsSecondVisible() throws IOException {
+        var sink = new StringBuilder();
+        var sut = new InteractivePrompter(
+                keys(typeChar('o'), key(DOWN), key(ENTER)),
+                sink::append, 8);
+
+        var result = sut.pick("Provider", CHOICES);
+
+        assertThat(result).hasValue("openrouter");
+        assertThat(sink).contains("> OpenRouter");
+    }
+
+    @Test
+    void escapeCancelsSelection() throws IOException {
+        var sut = new InteractivePrompter(keys(key(ESC)), s -> { }, 8);
 
         var result = sut.pick("Provider", CHOICES);
 
@@ -55,13 +60,8 @@ class InteractivePrompterIntegrationTest {
     }
 
     @Test
-    void returnsEmptyWhenNoChoices() throws Exception {
-        var out = new ByteArrayOutputStream();
-        Terminal terminal = TerminalBuilder.builder()
-                .streams(new ByteArrayInputStream(new byte[0]), out)
-                .system(false)
-                .build();
-        var sut = new InteractivePrompter(terminal, () -> List.of());
+    void returnsEmptyWhenNoChoices() throws IOException {
+        var sut = new InteractivePrompter(keys(key(ENTER)), s -> { }, 8);
 
         var result = sut.pick("Provider", List.of());
 
@@ -69,30 +69,30 @@ class InteractivePrompterIntegrationTest {
     }
 
     @Test
-    void abortsInsteadOfLoopingWhenInputIsBroken() throws Exception {
-        var out = new ByteArrayOutputStream();
-        var broken = new BrokenInputStream();
-        Terminal terminal = TerminalBuilder.builder()
-                .streams(broken, out)
-                .system(false)
-                .build();
-        var sut = new InteractivePrompter(terminal, () -> List.of());
+    void abortsWhenSourceEndsMidSelection() throws IOException {
+        var sut = new InteractivePrompter(keys(typeChar('a')), s -> { }, 8);
 
         var result = sut.pick("Provider", CHOICES);
 
         assertThat(result).isEmpty();
     }
 
-    private static final class BrokenInputStream extends java.io.InputStream {
-        private boolean read;
+    private static InteractivePrompter.PickSource keys(Key... keys) {
+        return new InteractivePrompter.PickSource() {
+            int i = 0;
 
-        @Override
-        public int read() throws java.io.IOException {
-            if (!read) {
-                read = true;
-                return 'a';
+            @Override
+            public Key read() throws IOException {
+                return i < keys.length ? keys[i++] : null;
             }
-            throw new java.io.IOException("pipe closed");
-        }
+        };
+    }
+
+    private static Key typeChar(char c) {
+        return new Key(TYPE, c);
+    }
+
+    private static Key key(Key.KeyType t) {
+        return new Key(t, ' ');
     }
 }

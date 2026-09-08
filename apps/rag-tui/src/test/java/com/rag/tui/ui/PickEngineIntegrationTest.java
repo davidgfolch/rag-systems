@@ -1,40 +1,56 @@
 package com.rag.tui.ui;
 
-import org.jline.terminal.Terminal;
-import org.jline.terminal.TerminalBuilder;
 import org.junit.jupiter.api.Test;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
+import java.io.IOException;
 
+import static com.rag.tui.ui.Key.KeyType.DOWN;
+import static com.rag.tui.ui.Key.KeyType.ENTER;
+import static com.rag.tui.ui.Key.KeyType.TYPE;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Drives {@link PickEngine}'s filter + navigation + select cycle end-to-end
- * through a real {@link InteractivePrompter} over a piped JLine terminal.
+ * Drives {@link InteractivePrompter#pick(String, List)} through the real
+ * selection loop + {@link PickEngine} (filter + navigation + select), using a
+ * scripted, deterministic {@link InteractivePrompter.PickSource} so it runs
+ * anywhere without a live terminal.
  */
 class PickEngineIntegrationTest {
 
-    private static final List<Prompter.Choice> CHOICES = List.of(
+    private static final java.util.List<Prompter.Choice> CHOICES = java.util.List.of(
             new Prompter.Choice("OpenAI", "openai"),
             new Prompter.Choice("OpenRouter", "openrouter"),
             new Prompter.Choice("Anthropic", "anthropic"));
 
     @Test
-    void filtersThenNavigatesAndSelects() throws Exception {
-        var out = new ByteArrayOutputStream();
-        byte[] input = "oj\n".getBytes(StandardCharsets.UTF_8);
-        Terminal terminal = TerminalBuilder.builder()
-                .streams(new ByteArrayInputStream(input), out)
-                .system(false)
-                .build();
-        var prompter = new InteractivePrompter(terminal, () -> List.of());
+    void filtersThenNavigatesAndSelects() throws IOException {
+        var sink = new StringBuilder();
+        var sut = new InteractivePrompter(
+                keys(typeChar('o'), key(DOWN), key(ENTER)),
+                sink::append, 8);
 
-        var result = prompter.pick("Provider", CHOICES);
+        var result = sut.pick("Provider", CHOICES);
 
         assertThat(result).hasValue("openrouter");
-        assertThat(out.toString(StandardCharsets.UTF_8)).contains("> OpenRouter");
+        assertThat(sink).contains("> OpenRouter");
+    }
+
+    private static InteractivePrompter.PickSource keys(Key... keys) {
+        return new InteractivePrompter.PickSource() {
+            int i = 0;
+
+            @Override
+            public Key read() throws IOException {
+                return i < keys.length ? keys[i++] : null;
+            }
+        };
+    }
+
+    private static Key typeChar(char c) {
+        return new Key(TYPE, c);
+    }
+
+    private static Key key(Key.KeyType t) {
+        return new Key(t, ' ');
     }
 }

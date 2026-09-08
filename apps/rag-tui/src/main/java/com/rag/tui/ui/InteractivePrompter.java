@@ -10,39 +10,57 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
+
+import static com.rag.tui.ui.Key.KeyType;
 
 /**
  * JLine-backed {@link Prompter}: a filterable single-select list plus a readline
- * free-text prompt, over a real terminal. Pure selection logic lives in
- * {@link PickEngine} so it is unit-testable without a terminal.
+ * free-text prompt, over a real terminal. The selection loop runs against an
+ * injectable {@link PickSource} (pure selection logic stays in {@link PickEngine}),
+ * so it is fully unit-testable without a live terminal.
  */
 public class InteractivePrompter implements Prompter {
 
-    private final Terminal terminal;
     private final LineReader reader;
+    private final PickSource pickSource;
+    private final Consumer<String> renderSink;
+    private final int rows;
 
     public InteractivePrompter(Terminal terminal, Supplier<Collection<String>> commandCandidates) {
-        this.terminal = terminal;
         this.reader = LineReaderBuilder.builder()
                 .terminal(terminal)
                 .completer(new ArgumentCompleter(new StringsCompleter(commandCandidates)))
                 .build();
+        this.pickSource = new TerminalPickSource(terminal);
+        this.renderSink = text -> {
+            terminal.writer().write(text);
+            terminal.flush();
+        };
+        this.rows = Math.max(1, terminal.getHeight() - 1);
+    }
+
+    InteractivePrompter(PickSource pickSource, Consumer<String> renderSink, int rows) {
+        this.reader = null;
+        this.pickSource = pickSource;
+        this.renderSink = renderSink;
+        this.rows = Math.min(rows, 10);
     }
 
     @Override
     public Optional<String> pick(String title, List<Choice> choices) {
         if (choices.isEmpty()) return Optional.empty();
         var engine = new PickEngine(choices);
-        int idleKeys = 0;
+        int idle = 0;
         while (true) {
-            var key = readKey();
+            Key key = read();
             if (key == null) return Optional.empty();
             if (key.type() == KeyType.NONE) {
-                if (++idleKeys > 3) return Optional.empty();
+                if (++idle > 3) return Optional.empty();
                 continue;
             }
-            idleKeys = 0;
+            idle = 0;
             switch (key.type()) {
                 case ESC -> {
                     return Optional.empty();
@@ -55,7 +73,7 @@ public class InteractivePrompter implements Prompter {
                 case UP -> engine.prev();
                 case DOWN -> engine.next();
                 case BACKSPACE -> engine.backspace();
-                case TYPE -> engine.append(key.charValue());
+                case TYPE -> engine.append(key.value());
                 default -> { }
             }
             render(title, engine);
@@ -72,8 +90,15 @@ public class InteractivePrompter implements Prompter {
         }
     }
 
+    private Key read() {
+        try {
+            return pickSource.read();
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
     private void render(String title, PickEngine engine) {
-        var rows = Math.min(terminal.getHeight() - 1, 10);
         var sb = new StringBuilder();
         sb.append("\r\u001B[2K").append(TerminalStyle.prompt(title))
                 .append(" [filter: ").append(engine.filter()).append("]\n")
@@ -88,45 +113,46 @@ public class InteractivePrompter implements Prompter {
             sb.append("\n").append(i == engine.cursor() ? TerminalStyle.command(line) : line);
         }
         sb.append("\n");
-        terminal.writer().write(sb.toString());
-        terminal.flush();
+        renderSink.accept(sb.toString());
     }
 
-    private EmittedKey readKey() {
-        int first;
-        try {
-            first = terminal.reader().read();
-        } catch (IOException e) {
-            return null;
+    interface PickSource {
+        Key read() throws IOException;
+    }
+
+    /** Decodes raw terminal bytes (including ESC sequences) into {@link Key}s. */
+    static final class TerminalPickSource implements PickSource {
+        private final Terminal terminal;
+
+        TerminalPickSource(Terminal terminal) {
+            this.terminal = terminal;
         }
-        if (first < 0) return null;
-        if (first == 3 || first == 4) return new EmittedKey(KeyType.ESC, ' ');
-        if (first == 27) {
-            try {
+
+        @Override
+        public Key read() throws IOException {
+            int first = terminal.reader().read();
+            if (first < 0) return null;
+            if (first == 3 || first == 4) return new Key(KeyType.ESC, ' ');
+            if (first == 27) {
                 int second = terminal.reader().read();
-                if (second != '[') return new EmittedKey(KeyType.ESC, ' ');
+                if (second != '[') return new Key(KeyType.ESC, ' ');
                 int third = terminal.reader().read();
                 return switch (third) {
-                    case 'A' -> new EmittedKey(KeyType.UP, ' ');
-                    case 'B' -> new EmittedKey(KeyType.DOWN, ' ');
-                    default -> new EmittedKey(KeyType.NONE, ' ');
+                    case 'A' -> new Key(KeyType.UP, ' ');
+                    case 'B' -> new Key(KeyType.DOWN, ' ');
+                    default -> new Key(KeyType.NONE, ' ');
                 };
-            } catch (IOException e) {
-                return new EmittedKey(KeyType.ESC, ' ');
             }
+            if (first == 13 || first == 10) return new Key(KeyType.ENTER, ' ');
+            if (first == 127 || first == 8) return new Key(KeyType.BACKSPACE, ' ');
+            if (first == 'k') return new Key(KeyType.UP, ' ');
+            if (first == 'j') return new Key(KeyType.DOWN, ' ');
+            if (first == 'q') return new Key(KeyType.ESC, ' ');
+            if (Character.isLetterOrDigit(first) || first == '-' || first == '_'
+                    || first == '.' || first == ' ') {
+                return new Key(KeyType.TYPE, (char) first);
+            }
+            return new Key(KeyType.NONE, ' ');
         }
-        if (first == 13 || first == 10) return new EmittedKey(KeyType.ENTER, ' ');
-        if (first == 127 || first == 8) return new EmittedKey(KeyType.BACKSPACE, ' ');
-        if (first == 'k') return new EmittedKey(KeyType.UP, ' ');
-        if (first == 'j') return new EmittedKey(KeyType.DOWN, ' ');
-        if (first == 'q') return new EmittedKey(KeyType.ESC, ' ');
-        if (Character.isLetterOrDigit(first) || first == '-' || first == '_' || first == '.' || first == ' ') {
-            return new EmittedKey(KeyType.TYPE, (char) first);
-        }
-        return new EmittedKey(KeyType.NONE, ' ');
     }
-
-    private enum KeyType { ESC, ENTER, UP, DOWN, BACKSPACE, TYPE, NONE }
-
-    private record EmittedKey(KeyType type, char charValue) {}
 }
