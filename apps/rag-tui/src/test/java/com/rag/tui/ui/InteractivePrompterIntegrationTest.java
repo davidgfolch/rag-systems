@@ -67,4 +67,32 @@ class InteractivePrompterIntegrationTest {
 
         assertThat(result).isEmpty();
     }
+
+    @Test
+    void abortsInsteadOfLoopingWhenInputIsBroken() throws Exception {
+        var out = new ByteArrayOutputStream();
+        var broken = new BrokenInputStream();
+        Terminal terminal = TerminalBuilder.builder()
+                .streams(broken, out)
+                .system(false)
+                .build();
+        var sut = new InteractivePrompter(terminal, () -> List.of());
+
+        var result = sut.pick("Provider", CHOICES);
+
+        assertThat(result).isEmpty();
+    }
+
+    private static final class BrokenInputStream extends java.io.InputStream {
+        private boolean read;
+
+        @Override
+        public int read() throws java.io.IOException {
+            if (!read) {
+                read = true;
+                return 'a';
+            }
+            throw new java.io.IOException("pipe closed");
+        }
+    }
 }

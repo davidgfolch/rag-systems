@@ -34,9 +34,15 @@ public class InteractivePrompter implements Prompter {
     public Optional<String> pick(String title, List<Choice> choices) {
         if (choices.isEmpty()) return Optional.empty();
         var engine = new PickEngine(choices);
+        int idleKeys = 0;
         while (true) {
             var key = readKey();
             if (key == null) return Optional.empty();
+            if (key.type() == KeyType.NONE) {
+                if (++idleKeys > 3) return Optional.empty();
+                continue;
+            }
+            idleKeys = 0;
             switch (key.type()) {
                 case ESC -> {
                     return Optional.empty();
@@ -50,7 +56,7 @@ public class InteractivePrompter implements Prompter {
                 case DOWN -> engine.next();
                 case BACKSPACE -> engine.backspace();
                 case TYPE -> engine.append(key.charValue());
-                case NONE -> { }
+                default -> { }
             }
             render(title, engine);
         }
@@ -91,7 +97,7 @@ public class InteractivePrompter implements Prompter {
         try {
             first = terminal.reader().read();
         } catch (IOException e) {
-            return new EmittedKey(KeyType.NONE, ' ');
+            return null;
         }
         if (first < 0) return null;
         if (first == 3 || first == 4) return new EmittedKey(KeyType.ESC, ' ');
