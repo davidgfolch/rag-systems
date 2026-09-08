@@ -7,6 +7,7 @@ import com.rag.tui.launcher.Module;
 import com.rag.tui.launcher.ModuleRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.test.web.client.MockRestServiceServer;
@@ -20,6 +21,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withNoContent;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 class RagApiClientTest {
@@ -122,6 +124,18 @@ class RagApiClientTest {
 
         sut.deleteDocument("http://localhost:8081", "d1");
 
+        server.verify();
+    }
+
+    @Test
+    void listDocumentsReturnsEmptyWhenModuleHasNoDocumentApi() {
+        server.expect(requestTo("http://localhost:8086/api/documents"))
+                .andExpect(method(HttpMethod.GET))
+                .andRespond(withStatus(HttpStatus.NOT_FOUND));
+
+        List<DocumentSummaryDTO> documents = sut.listDocuments("http://localhost:8086");
+
+        assertThat(documents).isEmpty();
         server.verify();
     }
 }

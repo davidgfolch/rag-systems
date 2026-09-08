@@ -5,6 +5,7 @@ import com.rag.common.services.FileDocumentLoader;
 import com.rag.tui.client.ChatGateway;
 import com.rag.tui.client.MemoryClient;
 import com.rag.tui.client.ModuleHealthClient;
+import com.rag.tui.client.ProviderClient;
 import com.rag.tui.client.RagApiClient;
 import com.rag.tui.launcher.Module;
 import com.rag.tui.launcher.ModuleLifecycleManager;
@@ -51,7 +52,8 @@ class InteractiveShellIntegrationTest {
                 RestClient.builder().baseUrl(stub.baseUrl()).build());
         dispatcher = new CommandDispatcher(registry, mock(ModuleLifecycleManager.class),
                 new CommandDispatcher.RagClients(apiClient, chatGateway, memoryClient,
-                        new FileDocumentLoader(), new ModuleHealthClient(RestClient.builder())),
+                        new FileDocumentLoader(), new ModuleHealthClient(RestClient.builder()),
+                        new ProviderClient(stub.baseUrl(), RestClient.builder())),
                 new CommandDispatcher.Settings(5_000, 4, 60), new CommandRegistry());
     }
 

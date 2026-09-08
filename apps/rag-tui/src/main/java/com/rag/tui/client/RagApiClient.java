@@ -18,6 +18,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
 import java.net.URI;
@@ -122,10 +123,14 @@ public class RagApiClient {
      * {@code documents} command does.
      */
     public List<DocumentSummaryDTO> listDocuments(String baseUrl) {
-        var documents = builder.clone().baseUrl(baseUrl).build()
-                .get().uri("/api/documents")
-                .retrieve().body(DocumentSummaryDTO[].class);
-        return documents == null ? List.of() : List.of(documents);
+        try {
+            var documents = builder.clone().baseUrl(baseUrl).build()
+                    .get().uri("/api/documents")
+                    .retrieve().body(DocumentSummaryDTO[].class);
+            return documents == null ? List.of() : List.of(documents);
+        } catch (HttpClientErrorException.NotFound e) {
+            return List.of();
+        }
     }
 
     private <T> T post(String path, Object body, Class<T> responseType) {

@@ -9,15 +9,23 @@ import com.rag.contract.model.ChatMessageDTO;
 import com.rag.tui.client.ChatGateway;
 import com.rag.tui.client.MemoryClient;
 import com.rag.tui.client.ModuleHealthClient;
+import com.rag.tui.client.ProviderClient;
 import com.rag.tui.client.RagApiClient;
 import com.rag.tui.launcher.Module;
 import com.rag.tui.launcher.ModuleLifecycleManager;
 import com.rag.tui.launcher.ModuleRegistry;
 import com.rag.common.services.FileDocumentLoader;
+import com.rag.contract.provider.ModelCapabilitiesDTO;
+import com.rag.contract.provider.ModelCatalogDTO;
+import com.rag.contract.provider.ModelLimitsDTO;
+import com.rag.contract.provider.ModelSpecDTO;
+import com.rag.contract.provider.ProviderModelDTO;
+import com.rag.contract.provider.ProviderStatusDTO;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.client.RestClientException;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -47,9 +55,11 @@ class CommandDispatcherTest {
     private final MemoryClient memoryClient = mock(MemoryClient.class);
     private final FileDocumentLoader fileLoader = mock(FileDocumentLoader.class);
     private final ModuleHealthClient healthClient = mock(ModuleHealthClient.class);
+    private final ProviderClient providerClient = mock(ProviderClient.class);
     private final CommandRegistry commandRegistry = new CommandRegistry();
     private final CommandDispatcher sut = new CommandDispatcher(registry, lifecycle,
-            new CommandDispatcher.RagClients(apiClient, chatGateway, memoryClient, fileLoader, healthClient),
+            new CommandDispatcher.RagClients(apiClient, chatGateway, memoryClient, fileLoader, healthClient,
+                    providerClient),
             new CommandDispatcher.Settings(10_000, 4, 60), commandRegistry);
 
     private String handle(String input) {
@@ -368,5 +378,131 @@ class CommandDispatcherTest {
         var result = handle("ask hello");
 
         assertThat(result).contains("Chat error", "unreachable");
+    }
+
+    @Test
+    void connectShowsProviderStatusAndCatalogFreshness() {
+        mockStatus();
+        when(providerClient.catalog()).thenReturn(catalog(Instant.parse("2026-09-08T10:00:00Z")));
+
+        var result = handle("connect");
+
+        assertThat(result)
+                .contains("chat: ollama/phi4", "embedding: ollama/nomic-embed-text", "dimension 768")
+                .contains("fetched 2026-09-08T10:00:00Z", "2 models");
+    }
+
+    @Test
+    void connectReportsCatalogNotFetchedYet() {
+        mockStatus();
+        when(providerClient.catalog()).thenReturn(catalog(null));
+
+        var result = handle("connect");
+
+        assertThat(result).contains("not fetched yet");
+    }
+
+    @Test
+    void connectListsCatalogGroupedByProvider() {
+        when(providerClient.catalog()).thenReturn(catalog(Instant.parse("2026-09-08T10:00:00Z")));
+
+        var result = handle("connect catalog");
+
+        assertThat(result)
+                .contains("ollama:", "openai:")
+                .contains("phi4 (Phi-4)")
+                .contains("gpt-4o (GPT-4o)", "ctx 128000");
+    }
+
+    @Test
+    void connectFiltersCatalogByProvider() {
+        when(providerClient.catalog()).thenReturn(catalog(Instant.parse("2026-09-08T10:00:00Z")));
+
+        var result = handle("connect catalog open");
+
+        assertThat(result).contains("openai:").doesNotContain("ollama:");
+    }
+
+    @Test
+    void connectReportsUnknownProviderFilter() {
+        when(providerClient.catalog()).thenReturn(catalog(Instant.parse("2026-09-08T10:00:00Z")));
+
+        var result = handle("connect catalog meta");
+
+        assertThat(result).contains("No models for provider 'meta'");
+    }
+
+    @Test
+    void connectReportsEmptyCatalog() {
+        when(providerClient.catalog()).thenReturn(new ModelCatalogDTO(List.of(), "https://models.dev/api.json", null));
+
+        var result = handle("connect catalog");
+
+        assertThat(result).contains("Catalog is empty", "connect refresh");
+    }
+
+    @Test
+    void connectSwitchesChatModel() {
+        var result = handle("connect chat ollama phi4");
+
+        assertThat(result).contains("Chat model switched", "ollama/phi4");
+        verify(providerClient).switchChat("ollama", "phi4");
+    }
+
+    @Test
+    void connectSwitchesEmbeddingModel() {
+        var result = handle("connect embedding openai text-embedding-3-small");
+
+        assertThat(result).contains("Embedding model switched", "openai/text-embedding-3-small");
+        verify(providerClient).switchEmbedding("openai", "text-embedding-3-small");
+    }
+
+    @Test
+    void connectShowsUsageWhenSwitchArgsMissing() {
+        var result = handle("connect chat ollama");
+
+        assertThat(result).contains("Usage: connect chat <provider> <model>");
+        verify(providerClient, never()).switchChat(anyString(), anyString());
+    }
+
+    @Test
+    void connectRefreshesCatalog() {
+        when(providerClient.refreshCatalog()).thenReturn(catalog(Instant.parse("2026-09-08T11:00:00Z")));
+
+        var result = handle("connect refresh");
+
+        assertThat(result).contains("Catalog refreshed", "2 models");
+        verify(providerClient).refreshCatalog();
+    }
+
+    @Test
+    void connectShowsUsageForUnknownSubcommand() {
+        var result = handle("connect frobnicate");
+
+        assertThat(result).contains("Usage: connect");
+    }
+
+    @Test
+    void connectReportsUnreachableProvider() {
+        when(providerClient.status()).thenThrow(new RestClientException("Connection refused"));
+
+        var result = handle("connect");
+
+        assertThat(result).contains("Module unreachable", "Connection refused");
+    }
+
+    private void mockStatus() {
+        when(providerClient.status()).thenReturn(new ProviderStatusDTO(
+                new ModelSpecDTO("ollama", "phi4"),
+                new ModelSpecDTO("ollama", "nomic-embed-text"), "ollama", 768));
+    }
+
+    private static ModelCatalogDTO catalog(Instant fetchedAt) {
+        return new ModelCatalogDTO(List.of(
+                new ProviderModelDTO("ollama", "phi4", "Phi-4", new ModelLimitsDTO(16384, 4096),
+                        new ModelCapabilitiesDTO(true, false, false), null, null),
+                new ProviderModelDTO("openai", "gpt-4o", "GPT-4o", new ModelLimitsDTO(128000, 16384),
+                        new ModelCapabilitiesDTO(false, true, true), null, null)),
+                "https://models.dev/api.json", fetchedAt);
     }
 }

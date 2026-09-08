@@ -5,6 +5,7 @@ import com.rag.common.services.FileDocumentLoader;
 import com.rag.tui.client.ChatGateway;
 import com.rag.tui.client.MemoryClient;
 import com.rag.tui.client.ModuleHealthClient;
+import com.rag.tui.client.ProviderClient;
 import com.rag.tui.client.RagApiClient;
 import com.rag.tui.launcher.Module;
 import com.rag.tui.launcher.ModuleLifecycleManager;
@@ -55,7 +56,8 @@ class CommandDispatcherIntegrationTest {
                 RestClient.builder().baseUrl(stub.baseUrl()).build());
         sut = new CommandDispatcher(registry, lifecycle,
                 new CommandDispatcher.RagClients(apiClient, chatGateway, memoryClient,
-                        new FileDocumentLoader(), new ModuleHealthClient(RestClient.builder())),
+                        new FileDocumentLoader(), new ModuleHealthClient(RestClient.builder()),
+                        new ProviderClient(stub.baseUrl(), RestClient.builder())),
                 new CommandDispatcher.Settings(5_000, 4, 60), new CommandRegistry());
     }
 
@@ -103,7 +105,8 @@ class CommandDispatcherIntegrationTest {
                 new CommandDispatcher.RagClients(
                         new RagApiClient(deadRegistry, RestClient.builder()), chatGateway,
                         mock(MemoryClient.class), new FileDocumentLoader(),
-                        new ModuleHealthClient(RestClient.builder())),
+                        new ModuleHealthClient(RestClient.builder()),
+                        new ProviderClient("http://localhost:1", RestClient.builder())),
                 new CommandDispatcher.Settings(1_000, 4, 60), new CommandRegistry());
 
         var result = dead.handle("add-file " + testFile(), token -> {});

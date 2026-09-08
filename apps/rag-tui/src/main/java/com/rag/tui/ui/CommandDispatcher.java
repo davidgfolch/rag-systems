@@ -6,6 +6,7 @@ import com.rag.contract.model.IngestStatusDTO;
 import com.rag.tui.client.ChatGateway;
 import com.rag.tui.client.MemoryClient;
 import com.rag.tui.client.ModuleHealthClient;
+import com.rag.tui.client.ProviderClient;
 import com.rag.tui.client.RagApiClient;
 import com.rag.tui.launcher.Module;
 import com.rag.tui.launcher.ModuleLifecycleManager;
@@ -67,6 +68,7 @@ public class CommandDispatcher {
                         case "add-url" -> addUrl(arg);
                         case "ask" -> ask(arg, tokenSink);
                         case "history" -> history();
+                        case "connect" -> new ConnectCommand(clients.providerClient()).execute(arg);
                         default -> error("Unknown command. Type 'help' for usage.");
                     };
                 } catch (RestClientException e) {
@@ -266,7 +268,8 @@ public class CommandDispatcher {
     }
 
     public record RagClients(RagApiClient apiClient, ChatGateway chatGateway, MemoryClient memoryClient,
-                             FileDocumentLoader fileLoader, ModuleHealthClient healthClient) {
+                             FileDocumentLoader fileLoader, ModuleHealthClient healthClient,
+                             ProviderClient providerClient) {
     }
 
     public record Settings(long startTimeoutMs, int topK, long chatTimeoutSeconds) {
