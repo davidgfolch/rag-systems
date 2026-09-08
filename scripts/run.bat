@@ -13,6 +13,17 @@ cd /d "%ROOT%"
 REM Bootstrap root .env files from scripts\.env*.example (idempotent)
 call scripts\bootstrap-env.bat
 
+REM Load .env (config) then .env.secrets (secrets override) into the environment
+for %%F in (.env .env.secrets) do (
+    if exist "%%F" (
+        for /f "delims=" %%L in ('findstr /b /v "#" "%%F" 2^>nul') do (
+            for /f "tokens=1,* delims==" %%A in ("%%L") do (
+                if not "%%A"=="" if not "%%B"=="" call set "%%A=%%B"
+            )
+        )
+    )
+)
+
 set "PROFILES=local"
 set "EXTRA_ARGS="
 set "FORCE="

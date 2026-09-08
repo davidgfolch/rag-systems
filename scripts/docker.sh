@@ -17,6 +17,20 @@ cd "$ROOT"
 # Bootstrap root .env files from scripts/.env*.example (idempotent)
 bash scripts/bootstrap-env.sh
 
+# Load .env (config) then .env.secrets (secrets override) so docker-compose can interpolate ${VAR}
+if [ -f .env ]; then
+    set -a
+    # shellcheck disable=SC1091
+    source .env
+    set +a
+fi
+if [ -f .env.secrets ]; then
+    set -a
+    # shellcheck disable=SC1091
+    source .env.secrets
+    set +a
+fi
+
 CMD="${1:-}"
 
 if [ -z "$CMD" ]; then
@@ -67,3 +81,8 @@ case "$CMD" in
         exit 1
         ;;
 esac
+
+# Sync postgres password to the generated PGVECTOR_PASSWORD secret after any up
+if [[ "$CMD" == up* ]]; then
+    bash scripts/pg-pw.sh
+fi

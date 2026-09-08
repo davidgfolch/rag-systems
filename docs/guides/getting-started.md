@@ -32,15 +32,16 @@ Environment files are bootstrapped automatically. Every operational script
 (`docker`, `run`, `sonar`, `install`, `build`, `test`) runs
 `scripts/bootstrap-env.{bat,sh}`, which copies the examples from `scripts/`
 
-- `scripts/.env.example` → `.env`
-- `scripts/.env.secrets.example` → `.env.secrets`
+- `scripts/.env.example` → `.env` (non-secret configuration)
+- `scripts/.env.secrets.example` → `.env.secrets` (secrets: API keys, passwords, tokens)
 
 to the repo root **only if they don't already exist**, and generates random
-passwords for any blank `PGVECTOR_PASSWORD` (`.env`) and
-`SONAR_ADMIN_PASSWORD` (`.env.secrets`). The generated files are gitignored.
+passwords for any blank `PGVECTOR_PASSWORD` and `SONAR_ADMIN_PASSWORD`
+(both in `.env.secrets`). The generated files are gitignored.
 
 So no manual copy is needed — just run any script, then edit `.env` if you want
-to override defaults (e.g. cloud API keys). Defaults point to Ollama local models.
+to override defaults (e.g. profile), and edit `.env.secrets` for any secrets
+(e.g. cloud API keys). Defaults point to Ollama local models.
 
 ## 3. Install Dependencies
 

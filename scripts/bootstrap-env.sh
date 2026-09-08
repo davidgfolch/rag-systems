@@ -27,12 +27,12 @@ for example in scripts/.env*.example; do
     fi
 done
 
-# Fill blank PGVECTOR_PASSWORD in .env
-if [ -f "$ROOT/.env" ] && grep -q "^PGVECTOR_PASSWORD=$" "$ROOT/.env"; then
+# Fill blank PGVECTOR_PASSWORD in .env.secrets
+if [ -f "$ROOT/.env.secrets" ] && grep -q "^PGVECTOR_PASSWORD=$" "$ROOT/.env.secrets"; then
     PASSWORD=$(gen_pw)
-    sed -i.bak "s|^PGVECTOR_PASSWORD=$|PGVECTOR_PASSWORD=$PASSWORD|" "$ROOT/.env"
-    rm -f "$ROOT/.env.bak"
-    echo "Generated PGVECTOR_PASSWORD in .env"
+    sed -i.bak "s|^PGVECTOR_PASSWORD=$|PGVECTOR_PASSWORD=$PASSWORD|" "$ROOT/.env.secrets"
+    rm -f "$ROOT/.env.secrets.bak"
+    echo "Generated PGVECTOR_PASSWORD in .env.secrets"
 fi
 
 # Fill blank SONAR_ADMIN_PASSWORD in .env.secrets

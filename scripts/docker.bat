@@ -17,6 +17,17 @@ cd /d "%ROOT%"
 REM Bootstrap root .env files from scripts\.env*.example (idempotent)
 call scripts\bootstrap-env.bat
 
+REM Load .env (config) then .env.secrets (secrets override) so docker-compose can interpolate vars
+for %%F in (.env .env.secrets) do (
+    if exist "%%F" (
+        for /f "delims=" %%L in ('findstr /b /v "#" "%%F" 2^>nul') do (
+            for /f "tokens=1,* delims==" %%A in ("%%L") do (
+                if not "%%A"=="" if not "%%B"=="" call set "%%A=%%B"
+            )
+        )
+    )
+)
+
 set "CMD=%~1"
 
 if "%CMD%"=="" (
@@ -57,5 +68,8 @@ if "%CMD%"=="up" (
     echo Usage: docker.bat ^<command^> [up^|up-ollama^|up-obs^|up-sonar^|up-all^|down^|logs^|ps]
     exit /b 1
 )
+
+REM Sync postgres password to the generated PGVECTOR_PASSWORD secret after any up
+if "%CMD:~0,2%"=="up" call scripts\pg-pw.bat
 
 endlocal

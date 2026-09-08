@@ -4,6 +4,7 @@ target/
 .vscode
 *.iml
 .env
+.env.secrets
 data/
 models/
 README.md

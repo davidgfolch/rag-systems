@@ -11,6 +11,9 @@ cd /d "%ROOT%"
 REM Bootstrap root .env files from scripts\.env*.example (idempotent)
 call scripts\bootstrap-env.bat
 
+REM Sync docker postgres password to the generated PGVECTOR_PASSWORD secret (idempotent)
+call scripts\pg-pw.bat
+
 if "%~1"=="" (
     echo Installing all RAG modules...
     call mvnw.cmd clean install -DskipTests -Djacoco.skip=true

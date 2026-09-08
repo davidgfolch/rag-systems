@@ -13,6 +13,20 @@ cd "$ROOT"
 # Bootstrap root .env files from scripts/.env*.example (idempotent)
 bash scripts/bootstrap-env.sh
 
+# Load .env (config) then .env.secrets (secrets override) into the environment
+if [ -f .env ]; then
+    set -a
+    # shellcheck disable=SC1091
+    source .env
+    set +a
+fi
+if [ -f .env.secrets ]; then
+    set -a
+    # shellcheck disable=SC1091
+    source .env.secrets
+    set +a
+fi
+
 MODULE=""
 PROFILES="local"
 EXTRA_ARGS=""

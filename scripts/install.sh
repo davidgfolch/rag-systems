@@ -11,6 +11,9 @@ cd "$ROOT"
 # Bootstrap root .env files from scripts/.env*.example (idempotent)
 bash scripts/bootstrap-env.sh
 
+# Sync docker postgres password to the generated PGVECTOR_PASSWORD secret (idempotent)
+bash scripts/pg-pw.sh
+
 codegraph_setup() {
   echo
   echo "===== CodeGraph auto-configuration ====="

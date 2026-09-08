@@ -19,14 +19,14 @@ for %%E in (scripts\.env*.example) do (
     )
 )
 
-REM --- Fill blank PGVECTOR_PASSWORD in .env ---
-if exist ".env" (
+REM --- Fill blank PGVECTOR_PASSWORD in .env.secrets ---
+if exist ".env.secrets" (
     set "PW_LINE="
-    for /f "delims=" %%L in ('findstr /b /c:"PGVECTOR_PASSWORD=" ".env"') do set "PW_LINE=%%L"
+    for /f "delims=" %%L in ('findstr /b /c:"PGVECTOR_PASSWORD=" ".env.secrets"') do set "PW_LINE=%%L"
     if "!PW_LINE!"=="PGVECTOR_PASSWORD=" (
         for /f %%P in ('powershell -NoProfile -Command "$s='abcdef0123456789'; -join (1..32 | ForEach-Object { $s[(Get-Random -Max 16)] })"') do set "PASSWORD=%%P"
-        powershell -NoProfile -Command "(Get-Content '.env') -replace '^PGVECTOR_PASSWORD=$','PGVECTOR_PASSWORD=!PASSWORD!' | Set-Content '.env'"
-        echo Generated PGVECTOR_PASSWORD in .env
+        powershell -NoProfile -Command "(Get-Content '.env.secrets') -replace '^PGVECTOR_PASSWORD=$','PGVECTOR_PASSWORD=!PASSWORD!' | Set-Content '.env.secrets'"
+        echo Generated PGVECTOR_PASSWORD in .env.secrets
     )
 )
 
