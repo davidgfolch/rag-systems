@@ -57,6 +57,8 @@ class ChatGatewayTest {
         feedEvent(session, "{\"type\":\"token\",\"content\":\"Hel\",\"conversationId\":\"x\"}");
         feedEvent(session, "{\"type\":\"token\",\"content\":\"lo\",\"conversationId\":\"x\"}");
         feedEvent(session, "{\"type\":\"done\",\"content\":\"Hello\",\"conversationId\":\"x\"}");
+        runner.join(2000);
+        assertThat(runner.isAlive()).isFalse();
         assertThat(tokens).containsExactly("Hel", "lo");
     }
 
@@ -65,6 +67,9 @@ class ChatGatewayTest {
         startAsk();
         sut.cancel();
         verify(session).close();
+        feedEvent(session, "{\"type\":\"done\",\"content\":\"\",\"conversationId\":\"x\"}");
+        runner.join(2000);
+        assertThat(runner.isAlive()).isFalse();
     }
 
     @Test

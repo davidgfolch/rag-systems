@@ -54,7 +54,8 @@ class InteractiveShellIntegrationTest {
                 new CommandDispatcher.RagClients(apiClient, chatGateway, memoryClient,
                         new FileDocumentLoader(), new ModuleHealthClient(RestClient.builder()),
                         new ProviderClient(stub.baseUrl(), RestClient.builder())),
-                new CommandDispatcher.Settings(5_000, 4, 60), new CommandRegistry());
+                new CommandDispatcher.Settings(5_000, 4, 60), new CommandRegistry(),
+                new NoopPrompter(new StringReader("")));
     }
 
     @AfterEach
@@ -69,7 +70,7 @@ class InteractiveShellIntegrationTest {
         Files.write(pdf, bytes);
         StringWriter out = new StringWriter();
 
-        new InteractiveShell(dispatcher, new StringReader("add-file " + pdf + "\nquit\n"), out).run();
+        new InteractiveShell(dispatcher, new NoopPrompter(new StringReader("add-file " + pdf + "\nquit\n")), out).run();
 
         assertThat(out.toString()).contains("document i-1", "Bye.");
         awaitContains(out, "2 chunks");
@@ -88,7 +89,7 @@ class InteractiveShellIntegrationTest {
         var out = new StringWriter();
 
         new InteractiveShell(dispatcher,
-                new StringReader("add-file definitely-missing.pdf\nhelp\nquit\n"), out).run();
+                new NoopPrompter(new StringReader("add-file definitely-missing.pdf\nhelp\nquit\n")), out).run();
 
         assertThat(out.toString()).contains("Failed to read file");
         assertThat(out.toString()).contains("Available commands");

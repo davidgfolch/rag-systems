@@ -19,6 +19,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 
 import java.io.IOException;
+import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -58,7 +59,8 @@ class CommandDispatcherIntegrationTest {
                 new CommandDispatcher.RagClients(apiClient, chatGateway, memoryClient,
                         new FileDocumentLoader(), new ModuleHealthClient(RestClient.builder()),
                         new ProviderClient(stub.baseUrl(), RestClient.builder())),
-                new CommandDispatcher.Settings(5_000, 4, 60), new CommandRegistry());
+                new CommandDispatcher.Settings(5_000, 4, 60), new CommandRegistry(),
+                new NoopPrompter(new StringReader("")));
     }
 
     @AfterEach
@@ -107,7 +109,8 @@ class CommandDispatcherIntegrationTest {
                         mock(MemoryClient.class), new FileDocumentLoader(),
                         new ModuleHealthClient(RestClient.builder()),
                         new ProviderClient("http://localhost:1", RestClient.builder())),
-                new CommandDispatcher.Settings(1_000, 4, 60), new CommandRegistry());
+                new CommandDispatcher.Settings(1_000, 4, 60), new CommandRegistry(),
+                new NoopPrompter(new StringReader("")));
 
         var result = dead.handle("add-file " + testFile(), token -> {});
 

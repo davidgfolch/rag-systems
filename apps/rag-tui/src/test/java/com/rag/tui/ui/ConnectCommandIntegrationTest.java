@@ -19,7 +19,8 @@ class ConnectCommandIntegrationTest {
     @BeforeEach
     void setUp() throws IOException {
         server = new StubProviderServer();
-        sut = new ConnectCommand(new ProviderClient(server.baseUrl(), RestClient.builder()));
+        sut = new ConnectCommand(new ProviderClient(server.baseUrl(), RestClient.builder()),
+                new NoopPrompter(new java.io.StringReader("")));
     }
 
     @AfterEach

@@ -3,9 +3,9 @@ package com.rag.tui.ui;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
-import java.io.Reader;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.io.Writer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -31,7 +31,7 @@ class InteractiveShellTest {
                 .thenThrow(new ShellExitException());
 
         var out = new StringWriter();
-        var sut = new InteractiveShell(dispatcher, new StringReader("ask hi\nquit\n"), out);
+        var sut = new InteractiveShell(dispatcher, new NoopPrompter(new StringReader("ask hi\nquit\n")), out);
 
         sut.run();
 
@@ -46,7 +46,7 @@ class InteractiveShellTest {
         when(dispatcher.handle(eq("quit"), any())).thenThrow(new ShellExitException());
 
         var out = new StringWriter();
-        var sut = new InteractiveShell(dispatcher, new StringReader("documents\nquit\n"), out);
+        var sut = new InteractiveShell(dispatcher, new NoopPrompter(new StringReader("documents\nquit\n")), out);
 
         sut.run();
 
@@ -67,7 +67,7 @@ class InteractiveShellTest {
                 });
 
         var out = new StringWriter();
-        var sut = new InteractiveShell(dispatcher, new StringReader("ask a\n"), out);
+        var sut = new InteractiveShell(dispatcher, new NoopPrompter(new StringReader("ask a\n")), out);
 
         sut.run();
 
@@ -75,20 +75,21 @@ class InteractiveShellTest {
     }
 
     @Test
-    void wrapsTerminalIoFailure() {
-        Reader failing = new Reader() {
+    void wrapsTerminalWriteFailure() {
+        Writer failing = new Writer() {
             @Override
-            public int read(char[] cbuf, int off, int len) throws IOException {
+            public void write(char[] cbuf, int off, int len) throws IOException {
                 throw new IOException("terminal gone");
             }
 
             @Override
-            public void close() {
-                // no-op: this reader's close is never invoked by the shell
-            }
+            public void flush() {}
+
+            @Override
+            public void close() {}
         };
 
-        var sut = new InteractiveShell(dispatcher, failing, new StringWriter());
+        var sut = new InteractiveShell(dispatcher, new NoopPrompter(new StringReader("ask hi\n")), failing);
 
         assertThatThrownBy(sut::run)
                 .isInstanceOf(InteractiveShell.ShellException.class)
@@ -103,7 +104,7 @@ class InteractiveShellTest {
                 .thenThrow(new ShellExitException());
 
         var out = new StringWriter();
-        var sut = new InteractiveShell(dispatcher, new StringReader("add-file x\nquit\n"), out);
+        var sut = new InteractiveShell(dispatcher, new NoopPrompter(new StringReader("add-file x\nquit\n")), out);
 
         sut.run();
 

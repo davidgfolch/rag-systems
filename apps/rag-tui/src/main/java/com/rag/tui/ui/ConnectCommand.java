@@ -8,23 +8,29 @@ import com.rag.tui.client.ProviderClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
+import java.util.Optional;
+
 import static com.rag.tui.ui.TerminalStyle.success;
 
 /**
  * Renders the {@code connect} command family: provider status, catalog browse,
- * chat/embedding model switching and manual catalog refresh.
+ * chat/embedding model switching and manual catalog refresh. When arguments are
+ * omitted, the provider and/or model are chosen interactively via {@link Prompter}.
  */
 public class ConnectCommand {
 
     private static final Logger log = LoggerFactory.getLogger(ConnectCommand.class);
 
-    static final String USAGE = "Usage: connect [catalog [<provider>] | chat <provider> <model>"
-            + " | embedding <provider> <model> | refresh]";
+    static final String USAGE = "Usage: connect [catalog [<provider>] | chat [<provider> [<model>]]"
+            + " | embedding [<provider> [<model>]] | refresh]";
 
     private final ProviderClient client;
+    private final Prompter prompter;
 
-    public ConnectCommand(ProviderClient client) {
+    public ConnectCommand(ProviderClient client, Prompter prompter) {
         this.client = client;
+        this.prompter = prompter;
     }
 
     public String execute(String arg) {
@@ -32,8 +38,8 @@ public class ConnectCommand {
         var parts = arg.split("\\s+", 3);
         return switch (parts[0]) {
             case "catalog" -> catalog(parts.length > 1 ? parts[1] : "");
-            case "chat" -> chat(parts);
-            case "embedding" -> embedding(parts);
+            case "chat" -> switchChat(parts.length > 1 ? parts[1] : "", parts.length > 2 ? parts[2] : "");
+            case "embedding" -> switchEmbedding(parts.length > 1 ? parts[1] : "", parts.length > 2 ? parts[2] : "");
             case "refresh" -> refresh();
             default -> USAGE;
         };
@@ -119,16 +125,49 @@ public class ConnectCommand {
         }
     }
 
-    private String chat(String[] parts) {
-        if (parts.length < 3) return "Usage: connect chat <provider> <model>";
-        client.switchChat(parts[1], parts[2]);
-        return success("Chat model switched: " + parts[1] + "/" + parts[2]);
+    private String switchChat(String provider, String model) {
+        if (provider.isEmpty() || model.isEmpty()) {
+            var chosen = chooseProviderAndModel("chat", provider, model);
+            if (chosen.isEmpty()) return "";
+            provider = chosen.get().providerId();
+            model = chosen.get().model();
+        }
+        client.switchChat(provider, model);
+        return success("Chat model switched: " + provider + "/" + model);
     }
 
-    private String embedding(String[] parts) {
-        if (parts.length < 3) return "Usage: connect embedding <provider> <model>";
-        client.switchEmbedding(parts[1], parts[2]);
-        return success("Embedding model switched: " + parts[1] + "/" + parts[2]);
+    private String switchEmbedding(String provider, String model) {
+        if (provider.isEmpty() || model.isEmpty()) {
+            var chosen = chooseProviderAndModel("embedding", provider, model);
+            if (chosen.isEmpty()) return "";
+            provider = chosen.get().providerId();
+            model = chosen.get().model();
+        }
+        client.switchEmbedding(provider, model);
+        return success("Embedding model switched: " + provider + "/" + model);
+    }
+
+    private Optional<ModelSpecDTO> chooseProviderAndModel(String kind, String provider, String model) {
+        var models = client.catalog().models();
+        if (provider.isEmpty()) {
+            var providers = models.stream().map(ProviderModelDTO::providerId).distinct().sorted()
+                    .map(id -> new Prompter.Choice(id, id))
+                    .toList();
+            provider = prompter.pick("Choose " + kind + " provider", providers).orElse("");
+            if (provider.isEmpty()) return Optional.empty();
+        }
+        final String prov = provider;
+        var choices = models.stream()
+                .filter(m -> m.providerId().equalsIgnoreCase(prov))
+                .map(m -> new Prompter.Choice(m.modelId(), m.modelId(),
+                        m.name() == null ? "" : m.name()))
+                .toList();
+        if (model.isEmpty()) {
+            if (choices.isEmpty()) return Optional.empty();
+            model = prompter.pick("Choose " + kind + " model for " + prov, choices).orElse("");
+            if (model.isEmpty()) return Optional.empty();
+        }
+        return Optional.of(new ModelSpecDTO(prov, model));
     }
 
     private String refresh() {

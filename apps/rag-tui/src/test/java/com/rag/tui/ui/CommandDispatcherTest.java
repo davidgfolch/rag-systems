@@ -29,12 +29,14 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -57,10 +59,11 @@ class CommandDispatcherTest {
     private final ModuleHealthClient healthClient = mock(ModuleHealthClient.class);
     private final ProviderClient providerClient = mock(ProviderClient.class);
     private final CommandRegistry commandRegistry = new CommandRegistry();
+    private final Prompter prompter = mock(Prompter.class);
     private final CommandDispatcher sut = new CommandDispatcher(registry, lifecycle,
             new CommandDispatcher.RagClients(apiClient, chatGateway, memoryClient, fileLoader, healthClient,
                     providerClient),
-            new CommandDispatcher.Settings(10_000, 4, 60), commandRegistry);
+            new CommandDispatcher.Settings(10_000, 4, 60), commandRegistry, prompter);
 
     private String handle(String input) {
         return sut.handle(input, token -> {});
@@ -124,6 +127,37 @@ class CommandDispatcherTest {
         var result = handle("use nope");
 
         assertThat(result).contains("Unknown module");
+    }
+
+    @Test
+    void usePromptsForModuleWhenNoArgumentGiven() {
+        when(prompter.pick(eq("Switch active module"), anyList())).thenReturn(Optional.of("rag-advanced"));
+
+        var result = handle("use");
+
+        assertThat(result).contains("Active module: rag-advanced");
+        assertThat(registry.active().name()).isEqualTo("rag-advanced");
+    }
+
+    @Test
+    void useCancelledPromptIsNoOp() {
+        when(prompter.pick(eq("Switch active module"), anyList())).thenReturn(Optional.empty());
+
+        var result = handle("use");
+
+        assertThat(result).isEmpty();
+        assertThat(registry.active().name()).isEqualTo("rag-basic");
+    }
+
+    @Test
+    void startPromptsForModuleWhenNoArgumentGiven() {
+        when(prompter.pick(eq("Start module"), anyList())).thenReturn(Optional.of("rag-basic"));
+        when(lifecycle.start(registry.find("rag-basic").get())).thenReturn(true);
+        when(healthClient.waitUntilUp(anyString(), anyLong(), any())).thenReturn(true);
+
+        var result = handle("start");
+
+        assertThat(result).contains("Started rag-basic", "ready");
     }
 
     @Test
@@ -223,12 +257,28 @@ class CommandDispatcherTest {
     }
 
     @Test
-    void deleteWithoutArgumentShowsUsage() {
+    void deleteWithoutArgumentCancelsWhenNoReachableDocuments() {
+        when(healthClient.isUp("http://localhost:8081")).thenReturn(false);
+        when(healthClient.isUp("http://localhost:8082")).thenReturn(false);
+
         var result = handle("delete");
 
-        assertThat(result).contains("Usage: delete <document-id>");
-        verify(apiClient, never()).deleteDocument(anyString());
+        assertThat(result).isEmpty();
         verify(apiClient, never()).deleteDocument(anyString(), anyString());
+    }
+
+    @Test
+    void deletePromptsAndDeletesChosenDocument() {
+        when(healthClient.isUp("http://localhost:8081")).thenReturn(true);
+        when(apiClient.listDocuments("http://localhost:8081")).thenReturn(List.of(
+                new DocumentSummaryDTO().documentId("d1").title("note.txt").chunkCount(3)));
+        when(apiClient.listDocuments("http://localhost:8082")).thenReturn(List.of());
+        when(prompter.pick(eq("Delete document"), anyList())).thenReturn(Optional.of("d1"));
+
+        var result = handle("delete");
+
+        assertThat(result).contains("Deleted document d1", "rag-basic");
+        verify(apiClient).deleteDocument("http://localhost:8081", "d1");
     }
 
     @Test
@@ -458,10 +508,12 @@ class CommandDispatcherTest {
     }
 
     @Test
-    void connectShowsUsageWhenSwitchArgsMissing() {
+    void connectCancelsSwitchWhenModelPromptCancelled() {
+        when(providerClient.catalog()).thenReturn(catalog(Instant.parse("2026-09-08T10:00:00Z")));
+
         var result = handle("connect chat ollama");
 
-        assertThat(result).contains("Usage: connect chat <provider> <model>");
+        assertThat(result).isEmpty();
         verify(providerClient, never()).switchChat(anyString(), anyString());
     }
 

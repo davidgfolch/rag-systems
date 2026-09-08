@@ -18,6 +18,7 @@ public final class StubModuleServer {
     private final HttpServer server;
     private final AtomicReference<byte[]> lastIngestBody = new AtomicReference<>();
     private final AtomicReference<String> lastIngestContentType = new AtomicReference<>();
+    private final AtomicReference<String> documentsBody = new AtomicReference<>("[]");
 
     public StubModuleServer() throws IOException {
         server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
@@ -44,6 +45,9 @@ public final class StubModuleServer {
         server.createContext("/api/conversations", exchange -> {
             respond(exchange, 200, "[]");
         });
+        server.createContext("/api/documents", exchange -> {
+            respond(exchange, 200, documentsBody.get());
+        });
         server.setExecutor(null);
         server.start();
     }
@@ -62,6 +66,10 @@ public final class StubModuleServer {
 
     public String lastIngestContentType() {
         return lastIngestContentType.get();
+    }
+
+    public void documents(String json) {
+        documentsBody.set(json);
     }
 
     public void stop() {
