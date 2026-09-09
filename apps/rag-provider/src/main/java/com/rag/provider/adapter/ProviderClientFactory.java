@@ -73,11 +73,17 @@ public class ProviderClientFactory {
 
     private static OpenAiApi openAiApi(ProviderProfile profile) {
         var builder = OpenAiApi.builder().apiKey(profile.apiKey());
-        var baseUrl = profile.baseUrl();
+        var baseUrl = withoutApiVersion(profile.baseUrl());
         if (ProviderType.OPENAI_COMPATIBLE.equals(profile.type())
                 || (baseUrl != null && !baseUrl.isBlank())) {
             return builder.baseUrl(baseUrl).build();
         }
         return builder.build();
+    }
+
+    static String withoutApiVersion(String baseUrl) {
+        if (baseUrl == null || baseUrl.isBlank()) return baseUrl;
+        var trimmed = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+        return trimmed.endsWith("/v1") ? trimmed.substring(0, trimmed.length() - 3) : baseUrl;
     }
 }

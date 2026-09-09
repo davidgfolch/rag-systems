@@ -40,4 +40,16 @@ class ProviderClientFactoryTest {
         assertThat(factory.chatModel(profile, "some-model")).isInstanceOf(OpenAiChatModel.class);
         assertThat(factory.embeddingModel(profile, "some-embedding")).isInstanceOf(OpenAiEmbeddingModel.class);
     }
+
+    @Test
+    void shouldStripApiVersionFromBaseUrlOnce() {
+        assertThat(ProviderClientFactory.withoutApiVersion("https://openrouter.ai/api/v1"))
+                .isEqualTo("https://openrouter.ai/api");
+        assertThat(ProviderClientFactory.withoutApiVersion("https://api.groq.com/openai/v1/"))
+                .isEqualTo("https://api.groq.com/openai");
+        assertThat(ProviderClientFactory.withoutApiVersion("https://v2.glhf.chat"))
+                .isEqualTo("https://v2.glhf.chat");
+        assertThat(ProviderClientFactory.withoutApiVersion(null)).isNull();
+        assertThat(ProviderClientFactory.withoutApiVersion("")).isEqualTo("");
+    }
 }

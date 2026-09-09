@@ -75,6 +75,38 @@ class InteractiveShellTest {
     }
 
     @Test
+    void printsProviderSummaryAtStartupWhenAvailable() {
+        when(dispatcher.providerSummary()).thenReturn("Chat model: ollama/phi4\nEmbedding model: ollama/nomic-embed-text");
+        when(dispatcher.handle(eq("quit"), any())).thenThrow(new ShellExitException());
+
+        var out = new StringWriter();
+        var sut = new InteractiveShell(dispatcher, new NoopPrompter(new StringReader("quit\n")), out);
+
+        sut.run();
+
+        assertThat(out.toString())
+                .contains("RAG TUI")
+                .contains("Chat model: ollama/phi4")
+                .contains("Embedding model: ollama/nomic-embed-text")
+                .contains("Bye.");
+    }
+
+    @Test
+    void skipsProviderSummaryWhenUnreachable() {
+        when(dispatcher.providerSummary()).thenReturn("");
+        when(dispatcher.handle(eq("quit"), any())).thenThrow(new ShellExitException());
+
+        var out = new StringWriter();
+        var sut = new InteractiveShell(dispatcher, new NoopPrompter(new StringReader("quit\n")), out);
+
+        sut.run();
+
+        String text = out.toString();
+        assertThat(text).doesNotContain("Providers:");
+        assertThat(text).contains("Bye.");
+    }
+
+    @Test
     void wrapsTerminalWriteFailure() {
         Writer failing = new Writer() {
             @Override

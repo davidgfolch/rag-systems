@@ -17,6 +17,7 @@ public final class StubProviderServer {
 
     private final HttpServer server;
     private final AtomicReference<String> lastSwitchBody = new AtomicReference<>();
+    private final AtomicReference<String> lastConfigureBody = new AtomicReference<>();
 
     public StubProviderServer() throws IOException {
         server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
@@ -33,6 +34,10 @@ public final class StubProviderServer {
         server.createContext("/api/provider/embedding", exchange -> {
             lastSwitchBody.set(readBody(exchange));
             respond(exchange, 204, "");
+        });
+        server.createContext("/api/provider/configure", exchange -> {
+            lastConfigureBody.set(readBody(exchange));
+            respond(exchange, 200, statusJson());
         });
         server.createContext("/api/provider", exchange -> {
             respond(exchange, 200, statusJson());
@@ -53,6 +58,10 @@ public final class StubProviderServer {
         return lastSwitchBody.get();
     }
 
+    public String lastConfigureBody() {
+        return lastConfigureBody.get();
+    }
+
     public void stop() {
         server.stop(0);
     }
@@ -70,7 +79,8 @@ public final class StubProviderServer {
                   {"providerId":"ollama","modelId":"phi4","name":"Phi-4",
                    "limits":{"context":16384,"output":4096},
                    "capabilities":{"reasoning":true,"toolCall":false,"structuredOutput":false},
-                   "cost":null,"status":null}],
+                   "cost":null,"status":null,
+                   "baseUrl":"http://ollama.local","apiKeyEnv":"OLLAMA_API_KEY"}],
                  "source":"https://models.dev/api.json",
                  "fetchedAt":"2026-09-08T10:00:00Z"}""";
     }

@@ -5,13 +5,18 @@ import org.jline.utils.NonBlockingReader;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.Writer;
 import java.util.ArrayDeque;
+import java.util.List;
 import java.util.Queue;
 
 import static com.rag.tui.ui.Key.KeyType.BACKSPACE;
 import static com.rag.tui.ui.Key.KeyType.DOWN;
 import static com.rag.tui.ui.Key.KeyType.ENTER;
 import static com.rag.tui.ui.Key.KeyType.ESC;
+import static com.rag.tui.ui.Key.KeyType.LEFT;
+import static com.rag.tui.ui.Key.KeyType.RIGHT;
 import static com.rag.tui.ui.Key.KeyType.TYPE;
 import static com.rag.tui.ui.Key.KeyType.UP;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -47,10 +52,53 @@ class TerminalPickSourceTest {
     }
 
     @Test
+    void keepsVimLettersWhenNavigationIsDisabled() throws Exception {
+        var source = new InteractivePrompter.TerminalPickSource(
+                terminal('s', 'k', '-', 'o', 'r', '-', 'v', '1', EOF), false);
+
+        assertThat(source.read()).isEqualTo(new Key(TYPE, 's'));
+        assertThat(source.read()).isEqualTo(new Key(TYPE, 'k'));
+        assertThat(source.read()).isEqualTo(new Key(TYPE, '-'));
+        assertThat(source.read()).isEqualTo(new Key(TYPE, 'o'));
+        assertThat(source.read()).isEqualTo(new Key(TYPE, 'r'));
+        assertThat(source.read()).isEqualTo(new Key(TYPE, '-'));
+        assertThat(source.read()).isEqualTo(new Key(TYPE, 'v'));
+        assertThat(source.read()).isEqualTo(new Key(TYPE, '1'));
+        assertThat(source.read()).isNull();
+    }
+
+    @Test
+    void decodesSs3ApplicationArrows() throws Exception {
+        var source = new InteractivePrompter.TerminalPickSource(
+                terminal(27, 'O', 'A', 27, 'O', 'B', 27, 'O', 'C', 27, 'O', 'D'));
+
+        assertThat(source.read()).isEqualTo(new Key(UP, ' '));
+        assertThat(source.read()).isEqualTo(new Key(DOWN, ' '));
+        assertThat(source.read()).isEqualTo(new Key(RIGHT, ' '));
+        assertThat(source.read()).isEqualTo(new Key(LEFT, ' '));
+    }
+
+    @Test
+    void returnsEscapeWhenSecondByteIsNotASequencePrefix() throws Exception {
+        var source = new InteractivePrompter.TerminalPickSource(terminal(27, EOF));
+
+        assertThat(source.read()).isEqualTo(new Key(ESC, ' '));
+    }
+
+    @Test
     void returnsEscapeAndNullOnClosedStream() throws Exception {
         var source = new InteractivePrompter.TerminalPickSource(terminal(EOF));
 
         assertThat(source.read()).isNull();
+    }
+
+    @Test
+    void promptKeepsPastedApiKeyIntact() throws Exception {
+        Terminal terminal = terminal('s', 'k', '-', 'o', 'r', '-', 'v', '1', '-', 'a', 'b', 13);
+        when(terminal.writer()).thenReturn(new PrintWriter(Writer.nullWriter()));
+        var sut = new InteractivePrompter(terminal, (line, cursor) -> List.of());
+
+        assertThat(sut.prompt("> ")).isEqualTo("sk-or-v1-ab");
     }
 
     private static Terminal terminal(int... bytes) throws IOException {

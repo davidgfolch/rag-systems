@@ -43,7 +43,8 @@ public class ProviderHttpClient {
             return parse(response, responseType);
         } catch (IOException | InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new IllegalStateException("Provider request failed for " + path + ": " + e.getMessage(), e);
+            throw new IllegalStateException(
+                    "Provider request failed for " + path + " at " + baseUrl + ": " + describe(e), e);
         }
     }
 
@@ -54,7 +55,8 @@ public class ProviderHttpClient {
             return parse(response, responseType);
         } catch (IOException | InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new IllegalStateException("Provider request failed for " + path + ": " + e.getMessage(), e);
+            throw new IllegalStateException(
+                    "Provider request failed for " + path + " at " + baseUrl + ": " + describe(e), e);
         }
     }
 
@@ -77,7 +79,8 @@ public class ProviderHttpClient {
             return response.body();
         } catch (IOException | InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new IllegalStateException("Provider stream request failed for " + path + ": " + e.getMessage(), e);
+            throw new IllegalStateException(
+                    "Provider stream request failed for " + path + " at " + baseUrl + ": " + describe(e), e);
         }
     }
 
@@ -95,6 +98,12 @@ public class ProviderHttpClient {
 
     private URI uri(String path) {
         return URI.create(baseUrl + path);
+    }
+
+    private static String describe(Throwable e) {
+        return e.getMessage() != null && !e.getMessage().isBlank()
+                ? e.getMessage()
+                : e.getClass().getSimpleName();
     }
 
     private static String trimSlash(String url) {

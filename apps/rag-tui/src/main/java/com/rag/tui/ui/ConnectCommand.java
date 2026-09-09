@@ -7,10 +7,13 @@ import com.rag.contract.provider.ProviderStatusDTO;
 import com.rag.tui.client.ProviderClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.util.List;
 import java.util.Optional;
 
+import static com.rag.tui.ui.TerminalStyle.error;
 import static com.rag.tui.ui.TerminalStyle.success;
 
 /**
@@ -22,8 +25,11 @@ public class ConnectCommand {
 
     private static final Logger log = LoggerFactory.getLogger(ConnectCommand.class);
 
-    static final String USAGE = "Usage: connect [catalog [<provider>] | chat [<provider> [<model>]]"
-            + " | embedding [<provider> [<model>]] | refresh]";
+    static final String USAGE = "Usage: connect <catalog|chat|embedding|refresh> [args]\n"
+            + "  connect catalog [<provider>]      browse the model catalog\n"
+            + "  connect chat <provider> <model>   switch the chat model\n"
+            + "  connect embedding <provider> <model>   switch the embedding model\n"
+            + "  connect refresh                   refresh the model catalog";
 
     private final ProviderClient client;
     private final Prompter prompter;
@@ -41,8 +47,26 @@ public class ConnectCommand {
             case "chat" -> switchChat(parts.length > 1 ? parts[1] : "", parts.length > 2 ? parts[2] : "");
             case "embedding" -> switchEmbedding(parts.length > 1 ? parts[1] : "", parts.length > 2 ? parts[2] : "");
             case "refresh" -> refresh();
-            default -> USAGE;
+            default -> switchChatByProvider(parts[0], parts.length > 1 ? parts[1] : "");
         };
+    }
+
+    /** Renders the active chat/embedding models (shown on TUI startup). */
+    public String activeSpecs() {
+        var status = client.status();
+        return "Chat model: " + spec(status.chat())
+                + "\nEmbedding model: " + spec(status.embedding())
+                + " (dimension " + status.embeddingDimension() + ")";
+    }
+
+    private String switchChatByProvider(String provider, String model) {
+        var catalog = client.catalog();
+        boolean known = catalog != null && catalog.models().stream()
+                .map(ProviderModelDTO::providerId)
+                .distinct()
+                .anyMatch(id -> id.equalsIgnoreCase(provider));
+        if (!known) return USAGE;
+        return switchChat(provider, model);
     }
 
     private String status() {
@@ -58,7 +82,7 @@ public class ConnectCommand {
         } else {
             sb.append(String.format(" (fetched %s, %d models)", catalog.fetchedAt(), catalog.models().size()));
         }
-        log.info("Connect status rendered: chatProvider={}, chatModel={}, embeddingProvider={}, embeddingModel={}",
+        log.debug("Connect status rendered: chatProvider={}, chatModel={}, embeddingProvider={}, embeddingModel={}",
                 status.chat().providerId(), status.chat().model(),
                 status.embedding().providerId(), status.embedding().model());
         return sb.toString();
@@ -96,7 +120,7 @@ public class ConnectCommand {
             }
             sb.append("\n");
         }
-        log.info("Connect catalog rendered: {} models", models.size());
+        log.debug("Connect catalog rendered: {} models", models.size());
         return sb.toString();
     }
 
@@ -132,8 +156,10 @@ public class ConnectCommand {
             provider = chosen.get().providerId();
             model = chosen.get().model();
         }
-        client.switchChat(provider, model);
-        return success("Chat model switched: " + provider + "/" + model);
+        final String prov = provider;
+        final String mod = model;
+        return runSwitch(() -> client.switchChat(prov, mod), provider,
+                "Chat model switched: " + provider + "/" + model);
     }
 
     private String switchEmbedding(String provider, String model) {
@@ -143,8 +169,49 @@ public class ConnectCommand {
             provider = chosen.get().providerId();
             model = chosen.get().model();
         }
-        client.switchEmbedding(provider, model);
-        return success("Embedding model switched: " + provider + "/" + model);
+        final String prov = provider;
+        final String mod = model;
+        return runSwitch(() -> client.switchEmbedding(prov, mod), provider,
+                "Embedding model switched: " + provider + "/" + model);
+    }
+
+    /**
+     * Runs a switch, offering to register the provider at runtime when
+     * rag-provider rejects it as unknown; the switch is retried once after a
+     * successful registration.
+     */
+    private String runSwitch(Runnable action, String providerId, String successMessage) {
+        boolean configured = false;
+        while (true) {
+            try {
+                action.run();
+                return success(successMessage);
+            } catch (RestClientResponseException e) {
+                String rejection = e.getResponseBodyAsString();
+                if (!configured && rejection.contains("Unknown provider")) {
+                    configured = true;
+                    String setup = attemptConfigure(providerId);
+                    if (setup == null) continue;
+                    return setup;
+                }
+                log.warn("Switch rejected by rag-provider: {}", rejection);
+                return error("Request rejected by rag-provider: "
+                        + (rejection.isEmpty() ? e.getMessage() : rejection));
+            } catch (RestClientException e) {
+                log.warn("Provider module unreachable: {}", e.getMessage());
+                return error("Provider module unreachable: " + e.getMessage());
+            }
+        }
+    }
+
+    /** Returns null when the switch should be retried, "" when cancelled, else an error text. */
+    private String attemptConfigure(String providerId) {
+        try {
+            return new ConfigureProviderFlow(client, prompter).configure(providerId) ? null : "";
+        } catch (RestClientException e) {
+            log.warn("Provider module unreachable while configuring: {}", e.getMessage());
+            return error("Provider module unreachable: " + e.getMessage());
+        }
     }
 
     private Optional<ModelSpecDTO> chooseProviderAndModel(String kind, String provider, String model) {

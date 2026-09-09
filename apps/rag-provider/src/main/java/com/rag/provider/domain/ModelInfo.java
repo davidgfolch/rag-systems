@@ -10,8 +10,16 @@ package com.rag.provider.domain;
  * @param capabilities reasoning, tool-calling and structured-output flags
  * @param cost         input/output price per million tokens (USD)
  * @param status       availability status (alpha/beta/deprecated), null when stable
+ * @param baseUrl      provider's OpenAI-compatible base URL from models.dev, null when unpublished
+ * @param apiKeyEnv    first env var models.dev declares for the provider's API key, null when none
  */
 public record ModelInfo(String providerId, String modelId, String name,
                         ModelLimits limits, ModelCapabilities capabilities,
-                        ModelCost cost, String status) {
+                        ModelCost cost, String status, String baseUrl, String apiKeyEnv) {
+
+    public ModelInfo(String providerId, String modelId, String name,
+                     ModelLimits limits, ModelCapabilities capabilities,
+                     ModelCost cost, String status) {
+        this(providerId, modelId, name, limits, capabilities, cost, status, null, null);
+    }
 }

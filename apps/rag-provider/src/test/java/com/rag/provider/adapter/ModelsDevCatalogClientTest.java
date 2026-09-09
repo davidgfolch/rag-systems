@@ -23,7 +23,7 @@ class ModelsDevCatalogClientTest {
     private static final ObjectMapper OM = new ObjectMapper();
 
     private static final String SAMPLE = """
-            {"ollama":{"name":"Ollama","models":{
+            {"ollama":{"name":"Ollama","api":"http://localhost:11434","env":["OLLAMA_API_KEY"],"models":{
               "phi4":{"name":"Phi 4","limit":{"context":16000},"cost":{"input":0.0,"output":0.0},
                       "reasoning":true,"tool_call":false,"structured_output":true},
               "nomic-embed-text":{"name":"Nomic Embed Text","limit":{"context":8192,"output":512},"status":"beta"}}},
@@ -47,12 +47,16 @@ class ModelsDevCatalogClientTest {
         assertThat(phi4.capabilities().structuredOutput()).isTrue();
         assertThat(phi4.cost().inputPerMillion()).isZero();
         assertThat(phi4.status()).isNull();
+        assertThat(phi4.baseUrl()).isEqualTo("http://localhost:11434");
+        assertThat(phi4.apiKeyEnv()).isEqualTo("OLLAMA_API_KEY");
 
         assertThat(find(models, "ollama", "nomic-embed-text").status()).isEqualTo("beta");
         var gpt4o = find(models, "openai", "gpt-4o");
         assertThat(gpt4o.cost().inputPerMillion()).isEqualTo(2.5);
         assertThat(gpt4o.cost().outputPerMillion()).isEqualTo(10);
         assertThat(gpt4o.limits().context()).isEqualTo(128000);
+        assertThat(gpt4o.baseUrl()).isNull();
+        assertThat(gpt4o.apiKeyEnv()).isNull();
     }
 
     @Test

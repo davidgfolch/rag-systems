@@ -18,6 +18,7 @@ public class InteractiveShell {
     public void run() {
         try {
             write(TerminalStyle.welcome("RAG TUI - type 'help' for commands, 'quit' to exit"));
+            writeProviderStatus();
             String line;
             while ((line = prompter.prompt("> ")) != null) {
                 if (line.isEmpty()) continue;
@@ -25,6 +26,13 @@ public class InteractiveShell {
             }
         } catch (IOException e) {
             throw new ShellException("Terminal I/O error", e);
+        }
+    }
+
+    private void writeProviderStatus() throws IOException {
+        String summary = dispatcher.providerSummary();
+        if (summary != null && !summary.isEmpty()) {
+            write(TerminalStyle.info("Providers:\n" + summary));
         }
     }
 

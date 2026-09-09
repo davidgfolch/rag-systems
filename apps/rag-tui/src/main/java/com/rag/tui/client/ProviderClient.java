@@ -1,5 +1,6 @@
 package com.rag.tui.client;
 
+import com.rag.contract.provider.ConfigureProviderRequest;
 import com.rag.contract.provider.ModelCatalogDTO;
 import com.rag.contract.provider.ModelSpecDTO;
 import com.rag.contract.provider.ProviderStatusDTO;
@@ -24,17 +25,17 @@ public class ProviderClient {
     }
 
     public ProviderStatusDTO status() {
-        log.info("Provider status requested from {}", baseUrl);
+        log.debug("Provider status requested from {}", baseUrl);
         return rest.get().uri("/api/provider").retrieve().body(ProviderStatusDTO.class);
     }
 
     public ModelCatalogDTO catalog() {
-        log.info("Model catalog requested from {}", baseUrl);
+        log.debug("Model catalog requested from {}", baseUrl);
         return rest.get().uri("/api/provider/catalog").retrieve().body(ModelCatalogDTO.class);
     }
 
     public ModelCatalogDTO refreshCatalog() {
-        log.info("Model catalog refresh requested from {}", baseUrl);
+        log.debug("Model catalog refresh requested from {}", baseUrl);
         return rest.post().uri("/api/provider/catalog/refresh").retrieve().body(ModelCatalogDTO.class);
     }
 
@@ -46,6 +47,12 @@ public class ProviderClient {
     public void switchEmbedding(String providerId, String model) {
         log.info("Embedding model switch requested: providerId={}, model={}", providerId, model);
         postSwitch("/api/provider/embedding", providerId, model);
+    }
+
+    public ProviderStatusDTO configure(ConfigureProviderRequest request) {
+        log.info("Provider profile configure requested: providerId={}", request.providerId());
+        return rest.post().uri("/api/provider/configure")
+                .body(request).retrieve().body(ProviderStatusDTO.class);
     }
 
     private void postSwitch(String path, String providerId, String model) {

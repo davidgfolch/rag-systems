@@ -9,6 +9,7 @@ import static com.rag.tui.ui.Key.KeyType.DOWN;
 import static com.rag.tui.ui.Key.KeyType.ENTER;
 import static com.rag.tui.ui.Key.KeyType.ESC;
 import static com.rag.tui.ui.Key.KeyType.TYPE;
+import static com.rag.tui.ui.Key.KeyType.UP;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
@@ -75,6 +76,27 @@ class InteractivePrompterIntegrationTest {
         var result = sut.pick("Provider", CHOICES);
 
         assertThat(result).isEmpty();
+    }
+
+    @Test
+    void recallsPreviousSubmissionViaArrowUpOnNextPrompt() throws IOException {
+        var sut = new InteractivePrompter(
+                keys(typeChar('h'), typeChar('i'), key(ENTER), key(UP), key(ENTER)),
+                s -> { }, 8);
+
+        assertThat(sut.prompt("> ")).isEqualTo("hi");
+        assertThat(sut.prompt("> ")).isEqualTo("hi");
+    }
+
+    @Test
+    void keepsSubmittedLineVisibleAndClearsOnlyPopupAreaOnSubmit() throws IOException {
+        var sink = new StringBuilder();
+        var sut = new InteractivePrompter(keys(typeChar('h'), typeChar('i'), key(ENTER)), sink::append, 8);
+
+        assertThat(sut.prompt("> ")).isEqualTo("hi");
+        assertThat(sink).contains("hi");
+        assertThat(sink.toString()).endsWith("\u001B[J\r\n");
+        assertThat(sink.toString()).doesNotEndWith("\u001B[2K\u001B[J");
     }
 
     private static InteractivePrompter.PickSource keys(Key... keys) {

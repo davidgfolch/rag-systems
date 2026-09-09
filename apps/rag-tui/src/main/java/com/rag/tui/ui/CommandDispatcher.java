@@ -91,6 +91,19 @@ public class CommandDispatcher {
         }
     }
 
+    /**
+     * Active provider models for the startup banner. Empty when rag-provider is
+     * unreachable, so the banner stays clean during development.
+     */
+    public String providerSummary() {
+        try {
+            return new ConnectCommand(clients.providerClient(), prompter).activeSpecs();
+        } catch (RuntimeException e) {
+            log.debug("Provider summary unavailable at startup: {}", e.getMessage());
+            return "";
+        }
+    }
+
     private List<Prompter.Choice> moduleChoices() {
         return registry.modules().stream()
                 .map(m -> new Prompter.Choice(m.name(), m.name()))
