@@ -50,16 +50,19 @@ public class ComputeController {
 
     @PostMapping(value = "/api/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter stream(@RequestBody CompleteRequest request) {
-        var emitter = new SseEmitter();
+        var emitter = new SseEmitter(0L);
+        log.info("Chat stream started: promptLength={}", request.prompt().length());
         var subscription = chatService.stream(request.prompt()).subscribe(
                 token -> send(emitter, new ChatResponse("token", token, null)),
                 error -> fail(emitter, error),
                 () -> {
                     send(emitter, new ChatResponse("done", null, null));
                     emitter.complete();
+                    log.info("Chat stream completed: promptLength={}", request.prompt().length());
                 });
         emitter.onCompletion(subscription::dispose);
         emitter.onTimeout(() -> {
+            log.warn("Chat stream emitter timed out, disposing subscription");
             subscription.dispose();
             emitter.complete();
         });

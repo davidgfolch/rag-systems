@@ -36,12 +36,12 @@ class CommandCompletionTest {
     }
 
     @Test
-    void showsProvidersContainingTypedToken() {
+    void showsProvidersStartingWithTypedToken() {
         catalog();
 
         var result = sut.candidates("connect o", 9);
 
-        assertThat(result).contains("openai", "openrouter", "ollama", "cohere");
+        assertThat(result).containsExactly("ollama", "openai", "openrouter");
     }
 
     @Test
@@ -63,12 +63,12 @@ class CommandCompletionTest {
     }
 
     @Test
-    void showsSubcommandsAndMatchingProvidersOnTypedConnectToken() {
+    void showsMatchingProvidersOnTypedConnectToken() {
         catalog();
 
         var result = sut.candidates("connect o", 9);
 
-        assertThat(result).contains("catalog", "openai", "openrouter", "ollama", "cohere");
+        assertThat(result).containsExactly("ollama", "openai", "openrouter");
     }
 
     @Test
@@ -77,7 +77,7 @@ class CommandCompletionTest {
 
         var result = sut.candidates("connect chat o", 14);
 
-        assertThat(result).contains("openai", "openrouter", "ollama", "cohere");
+        assertThat(result).containsExactly("ollama", "openai", "openrouter");
     }
 
     @Test
