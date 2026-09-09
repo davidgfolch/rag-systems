@@ -54,13 +54,19 @@ public class CommandCompletion implements CompletionCandidates {
 
     private List<String> connectCandidates(List<String> tokens, String token, int pos) {
         if (pos == 1) return prefixFilter(commandNames(), token);
-        if (pos == 2) return token.isEmpty() ? CONNECT_SUBS : containsFilter(connectFirst(), token);
+        if (pos == 2) {
+            if (token.isEmpty()) return CONNECT_SUBS;
+            List<String> matches = prefixFilter(connectFirst(), token);
+            if (!matches.isEmpty()) return matches;
+            return containsFilter(CONNECT_SUBS, token);
+        }
         String sub = tokens.get(1).toLowerCase();
         if (pos == 3 && ("catalog".equals(sub) || "chat".equals(sub) || "embedding".equals(sub))) {
-            return token.isEmpty() ? List.of() : containsFilter(providerIds(), token);
+            if (token.isEmpty()) return List.of();
+            return prefixFilter(providerIds(), token);
         }
         if (pos == 4 && ("chat".equals(sub) || "embedding".equals(sub))) {
-            return token.isEmpty() ? List.of() : containsFilter(modelIds(tokens.get(2)), token);
+            return token.isEmpty() ? List.of() : prefixFilter(modelIds(tokens.get(2)), token);
         }
         return List.of();
     }
