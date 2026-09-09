@@ -3,9 +3,11 @@ package com.rag.provider.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rag.provider.adapter.ModelsDevCatalogClient;
 import com.rag.provider.adapter.ProviderClientFactory;
+import com.rag.provider.adapter.ProviderProfileFileStore;
 import com.rag.provider.domain.ModelCatalogPort;
 import com.rag.provider.domain.ModelSpec;
 import com.rag.provider.domain.ProviderProfile;
+import com.rag.provider.domain.ProviderProfileStore;
 import com.rag.provider.domain.ProviderType;
 import com.rag.provider.services.ChatService;
 import com.rag.provider.services.EmbeddingService;
@@ -19,6 +21,7 @@ import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
 import java.net.http.HttpClient;
+import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
@@ -33,13 +36,22 @@ import java.util.List;
 public class RagProviderConfig {
 
     @Bean
+    public ProviderProfileStore providerProfileStore(
+            ObjectMapper objectMapper,
+            @Value("${rag.provider.profiles-file:data/provider-profiles.json}") String profilesFile) {
+        return new ProviderProfileFileStore(objectMapper, Path.of(profilesFile));
+    }
+
+    @Bean
     public ProviderRegistry providerRegistry(
+            ProviderProfileStore store,
             @Value("${rag.provider.ollama.base-url:http://localhost:11434}") String ollamaBaseUrl,
             @Value("${rag.provider.openai.base-url:}") String openAiBaseUrl,
             @Value("${rag.provider.openai.api-key:}") String openAiApiKey) {
         return new ProviderRegistry(List.of(
                 new ProviderProfile("ollama", ProviderType.OLLAMA, "Ollama", ollamaBaseUrl, ""),
-                new ProviderProfile("openai", ProviderType.OPENAI, "OpenAI", openAiBaseUrl, openAiApiKey)));
+                new ProviderProfile("openai", ProviderType.OPENAI, "OpenAI", openAiBaseUrl, openAiApiKey)),
+                store);
     }
 
     @Bean

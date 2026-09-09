@@ -97,6 +97,6 @@ public class ModelCatalogService {
                 m.capabilities().structuredOutput());
         var cost = new ModelCostDTO(m.cost().inputPerMillion(), m.cost().outputPerMillion());
         return new ProviderModelDTO(m.providerId(), m.modelId(), m.name(),
-                limits, capabilities, cost, m.status());
+                limits, capabilities, cost, m.status(), m.baseUrl(), m.apiKeyEnv());
     }
 }

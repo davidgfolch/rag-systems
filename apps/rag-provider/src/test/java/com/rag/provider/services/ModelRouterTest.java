@@ -75,7 +75,7 @@ class ModelRouterTest {
         var unknown = new ModelSpec("nope", "x");
         assertThatThrownBy(() -> router.switchChat(unknown))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("Unknown provider: nope");
+                .hasMessage("Unknown provider: nope. Available providers: [ollama]");
     }
 
     @Test

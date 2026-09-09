@@ -1,51 +1,54 @@
 package com.rag.tui.ui;
 
-import org.jline.reader.LineReader;
-import org.jline.reader.LineReaderBuilder;
-import org.jline.reader.impl.completer.ArgumentCompleter;
-import org.jline.reader.impl.completer.StringsCompleter;
 import org.jline.terminal.Terminal;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 import static com.rag.tui.ui.Key.KeyType;
 
 /**
- * JLine-backed {@link Prompter}: a filterable single-select list plus a readline
- * free-text prompt, over a real terminal. The selection loop runs against an
- * injectable {@link PickSource} (pure selection logic stays in {@link PickEngine}),
- * so it is fully unit-testable without a live terminal.
+ * JLine-backed {@link Prompter}: a filterable single-select list plus an
+ * auto-completing readline prompt, over a real terminal. The prompt loop runs
+ * against an injectable {@link PickSource} (pure selection logic stays in
+ * {@link PickEngine} and {@link LineEditor}), so it is fully unit-testable
+ * without a live terminal.
  */
 public class InteractivePrompter implements Prompter {
 
-    private final LineReader reader;
     private final PickSource pickSource;
+    private final PickSource promptSource;
     private final Consumer<String> renderSink;
     private final int rows;
+    private final CompletionCandidates completion;
+    private final LineEditor editor = new LineEditor();
 
-    public InteractivePrompter(Terminal terminal, Supplier<Collection<String>> commandCandidates) {
-        this.reader = LineReaderBuilder.builder()
-                .terminal(terminal)
-                .completer(new ArgumentCompleter(new StringsCompleter(commandCandidates)))
-                .build();
-        this.pickSource = new TerminalPickSource(terminal);
-        this.renderSink = text -> {
+    public InteractivePrompter(Terminal terminal, CompletionCandidates completion) {
+        this(new TerminalPickSource(terminal, true), new TerminalPickSource(terminal, false), text -> {
             terminal.writer().write(text);
             terminal.flush();
-        };
-        this.rows = Math.max(1, terminal.getHeight() - 1);
+        }, Math.max(1, terminal.getHeight() - 1), completion);
     }
 
     InteractivePrompter(PickSource pickSource, Consumer<String> renderSink, int rows) {
-        this.reader = null;
+        this(pickSource, pickSource, renderSink, rows, (line, cursor) -> List.of());
+    }
+
+    InteractivePrompter(PickSource pickSource, Consumer<String> renderSink, int rows,
+                        CompletionCandidates completion) {
+        this(pickSource, pickSource, renderSink, rows, completion);
+    }
+
+    private InteractivePrompter(PickSource pickSource, PickSource promptSource,
+                                Consumer<String> renderSink, int rows, CompletionCandidates completion) {
         this.pickSource = pickSource;
+        this.promptSource = promptSource;
         this.renderSink = renderSink;
         this.rows = Math.min(rows, 10);
+        this.completion = completion;
+        this.editor.setCompletion(completion);
     }
 
     @Override
@@ -82,17 +85,62 @@ public class InteractivePrompter implements Prompter {
 
     @Override
     public String prompt(String promptText) {
-        try {
-            String line = reader.readLine(TerminalStyle.prompt(promptText));
-            return line == null ? null : line.trim();
-        } catch (Exception e) {
-            return null;
+        editor.start();
+        renderPrompt(promptText, editor.view());
+        while (true) {
+            Key key = promptRead();
+            if (key == null) return editor.text().isEmpty() ? null : editor.text();
+            if (key.type() == KeyType.NONE) continue;
+            if (key.type() == KeyType.ENTER && editor.popupVisible()) {
+                if (editor.selectPopup()) {
+                    renderPrompt(promptText, editor.view());
+                    continue;
+                }
+            }
+            if (editor.accept(key)) {
+                renderSink.accept("\u001B[J\r\n");
+                return editor.submitted();
+            }
+            renderPrompt(promptText, editor.view());
         }
+    }
+
+    private void renderPrompt(String promptText, LineEditor.View view) {
+        var sb = new StringBuilder("\r\u001B[2K\u001B[J");
+        sb.append(TerminalStyle.prompt(promptText)).append(view.line());
+        sb.append("\u001B[").append(view.cursor() + promptText.length() + 1).append('G');
+        int popupRows = 0;
+        if (view.popupVisible()) {
+            popupRows = renderPopup(sb, view);
+            sb.append("\u001B[").append(popupRows).append('A');
+            sb.append("\u001B[").append(view.cursor() + promptText.length() + 1).append('G');
+        }
+        renderSink.accept(sb.toString());
+    }
+
+    private int renderPopup(StringBuilder sb, LineEditor.View view) {
+        int popupRows = Math.min(view.popup().size(), rows);
+        int start = Math.max(0, view.popupCursor() - popupRows + 1);
+        int end = Math.min(view.popup().size(), start + popupRows);
+        for (int i = start; i < end; i++) {
+            String prefix = (i == view.popupCursor()) ? "> " : "  ";
+            String line = prefix + view.popup().get(i);
+            sb.append("\n").append(i == view.popupCursor() ? TerminalStyle.command(line) : line);
+        }
+        return popupRows;
     }
 
     private Key read() {
         try {
             return pickSource.read();
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
+    private Key promptRead() {
+        try {
+            return promptSource.read();
         } catch (IOException e) {
             return null;
         }
@@ -123,9 +171,15 @@ public class InteractivePrompter implements Prompter {
     /** Decodes raw terminal bytes (including ESC sequences) into {@link Key}s. */
     static final class TerminalPickSource implements PickSource {
         private final Terminal terminal;
+        private final boolean navigationKeys;
 
         TerminalPickSource(Terminal terminal) {
+            this(terminal, true);
+        }
+
+        TerminalPickSource(Terminal terminal, boolean navigationKeys) {
             this.terminal = terminal;
+            this.navigationKeys = navigationKeys;
         }
 
         @Override
@@ -134,20 +188,24 @@ public class InteractivePrompter implements Prompter {
             if (first < 0) return null;
             if (first == 3 || first == 4) return new Key(KeyType.ESC, ' ');
             if (first == 27) {
-                int second = terminal.reader().read();
-                if (second != '[') return new Key(KeyType.ESC, ' ');
+                int second = terminal.reader().read(50);
+                if (second != '[' && second != 'O') return new Key(KeyType.ESC, ' ');
                 int third = terminal.reader().read();
                 return switch (third) {
                     case 'A' -> new Key(KeyType.UP, ' ');
                     case 'B' -> new Key(KeyType.DOWN, ' ');
+                    case 'C' -> new Key(KeyType.RIGHT, ' ');
+                    case 'D' -> new Key(KeyType.LEFT, ' ');
                     default -> new Key(KeyType.NONE, ' ');
                 };
             }
             if (first == 13 || first == 10) return new Key(KeyType.ENTER, ' ');
             if (first == 127 || first == 8) return new Key(KeyType.BACKSPACE, ' ');
-            if (first == 'k') return new Key(KeyType.UP, ' ');
-            if (first == 'j') return new Key(KeyType.DOWN, ' ');
-            if (first == 'q') return new Key(KeyType.ESC, ' ');
+            if (navigationKeys) {
+                if (first == 'k') return new Key(KeyType.UP, ' ');
+                if (first == 'j') return new Key(KeyType.DOWN, ' ');
+                if (first == 'q') return new Key(KeyType.ESC, ' ');
+            }
             if (Character.isLetterOrDigit(first) || first == '-' || first == '_'
                     || first == '.' || first == ' ') {
                 return new Key(KeyType.TYPE, (char) first);

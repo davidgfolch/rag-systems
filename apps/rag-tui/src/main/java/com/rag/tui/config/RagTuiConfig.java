@@ -11,7 +11,7 @@ import com.rag.tui.launcher.ModuleLifecycleManager;
 import com.rag.tui.launcher.ModuleRegistry;
 import com.rag.common.services.FileDocumentLoader;
 import com.rag.tui.ui.CommandDispatcher;
-import com.rag.tui.ui.CommandDescriptor;
+import com.rag.tui.ui.CommandCompletion;
 import com.rag.tui.ui.CommandRegistry;
 import com.rag.tui.ui.InteractivePrompter;
 import com.rag.tui.ui.InteractiveShell;
@@ -100,15 +100,21 @@ public class RagTuiConfig {
     }
 
     @Bean
-    public Prompter prompter(CommandRegistry commandRegistry) {
+    public CommandCompletion commandCompletion(CommandRegistry commandRegistry, ModuleRegistry moduleRegistry,
+                                               ProviderClient providerClient) {
+        var completion = new CommandCompletion(commandRegistry, moduleRegistry, providerClient);
+        completion.warmup();
+        return completion;
+    }
+
+    @Bean
+    public Prompter prompter(CommandCompletion completion) {
         if (System.console() == null) {
             return new NoopPrompter(new java.io.InputStreamReader(System.in));
         }
         try {
             var terminal = TerminalBuilder.builder().build();
-            return new InteractivePrompter(terminal, () -> commandRegistry.all().stream()
-                    .map(CommandDescriptor::name)
-                    .toList());
+            return new InteractivePrompter(terminal, completion);
         } catch (Exception e) {
             return new NoopPrompter(new java.io.InputStreamReader(System.in));
         }

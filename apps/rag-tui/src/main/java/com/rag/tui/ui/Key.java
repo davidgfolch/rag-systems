@@ -3,5 +3,5 @@ package com.rag.tui.ui;
 /** A decoded input event for the filterable picker. */
 record Key(KeyType type, char value) {
 
-    enum KeyType { ESC, ENTER, UP, DOWN, BACKSPACE, TYPE, NONE }
+    enum KeyType { ESC, ENTER, UP, DOWN, LEFT, RIGHT, BACKSPACE, TYPE, NONE }
 }

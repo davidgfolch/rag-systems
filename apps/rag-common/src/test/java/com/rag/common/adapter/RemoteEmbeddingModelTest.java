@@ -82,6 +82,22 @@ class RemoteEmbeddingModelTest {
         assertThat(providerStatusCalls.get()).isEqualTo(1);
     }
 
+    @Test
+    void shouldFallBackToDefaultDimensionWhenProviderUnreachableAndRetryLater() throws IOException {
+        var down = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
+        down.start();
+        var client = new ProviderHttpClient("http://localhost:" + down.getAddress().getPort(),
+                new ObjectMapper());
+        var sut = new RemoteEmbeddingModel(client, 512);
+
+        assertThat(sut.dimensions()).isEqualTo(512);
+
+        down.createContext("/api/provider", exchange ->
+                respond(exchange, 200, "application/json", STATUS_JSON));
+        assertThat(sut.dimensions()).isEqualTo(768);
+        down.stop(0);
+    }
+
     private static void respond(HttpExchange exchange, int code, String contentType, String body)
             throws IOException {
         var bytes = body.getBytes(StandardCharsets.UTF_8);

@@ -54,6 +54,19 @@ class CommandRegistryTest {
                 .contains("Available commands:")
                 .contains("help", "modules", "use", "start", "stop")
                 .contains("documents", "delete", "add-file", "add-folder", "add-url", "ask", "history", "connect", "quit")
+                .contains("connect catalog [<provider>]", "connect chat <provider> <model>",
+                        "connect embedding <provider> <model>", "connect refresh")
                 .doesNotContain("/ to browse commands");
+    }
+
+    @Test
+    void tabulatesDescriptionColumn() {
+        var descStarts = sut.generateUsage().lines()
+                .filter(line -> line.startsWith("  "))
+                .map(line -> line.lastIndexOf("  ") + 2)
+                .distinct()
+                .toList();
+
+        assertThat(descStarts).hasSize(1);
     }
 }

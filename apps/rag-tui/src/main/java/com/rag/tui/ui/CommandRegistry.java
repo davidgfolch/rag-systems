@@ -1,5 +1,6 @@
 package com.rag.tui.ui;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -7,6 +8,12 @@ import java.util.Optional;
 public class CommandRegistry {
 
     private static final String MODULE_ARG = "<module>";
+    private static final List<CommandDescriptor> CONNECT_HELP = List.of(
+            new CommandDescriptor("connect catalog", "browse the model catalog via rag-provider", "[<provider>]"),
+            new CommandDescriptor("connect chat", "switch the chat model via rag-provider", "<provider> <model>"),
+            new CommandDescriptor("connect embedding", "switch the embedding model via rag-provider", "<provider> <model>"),
+            new CommandDescriptor("connect refresh", "re-fetch the model catalog", "")
+    );
     private static final List<CommandDescriptor> COMMANDS = List.of(
             new CommandDescriptor("help", "show this help", ""),
             new CommandDescriptor("modules", "list known rag-* modules", ""),
@@ -43,11 +50,25 @@ public class CommandRegistry {
     }
 
     public String generateUsage() {
-        var sb = new StringBuilder("Available commands:").append(System.lineSeparator());
+        List<String[]> rows = new ArrayList<>();
         for (CommandDescriptor cmd : COMMANDS) {
-            String args = cmd.usage().isEmpty() ? "" : " " + cmd.usage();
-            sb.append(String.format("  %-16s %s%n", cmd.name() + args, cmd.description()));
+            if (cmd.name().equals("connect")) {
+                for (CommandDescriptor sub : CONNECT_HELP) {
+                    rows.add(new String[]{sub.name() + argsOf(sub.usage()), sub.description()});
+                }
+            } else {
+                rows.add(new String[]{cmd.name() + argsOf(cmd.usage()), cmd.description()});
+            }
+        }
+        int width = rows.stream().mapToInt(r -> r[0].length()).max().orElse(0);
+        var sb = new StringBuilder("Available commands:").append(System.lineSeparator());
+        for (String[] row : rows) {
+            sb.append(String.format("  %-" + width + "s  %s%n", row[0], row[1]));
         }
         return sb.toString();
+    }
+
+    private static String argsOf(String usage) {
+        return usage.isEmpty() ? "" : " " + usage;
     }
 }

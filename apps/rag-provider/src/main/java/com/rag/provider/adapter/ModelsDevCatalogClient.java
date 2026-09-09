@@ -71,13 +71,20 @@ public class ModelsDevCatalogClient implements ModelCatalogPort {
         if (!modelsNode.isObject()) {
             return;
         }
+        String baseUrl = providerNode.path("api").asText(null);
+        String apiKeyEnv = firstEnvVar(providerNode.path("env"));
         for (var entry = modelsNode.fields(); entry.hasNext(); ) {
             var modelEntry = entry.next();
-            out.add(model(providerId, modelEntry.getKey(), modelEntry.getValue()));
+            out.add(model(providerId, modelEntry.getKey(), modelEntry.getValue(), baseUrl, apiKeyEnv));
         }
     }
 
-    private static ModelInfo model(String providerId, String modelId, JsonNode node) {
+    private static String firstEnvVar(JsonNode env) {
+        return env.isArray() && env.size() > 0 ? env.get(0).asText(null) : null;
+    }
+
+    private static ModelInfo model(String providerId, String modelId, JsonNode node,
+                                   String baseUrl, String apiKeyEnv) {
         var limit = node.path("limit");
         var cost = node.path("cost");
         return new ModelInfo(
@@ -90,6 +97,8 @@ public class ModelsDevCatalogClient implements ModelCatalogPort {
                         node.path("tool_call").asBoolean(),
                         node.path("structured_output").asBoolean()),
                 new ModelCost(cost.path("input").asDouble(), cost.path("output").asDouble()),
-                node.path("status").asText(null));
+                node.path("status").asText(null),
+                baseUrl,
+                apiKeyEnv);
     }
 }

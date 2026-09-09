@@ -110,8 +110,13 @@ public class ModelRouter {
     }
 
     private ProviderProfile requireProfile(String providerId) {
-        return registry.find(providerId)
-                .orElseThrow(() -> new IllegalArgumentException("Unknown provider: " + providerId));
+        var profile = registry.find(providerId);
+        if (profile.isEmpty()) {
+            var available = registry.all().stream().map(ProviderProfile::id).toList();
+            throw new IllegalArgumentException(
+                    "Unknown provider: " + providerId + ". Available providers: " + available);
+        }
+        return profile.get();
     }
 
     private static int detectDimension(EmbeddingModel model) {

@@ -23,10 +23,16 @@ public class RemoteEmbeddingModel implements EmbeddingModel {
     private static final Logger log = LoggerFactory.getLogger(RemoteEmbeddingModel.class);
 
     private final ProviderHttpClient httpClient;
+    private final int fallbackDimension;
     private volatile int cachedDimension = -1;
 
     public RemoteEmbeddingModel(ProviderHttpClient httpClient) {
+        this(httpClient, 768);
+    }
+
+    public RemoteEmbeddingModel(ProviderHttpClient httpClient, int fallbackDimension) {
         this.httpClient = httpClient;
+        this.fallbackDimension = fallbackDimension;
     }
 
     @Override
@@ -52,9 +58,19 @@ public class RemoteEmbeddingModel implements EmbeddingModel {
     @Override
     public int dimensions() {
         if (cachedDimension < 0) {
-            var status = httpClient.get("/api/provider", ProviderStatusDTO.class);
-            cachedDimension = status.embeddingDimension();
-            log.info("Remote embedding dimension resolved: {}", cachedDimension);
+            try {
+                var status = httpClient.get("/api/provider", ProviderStatusDTO.class);
+                cachedDimension = status.embeddingDimension();
+                log.info("Remote embedding dimension resolved: {}", cachedDimension);
+            } catch (RuntimeException e) {
+                if (fallbackDimension <= 0) {
+                    throw e;
+                }
+                log.warn("Provider unreachable, using default embedding dimension {} "
+                                + "(real value resolved on first embed): {}",
+                        fallbackDimension, e.getMessage());
+                return fallbackDimension;
+            }
         }
         return cachedDimension;
     }

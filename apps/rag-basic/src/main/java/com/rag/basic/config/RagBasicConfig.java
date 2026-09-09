@@ -72,8 +72,10 @@ public class RagBasicConfig {
     }
 
     @Bean
-    public RemoteEmbeddingModel remoteEmbeddingModel(ProviderHttpClient providerHttpClient) {
-        return new RemoteEmbeddingModel(providerHttpClient);
+    public RemoteEmbeddingModel remoteEmbeddingModel(
+            ProviderHttpClient providerHttpClient,
+            @Value("${rag.provider.embedding.default-dimension:768}") int defaultDimension) {
+        return new RemoteEmbeddingModel(providerHttpClient, defaultDimension);
     }
 
     @Bean
