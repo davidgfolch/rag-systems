@@ -88,6 +88,24 @@ popd
 if not "%CGERR%"=="0" echo Warning: CodeGraph index build failed for %~1.
 goto :eof
 
+:stop_codegraph
+REM Stop any CodeGraph daemon holding locks on the target clone's .codegraph db:
+REM the clone's own daemon (if any) and the main workspace daemon (locks clones
+REM opened via codegraph projectPath queries).
+set "TARGET=%~1"
+set "MAIN=%ROOT%\..\rag-systems"
+set "STOPPED="
+for %%P in ("%TARGET%\.codegraph\daemon.pid" "%MAIN%\.codegraph\daemon.pid") do (
+    if exist "%%~P" (
+        for /f "usebackq delims=" %%R in (`powershell -NoProfile -Command "$p=(Get-Content -Raw '%%~P' | ConvertFrom-Json).pid; if ($p -and (Get-Process -Id $p -ErrorAction SilentlyContinue)) { Stop-Process -Id $p -Force -ErrorAction SilentlyContinue; Write-Output $p }"`) do (
+            echo Stopped CodeGraph daemon %%R ^(tracked by %%~P^)
+            set "STOPPED=1"
+        )
+    )
+)
+if defined STOPPED echo CodeGraph daemons stopped; clone can be deleted.
+exit /b 0
+
 :checkout
 if "%~2"=="" goto :usage
 git checkout "%~2"
@@ -219,6 +237,7 @@ if not errorlevel 1 (
         set "SUFFIX=%CURBRANCH:feat/=%"
         set "TARGET=%ROOT%\..\rag-systems-%SUFFIX%"
         if exist "%TARGET%" (
+            call :stop_codegraph "%TARGET%"
             cd /d "%TARGET%\.."
             echo Deleting clone %TARGET%...
             rmdir /s /q "%TARGET%"
@@ -235,6 +254,7 @@ set "NAME=%~2"
 if "%NAME%"=="" goto :usage
 set "TARGET=%ROOT%\..\rag-systems-%NAME%"
 if exist "%TARGET%" (
+    call :stop_codegraph "%TARGET%"
     echo Deleting %TARGET%...
     rmdir /s /q "%TARGET%"
     echo Deleted.

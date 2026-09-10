@@ -20,6 +20,18 @@ CMD="${1:-}"
 
 curbranch() { git rev-parse --abbrev-ref HEAD; }
 
+stop_codegraph() {
+    local target="$1" main="$ROOT/../rag-systems" pid pf
+    for pf in "$target/.codegraph/daemon.pid" "$main/.codegraph/daemon.pid"; do
+        [ -f "$pf" ] || continue
+        pid="$(jq -r '.pid' "$pf" 2>/dev/null || sed -n 's/.*"pid": *\([0-9]*\).*/\1/p' "$pf")"
+        if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+            echo "Stopping CodeGraph daemon $pid (tracked by $pf)"
+            kill "$pid" 2>/dev/null || true
+        fi
+    done
+}
+
 case "$CMD" in
     new)
         NAME="${2:-}"
@@ -135,6 +147,7 @@ case "$CMD" in
                 SUFFIX="${BR#feat/}"
                 TARGET="$ROOT/../rag-systems-$SUFFIX"
                 if [ -d "$TARGET" ]; then
+                    stop_codegraph "$TARGET"
                     cd "$TARGET/.."
                     echo "Deleting clone $TARGET..."
                     rm -rf "$TARGET"
@@ -150,6 +163,7 @@ case "$CMD" in
         [ -n "$NAME" ] || { echo "Usage: ./dev.sh cleanup <name>"; exit 1; }
         TARGET="$ROOT/../rag-systems-$NAME"
         if [ -d "$TARGET" ]; then
+            stop_codegraph "$TARGET"
             echo "Deleting $TARGET..."
             rm -rf "$TARGET"
             echo "Deleted."
