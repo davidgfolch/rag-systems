@@ -9,7 +9,7 @@ The monorepo already enforces code quality through manual reviews, architecture 
 
 ## Decision
 
-Add **SonarQube Community Edition 10.7 LTS** as a local, Docker-based static analysis server, wired into the Maven build via the `sonar-maven-plugin`, and expose it through dedicated wrapper scripts:
+Add **SonarQube Community Build 26.8** as a local, Docker-based static analysis server, wired into the Maven build via the `sonar-maven-plugin`, and expose it through dedicated wrapper scripts:
 
 - `docker/docker-compose.sonarqube.yml` - local SonarQube container (port `9000`, persistent volumes).
 - `pom.xml` - `sonar-maven-plugin` + `sonar.version` in `pluginManagement`.
@@ -29,7 +29,7 @@ The **"Clean as You Code" quality gate** (new-code coverage ≥ 80%, no new viol
 ### Negative
 - Requires a running SonarQube container and a generated token to scan.
 - The coverage gate measures **new/modified lines**, so refactoring healthy code can temporarily fail the gate until new branches are tested.
-- Local Community Edition does not support JRE provisioning, so `sonar.scanner.skipJreProvisioning=true` is mandatory (otherwise scans hit SonarCloud endpoints and fail with HTTP 403).
+- Local Community Build does not require JRE provisioning when the project already uses Java 21, so `sonar.scanner.skipJreProvisioning=true` is kept for simplicity.
 - Maven-plugin scanner settings must be passed via `-D` flags; the plugin does not reliably read `sonar.host.url`/`sonar.projectKey`/JaCoCo paths from `sonar-project.properties`.
 
 ## Reference

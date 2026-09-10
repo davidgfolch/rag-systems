@@ -1,6 +1,6 @@
 services:
   sonarqube:
-    image: sonarqube:10.7.0-community
+    image: sonarqube:26.8.0.126808-community
     container_name: rag-sonarqube
     environment:
       SONAR_WEB_JAVAADDITIONALOPTS: "-Xmx1g -Xms512m"

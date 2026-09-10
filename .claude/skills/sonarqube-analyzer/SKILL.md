@@ -12,7 +12,7 @@ Run local SonarQube static analysis on the monorepo, map findings to fixes, and 
 
 ## Key Facts
 
-- **Server**: local SonarQube Community 10.7 LTS at `http://localhost:9000` (first boot auto-provisioned by `scripts/sonar-pw.{bat,sh}`: fixed admin password from `SONAR_ADMIN_PASSWORD` in `.env.secrets`, plus a generated `rag-local-ci` analysis token in `SONAR_TOKEN`).
+- **Server**: local SonarQube Community Build 26.8 at `http://localhost:9000` (first boot auto-provisioned by `scripts/sonar-pw.{bat,sh}`: fixed admin password from `SONAR_ADMIN_PASSWORD` in `.env.secrets`, plus a generated `rag-local-ci` analysis token in `SONAR_TOKEN`).
 - **Project key**: `com.rag:rag-systems` (derived from the parent POM GAV).
 - **Entry points**: `scripts/sonar.{bat,sh}` and the `sonar-maven-plugin`. Results are auto-exported to the README by `scripts/sonar-export.ps1` (Windows) / `scripts/sonar-export.sh` (Linux/Mac) after each scan.
 - **Config**: `sonar-project.properties` (exclusions, JRE-provisioning skip, report paths), `docker/docker-compose.sonarqube.yml`.
@@ -86,7 +86,7 @@ Refuse to mark the task complete until:
 
 ## Gotchas
 
-- **JRE provisioning**: Community Edition must scan with `-Dsonar.scanner.skipJreProvisioning=true` (otherwise it hits SonarCloud endpoints / HTTP 403).
+- **JRE provisioning**: Community Build with Java 21 project does not require JRE provisioning; kept `skipJreProvisioning=true` for simplicity.
 - **`-D` flags required**: The Maven plugin does not reliably read `sonar.host.url`/`sonar.projectKey`/JaCoCo paths from `sonar-project.properties`; pass them via CLI.
 - **Stale results**: always use `mvn clean verify sonar:sonar` after source changes.
 - **PowerShell `.` splitting**: quote `-D` properties when invoking `mvnw.cmd` from PowerShell (`"-Dsonar.host.url=http://localhost:9000"`).
