@@ -63,7 +63,12 @@ public class CommandRegistry {
         int width = rows.stream().mapToInt(r -> r[0].length()).max().orElse(0);
         var sb = new StringBuilder("Available commands:").append(System.lineSeparator());
         for (String[] row : rows) {
-            sb.append(String.format("  %-" + width + "s  %s%n", row[0], row[1]));
+            sb.append("  ")
+                    .append(row[0])
+                    .append(" ".repeat(width - row[0].length()))
+                    .append("  ")
+                    .append(row[1])
+                    .append(System.lineSeparator());
         }
         return sb.toString();
     }

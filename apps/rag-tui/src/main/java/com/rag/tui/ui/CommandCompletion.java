@@ -1,12 +1,14 @@
 package com.rag.tui.ui;
 
 import com.rag.contract.provider.ModelCatalogDTO;
+import com.rag.tui.launcher.Module;
 import com.rag.tui.launcher.ModuleRegistry;
 import com.rag.tui.client.ProviderClient;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Provides auto-completion candidates based on the current command context:
@@ -15,14 +17,17 @@ import java.util.concurrent.CompletableFuture;
  */
 public class CommandCompletion implements CompletionCandidates {
 
+    private static final String CATALOG = "catalog";
+    private static final String CHAT = "chat";
+    private static final String EMBEDDING = "embedding";
     private static final List<String> CONNECT_SUBS =
-            List.of("catalog", "chat", "embedding", "refresh");
+            List.of(CATALOG, CHAT, EMBEDDING, "refresh");
     private static final long CACHE_TTL_MS = 30_000;
 
     private final CommandRegistry commandRegistry;
     private final ModuleRegistry moduleRegistry;
     private final ProviderClient providerClient;
-    private volatile ModelCatalogDTO cachedCatalog;
+    private final AtomicReference<ModelCatalogDTO> cachedCatalog = new AtomicReference<>();
     private volatile long cachedAtMs;
 
     public CommandCompletion(CommandRegistry commandRegistry, ModuleRegistry moduleRegistry,
@@ -54,21 +59,30 @@ public class CommandCompletion implements CompletionCandidates {
 
     private List<String> connectCandidates(List<String> tokens, String token, int pos) {
         if (pos == 1) return prefixFilter(commandNames(), token);
-        if (pos == 2) {
-            if (token.isEmpty()) return CONNECT_SUBS;
-            List<String> matches = prefixFilter(connectFirst(), token);
-            if (!matches.isEmpty()) return matches;
-            return containsFilter(CONNECT_SUBS, token);
-        }
+        if (pos == 2) return connectSubCandidates(token);
         String sub = tokens.get(1).toLowerCase();
-        if (pos == 3 && ("catalog".equals(sub) || "chat".equals(sub) || "embedding".equals(sub))) {
-            if (token.isEmpty()) return List.of();
-            return prefixFilter(providerIds(), token);
+        if (pos == 3 && takesProvider(sub)) {
+            return token.isEmpty() ? List.of() : prefixFilter(providerIds(), token);
         }
-        if (pos == 4 && ("chat".equals(sub) || "embedding".equals(sub))) {
+        if (pos == 4 && takesModel(sub)) {
             return token.isEmpty() ? List.of() : prefixFilter(modelIds(tokens.get(2)), token);
         }
         return List.of();
+    }
+
+    private List<String> connectSubCandidates(String token) {
+        if (token.isEmpty()) return CONNECT_SUBS;
+        List<String> matches = prefixFilter(connectFirst(), token);
+        if (!matches.isEmpty()) return matches;
+        return containsFilter(CONNECT_SUBS, token);
+    }
+
+    private static boolean takesProvider(String sub) {
+        return CATALOG.equals(sub) || CHAT.equals(sub) || EMBEDDING.equals(sub);
+    }
+
+    private static boolean takesModel(String sub) {
+        return CHAT.equals(sub) || EMBEDDING.equals(sub);
     }
 
     private List<String> connectFirst() {
@@ -100,20 +114,20 @@ public class CommandCompletion implements CompletionCandidates {
 
     private List<String> moduleNames() {
         return moduleRegistry.modules().stream()
-                .map(m -> m.name())
+                .map(Module::name)
                 .toList();
     }
 
     private ModelCatalogDTO catalog() {
         long now = System.currentTimeMillis();
-        if (now - cachedAtMs < CACHE_TTL_MS) return cachedCatalog;
+        if (now - cachedAtMs < CACHE_TTL_MS) return cachedCatalog.get();
         try {
-            cachedCatalog = providerClient.catalog();
+            cachedCatalog.set(providerClient.catalog());
         } catch (RuntimeException e) {
-            cachedCatalog = null;
+            cachedCatalog.set(null);
         }
         cachedAtMs = now;
-        return cachedCatalog;
+        return cachedCatalog.get();
     }
 
     private List<String> providerIds() {

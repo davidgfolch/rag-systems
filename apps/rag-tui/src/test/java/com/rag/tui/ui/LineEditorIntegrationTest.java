@@ -2,7 +2,6 @@ package com.rag.tui.ui;
 
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.util.List;
 
 import static com.rag.tui.ui.Key.KeyType.DOWN;
@@ -26,7 +25,7 @@ class LineEditorIntegrationTest {
     };
 
     @Test
-    void typingOpensPopupAndRendersCandidates() throws IOException {
+    void typingOpensPopupAndRendersCandidates() {
         var sink = new StringBuilder();
         var sut = new InteractivePrompter(
                 keys(typeChar('o')),
@@ -38,7 +37,7 @@ class LineEditorIntegrationTest {
     }
 
     @Test
-    void arrowDownAndEnterSelectsPopupEntry() throws IOException {
+    void arrowDownAndEnterSelectsPopupEntry() {
         var sut = new InteractivePrompter(
                 keys(typeChar('o'), key(DOWN), key(ENTER), key(ENTER)),
                 s -> { }, 8, PROVIDERS);
@@ -49,7 +48,7 @@ class LineEditorIntegrationTest {
     }
 
     @Test
-    void plainEnterSubmitsWithoutPopup() throws IOException {
+    void plainEnterSubmitsWithoutPopup() {
         var sut = new InteractivePrompter(
                 keys(typeChar('h'), typeChar('i'), key(ENTER)),
                 s -> { }, 8, PROVIDERS);
@@ -60,7 +59,7 @@ class LineEditorIntegrationTest {
     }
 
     @Test
-    void escapeClosesPopupAndEnterSubmits() throws IOException {
+    void escapeClosesPopupAndEnterSubmits() {
         var sut = new InteractivePrompter(
                 keys(typeChar('o'), key(Key.KeyType.ESC), key(ENTER)),
                 s -> { }, 8, PROVIDERS);
@@ -75,7 +74,7 @@ class LineEditorIntegrationTest {
             int i = 0;
 
             @Override
-            public Key read() throws IOException {
+            public Key read() {
                 return i < keys.length ? keys[i++] : null;
             }
         };

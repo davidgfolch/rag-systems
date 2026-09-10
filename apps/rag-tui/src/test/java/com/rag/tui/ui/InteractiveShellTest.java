@@ -107,8 +107,9 @@ class InteractiveShellTest {
         sut.run();
 
         String text = out.toString();
-        assertThat(text).doesNotContain("Providers:");
-        assertThat(text).contains("Bye.");
+        assertThat(text)
+                .doesNotContain("Providers:")
+                .contains("Bye.");
     }
 
     @Test
@@ -120,10 +121,14 @@ class InteractiveShellTest {
             }
 
             @Override
-            public void flush() {}
+            public void flush() {
+                // no-op: failing writer stays silent
+            }
 
             @Override
-            public void close() {}
+            public void close() {
+                // no-op: failing writer stays silent
+            }
         };
 
         var sut = new InteractiveShell(dispatcher, new NoopPrompter(new StringReader("ask hi\n")), failing);

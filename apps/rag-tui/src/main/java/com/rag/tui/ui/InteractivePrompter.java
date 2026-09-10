@@ -18,11 +18,15 @@ import static com.rag.tui.ui.Key.KeyType;
  */
 public class InteractivePrompter implements Prompter {
 
+    private static final String CSI = "\u001B[";
+    private static final String CLEAR_LINE = "\u001B[J\r\n";
+    private static final int MAX_IDLE_PICKS = 3;
+    private static final int MAX_ROWS = 10;
+
     private final PickSource pickSource;
     private final PickSource promptSource;
     private final Consumer<String> renderSink;
     private final int rows;
-    private final CompletionCandidates completion;
     private final LineEditor editor = new LineEditor();
 
     public InteractivePrompter(Terminal terminal, CompletionCandidates completion) {
@@ -46,8 +50,7 @@ public class InteractivePrompter implements Prompter {
         this.pickSource = pickSource;
         this.promptSource = promptSource;
         this.renderSink = renderSink;
-        this.rows = Math.min(rows, 10);
-        this.completion = completion;
+        this.rows = Math.min(rows, MAX_ROWS);
         this.editor.setCompletion(completion);
     }
 
@@ -60,7 +63,7 @@ public class InteractivePrompter implements Prompter {
             Key key = read();
             if (key == null) return Optional.empty();
             if (key.type() == KeyType.NONE) {
-                if (++idle > 3) return Optional.empty();
+                if (++idle > MAX_IDLE_PICKS) return Optional.empty();
                 continue;
             }
             idle = 0;
@@ -70,14 +73,15 @@ public class InteractivePrompter implements Prompter {
                 }
                 case ENTER -> {
                     var list = engine.visible();
-                    if (list.isEmpty()) continue;
-                    return Optional.of(list.get(engine.cursor()).value());
+                    if (!list.isEmpty()) {
+                        return Optional.of(list.get(engine.cursor()).value());
+                    }
                 }
                 case UP -> engine.prev();
                 case DOWN -> engine.next();
                 case BACKSPACE -> engine.backspace();
                 case TYPE -> engine.append(key.value());
-                default -> { }
+                default -> { /* LEFT/RIGHT are not used in pick mode */ }
             }
             render(title, engine);
         }
@@ -87,33 +91,35 @@ public class InteractivePrompter implements Prompter {
     public String prompt(String promptText) {
         editor.start();
         renderPrompt(promptText, editor.view());
-        while (true) {
-            Key key = promptRead();
+        Key key;
+        do {
+            key = promptRead();
             if (key == null) return editor.text().isEmpty() ? null : editor.text();
-            if (key.type() == KeyType.NONE) continue;
-            if (key.type() == KeyType.ENTER && editor.popupVisible()) {
-                if (editor.selectPopup()) {
-                    renderPrompt(promptText, editor.view());
-                    continue;
-                }
-            }
-            if (editor.accept(key)) {
-                renderSink.accept("\u001B[J\r\n");
-                return editor.submitted();
-            }
+        } while (!step(promptText, key));
+        renderSink.accept(CLEAR_LINE);
+        return editor.submitted();
+    }
+
+    private boolean step(String promptText, Key key) {
+        if (key.type() == KeyType.NONE) return false;
+        if (key.type() == KeyType.ENTER && editor.popupVisible() && editor.selectPopup()) {
             renderPrompt(promptText, editor.view());
+            return false;
         }
+        if (editor.accept(key)) return true;
+        renderPrompt(promptText, editor.view());
+        return false;
     }
 
     private void renderPrompt(String promptText, LineEditor.View view) {
         var sb = new StringBuilder("\r\u001B[2K\u001B[J");
         sb.append(TerminalStyle.prompt(promptText)).append(view.line());
-        sb.append("\u001B[").append(view.cursor() + promptText.length() + 1).append('G');
+        sb.append(CSI).append(view.cursor() + promptText.length() + 1).append('G');
         int popupRows = 0;
         if (view.popupVisible()) {
             popupRows = renderPopup(sb, view);
-            sb.append("\u001B[").append(popupRows).append('A');
-            sb.append("\u001B[").append(view.cursor() + promptText.length() + 1).append('G');
+            sb.append(CSI).append(popupRows).append('A');
+            sb.append(CSI).append(view.cursor() + promptText.length() + 1).append('G');
         }
         renderSink.accept(sb.toString());
     }
@@ -186,19 +192,26 @@ public class InteractivePrompter implements Prompter {
         public Key read() throws IOException {
             int first = terminal.reader().read();
             if (first < 0) return null;
+            if (first == 27) return escapeSequence();
+            Key key = decode(first);
+            return key != null ? key : new Key(KeyType.NONE, ' ');
+        }
+
+        private Key escapeSequence() throws IOException {
+            int second = terminal.reader().read(50);
+            if (second != '[' && second != 'O') return new Key(KeyType.ESC, ' ');
+            int third = terminal.reader().read();
+            return switch (third) {
+                case 'A' -> new Key(KeyType.UP, ' ');
+                case 'B' -> new Key(KeyType.DOWN, ' ');
+                case 'C' -> new Key(KeyType.RIGHT, ' ');
+                case 'D' -> new Key(KeyType.LEFT, ' ');
+                default -> new Key(KeyType.NONE, ' ');
+            };
+        }
+
+        private Key decode(int first) {
             if (first == 3 || first == 4) return new Key(KeyType.ESC, ' ');
-            if (first == 27) {
-                int second = terminal.reader().read(50);
-                if (second != '[' && second != 'O') return new Key(KeyType.ESC, ' ');
-                int third = terminal.reader().read();
-                return switch (third) {
-                    case 'A' -> new Key(KeyType.UP, ' ');
-                    case 'B' -> new Key(KeyType.DOWN, ' ');
-                    case 'C' -> new Key(KeyType.RIGHT, ' ');
-                    case 'D' -> new Key(KeyType.LEFT, ' ');
-                    default -> new Key(KeyType.NONE, ' ');
-                };
-            }
             if (first == 13 || first == 10) return new Key(KeyType.ENTER, ' ');
             if (first == 127 || first == 8) return new Key(KeyType.BACKSPACE, ' ');
             if (navigationKeys) {
@@ -206,11 +219,13 @@ public class InteractivePrompter implements Prompter {
                 if (first == 'j') return new Key(KeyType.DOWN, ' ');
                 if (first == 'q') return new Key(KeyType.ESC, ' ');
             }
-            if (Character.isLetterOrDigit(first) || first == '-' || first == '_'
-                    || first == '.' || first == ' ') {
-                return new Key(KeyType.TYPE, (char) first);
-            }
-            return new Key(KeyType.NONE, ' ');
+            if (isPrintable(first)) return new Key(KeyType.TYPE, (char) first);
+            return null;
+        }
+
+        private static boolean isPrintable(int code) {
+            return Character.isLetterOrDigit(code) || code == '-' || code == '_'
+                    || code == '.' || code == ' ';
         }
     }
 }

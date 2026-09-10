@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
-import java.util.List;
 import java.util.Optional;
 
 import static com.rag.tui.ui.TerminalStyle.error;
@@ -25,11 +24,12 @@ public class ConnectCommand {
 
     private static final Logger log = LoggerFactory.getLogger(ConnectCommand.class);
 
-    static final String USAGE = "Usage: connect <catalog|chat|embedding|refresh> [args]\n"
-            + "  connect catalog [<provider>]      browse the model catalog\n"
-            + "  connect chat <provider> <model>   switch the chat model\n"
-            + "  connect embedding <provider> <model>   switch the embedding model\n"
-            + "  connect refresh                   refresh the model catalog";
+    static final String USAGE = """
+        Usage: connect <catalog|chat|embedding|refresh> [args]
+          connect catalog [<provider>]      browse the model catalog
+          connect chat <provider> <model>   switch the chat model
+          connect embedding <provider> <model>   switch the embedding model
+          connect refresh                   refresh the model catalog""";
 
     private final ProviderClient client;
     private final Prompter prompter;
@@ -187,21 +187,27 @@ public class ConnectCommand {
                 action.run();
                 return success(successMessage);
             } catch (RestClientResponseException e) {
-                String rejection = e.getResponseBodyAsString();
-                if (!configured && rejection.contains("Unknown provider")) {
+                String outcome = handleRejection(e, providerId, configured);
+                if (outcome == null) {
                     configured = true;
-                    String setup = attemptConfigure(providerId);
-                    if (setup == null) continue;
-                    return setup;
+                    continue;
                 }
-                log.warn("Switch rejected by rag-provider: {}", rejection);
-                return error("Request rejected by rag-provider: "
-                        + (rejection.isEmpty() ? e.getMessage() : rejection));
+                return outcome;
             } catch (RestClientException e) {
                 log.warn("Provider module unreachable: {}", e.getMessage());
                 return error("Provider module unreachable: " + e.getMessage());
             }
         }
+    }
+
+    private String handleRejection(RestClientResponseException e, String providerId, boolean configured) {
+        String rejection = e.getResponseBodyAsString();
+        if (configured || !rejection.contains("Unknown provider")) {
+            log.warn("Switch rejected by rag-provider: {}", rejection);
+            return error("Request rejected by rag-provider: "
+                    + (rejection.isEmpty() ? e.getMessage() : rejection));
+        }
+        return attemptConfigure(providerId);
     }
 
     /** Returns null when the switch should be retried, "" when cancelled, else an error text. */

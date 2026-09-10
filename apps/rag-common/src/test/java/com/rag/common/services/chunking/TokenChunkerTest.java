@@ -28,6 +28,7 @@ class TokenChunkerTest {
             }
             case "EMPTY" -> assertThat(chunks).isEmpty();
             case "SINGLE" -> assertThat(chunks).hasSize(1);
+            default -> throw new AssertionError("Unexpected mode: " + expectedMode);
         }
     }
 

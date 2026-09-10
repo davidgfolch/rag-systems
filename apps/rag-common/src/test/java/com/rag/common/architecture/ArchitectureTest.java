@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.tngtech.archunit.core.domain.JavaClass;
-import com.tngtech.archunit.core.domain.JavaFieldAccess;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.lang.ArchCondition;
@@ -59,7 +58,7 @@ class ArchitectureTest {
 
     @Test
     void domainDependsOnNothing() {
-        com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses()
+        noClasses()
                 .that().resideInAPackage("..domain..")
                 .should().dependOnClassesThat().resideInAnyPackage("..services..", "..repositories..")
                 .check(importer.importPackages(ROOT));
@@ -136,7 +135,7 @@ class ArchitectureTest {
     }
 
     @Test
-    void testFixturesShouldBeUnder100Lines() throws IOException {
+    void testFixturesShouldBeUnder100Lines() {
         var allClasses = new ClassFileImporter().importPackages(ROOT);
         List<String> tooLong = allClasses.stream()
                 .filter(c -> c.getPackageName().contains(".testfixture"))
