@@ -31,12 +31,12 @@ This document describes the high-level architecture of the RAG Systems monorepo.
 │  └───────────────┴───────────────┴───────────────┴───────────────┘ │
 │                                                                     │
 │  ┌───────────────┬───────────────┬───────────────┬───────────────┐ │
-│  │ rag-evaluation│ rag-observ-   │    rag-cli    │               │ │
-│  │ (metrics)     │  ability      │  (TUI testing)│               │ │
+│  │ rag-evaluation│ rag-observ-   │    rag-cli    │ rag-provider  │ │
+│  │ (metrics)     │  ability      │  (TUI testing)│ (model hub)   │ │
 │  ├───────────────┼───────────────┼───────────────┼───────────────┤ │
-│  │ Precision     │ Tracing       │ Interactive   │               │ │
-│  │ Recall, MRR   │ Metrics       │ queries       │               │ │
-│  │ Benchmark     │ Dashboards    │               │               │ │
+│  │ Precision     │ Tracing       │ Interactive   │ Chat/embed    │ │
+│  │ Recall, MRR   │ Metrics       │ queries       │ switching     │ │
+│  │ Benchmark     │ Dashboards    │               │ Provider API  │ │
 │  └───────────────┴───────────────┴───────────────┴───────────────┘ │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
@@ -60,12 +60,14 @@ Each runnable module follows a strict layered architecture with **one-way depend
 ## Cross-Cutting Concerns
 
 ### Provider Abstraction (Critical)
-The `EmbeddingModelPort` and `ChatModelPort` abstractions must allow swapping between OpenAI, Ollama, and HuggingFace via **configuration profiles**, not code changes.
+All provider connectivity is centralized in the **rag-provider** service: it owns the Ollama/OpenAI clients and exposes chat (`/api/complete`, `/api/chat/stream`), embedding (`/api/embed`), and model-switching (`/api/provider/*`) over HTTP. Downstream RAG modules used to hold direct provider dependencies; they now consume rag-provider through thin `rag-common` bridges (`RemoteChatModelPort`, `RemoteEmbeddingModel`). Swapping between OpenAI, Ollama, and any OpenAI-compatible provider is a runtime call — no code or config-profile change needed.
 
 | Profile | Embeddings | LLM | Use case |
 |---------|-----------|-----|----------|
 | `local` | nomic-embed-text (Ollama) | phi4 / qwen3 (Ollama) | Development, privacy |
 | `cloud` | text-embedding-3-small | gpt-4o | Frontier-model comparison |
+
+Model switching and embedding dimensions are managed by rag-provider's `ModelRouter`. Each module connects via `rag.provider.url` (default `http://localhost:8086`).
 
 ### Strategy Pattern
 Pluggable strategies via interfaces:
@@ -104,6 +106,7 @@ OpenTelemetry spans + Micrometer metrics + Structured logs
 ```
 apps/
 ├── rag-common/       # Shared library: domain, services, repositories
+├── rag-provider/     # Centralized provider hub: model switching, chat/embed APIs
 ├── rag-basic/        # Basic RAG: fixed chunking, similarity search
 ├── rag-advanced/     # Advanced RAG: reranking, hybrid search, metadata
 ├── rag-agentic/      # Agentic RAG: tool calling, multi-step retrieval
@@ -118,6 +121,7 @@ apps/
 | Module | Responsibility |
 |--------|---------------|
 | rag-common | Shared domain models, interfaces, configuration helpers |
+| rag-provider | Centralized LLM/embedding clients, runtime model switching, provider profiles |
 | rag-basic | Baseline RAG: fixed/recursive chunking, similarity search |
 | rag-advanced | Reranking, hybrid search, semantic chunking, metadata filtering |
 | rag-agentic | Agents, tool calling, multi-step retrieval, self-reflection |
@@ -134,6 +138,7 @@ apps/
 | rag-advanced | + Semantic | + Hybrid, reranking | Metadata filtering, query transform |
 | rag-agentic | Agentic | Tool calling, multi-step | Self-reflection |
 | rag-evaluation | - | - | Metrics, benchmarking, comparison |
+| rag-provider | - | - | Chat/embed APIs, runtime model switching, model catalog |
 | rag-tui | Recursive, Tika | Vector similarity | Interactive add-file / add-url + chat |
 
 ## Local Machine Feasibility
@@ -153,3 +158,6 @@ See [performance-metrics.md](../comparison/performance-metrics.md) for details.
 - [Observability](../guides/observability.md)
 - [Performance Metrics](../comparison/performance-metrics.md)
 - [Trade-offs](../comparison/trade-offs.md)
+- [ADR-0010: rag-provider Service](decision-records/adr-0010-rag-provider.md)
+- [ADR-0011: Model Catalog](decision-records/adr-0011-model-catalog.md)
+- [ADR-0012: TUI connect Command](decision-records/adr-0012-tui-connect.md)

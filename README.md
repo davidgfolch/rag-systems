@@ -51,7 +51,17 @@ ollama pull phi4                # small CPU-friendly LLM
 
 ## Quick Start
 
-The fastest way to try the system is with the **TUI** (Terminal UI) — it lets you add local files or web pages as sources and then ask grounded questions against them.
+All RAG modules depend on **rag-provider** for LLM and embedding compute. Start it first:
+
+```bash
+# Start rag-provider (Windows)
+.\scripts\run.bat rag-provider --profile local
+
+# Linux/Mac
+./scripts/run.sh rag-provider --profile local
+```
+
+Then start the TUI (Terminal UI) — it lets you add local files or web pages as sources and then ask grounded questions against them:
 
 ```bash
 # Start the TUI with local models (Windows; rag-tui is the default)
@@ -82,6 +92,7 @@ The monorepo is organized around a **thin TUI + switchable RAG modules**. Each `
 |--------|------|------|--------------------|
 | **rag-contract** | OpenAPI spec + generated DTOs | - | - |
 | **rag-common** | Shared strategies (chunking, parsing, adapters, ingestion) | - | - |
+| **rag-provider** | Centralized LLM/embedding provider service | - | `RAG_PROVIDER_URL` |
 | **rag-basic** | Basic RAG | schema `rag_basic` | `RAG_BASIC_URL` |
 | **rag-advanced** *(planned)* | Advanced RAG (reranking, hybrid) | schema `rag_advanced` | `RAG_ADVANCED_URL` |
 | **rag-agentic** *(planned)* | Agentic RAG (tool calling) | schema `rag_agentic` | `RAG_AGENTIC_URL` |
@@ -99,6 +110,7 @@ See the architecture decisions for the full rationale:
 - [ADR-0007: Thin TUI + Module Control Plane](docs/architecture/decision-records/adr-0007-tui-interface.md)
 - [ADR-0008: rag-memory Module](docs/architecture/decision-records/adr-0008-rag-memory.md)
 - [ADR-0009: rag-webcrawler Module](docs/architecture/decision-records/adr-0009-rag-webcrawler.md)
+- [ADR-0010: rag-provider Service](docs/architecture/decision-records/adr-0010-rag-provider.md)
 
 ## More Documentation
 

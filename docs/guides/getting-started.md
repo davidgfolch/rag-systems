@@ -75,7 +75,25 @@ Optionally start observability (Prometheus + Grafana):
 ./scripts/docker.sh up-obs
 ```
 
-## 5. Run a Module
+## 5. Start rag-provider
+
+All RAG modules (rag-basic, rag-advanced, etc.) depend on **rag-provider** for LLM and embedding compute. It must be running before any other module:
+
+```bash
+# Windows
+.\scripts\run.bat rag-provider --profile local
+
+# Linux/Mac
+./scripts/run.sh rag-provider --profile local
+```
+
+rag-provider starts on port **8086** by default. It manages Ollama/OpenAI clients centrally and exposes them over HTTP so downstream modules don't need direct provider dependencies.
+
+> **Important — embedding dimension changes:** each embedding model produces vectors of a fixed dimension (e.g. `nomic-embed-text` → 768, `text-embedding-3-small` → 1536). When you switch the active embedding model (via `POST /api/provider/embedding` or the TUI `connect embedding` command), any documents already embedded with the previous model remain stored at the old dimension. rag-provider re-detects the new dimension lazily (at switch time and on each status read), but the vector store still holds the old vectors — similarity search and retrieval will fail with dimension-mismatch errors until you **re-ingest your documents** with the new embedding model. Keep to one embedding model per corpus, or clear and re-ingest after a switch.
+
+See the [rag-provider README](../../apps/rag-provider/README.md) for full configuration, API reference, and how to connect external providers.
+
+## 6. Run a Module
 
 Run rag-basic with the local (Ollama) profile:
 
@@ -89,7 +107,7 @@ Run rag-basic with the local (Ollama) profile:
 
 The API starts on http://localhost:8080 with Swagger UI at http://localhost:8080/swagger-ui.html
 
-## 6. Test with the CLI
+## 7. Test with the CLI
 
 Use the interactive CLI to query without a web UI:
 
@@ -101,7 +119,7 @@ Use the interactive CLI to query without a web UI:
 ./scripts/run.sh rag-cli --profile local
 ```
 
-## 7. Run Tests
+## 8. Run Tests
 
 ```bash
 # Run all tests with coverage
@@ -111,7 +129,7 @@ Use the interactive CLI to query without a web UI:
 .\scripts\test.bat rag-basic
 ```
 
-## 8. Run SonarQube Static Analysis (Optional)
+## 9. Run SonarQube Static Analysis (Optional)
 
 Start the local SonarQube server and analyze the whole monorepo (bugs, code smells, coverage, quality gate):
 
@@ -162,6 +180,14 @@ Set via `SPRING_PROFILES_ACTIVE` env var or `--profile` script flag.
 
 **PostgreSQL not connecting**
 - Ensure Docker is running and check `docker compose ps`
+
+**Embedding dimension mismatch after switching models**
+- Vectors stored under the old embedding model keep its dimension; re-ingest your documents with the new active embedding model (see the warning in [Start rag-provider](#5-start-rag-provider))
+- Check the active dimension with `GET http://localhost:8086/api/provider`
+
+**rag-provider unreachable**
+- Ensure it is running: `.\scripts\run.bat rag-provider --profile local`
+- Downstream modules fail with connection errors until rag-provider is up
 
 ## Next Steps
 
