@@ -115,7 +115,26 @@ Keep the full type name when:
 For types without a canonical short form, use `var` (section 2) and pick a
 concise plural (`msgs`) that stays readable.
 
-## 4. Structured logging is mandatory
+## 4. No magic literals
+
+Every string literal and numeric literal (other than `0`, `1`, `-1`) used in
+business logic, metadata keys, API paths, or frame types MUST be a named
+`static final` constant. Use shared constants from `rag-common` /
+`rag-contract` when available; otherwise define a module-local constant.
+
+```java
+// BAD
+Map.of("sourceType", "file", "fileName", name)
+
+// GOOD — import from MetadataKeys
+import static com.rag.common.domain.MetadataKeys.*;
+Map.of(SOURCE_TYPE, "file", FILE_NAME, name)
+```
+
+Exemptions: single-char format strings (`"\n"`, `" "`, `"."`,
+`"-"`), simple regex patterns, and annotation values.
+
+## 5. Structured logging is mandatory
 
 Every concrete service, controller, handler, adapter, and client class MUST log
 through a SLF4J logger. This is required for all features and modules.

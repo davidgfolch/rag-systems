@@ -15,6 +15,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import static com.rag.contract.constants.ApiPaths.CHAT_STREAM;
+import static com.rag.contract.constants.ApiPaths.COMPLETE;
+import static com.rag.contract.constants.ApiPaths.EMBED;
+import static com.rag.contract.constants.FrameTypes.DONE;
+import static com.rag.contract.constants.FrameTypes.ERROR;
+import static com.rag.contract.constants.FrameTypes.TOKEN;
+
 /**
  * Model-level compute endpoints consumed by the RAG modules' remote bridges.
  * Streaming reuses the {@link ChatResponse} stream frame shape ("token"/"done"/
@@ -33,14 +40,14 @@ public class ComputeController {
         this.embeddingService = embeddingService;
     }
 
-    @PostMapping("/api/complete")
+    @PostMapping(COMPLETE)
     public CompleteResponse complete(@RequestBody CompleteRequest request) {
         var answer = chatService.complete(request.prompt());
         log.info("Completion served: promptLength={}, answerLength={}", request.prompt().length(), answer.length());
         return new CompleteResponse(answer);
     }
 
-    @PostMapping("/api/embed")
+    @PostMapping(EMBED)
     public EmbedResponse embed(@RequestBody EmbedRequest request) {
         var vectors = embeddingService.embed(request.texts());
         log.info("Embedding served: texts={}, dimension={}",
@@ -48,15 +55,15 @@ public class ComputeController {
         return new EmbedResponse(vectors);
     }
 
-    @PostMapping(value = "/api/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @PostMapping(value = CHAT_STREAM, produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter stream(@RequestBody CompleteRequest request) {
         var emitter = new SseEmitter(0L);
         log.info("Chat stream started: promptLength={}", request.prompt().length());
         var subscription = chatService.stream(request.prompt()).subscribe(
-                token -> send(emitter, new ChatResponse("token", token, null)),
+                token -> send(emitter, new ChatResponse(TOKEN, token, null)),
                 error -> fail(emitter, error),
                 () -> {
-                    send(emitter, new ChatResponse("done", null, null));
+                    send(emitter, new ChatResponse(DONE, null, null));
                     emitter.complete();
                     log.info("Chat stream completed: promptLength={}", request.prompt().length());
                 });
@@ -72,7 +79,7 @@ public class ComputeController {
 
     private void fail(SseEmitter emitter, Throwable error) {
         log.error("Chat stream failed", error);
-        send(emitter, new ChatResponse("error", error.getMessage(), null));
+        send(emitter, new ChatResponse(ERROR, error.getMessage(), null));
         emitter.complete();
     }
 

@@ -2,6 +2,7 @@ package com.rag.common.services;
 
 import com.rag.common.domain.Chunk;
 import com.rag.common.domain.Document;
+import com.rag.common.domain.MetadataKeys;
 import com.rag.common.repositories.VectorStorePort;
 import org.junit.jupiter.api.Test;
 
@@ -37,7 +38,7 @@ class AsyncIngestionServiceTest {
         when(embeddingModel.embed("hello world")).thenReturn(List.of(1.0f, 0.0f));
 
         var service = new AsyncIngestionService(delegate);
-        var id = service.submit(new Document("d1", "", Map.of("rawBytes", new byte[]{1})));
+        var id = service.submit(new Document("d1", "", Map.of(MetadataKeys.RAW_BYTES, new byte[]{1})));
 
         var status = await(service, id);
         assertThat(status.state()).isEqualTo("COMPLETED");

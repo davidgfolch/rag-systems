@@ -1,6 +1,7 @@
 package com.rag.common.repositories.store;
 
 import com.rag.common.domain.Chunk;
+import com.rag.common.domain.MetadataKeys;
 import com.rag.common.services.EmbeddingModelPort;
 import org.junit.jupiter.api.Test;
 
@@ -78,11 +79,11 @@ class InMemoryVectorStoreTest {
 
     @Test
     void listsDocumentsGroupedByDocumentIdWithChunkCountAndMetadata() {
-        var a = new Chunk("c1", "d1", "text a", 0, Map.of("fileName", "note.txt"));
+        var a = new Chunk("c1", "d1", "text a", 0, Map.of(MetadataKeys.FILE_NAME, "note.txt"));
         a.setEmbedding(List.of(1f, 0f));
-        var b = new Chunk("c2", "d1", "text b", 1, Map.of("fileName", "note.txt"));
+        var b = new Chunk("c2", "d1", "text b", 1, Map.of(MetadataKeys.FILE_NAME, "note.txt"));
         b.setEmbedding(List.of(1f, 0f));
-        var c = new Chunk("c3", "d2", "text c", 0, Map.of("fileName", "other.txt"));
+        var c = new Chunk("c3", "d2", "text c", 0, Map.of(MetadataKeys.FILE_NAME, "other.txt"));
         c.setEmbedding(List.of(1f, 0f));
         store.add(List.of(a, b, c));
 
@@ -92,7 +93,7 @@ class InMemoryVectorStoreTest {
         var d1 = documents.stream()
                 .filter(d -> d.documentId().equals("d1")).findFirst().orElseThrow();
         assertThat(d1.chunkCount()).isEqualTo(2);
-        assertThat(d1.metadata()).containsEntry("fileName", "note.txt");
+        assertThat(d1.metadata()).containsEntry(MetadataKeys.FILE_NAME, "note.txt");
     }
 
     @Test

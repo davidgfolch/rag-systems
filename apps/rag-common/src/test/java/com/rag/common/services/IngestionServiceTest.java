@@ -2,6 +2,7 @@ package com.rag.common.services;
 
 import com.rag.common.domain.Chunk;
 import com.rag.common.domain.Document;
+import com.rag.common.domain.MetadataKeys;
 import com.rag.common.repositories.VectorStorePort;
 import com.rag.common.services.IngestionService.EmptyExtractionException;
 import org.junit.jupiter.api.Test;
@@ -69,7 +70,7 @@ class IngestionServiceTest {
 
     @Test
     void rejectsBinaryDocumentThatYieldsNoText() {
-        var doc = new Document("d1", "", Map.of("rawBytes", new byte[]{0x25, 0x50, 0x44, 0x46}));
+        var doc = new Document("d1", "", Map.of(MetadataKeys.RAW_BYTES, new byte[]{0x25, 0x50, 0x44, 0x46}));
         when(parser.parse(doc)).thenReturn("");
 
         assertThatThrownBy(() -> service.ingest(doc))

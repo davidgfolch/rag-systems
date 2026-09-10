@@ -11,6 +11,7 @@ import org.springframework.web.client.RestClient;
 
 import java.util.List;
 
+import static com.rag.contract.constants.ApiPaths.CONVERSATIONS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -18,15 +19,17 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 class MemoryClientTest {
 
+    private static final String MEMORY_BASE_URL = "http://localhost:8084";
+
     private final RestClient.Builder builder = RestClient.builder()
-            .baseUrl("http://localhost:8084")
+            .baseUrl(MEMORY_BASE_URL)
             .requestFactory(new JdkClientHttpRequestFactory());
     private final MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
     private final MemoryClient sut = new MemoryClient(builder.build());
 
     @Test
     void listsConversations() {
-        server.expect(requestTo("http://localhost:8084/api/conversations"))
+        server.expect(requestTo(MEMORY_BASE_URL + CONVERSATIONS))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("[{\"id\":\"c1\",\"title\":\"t1\"}]",
                         MediaType.APPLICATION_JSON));
@@ -40,7 +43,7 @@ class MemoryClientTest {
 
     @Test
     void returnsEmptyWhenNoConversations() {
-        server.expect(requestTo("http://localhost:8084/api/conversations"))
+        server.expect(requestTo(MEMORY_BASE_URL + CONVERSATIONS))
                 .andRespond(withSuccess("null", MediaType.APPLICATION_JSON));
 
         assertThat(sut.conversations()).isEmpty();
@@ -49,7 +52,7 @@ class MemoryClientTest {
 
     @Test
     void listsMessagesForConversation() {
-        server.expect(requestTo("http://localhost:8084/api/conversations/c1/messages"))
+        server.expect(requestTo(MEMORY_BASE_URL + CONVERSATIONS + "/c1/messages"))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess(
                         "[{\"id\":\"m1\",\"content\":\"hi\",\"role\":\"user\",\"conversationId\":\"c1\"}]",

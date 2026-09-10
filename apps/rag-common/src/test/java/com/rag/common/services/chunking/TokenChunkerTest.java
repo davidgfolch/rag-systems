@@ -1,9 +1,13 @@
 package com.rag.common.services.chunking;
 
 import com.rag.common.domain.Document;
+import com.rag.common.domain.MetadataKeys;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -11,27 +15,28 @@ class TokenChunkerTest {
 
     private final TokenChunker chunker = new TokenChunker(5, 1);
 
-    @Test
-    void splitsByTokenCount() {
-        Document doc = new Document("d1",
-                "one two three four five six seven eight nine ten eleven", Map.of());
-
+    @ParameterizedTest(name = "input=\"{0}\" → {1}")
+    @MethodSource("splitInputProvider")
+    void splitReturnsExpectedChunksForInput(String input, String expectedMode) {
+        Document doc = new Document("d1", input, Map.of());
         var chunks = chunker.split(doc);
 
-        assertThat(chunks).hasSizeGreaterThan(1);
-        assertThat(chunks.get(0).getMetadata()).containsEntry("strategy", "token");
+        switch (expectedMode) {
+            case "MULTI" -> {
+                assertThat(chunks).hasSizeGreaterThan(1);
+                assertThat(chunks.get(0).getMetadata()).containsEntry(MetadataKeys.STRATEGY, "token");
+            }
+            case "EMPTY" -> assertThat(chunks).isEmpty();
+            case "SINGLE" -> assertThat(chunks).hasSize(1);
+        }
     }
 
-    @Test
-    void returnsEmptyForBlankContent() {
-        Document doc = new Document("d1", "", Map.of());
-        assertThat(chunker.split(doc)).isEmpty();
-    }
-
-    @Test
-    void singleChunkForSmallText() {
-        Document doc = new Document("d1", "one two three", Map.of());
-        assertThat(chunker.split(doc)).hasSize(1);
+    static Stream<Object[]> splitInputProvider() {
+        return Stream.of(
+                new Object[]{"one two three four five six seven eight nine ten eleven", "MULTI"},
+                new Object[]{"", "EMPTY"},
+                new Object[]{"one two three", "SINGLE"}
+        );
     }
 
     @Test

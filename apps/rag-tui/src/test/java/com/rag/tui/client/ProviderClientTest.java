@@ -8,6 +8,15 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static com.rag.contract.constants.ApiPaths.CATALOG;
+import static com.rag.contract.constants.ApiPaths.CATALOG_REFRESH;
+import static com.rag.contract.constants.ApiPaths.PROVIDER;
+import static com.rag.contract.constants.ApiPaths.PROVIDER_CHAT;
+import static com.rag.contract.constants.ApiPaths.PROVIDER_EMBEDDING;
+import static com.rag.tui.testfixture.TestModelCatalogs.LOCAL_CHAT;
+import static com.rag.tui.testfixture.TestModelCatalogs.LOCAL_EMBED;
+import static com.rag.tui.testfixture.TestModelCatalogs.PROVIDER_OLLAMA;
+import static com.rag.tui.testfixture.TestModelCatalogs.SOURCE;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -39,31 +48,31 @@ class ProviderClientTest {
 
     @Test
     void returnsProviderStatus() {
-        server.expect(requestTo(BASE + "/api/provider"))
+        server.expect(requestTo(BASE + PROVIDER))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess(STATUS_JSON, MediaType.APPLICATION_JSON));
 
         var status = sut.status();
 
-        assertThat(status.chat().providerId()).isEqualTo("ollama");
-        assertThat(status.chat().model()).isEqualTo("phi4");
-        assertThat(status.embedding().model()).isEqualTo("nomic-embed-text");
+        assertThat(status.chat().providerId()).isEqualTo(PROVIDER_OLLAMA);
+        assertThat(status.chat().model()).isEqualTo(LOCAL_CHAT);
+        assertThat(status.embedding().model()).isEqualTo(LOCAL_EMBED);
         assertThat(status.embeddingDimension()).isEqualTo(768);
         server.verify();
     }
 
     @Test
     void returnsCatalog() {
-        server.expect(requestTo(BASE + "/api/provider/catalog"))
+        server.expect(requestTo(BASE + CATALOG))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess(CATALOG_JSON, MediaType.APPLICATION_JSON));
 
         var catalog = sut.catalog();
 
         assertThat(catalog.models()).hasSize(1);
-        assertThat(catalog.source()).isEqualTo("https://models.dev/api.json");
+        assertThat(catalog.source()).isEqualTo(SOURCE);
         assertThat(catalog.fetchedAt()).isNotNull();
-        assertThat(catalog.models().getFirst().modelId()).isEqualTo("phi4");
+        assertThat(catalog.models().getFirst().modelId()).isEqualTo(LOCAL_CHAT);
         assertThat(catalog.models().getFirst().limits().context()).isEqualTo(16384);
         assertThat(catalog.models().getFirst().capabilities().reasoning()).isTrue();
         server.verify();
@@ -71,7 +80,7 @@ class ProviderClientTest {
 
     @Test
     void refreshesCatalog() {
-        server.expect(requestTo(BASE + "/api/provider/catalog/refresh"))
+        server.expect(requestTo(BASE + CATALOG_REFRESH))
                 .andExpect(method(HttpMethod.POST))
                 .andRespond(withSuccess(CATALOG_JSON, MediaType.APPLICATION_JSON));
 
@@ -83,19 +92,19 @@ class ProviderClientTest {
 
     @Test
     void switchesChatModel() {
-        server.expect(requestTo(BASE + "/api/provider/chat"))
+        server.expect(requestTo(BASE + PROVIDER_CHAT))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(content().json("{\"providerId\":\"ollama\",\"model\":\"phi4\"}"))
                 .andRespond(withNoContent());
 
-        sut.switchChat("ollama", "phi4");
+        sut.switchChat(PROVIDER_OLLAMA, LOCAL_CHAT);
 
         server.verify();
     }
 
     @Test
     void switchesEmbeddingModel() {
-        server.expect(requestTo(BASE + "/api/provider/embedding"))
+        server.expect(requestTo(BASE + PROVIDER_EMBEDDING))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(content().json("{\"providerId\":\"openai\",\"model\":\"text-embedding-3-small\"}"))
                 .andRespond(withNoContent());

@@ -1,6 +1,7 @@
 package com.rag.common.services.parsing;
 
 import com.rag.common.domain.Document;
+import com.rag.common.domain.MetadataKeys;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -21,7 +22,7 @@ class TikaDocumentParserTest {
     @Test
     void extractsTextFromHtml() {
         String html = "<html><body><h1>Title</h1><p>Some <b>content</b> here.</p></body></html>";
-        Document doc = new Document("d1", "", Map.of("rawBytes", html.getBytes(StandardCharsets.UTF_8)));
+        Document doc = new Document("d1", "", Map.of(MetadataKeys.RAW_BYTES, html.getBytes(StandardCharsets.UTF_8)));
 
         String result = parser.parse(doc);
 
@@ -33,14 +34,14 @@ class TikaDocumentParserTest {
     @Test
     void extractsTextFromBase64RawForBackwardCompatibility() {
         String html = "<html><body><p>legacy base64</p></body></html>";
-        Document doc = new Document("d1", "", Map.of("raw", base64(html)));
+        Document doc = new Document("d1", "", Map.of(MetadataKeys.RAW, base64(html)));
 
         assertThat(parser.parse(doc)).containsIgnoringCase("legacy base64");
     }
 
     @Test
     void throwsWhenRawIsNotString() {
-        Document doc = new Document("d1", "", Map.of("raw", 123));
+        Document doc = new Document("d1", "", Map.of(MetadataKeys.RAW, 123));
         assertThat(parser.parse(doc)).isEmpty();
     }
 

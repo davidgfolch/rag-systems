@@ -19,6 +19,12 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static com.rag.contract.constants.FrameTypes.ASK;
+import static com.rag.contract.constants.FrameTypes.CANCEL;
+import static com.rag.contract.constants.FrameTypes.DONE;
+import static com.rag.contract.constants.FrameTypes.ERROR;
+import static com.rag.contract.constants.FrameTypes.TOKEN;
+
 /**
  * Streaming chat over WebSocket: ask/cancel inbound, token/done/error outbound.
  * Per-session disposal cancels the underlying LLM stream on disconnect or cancel.
@@ -41,10 +47,10 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         ChatRequest request = objectMapper.readValue(message.getPayload(), ChatRequest.class);
-        if ("cancel".equals(request.type())) {
+        if (CANCEL.equals(request.type())) {
             cancel(request.conversationId());
-            send(session, new ChatResponse("done", "", request.conversationId()));
-        } else if ("ask".equals(request.type()) && request.question() != null) {
+            send(session, new ChatResponse(DONE, "", request.conversationId()));
+        } else if (ASK.equals(request.type()) && request.question() != null) {
             ask(session, request);
         }
     }
@@ -60,18 +66,18 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 .doOnNext(answer::append)
                 .doOnCancel(() -> finished.set(true))
                 .subscribe(
-                        token -> send(session, new ChatResponse("token", token, request.conversationId())),
+                        token -> send(session, new ChatResponse(TOKEN, token, request.conversationId())),
                         error -> {
                             finished.set(true);
                             log.error("Stream error: conversationId={}, error={}",
                                     request.conversationId(), error.getMessage(), error);
-                            send(session, new ChatResponse("error", error.getMessage(), request.conversationId()));
+                            send(session, new ChatResponse(ERROR, error.getMessage(), request.conversationId()));
                         },
                         () -> {
                             if (finished.compareAndSet(false, true)) {
                                 log.info("Stream complete: conversationId={}, answerLength={}",
                                         request.conversationId(), answer.length());
-                                send(session, new ChatResponse("done", answer.toString(), request.conversationId()));
+                                send(session, new ChatResponse(DONE, answer.toString(), request.conversationId()));
                             } else {
                                 log.info("Stream cancelled: conversationId={}", request.conversationId());
                             }

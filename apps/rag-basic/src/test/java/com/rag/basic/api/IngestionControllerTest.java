@@ -3,6 +3,7 @@ package com.rag.basic.api;
 import com.rag.basic.services.RetrievalService;
 import com.rag.basic.services.WebCrawlerClient;
 import com.rag.common.domain.DocumentSummary;
+import com.rag.common.domain.MetadataKeys;
 import com.rag.common.services.AsyncIngestionService;
 import com.rag.common.services.IngestionService;
 import com.rag.contract.model.DocumentSummaryDTO;
@@ -63,7 +64,7 @@ class IngestionControllerTest {
 
         ResponseEntity<IngestResponse> response =
                 controller.ingest(new IngestRequest().content("")
-                        .metadata(Map.of("raw", Base64.getEncoder().encodeToString(new byte[]{0x25, 0x50, 0x44, 0x46}))));
+                        .metadata(Map.of(MetadataKeys.RAW, Base64.getEncoder().encodeToString(new byte[]{0x25, 0x50, 0x44, 0x46}))));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody().getDocumentId()).isEqualTo("d1");
@@ -77,7 +78,7 @@ class IngestionControllerTest {
                 new byte[]{0x25, 0x50, 0x44, 0x46});
 
         ResponseEntity<IngestResponse> response =
-                controller.ingestFile(file, Map.of("source", "x.pdf"));
+                controller.ingestFile(file, Map.of(MetadataKeys.SOURCE, "x.pdf"));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody().getDocumentId()).isEqualTo("d1");
@@ -136,12 +137,12 @@ class IngestionControllerTest {
                 new byte[]{0x25, 0x50, 0x44, 0x46});
 
         ResponseEntity<IngestJobResponse> response =
-                asyncController.ingestFileAsync(file, Map.of("source", "x.pdf"));
+                asyncController.ingestFileAsync(file, Map.of(MetadataKeys.SOURCE, "x.pdf"));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
         assertThat(response.getBody().getDocumentId()).isNotBlank();
         String documentId = response.getBody().getDocumentId();
-        assertThat(awaitState(asyncController, documentId)).isEqualTo("COMPLETED");
+        assertThat(awaitState(asyncController, documentId)).isEqualTo(AsyncIngestionService.STATE_COMPLETED);
     }
 
     @Test
@@ -165,14 +166,14 @@ class IngestionControllerTest {
 
     private static boolean isTerminalState(IngestionController asyncController, String documentId) {
         String state = asyncController.ingestStatus(documentId).getBody().getState().getValue();
-        return "COMPLETED".equals(state) || "FAILED".equals(state);
+        return AsyncIngestionService.STATE_COMPLETED.equals(state) || AsyncIngestionService.STATE_FAILED.equals(state);
     }
 
     @Test
     void listsDocumentsViaRetrievalService() {
         RetrievalService retrievalService = mock(RetrievalService.class);
         when(retrievalService.listDocuments()).thenReturn(List.of(
-                new DocumentSummary("d1", 3, Map.of("fileName", "note.txt", "title", "note.txt"))));
+                new DocumentSummary("d1", 3, Map.of(MetadataKeys.FILE_NAME, "note.txt", MetadataKeys.TITLE, "note.txt"))));
         IngestionController listController = new IngestionController(service, webCrawlerClient, null, retrievalService);
 
         ResponseEntity<List<DocumentSummaryDTO>> response = listController.listDocuments();
@@ -183,7 +184,7 @@ class IngestionControllerTest {
         assertThat(dto.getDocumentId()).isEqualTo("d1");
         assertThat(dto.getTitle()).isEqualTo("note.txt");
         assertThat(dto.getChunkCount()).isEqualTo(3);
-        assertThat(dto.getMetadata()).containsEntry("fileName", "note.txt");
+        assertThat(dto.getMetadata()).containsEntry(MetadataKeys.FILE_NAME, "note.txt");
     }
 
     @Test

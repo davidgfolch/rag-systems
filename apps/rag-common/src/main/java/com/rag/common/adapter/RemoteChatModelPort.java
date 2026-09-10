@@ -15,6 +15,12 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
+import static com.rag.contract.constants.ApiPaths.CHAT_STREAM;
+import static com.rag.contract.constants.ApiPaths.COMPLETE;
+import static com.rag.contract.constants.FrameTypes.DONE;
+import static com.rag.contract.constants.FrameTypes.ERROR;
+import static com.rag.contract.constants.FrameTypes.TOKEN;
+
 /**
  * Adapter bridging the domain {@link ChatModelPort} onto the rag-provider
  * service over HTTP. Streaming reuses the {@link ChatResponse} frame shape,
@@ -34,7 +40,7 @@ public class RemoteChatModelPort implements ChatModelPort {
 
     @Override
     public String complete(String prompt) {
-        var response = httpClient.postJson("/api/complete", new CompleteRequest(prompt), CompleteResponse.class);
+        var response = httpClient.postJson(COMPLETE, new CompleteRequest(prompt), CompleteResponse.class);
         log.info("Remote chat completion received: promptLength={}, answerLength={}",
                 prompt.length(), response.answer() == null ? 0 : response.answer().length());
         return response.answer();
@@ -49,7 +55,7 @@ public class RemoteChatModelPort implements ChatModelPort {
     }
 
     private void readStream(String prompt, Sinks.Many<String> sink) {
-        try (var body = httpClient.postStream("/api/chat/stream", new CompleteRequest(prompt));
+        try (var body = httpClient.postStream(CHAT_STREAM, new CompleteRequest(prompt));
              var reader = new BufferedReader(new InputStreamReader(body, StandardCharsets.UTF_8))) {
             String line;
             while ((line = reader.readLine()) != null) {
@@ -70,17 +76,17 @@ public class RemoteChatModelPort implements ChatModelPort {
     private boolean consumeFrame(Sinks.Many<String> sink, String json) throws IOException {
         var frame = objectMapper.readValue(json, ChatResponse.class);
         return switch (frame.type()) {
-            case "token" -> {
+            case TOKEN -> {
                 if (frame.content() != null) {
                     sink.tryEmitNext(frame.content());
                 }
                 yield true;
             }
-            case "error" -> {
+            case ERROR -> {
                 sink.tryEmitError(new IllegalStateException(frame.content()));
                 yield false;
             }
-            case "done" -> {
+            case DONE -> {
                 sink.tryEmitComplete();
                 yield false;
             }

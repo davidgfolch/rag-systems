@@ -25,6 +25,15 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
+import static com.rag.contract.constants.ApiPaths.DOCUMENT_BY_ID;
+import static com.rag.contract.constants.ApiPaths.DOCUMENTS;
+import static com.rag.contract.constants.ApiPaths.INGEST;
+import static com.rag.contract.constants.ApiPaths.INGEST_FILE;
+import static com.rag.contract.constants.ApiPaths.INGEST_FILE_ASYNC;
+import static com.rag.contract.constants.ApiPaths.INGEST_STATUS;
+import static com.rag.contract.constants.ApiPaths.INGEST_URL;
+import static com.rag.contract.constants.ApiPaths.QUERY;
+
 /**
  * REST client for the active rag-* module: ingestion and query endpoints,
  * using the shared contract DTOs. The active module is resolved per call.
@@ -46,12 +55,12 @@ public class RagApiClient {
         if (metadata != null) {
             request.metadata(metadata);
         }
-        return post("/api/documents/ingest", request, IngestResponse.class);
+        return post(INGEST, request, IngestResponse.class);
     }
 
     public IngestResponse ingestFile(byte[] bytes, String fileName, Map<String, Object> metadata) {
         return client()
-                .post().uri("/api/documents/ingest-file")
+                .post().uri(INGEST_FILE)
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .body(buildBody(bytes, fileName, metadata))
                 .retrieve().body(IngestResponse.class);
@@ -78,7 +87,7 @@ public class RagApiClient {
      */
     public IngestJobResponse submitIngestFile(byte[] bytes, String fileName, Map<String, Object> metadata) {
         return client()
-                .post().uri("/api/documents/ingest-file-async")
+                .post().uri(INGEST_FILE_ASYNC)
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .body(buildBody(bytes, fileName, metadata))
                 .retrieve().body(IngestJobResponse.class);
@@ -86,12 +95,12 @@ public class RagApiClient {
 
     public IngestStatusDTO ingestStatus(String documentId) {
         log.debug("Polling ingest status for {}", documentId);
-        return client().get().uri("/api/documents/ingest-status/{id}", documentId)
+        return client().get().uri(INGEST_STATUS, documentId)
                 .retrieve().body(IngestStatusDTO.class);
     }
 
     public IngestResponse ingestUrl(String url) {
-        return post("/api/documents/ingest-url",
+        return post(INGEST_URL,
                 new IngestUrlRequest().url(URI.create(url)), IngestResponse.class);
     }
 
@@ -99,7 +108,7 @@ public class RagApiClient {
      * Deletes an ingested document and all of its chunks from the active module.
      */
     public void deleteDocument(String documentId) {
-        client().delete().uri("/api/documents/{documentId}", documentId)
+        client().delete().uri(DOCUMENT_BY_ID, documentId)
                 .retrieve().toBodilessEntity();
     }
 
@@ -108,12 +117,12 @@ public class RagApiClient {
      */
     public void deleteDocument(String baseUrl, String documentId) {
         builder.clone().baseUrl(baseUrl).build()
-                .delete().uri("/api/documents/{documentId}", documentId)
+                .delete().uri(DOCUMENT_BY_ID, documentId)
                 .retrieve().toBodilessEntity();
     }
 
     public QueryResponse query(String question, int topK) {
-        return post("/api/query",
+        return post(QUERY,
                 new QueryRequest().question(question).topK(topK), QueryResponse.class);
     }
 
@@ -125,7 +134,7 @@ public class RagApiClient {
     public List<DocumentSummaryDTO> listDocuments(String baseUrl) {
         try {
             var documents = builder.clone().baseUrl(baseUrl).build()
-                    .get().uri("/api/documents")
+                    .get().uri(DOCUMENTS)
                     .retrieve().body(DocumentSummaryDTO[].class);
             return documents == null ? List.of() : List.of(documents);
         } catch (HttpClientErrorException.NotFound e) {

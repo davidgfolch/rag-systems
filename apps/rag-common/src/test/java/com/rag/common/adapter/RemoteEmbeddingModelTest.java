@@ -1,6 +1,7 @@
 package com.rag.common.adapter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rag.contract.constants.ApiPaths;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.AfterEach;
@@ -36,7 +37,7 @@ class RemoteEmbeddingModelTest {
         var client = new ProviderHttpClient("http://localhost:" + server.getAddress().getPort(),
                 new ObjectMapper());
         model = new RemoteEmbeddingModel(client);
-        server.createContext("/api/provider", exchange -> {
+        server.createContext(ApiPaths.PROVIDER, exchange -> {
             providerStatusCalls.incrementAndGet();
             respond(exchange, 200, "application/json", STATUS_JSON);
         });
@@ -55,7 +56,7 @@ class RemoteEmbeddingModelTest {
 
     @Test
     void shouldEmbedTextsViaApiEmbed() {
-        server.createContext("/api/embed",
+        server.createContext(ApiPaths.EMBED,
                 exchange -> respond(exchange, 200, "application/json",
                         "{\"embeddings\":[[0.0,1.0],[2.0,3.0]]}"));
 
@@ -67,7 +68,7 @@ class RemoteEmbeddingModelTest {
 
     @Test
     void shouldEmbedDocumentViaApiEmbed() {
-        server.createContext("/api/embed",
+        server.createContext(ApiPaths.EMBED,
                 exchange -> respond(exchange, 200, "application/json",
                         "{\"embeddings\":[[4.0,5.0]]}"));
 
@@ -92,7 +93,7 @@ class RemoteEmbeddingModelTest {
 
         assertThat(sut.dimensions()).isEqualTo(512);
 
-        down.createContext("/api/provider", exchange ->
+        down.createContext(ApiPaths.PROVIDER, exchange ->
                 respond(exchange, 200, "application/json", STATUS_JSON));
         assertThat(sut.dimensions()).isEqualTo(768);
         down.stop(0);

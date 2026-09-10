@@ -159,3 +159,6 @@ These rules are enforced by the architecture tests:
 | Imports instead of inline fully-qualified names | `.claude/skills/rules/SKILL.md` |
 | Common abbreviated names (`req`, `res`, `conn`, `ds`, ...) | `.claude/skills/rules/SKILL.md` |
 | `Entity`/`DTO` bean suffixes | `rag-memory/.../ArchitectureTest`, `rag-contract/.../DtoNamingTest` |
+| No magic literals in production code | This document, `.claude/rules/architecture-guidelines.md`, `rag-common/.../ArchitectureTest` |
+| Shared test fixtures | `.claude/skills/test-implementer/SKILL.md`, `.claude/rules/architecture-guidelines.md` |
+| Parameterized tests where applicable | `.claude/skills/test-implementer/SKILL.md`, `.claude/rules/architecture-guidelines.md` |

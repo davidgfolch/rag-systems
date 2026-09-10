@@ -16,6 +16,9 @@ import java.io.IOException;
 import java.util.Base64;
 import java.util.regex.Pattern;
 
+import static com.rag.common.domain.MetadataKeys.RAW;
+import static com.rag.common.domain.MetadataKeys.RAW_BYTES;
+
 /**
  * Tika-based parser for binary formats (PDF, DOCX, XLSX, PPTX, RTF, ...).
  *
@@ -45,11 +48,11 @@ public class TikaDocumentParser implements DocumentParser {
     }
 
     private byte[] getRawBytes(Document document) {
-        var raw = document.getMetadata().get("rawBytes");
+        var raw = document.getMetadata().get(RAW_BYTES);
         if (raw instanceof byte[] bytes) {
             return bytes;
         }
-        var legacy = document.getMetadata().get("raw");
+        var legacy = document.getMetadata().get(RAW);
         if (legacy instanceof String rawContent) {
             return Base64.getDecoder().decode(rawContent);
         }

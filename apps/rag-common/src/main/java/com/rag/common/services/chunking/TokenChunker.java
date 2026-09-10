@@ -13,6 +13,11 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
+import static com.rag.common.domain.MetadataKeys.MAX_TOKENS;
+import static com.rag.common.domain.MetadataKeys.RAW_BYTES;
+import static com.rag.common.domain.MetadataKeys.STRATEGY;
+import static com.rag.common.domain.MetadataKeys.TOKEN_COUNT;
+
 /**
  * Token-aware chunker. Splits on token boundaries rather than characters,
  * using a simple word-based tokenizer approximation (1 token ≈ 4 characters
@@ -60,9 +65,9 @@ public class TokenChunker implements TextSplitter {
 
             if (!chunkContent.isEmpty()) {
                 var meta = new HashMap<>(baseMeta);
-                meta.put("strategy", "token");
-                meta.put("maxTokens", maxTokens);
-                meta.put("tokenCount", end - start);
+                meta.put(STRATEGY, "token");
+                meta.put(MAX_TOKENS, maxTokens);
+                meta.put(TOKEN_COUNT, end - start);
                 chunks.add(new Chunk(
                         UUID.randomUUID().toString(),
                         document.getId(),
@@ -82,7 +87,7 @@ public class TokenChunker implements TextSplitter {
 
     private static Map<String, Object> documentMeta(Document document) {
         var meta = new HashMap<>(document.getMetadata());
-        meta.remove("rawBytes");
+        meta.remove(RAW_BYTES);
         return meta;
     }
 }

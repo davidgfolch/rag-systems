@@ -20,6 +20,11 @@ import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static com.rag.contract.constants.FrameTypes.ASK;
+import static com.rag.contract.constants.FrameTypes.DONE;
+import static com.rag.contract.constants.FrameTypes.ERROR;
+import static com.rag.contract.constants.FrameTypes.TOKEN;
+
 /**
  * Streaming chat client over WebSocket (/ws/chat) for the active module.
  * ask() blocks until done/error, feeding tokens to a sink; cancel() closes the
@@ -74,12 +79,12 @@ public class ChatGateway {
             protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
                 ChatResponse response = objectMapper.readValue(message.getPayload(), ChatResponse.class);
                 switch (response.type()) {
-                    case "token" -> onToken.accept(response.content());
-                    case "done" -> {
+                    case TOKEN -> onToken.accept(response.content());
+                    case DONE -> {
                         answer.set(response.content());
                         done.countDown();
                     }
-                    case "error" -> {
+                    case ERROR -> {
                         error.set(response.content());
                         done.countDown();
                     }
@@ -93,7 +98,7 @@ public class ChatGateway {
     }
 
     private void sendAsk(WebSocketSession session, String question, int topK, String conversationId) {
-        ChatRequest ask = new ChatRequest("ask", question, topK, conversationId);
+        ChatRequest ask = new ChatRequest(ASK, question, topK, conversationId);
         try {
             session.sendMessage(new TextMessage(objectMapper.writeValueAsString(ask)));
         } catch (IOException e) {

@@ -31,6 +31,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static com.rag.tui.testfixture.TestModelCatalogs.CLOUD_CHAT;
+import static com.rag.tui.testfixture.TestModelCatalogs.LOCAL_CHAT;
+import static com.rag.tui.testfixture.TestModelCatalogs.LOCAL_EMBED;
+import static com.rag.tui.testfixture.TestModelCatalogs.PROVIDER_OLLAMA;
+import static com.rag.tui.testfixture.TestModelCatalogs.SOURCE;
 
 class ConnectCommandTest {
 
@@ -43,12 +48,12 @@ class ConnectCommandTest {
         when(client.catalog()).thenReturn(catalog());
         when(prompter.pick(eq("Choose chat provider"), anyList())).thenReturn(Optional.of("openrouter"));
         when(prompter.pick(eq("Choose chat model for openrouter"), anyList()))
-                .thenReturn(Optional.of("gpt-4o"));
+                .thenReturn(Optional.of(CLOUD_CHAT));
 
         var result = sut.execute("chat");
 
-        assertThat(result).contains("Chat model switched", "openrouter/gpt-4o");
-        verify(client).switchChat("openrouter", "gpt-4o");
+        assertThat(result).contains("Chat model switched", "openrouter/" + CLOUD_CHAT);
+        verify(client).switchChat("openrouter", CLOUD_CHAT);
     }
 
     @Test
@@ -89,10 +94,10 @@ class ConnectCommandTest {
 
     @Test
     void keepsTypedArgsWithoutPrompts() {
-        var result = sut.execute("chat openrouter gpt-4o");
+        var result = sut.execute("chat openrouter " + CLOUD_CHAT);
 
-        assertThat(result).contains("Chat model switched", "openrouter/gpt-4o");
-        verify(client).switchChat("openrouter", "gpt-4o");
+        assertThat(result).contains("Chat model switched", "openrouter/" + CLOUD_CHAT);
+        verify(client).switchChat("openrouter", CLOUD_CHAT);
         verify(prompter, never()).pick(anyString(), anyList());
     }
 
@@ -146,9 +151,9 @@ class ConnectCommandTest {
     @Test
     void reportsProviderModuleUnreachableForConnectionFailures() {
         doThrow(new ResourceAccessException("connection refused"))
-                .when(client).switchChat("openrouter", "gpt-4o");
+                .when(client).switchChat("openrouter", CLOUD_CHAT);
 
-        var result = sut.execute("chat openrouter gpt-4o");
+        var result = sut.execute("chat openrouter " + CLOUD_CHAT);
 
         assertThat(result).contains("Provider module unreachable", "connection refused");
     }
@@ -156,22 +161,22 @@ class ConnectCommandTest {
     @Test
     void rendersActiveModelsForStartupBanner() {
         when(client.status()).thenReturn(new ProviderStatusDTO(
-                new ModelSpecDTO("ollama", "phi4"),
-                new ModelSpecDTO("ollama", "nomic-embed-text"), "ollama", 768));
+                new ModelSpecDTO(PROVIDER_OLLAMA, LOCAL_CHAT),
+                new ModelSpecDTO(PROVIDER_OLLAMA, LOCAL_EMBED), PROVIDER_OLLAMA, 768));
 
         var result = sut.activeSpecs();
 
         assertThat(result)
-                .contains("Chat model: ollama/phi4")
-                .contains("Embedding model: ollama/nomic-embed-text (dimension 768)");
+                .contains("Chat model: " + PROVIDER_OLLAMA + "/" + LOCAL_CHAT)
+                .contains("Embedding model: " + PROVIDER_OLLAMA + "/" + LOCAL_EMBED + " (dimension 768)");
     }
 
     private static ModelCatalogDTO catalog() {
         return new ModelCatalogDTO(List.of(
-                new ProviderModelDTO("ollama", "phi4", "Phi-4", new ModelLimitsDTO(16384, 4096),
+                new ProviderModelDTO(PROVIDER_OLLAMA, LOCAL_CHAT, "Phi-4", new ModelLimitsDTO(16384, 4096),
                         new ModelCapabilitiesDTO(true, false, false), null, null),
-                new ProviderModelDTO("openrouter", "gpt-4o", "GPT-4o", new ModelLimitsDTO(128000, 16384),
+                new ProviderModelDTO("openrouter", CLOUD_CHAT, "GPT-4o", new ModelLimitsDTO(128000, 16384),
                         new ModelCapabilitiesDTO(false, true, true), null, null)),
-                "https://models.dev/api.json", Instant.now());
+                SOURCE, Instant.now());
     }
 }
