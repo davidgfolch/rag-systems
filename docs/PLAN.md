@@ -119,6 +119,7 @@ This architecture evolves around a **thin TUI + switchable RAG modules**. Each d
 | **TUI** | Thin interface over a control plane: starts/stops rag-* modules as child processes, routes REST/WebSocket to the active module | [ADR-0007](architecture/decision-records/adr-0007-tui-interface.md) |
 | **Conversation state** | `rag-memory` module owns chat/conversation history (schema `rag_memory`, non-vector) | [ADR-0008](architecture/decision-records/adr-0008-rag-memory.md) |
 | **Web ingestion** | `rag-webcrawler` module: intelligent fetching with LLM-driven link selection | [ADR-0009](architecture/decision-records/adr-0009-rag-webcrawler.md) |
+| **Provider abstraction** | Dedicated `rag-provider` service owns all model/provider clients; runtime model switching over HTTP; downstream modules talk to it via thin `rag-common` bridges | [ADR-0010](architecture/decision-records/adr-0010-rag-provider.md), [ADR-0011](architecture/decision-records/adr-0011-model-catalog.md), [ADR-0012](architecture/decision-records/adr-0012-tui-connect.md) |
 
 Core invariants:
 
@@ -183,6 +184,13 @@ rag-systems/
 │   └── opencode.json
 ├── apps/                             # Monorepo modules
 │   ├── rag-contract/                 # OpenAPI contract + generated DTOs
+│   ├── rag-provider/                 # Provider hub: model switching, chat/embed APIs
+│   │   ├── src/main/java/com/rag/provider/
+│   │   │   ├── domain/               # ProviderProfile, ModelSpec, ModelCatalog
+│   │   │   ├── services/             # ModelRouter, ProviderRegistry, CatalogService
+│   │   │   ├── adapter/              # ProviderClientFactory, FileStore, CatalogClient
+│   │   │   └── api/                  # ProviderController, ComputeController, CatalogController
+│   │   └── src/test/java/com/rag/provider/
 │   ├── rag-common/                   # Shared library
 │   │   ├── src/main/java/com/rag/common/
 │   │   │   ├── domain/              # Document, Chunk, Embedding
@@ -341,6 +349,15 @@ Reusable web-fetch tool. No RAG pipeline - returns `Page` DTOs.
 **API**: `POST /api/fetch {url}`, `POST /api/fetch/links {url, question}`
 **Features**: jsoup fetching, LLM-driven `LinkPrioritizer` for selecting which links to load (deterministic fallback)
 
+### 10. rag-provider (Provider Hub)
+
+Dedicated Spring Boot service owning all LLM/embedding provider clients (Ollama, OpenAI, OpenAI-compatible). Port **8086**. All other rag-modules depend on it over HTTP - they hold no provider dependencies of their own.
+
+**API**: `GET /api/provider` (status), `POST /api/provider/chat|embedding` (switch model), `POST /api/provider/configure` (upsert provider profile), `POST /api/complete|/api/embed|/api/chat/stream` (compute), `GET /api/provider/catalog` (model discovery)
+**Domain**: `ProviderProfile`/`ProviderType` (OLLAMA, OPENAI, OPENAI_COMPATIBLE), `ModelRouter` (active chat/embedding + lazy dimension detection), `ProviderRegistry` (profiles persisted to `data/provider-profiles.json`)
+**Consumer side**: `rag-common` `RemoteChatModelPort` / `RemoteEmbeddingModel` bridges; modules connect via `rag.provider.url` (default `http://localhost:8086`)
+**Why required**: runtime model switching without restarting modules, no duplicate provider clients per module, embedding dimension resolved lazily (see [ADR-0010](architecture/decision-records/adr-0010-rag-provider.md)).
+
 ## Local Development Profile
 
 The project is designed to run comfortably on a **regular local machine** (CPU-only or modest GPU) for learning purposes. RAG separates into layers with very different hardware demands - the heavy compute is composable and optional.
@@ -376,10 +393,11 @@ The project is designed to run comfortably on a **regular local machine** (CPU-o
 
 ### Provider Abstraction
 
-Critical design decision: the `EmbeddingModel` and LLM abstractions must allow seamless swapping between OpenAI, Ollama, and HuggingFace via **configuration, not code**. Strategy pattern handles this.
+All provider connectivity is centralized in the **rag-provider** service. It owns the Ollama/OpenAI/OpenAI-compatible clients and exposes chat and embedding compute + runtime model switching over HTTP (port **8086**). Downstream modules no longer bundle provider dependencies; they consume rag-provider through thin `rag-common` bridges (`RemoteChatModelPort`, `RemoteEmbeddingModel`).
 
-- `application-local.yml` - Points to Ollama default models
-- `application-cloud.yml` - Points to OpenAI/Anthropic
+- rag-provider reads Ollama/OpenAI defaults from its `application.yml` (overridable via `OLLAMA_*`, `OPENAI_*`, `DEFAULT_CHAT_PROVIDER`/`DEFAULT_EMBEDDING_PROVIDER` env vars, see [rag-provider README](../../apps/rag-provider/README.md))
+- Additional providers (any OpenAI-compatible endpoint) can be added at runtime via `POST /api/provider/configure` and are persisted
+- Switching chat/embedding models is a runtime HTTP call; no restart, no code, no config-profile edit
 - Profile selection via `SPRING_PROFILES_ACTIVE=local` or `=cloud`
 
 ### Local Model Setup (Ollama)
@@ -499,6 +517,7 @@ See [guides/sonarqube.md](guides/sonarqube.md) and [ADR-0004](architecture/decis
 - [ ] `.env`: `RAG_BASIC_URL`, `RAG_ADVANCED_URL`, `RAG_AGENTIC_URL`, `RAG_MEMORY_URL`, `RAG_WEBCRAWLER_URL`
 
 ### Phase 4: Supporting Modules
+- [x] `rag-provider` - provider hub: model switching + chat/embed APIs (ADR-0010..0012)
 - [ ] `rag-memory` - conversation persistence (schema `rag_memory`)
 - [ ] `rag-webcrawler` - smart fetch tool + LLM link prioritizer
 - [ ] rag-basic WebSocket `/ws/chat` + module-orchestrated `ingest-url`
