@@ -35,7 +35,7 @@ if exist ".env.secrets" (
     set "SAPW_LINE="
     for /f "delims=" %%L in ('findstr /b /c:"SONAR_ADMIN_PASSWORD=" ".env.secrets"') do set "SAPW_LINE=%%L"
     if "!SAPW_LINE!"=="SONAR_ADMIN_PASSWORD=" (
-        for /f %%P in ('powershell -NoProfile -Command "$s='abcdef0123456789'; -join (1..32 | ForEach-Object { $s[(Get-Random -Max 16)] })"') do set "PASSWORD=%%P"
+        for /f %%P in ('powershell -NoProfile -Command "$u='ABCDEFGHIJKLMNOPQRSTUVWXYZ'; $l='abcdefghijklmnopqrstuvwxyz'; $d='0123456789'; $all=$u+$l+$d; $pw=($u[(Get-Random -Max $u.Length)],$l[(Get-Random -Max $l.Length)],$d[(Get-Random -Max $d.Length)] + -join (1..29 | ForEach-Object { $all[(Get-Random -Max $all.Length)] }) -join ''; $pw"') do set "PASSWORD=%%P"
         powershell -NoProfile -Command "(Get-Content '.env.secrets') -replace '^SONAR_ADMIN_PASSWORD=$','SONAR_ADMIN_PASSWORD=!PASSWORD!' | Set-Content '.env.secrets'"
         echo Generated SONAR_ADMIN_PASSWORD in .env.secrets
     )

@@ -488,7 +488,7 @@ All operations centralized in `scripts/` folder with Windows (`.bat`) and Linux/
 
 ### Static Analysis (SonarQube)
 
-Local **SonarQube Community 10.7 LTS** (Docker) runs `mvn verify sonar:sonar` for bugs, vulnerabilities, code smells, and coverage enforcement.
+Local **SonarQube Community Build 26.8** (Docker) runs `mvn verify sonar:sonar` for bugs, vulnerabilities, code smells, and coverage enforcement.
 
 - **Compose overlay**: `docker/docker-compose.sonarqube.yml` (port `9000`, persistent volumes).
 - **Scanner config**: `sonar-project.properties`; plugin in `pom.xml` (`sonar-maven-plugin`).

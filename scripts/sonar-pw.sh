@@ -47,7 +47,7 @@ fi
 echo "Setting admin password..."
 HTTP_CODE=$(curl -sf -o /dev/null -w "%{http_code}" \
     -u "$ADMIN_USER:admin" \
-    -X POST "$HOST/api/authentication/change_password" \
+    -X POST "$HOST/api/users/change_password" \
     -d "login=$ADMIN_USER" \
     -d "previousPassword=admin" \
     -d "password=$NEW_PW")

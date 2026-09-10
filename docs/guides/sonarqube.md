@@ -11,13 +11,13 @@ SonarQube performs continuous code quality inspection across the monorepo:
 - **Test coverage** - reports JaCoCo coverage and enforces the "New Code" quality gate
 - **Duplication** - duplicated lines in changed code
 
-Analysis is local-first and runs against a **SonarQube Community Edition 10.7 LTS** container on your machine. No cloud service or credentials are required beyond the SQLite-backed local server.
+Analysis is local-first and runs against a **SonarQube Community Build 26.8** container on your machine. No cloud service or credentials are required beyond the SQLite-backed local server.
 
 ## Stack
 
 | Component | Role |
 |-----------|------|
-| SonarQube 10.7 LTS (Community) | Analysis server + dashboard |
+| SonarQube 26.8 (Community Build) | Analysis server + dashboard |
 | `sonar-maven-plugin` | Runs scanner as part of the Maven build |
 | JaCoCo | Test coverage report consumed by SonarQube |
 | `scripts/sonar.{bat,sh}` | Lifecycle wrapper (start, scan, stop) |
@@ -40,7 +40,7 @@ The Maven plugin reads the project coordinates from the parent POM (`com.rag:rag
 
 ### Docker Compose (`docker/docker-compose.sonarqube.yml`)
 
-Overlay file defining a `sonarqube:10.7.0-community` service on port `9000` with persistent volumes:
+Overlay file defining a `sonarqube:26.8.0.126808-community` service on port `9000` with persistent volumes:
 
 - `sonarqube_data` - indexed data (survives container restarts)
 - `sonarqube_extensions` - installed plugins
@@ -50,7 +50,7 @@ JVM memory is capped (`-Xmx1g`) so the container runs comfortably on a local mac
 
 ### Maven plugin (`pom.xml`)
 
-`org.sonarsource.scanner.maven:sonar-maven-plugin` is declared in `pluginManagement` with `sonar.version` `5.5.0.6356`.
+`org.sonarsource.scanner.maven:sonar-maven-plugin` is declared in `pluginManagement` with `sonar.version` `5.7.0.6970`.
 
 ### Scanner configuration (`sonar-project.properties`)
 
@@ -60,7 +60,7 @@ Root-level properties used by the scanner:
 |----------|-------|-------|
 | `sonar.projectKey` | `rag-systems` | Used by non-Maven scans; Maven scan uses `com.rag:rag-systems` from the POM |
 | `sonar.exclusions` | `**/target/**` | Excludes build output |
-| `sonar.scanner.skipJreProvisioning` | `true` | **Required** for Community Edition (no JRE provisioning; otherwise hits SonarCloud endpoints / 403) |
+| `sonar.scanner.skipJreProvisioning` | `true` | Skips JRE auto-provisioning (project already uses Java 21) |
 | `sonar.coverage.jacoco.xmlReportPaths` | `**/target/site/jacoco/jacoco.xml` | JaCoCo report location |
 | `sonar.junit.reportPaths` | `**/target/surefire-reports` | Test report location |
 | `sonar.host.url` | `http://localhost:9000` | Local server |
@@ -71,7 +71,7 @@ Root-level properties used by the scanner:
 
 ### 1. Configure secrets (optional but recommended)
 
-The local SonarQube Community server always starts with the default `admin` / `admin` credentials and **forces** a password change on first login. There is no declarative way to pre-set the admin password or disable the reset prompt in Community Edition. Instead, the bootstrap script auto-sets a fixed password **and** generates a reusable analysis token on first boot.
+The local SonarQube Community Build server always starts with the default `admin` / `admin` credentials and **forces** a password change on first login. There is no declarative way to pre-set the admin password or disable the reset prompt in Community Build. Instead, the bootstrap script auto-sets a fixed password **and** generates a reusable analysis token on first boot.
 
 `.env.secrets` is bootstrapped automatically: every script runs `scripts/bootstrap-env.{bat,sh}`, which copies `scripts/.env.secrets.example` to the repo root if it does not exist and generates a random `SONAR_ADMIN_PASSWORD` if it is blank. The file is gitignored. No manual copy is needed:
 
@@ -109,7 +109,7 @@ rm .sonarqube/admin_pw_set
 
 Alternatively start just SonarQube via Docker directly (`docker.sh/bat up-sonar`); you'll need to run the bootstrap or set up a token manually.
 
-> **Note:** SonarQube Community Edition does **not** support disabling the "Forgot password" / password reset flow in the UI. Setting a known fixed password is the supported local equivalent.
+> **Note:** SonarQube Community Build does **not** support disabling the "Forgot password" / password reset flow in the UI. Setting a known fixed password is the supported local equivalent.
 
 ### 3. Run analysis
 
@@ -200,7 +200,7 @@ Because the gate measures **new/modified lines**, refactoring a method (e.g., sp
 
 | Symptom | Cause / fix |
 |---------|-------------|
-| Analysis hits `api.sonarcloud.io` / HTTP 403 | JRE provisioning unsupported on Community Edition; pass `-Dsonar.scanner.skipJreProvisioning=true` |
+| Analysis hits `api.sonarcloud.io` / HTTP 403 | JRE provisioning skipped; pass `-Dsonar.scanner.skipJreProvisioning=true` |
 | Scan uses stale results | Old `target/` classes; run `mvn clean verify sonar:sonar` |
 | Container fails to start | `vm.max_map_count` not needed here (Docker Desktop); check `docker compose ... ps` and logs |
 | Quality gate still red after fixing | Coverage gate is on new code; add tests for the refactored/uncovered branches |
