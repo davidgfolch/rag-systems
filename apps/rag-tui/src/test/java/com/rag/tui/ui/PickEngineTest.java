@@ -17,10 +17,8 @@ class PickEngineTest {
     @Test
     void filtersByLabelOrValueWhileTyping() {
         var engine = new PickEngine(CHOICES);
-
         engine.append('o');
         engine.append('p');
-
         assertThat(engine.visible()).extracting(Prompter.Choice::value)
                 .containsExactly("openai", "openrouter");
     }
@@ -32,7 +30,6 @@ class PickEngineTest {
         engine.append('p');
         engine.backspace();
         engine.backspace();
-
         assertThat(engine.visible()).hasSize(CHOICES.size());
     }
 
@@ -41,7 +38,6 @@ class PickEngineTest {
         var engine = new PickEngine(CHOICES);
         engine.append('o');
         engine.append('p'); // openai, openrouter
-
         engine.next();
         assertThat(engine.visible().get(engine.cursor()).value()).isEqualTo("openrouter");
         engine.next();
@@ -53,7 +49,6 @@ class PickEngineTest {
     @Test
     void emptyFilterMatchesEverythingAndStartsAtFirst() {
         var engine = new PickEngine(CHOICES);
-
         assertThat(engine.visible()).hasSize(CHOICES.size());
         assertThat(engine.cursor()).isZero();
     }
@@ -62,7 +57,6 @@ class PickEngineTest {
     void returnsNoVisiblesWhenNothingMatches() {
         var engine = new PickEngine(CHOICES);
         for (char c : "zzz".toCharArray()) engine.append(c);
-
         assertThat(engine.visible()).isEmpty();
     }
 }

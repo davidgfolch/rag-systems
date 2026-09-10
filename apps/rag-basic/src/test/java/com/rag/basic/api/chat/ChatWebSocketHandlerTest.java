@@ -49,9 +49,7 @@ class ChatWebSocketHandlerTest {
     void streamsTokensThenDone() throws Exception {
         when(chatService.askStream("hello", 5))
                 .thenReturn(Flux.just("Hel", "lo!"));
-
         send("{\"type\":\"ask\",\"question\":\"hello\",\"conversationId\":\"c1\"}");
-
         List<String> payloads = sentPayloads(3);
         assertThat(payloads).hasSize(3);
         assertThat(payloads.get(0)).contains("\"type\":\"token\"", "\"content\":\"Hel\"", "\"conversationId\":\"c1\"");
@@ -64,9 +62,7 @@ class ChatWebSocketHandlerTest {
     void cancelDisposesStream() throws Exception {
         when(chatService.askStream("hello", 5)).thenReturn(Flux.never());
         send("{\"type\":\"ask\",\"question\":\"hello\",\"conversationId\":\"c1\"}");
-
         handler.handleTextMessage(session, new TextMessage("{\"type\":\"cancel\",\"conversationId\":\"c1\"}"));
-
         List<String> payloads = sentPayloads(1);
         assertThat(payloads).hasSize(1);
         assertThat(payloads.get(0)).contains("\"type\":\"done\"", "\"content\":\"\"", "\"conversationId\":\"c1\"");
@@ -75,7 +71,6 @@ class ChatWebSocketHandlerTest {
     @Test
     void ignoresEmptyQuestion() throws Exception {
         send("{\"type\":\"ask\",\"question\":null,\"conversationId\":\"c1\"}");
-
         verify(session, never()).sendMessage(any(TextMessage.class));
         verify(chatService, never()).askStream(anyString(), anyInt());
     }
@@ -84,9 +79,7 @@ class ChatWebSocketHandlerTest {
     void streamsErrorEvent() throws Exception {
         when(chatService.askStream("hello", 5))
                 .thenReturn(Flux.error(new IllegalStateException("boom")));
-
         send("{\"type\":\"ask\",\"question\":\"hello\",\"conversationId\":\"c1\"}");
-
         List<String> payloads = sentPayloads(1);
         assertThat(payloads.get(0)).contains("\"type\":\"error\"", "\"boom\"");
     }
@@ -94,9 +87,7 @@ class ChatWebSocketHandlerTest {
     @Test
     void usesDefaultTopKWhenNull() throws Exception {
         when(chatService.askStream("hello", 5)).thenReturn(Flux.empty());
-
         send("{\"type\":\"ask\",\"question\":\"hello\",\"conversationId\":\"c1\"}");
-
         sentPayloads(1);
         verify(chatService).askStream("hello", 5);
     }
@@ -105,9 +96,7 @@ class ChatWebSocketHandlerTest {
     void cleansUpOnDisconnect() throws Exception {
         when(chatService.askStream("hello", 5)).thenReturn(Flux.never());
         send("{\"type\":\"ask\",\"question\":\"hello\",\"conversationId\":\"c1\"}");
-
         handler.afterConnectionClosed(session, CloseStatus.NORMAL);
-
         handler.handleTextMessage(session, new TextMessage("{\"type\":\"cancel\",\"conversationId\":\"c1\"}"));
         verify(chatService).askStream("hello", 5);
     }

@@ -23,7 +23,7 @@ class ChatServiceTest {
     @Mock private ModelRouter router;
     @Mock private ChatModel chatModel;
 
-    private static org.springframework.ai.chat.model.ChatResponse textResponse(String text) {
+    private static ChatResponse textResponse(String text) {
         return new ChatResponse(List.of(new Generation(new AssistantMessage(text))));
     }
 
@@ -31,7 +31,6 @@ class ChatServiceTest {
     void shouldCompleteWithActiveModel() {
         when(router.chatModel()).thenReturn(chatModel);
         when(chatModel.call(any(Prompt.class))).thenReturn(textResponse("Hello!"));
-
         var service = new ChatService(router);
         assertThat(service.complete("hi")).isEqualTo("Hello!");
     }
@@ -41,7 +40,6 @@ class ChatServiceTest {
         when(router.chatModel()).thenReturn(chatModel);
         when(chatModel.stream(any(Prompt.class)))
                 .thenReturn(Flux.just(textResponse("Hel"), textResponse("lo")));
-
         var service = new ChatService(router);
         assertThat(service.stream("hi").collectList().block()).containsExactly("Hel", "lo");
     }

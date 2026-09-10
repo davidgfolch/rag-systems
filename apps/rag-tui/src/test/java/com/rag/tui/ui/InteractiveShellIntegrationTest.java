@@ -69,9 +69,7 @@ class InteractiveShellIntegrationTest {
         byte[] bytes = "%PDF-1.4 binary".getBytes(StandardCharsets.UTF_8);
         Files.write(pdf, bytes);
         StringWriter out = new StringWriter();
-
         new InteractiveShell(dispatcher, new NoopPrompter(new StringReader("add-file " + pdf + "\nquit\n")), out).run();
-
         assertThat(out.toString()).contains("document i-1", "Bye.");
         awaitContains(out, "2 chunks");
         assertThat(out.toString()).contains("2 chunks");
@@ -87,10 +85,8 @@ class InteractiveShellIntegrationTest {
     @Test
     void survivesFailedCommandAndContinuesToQuit() {
         var out = new StringWriter();
-
         new InteractiveShell(dispatcher,
                 new NoopPrompter(new StringReader("add-file definitely-missing.pdf\nhelp\nquit\n")), out).run();
-
         assertThat(out.toString()).contains("Failed to read file");
         assertThat(out.toString()).contains("Available commands");
         assertThat(out.toString()).contains("Bye.");

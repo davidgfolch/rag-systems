@@ -22,9 +22,7 @@ class SpringAiEmbeddingModelTest {
     void embedsTextAndReturnsFloatList() {
         when(delegate.call(any(EmbeddingRequest.class)))
                 .thenReturn(new EmbeddingResponse(List.of(new Embedding(new float[]{1.0f, 2.0f, 0.5f}, 0))));
-
         var result = model.embed("hello");
-
         assertThat(result).containsExactly(1.0f, 2.0f, 0.5f);
     }
 }

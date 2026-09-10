@@ -15,9 +15,7 @@ class VectorStoreTest {
         var other = new Chunk("c1", "d1", "text one", 0, Map.of());
         var wanted = new Chunk("c2", "d2", "text two", 1, Map.of());
         VectorStorePort store = new ChunkStore(List.of(other, wanted));
-
         var result = store.similaritySearch("query", 5, "d2");
-
         assertThat(result).containsExactly(wanted);
     }
 

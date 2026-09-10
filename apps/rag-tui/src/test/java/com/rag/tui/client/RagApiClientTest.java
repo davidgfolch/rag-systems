@@ -44,9 +44,7 @@ class RagApiClientTest {
                 .andExpect(method(HttpMethod.POST))
                 .andRespond(withSuccess("{\"documentId\":\"d1\",\"chunkCount\":2}",
                         MediaType.APPLICATION_JSON));
-
         IngestResponse response = sut.ingest("text", Map.of("k", "v"));
-
         assertThat(response.getDocumentId()).isEqualTo("d1");
         assertThat(response.getChunkCount()).isEqualTo(2);
         server.verify();
@@ -60,9 +58,7 @@ class RagApiClientTest {
                 .andExpect(content().contentTypeCompatibleWith(MediaType.MULTIPART_FORM_DATA))
                 .andRespond(withSuccess("{\"documentId\":\"d1\",\"chunkCount\":5}",
                         MediaType.APPLICATION_JSON));
-
         IngestResponse response = sut.ingestFile(bytes, "doc.pdf", Map.of("sourceType", "file"));
-
         assertThat(response.getDocumentId()).isEqualTo("d1");
         assertThat(response.getChunkCount()).isEqualTo(5);
         server.verify();
@@ -74,9 +70,7 @@ class RagApiClientTest {
                 .andExpect(method(HttpMethod.POST))
                 .andRespond(withSuccess("{\"documentId\":\"d1\",\"chunkCount\":3}",
                         MediaType.APPLICATION_JSON));
-
         IngestResponse response = sut.ingestUrl("https://example.com");
-
         assertThat(response.getDocumentId()).isEqualTo("d1");
         server.verify();
     }
@@ -87,9 +81,7 @@ class RagApiClientTest {
                 .andExpect(method(HttpMethod.POST))
                 .andRespond(withSuccess("{\"question\":\"q\",\"results\":[]}",
                         MediaType.APPLICATION_JSON));
-
         QueryResponse response = sut.query("q", 5);
-
         assertThat(response.getQuestion()).isEqualTo("q");
         server.verify();
     }
@@ -100,9 +92,7 @@ class RagApiClientTest {
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("[{\"documentId\":\"d1\",\"chunkCount\":3,\"metadata\":{\"fileName\":\"n.txt\"}}]",
                         MediaType.APPLICATION_JSON));
-
         List<DocumentSummaryDTO> documents = sut.listDocuments(TestModules.BASIC_URL);
-
         assertThat(documents).hasSize(1);
         assertThat(documents.get(0).getDocumentId()).isEqualTo("d1");
         assertThat(documents.get(0).getChunkCount()).isEqualTo(3);
@@ -115,9 +105,7 @@ class RagApiClientTest {
         server.expect(requestTo(TestModules.BASIC_URL + DOCUMENTS + "/d1"))
                 .andExpect(method(HttpMethod.DELETE))
                 .andRespond(withNoContent());
-
         sut.deleteDocument("d1");
-
         server.verify();
     }
 
@@ -126,9 +114,7 @@ class RagApiClientTest {
         server.expect(requestTo(TestModules.BASIC_URL + DOCUMENTS + "/d1"))
                 .andExpect(method(HttpMethod.DELETE))
                 .andRespond(withNoContent());
-
         sut.deleteDocument(TestModules.BASIC_URL, "d1");
-
         server.verify();
     }
 
@@ -137,9 +123,7 @@ class RagApiClientTest {
         server.expect(requestTo(TestModules.PROVIDER_URL + DOCUMENTS))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withStatus(HttpStatus.NOT_FOUND));
-
         List<DocumentSummaryDTO> documents = sut.listDocuments(TestModules.PROVIDER_URL);
-
         assertThat(documents).isEmpty();
         server.verify();
     }

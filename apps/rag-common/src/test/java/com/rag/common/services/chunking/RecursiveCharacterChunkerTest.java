@@ -21,7 +21,6 @@ class RecursiveCharacterChunkerTest {
     void splitReturnsExpectedChunksForInput(String input, String expectedMode) {
         Document doc = new Document("d1", input, Map.of());
         var chunks = chunker.split(doc);
-
         switch (expectedMode) {
             case "EMPTY" -> assertThat(chunks).isEmpty();
             case "SINGLE" -> {
@@ -43,13 +42,9 @@ class RecursiveCharacterChunkerTest {
     void splitsByParagraphsThenSentences() {
         Document doc = new Document("d1", """
                 First paragraph has some content that might be long enough.
-
                 Second paragraph with more content.
-
                 Third paragraph here.""", Map.of());
-
         var chunks = chunker.split(doc);
-
         assertThat(chunks).isNotEmpty();
         assertThat(chunks.get(0).getMetadata()).containsEntry(MetadataKeys.STRATEGY, "recursive");
     }

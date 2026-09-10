@@ -13,9 +13,7 @@ class ChunkTest {
     void shouldStoreEmbeddingOnceAssigned() {
         Chunk sut = new Chunk("chunk-1", "doc-1", "text", 0, Map.of("k", "v"));
         List<Float> embedding = List.of(0.1f, 0.2f, 0.3f);
-
         sut.setEmbedding(embedding);
-
         assertThat(sut.getEmbedding()).isEqualTo(embedding);
         assertThat(sut.getDocumentId()).isEqualTo("doc-1");
         assertThat(sut.getIndex()).isZero();

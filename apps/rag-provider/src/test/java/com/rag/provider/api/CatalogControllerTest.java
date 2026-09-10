@@ -38,7 +38,6 @@ class CatalogControllerTest {
     @Test
     void shouldReturnCachedCatalog() throws Exception {
         when(catalogService.catalog()).thenReturn(catalog());
-
         mockMvc.perform(get("/api/provider/catalog"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.models[0].providerId").value("ollama"))
@@ -54,11 +53,9 @@ class CatalogControllerTest {
     @Test
     void shouldRefreshCatalogOnDemand() throws Exception {
         when(catalogService.refresh()).thenReturn(catalog());
-
         mockMvc.perform(post("/api/provider/catalog/refresh"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.models[0].providerId").value("ollama"));
-
         verify(catalogService).refresh();
     }
 

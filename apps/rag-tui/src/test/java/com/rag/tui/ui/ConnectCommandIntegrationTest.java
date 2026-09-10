@@ -34,7 +34,6 @@ class ConnectCommandIntegrationTest {
     @Test
     void rendersProviderStatus() {
         var result = sut.execute("");
-
         assertThat(result)
                 .contains("chat: " + PROVIDER_OLLAMA + "/" + LOCAL_CHAT,
                         "embedding: " + PROVIDER_OLLAMA + "/" + LOCAL_EMBED, "dimension 768")
@@ -44,7 +43,6 @@ class ConnectCommandIntegrationTest {
     @Test
     void listsCatalog() {
         var result = sut.execute("catalog");
-
         assertThat(result)
                 .contains("ollama:")
                 .contains("- " + LOCAL_CHAT + " (Phi-4)", "ctx 16384")
@@ -54,7 +52,6 @@ class ConnectCommandIntegrationTest {
     @Test
     void switchesChatModel() {
         var result = sut.execute("chat " + PROVIDER_OLLAMA + " " + LOCAL_CHAT);
-
         assertThat(result).contains("Chat model switched", PROVIDER_OLLAMA + "/" + LOCAL_CHAT);
         assertThat(server.lastSwitchBody()).contains("\"providerId\":\"" + PROVIDER_OLLAMA + "\"");
     }
@@ -62,7 +59,6 @@ class ConnectCommandIntegrationTest {
     @Test
     void refreshesCatalog() {
         var result = sut.execute("refresh");
-
         assertThat(result).contains("Catalog refreshed", "1 models");
     }
 }

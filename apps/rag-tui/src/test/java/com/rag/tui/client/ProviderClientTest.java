@@ -51,9 +51,7 @@ class ProviderClientTest {
         server.expect(requestTo(BASE + PROVIDER))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess(STATUS_JSON, MediaType.APPLICATION_JSON));
-
         var status = sut.status();
-
         assertThat(status.chat().providerId()).isEqualTo(PROVIDER_OLLAMA);
         assertThat(status.chat().model()).isEqualTo(LOCAL_CHAT);
         assertThat(status.embedding().model()).isEqualTo(LOCAL_EMBED);
@@ -66,9 +64,7 @@ class ProviderClientTest {
         server.expect(requestTo(BASE + CATALOG))
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess(CATALOG_JSON, MediaType.APPLICATION_JSON));
-
         var catalog = sut.catalog();
-
         assertThat(catalog.models()).hasSize(1);
         assertThat(catalog.source()).isEqualTo(SOURCE);
         assertThat(catalog.fetchedAt()).isNotNull();
@@ -83,9 +79,7 @@ class ProviderClientTest {
         server.expect(requestTo(BASE + CATALOG_REFRESH))
                 .andExpect(method(HttpMethod.POST))
                 .andRespond(withSuccess(CATALOG_JSON, MediaType.APPLICATION_JSON));
-
         var catalog = sut.refreshCatalog();
-
         assertThat(catalog.models()).hasSize(1);
         server.verify();
     }
@@ -96,9 +90,7 @@ class ProviderClientTest {
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(content().json("{\"providerId\":\"ollama\",\"model\":\"phi4\"}"))
                 .andRespond(withNoContent());
-
         sut.switchChat(PROVIDER_OLLAMA, LOCAL_CHAT);
-
         server.verify();
     }
 
@@ -108,9 +100,7 @@ class ProviderClientTest {
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(content().json("{\"providerId\":\"openai\",\"model\":\"text-embedding-3-small\"}"))
                 .andRespond(withNoContent());
-
         sut.switchEmbedding("openai", "text-embedding-3-small");
-
         server.verify();
     }
 }

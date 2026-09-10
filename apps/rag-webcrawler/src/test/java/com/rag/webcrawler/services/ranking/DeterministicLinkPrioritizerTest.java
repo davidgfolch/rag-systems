@@ -13,9 +13,7 @@ class DeterministicLinkPrioritizerTest {
     @Test
     void keepsLinksInOrderWithoutQuestion() {
         List<String> links = List.of("https://a", "https://b");
-
         List<String> result = sut.prioritize(links, null);
-
         assertThat(result).containsExactly("https://a", "https://b");
     }
 
@@ -23,14 +21,12 @@ class DeterministicLinkPrioritizerTest {
     void boostsLinksMatchingQuestionWords() {
         List<String> links = List.of("https://ex.com/java", "https://ex.com/python", "https://ex.com/news");
         List<String> result = sut.prioritize(links, "java");
-
         assertThat(result.get(0)).isEqualTo("https://ex.com/java");
     }
 
     @Test
     void prefersRelativeLinksWhenNoQuestion() {
         List<String> result = sut.prioritize(List.of("https://ex.com/x.html", "/docs/guide.html"), "");
-
         assertThat(result.get(0)).isEqualTo("/docs/guide.html");
     }
 }

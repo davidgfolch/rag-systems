@@ -16,7 +16,7 @@ Add **SonarQube Community Build 26.8** as a local, Docker-based static analysis 
 - `sonar-project.properties` - scanner settings (exclusions, JRE-provisioning skip, report paths).
 - `scripts/sonar.{bat,sh}` - `up` / `scan` / `up-scan` / `down` lifecycle; `scan` runs `mvn verify sonar:sonar` (tests + JaCoCo + analysis) with the working CLI parameters.
 
-The **"Clean as You Code" quality gate** (new-code coverage ≥ 80%, no new violations, no new duplication) is the definition of "clean."
+The **"RAG 85% Coverage" quality gate** (overall coverage ≥ 85%, no new violations, no new duplication) is the definition of "clean."
 
 ## Consequences
 

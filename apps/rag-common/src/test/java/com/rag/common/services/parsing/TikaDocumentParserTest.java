@@ -23,9 +23,7 @@ class TikaDocumentParserTest {
     void extractsTextFromHtml() {
         String html = "<html><body><h1>Title</h1><p>Some <b>content</b> here.</p></body></html>";
         Document doc = new Document("d1", "", Map.of(MetadataKeys.RAW_BYTES, html.getBytes(StandardCharsets.UTF_8)));
-
         String result = parser.parse(doc);
-
         assertThat(result)
                 .containsIgnoringCase("Title")
                 .containsIgnoringCase("Some content here");
@@ -35,7 +33,6 @@ class TikaDocumentParserTest {
     void extractsTextFromBase64RawForBackwardCompatibility() {
         String html = "<html><body><p>legacy base64</p></body></html>";
         Document doc = new Document("d1", "", Map.of(MetadataKeys.RAW, base64(html)));
-
         assertThat(parser.parse(doc)).containsIgnoringCase("legacy base64");
     }
 

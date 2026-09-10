@@ -22,9 +22,7 @@ class WebCrawlServiceTest {
     void fetchesSinglePage() {
         PageDTO page = new PageDTO("https://ex.com", "Title", "text");
         when(fetcher.fetch("https://ex.com")).thenReturn(page);
-
         PageDTO result = sut.fetch("https://ex.com");
-
         assertThat(result.getUrl()).isEqualTo("https://ex.com");
     }
 
@@ -38,9 +36,7 @@ class WebCrawlServiceTest {
                 .thenReturn(List.of("https://ex.com/c", "https://ex.com/a"));
         when(fetcher.fetch("https://ex.com/c")).thenReturn(new PageDTO("https://ex.com/c", "C", "c"));
         when(fetcher.fetch("https://ex.com/a")).thenReturn(new PageDTO("https://ex.com/a", "A", "a"));
-
         List<PageDTO> result = sut.fetchRelevantLinks(base, "question", 2);
-
         assertThat(result).extracting(PageDTO::getUrl)
                 .containsExactly("https://ex.com/c", "https://ex.com/a");
     }
@@ -52,9 +48,7 @@ class WebCrawlServiceTest {
         when(fetcher.fetch(base)).thenReturn(new PageDTO(base, "Title", "text").links(links));
         when(prioritizer.prioritize(links, null)).thenReturn(links);
         when(fetcher.fetch("https://ex.com/a")).thenReturn(new PageDTO("https://ex.com/a", "A", "a"));
-
         List<PageDTO> result = sut.fetchRelevantLinks(base, null, 1);
-
         assertThat(result).extracting(PageDTO::getUrl).containsExactly("https://ex.com/a");
         verify(fetcher).fetch(base);
     }

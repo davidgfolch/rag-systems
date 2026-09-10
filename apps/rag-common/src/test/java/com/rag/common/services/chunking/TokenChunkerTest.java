@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TokenChunkerTest {
 
@@ -20,7 +21,6 @@ class TokenChunkerTest {
     void splitReturnsExpectedChunksForInput(String input, String expectedMode) {
         Document doc = new Document("d1", input, Map.of());
         var chunks = chunker.split(doc);
-
         switch (expectedMode) {
             case "MULTI" -> {
                 assertThat(chunks).hasSizeGreaterThan(1);
@@ -42,7 +42,7 @@ class TokenChunkerTest {
 
     @Test
     void rejectsInvalidMaxTokens() {
-        org.junit.jupiter.api.Assertions.assertThrows(
+        assertThrows(
                 IllegalArgumentException.class, () -> new TokenChunker(0, 0));
     }
 }

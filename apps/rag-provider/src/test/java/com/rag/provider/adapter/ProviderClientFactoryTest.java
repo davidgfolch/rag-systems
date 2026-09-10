@@ -18,7 +18,6 @@ class ProviderClientFactoryTest {
     void shouldBuildOllamaClients() {
         var profile = new ProviderProfile("ollama", ProviderType.OLLAMA, "Ollama",
                 "http://localhost:11434", "");
-
         assertThat(factory.chatModel(profile, "phi4")).isInstanceOf(OllamaChatModel.class);
         assertThat(factory.embeddingModel(profile, "nomic-embed-text")).isInstanceOf(OllamaEmbeddingModel.class);
     }
@@ -26,7 +25,6 @@ class ProviderClientFactoryTest {
     @Test
     void shouldBuildOpenAiClients() {
         var profile = new ProviderProfile("openai", ProviderType.OPENAI, "OpenAI", "", "sk-x");
-
         assertThat(factory.chatModel(profile, "gpt-4o")).isInstanceOf(OpenAiChatModel.class);
         assertThat(factory.embeddingModel(profile, "text-embedding-3-small"))
                 .isInstanceOf(OpenAiEmbeddingModel.class);
@@ -36,7 +34,6 @@ class ProviderClientFactoryTest {
     void shouldBuildOpenAiCompatibleClientsAgainstCustomBaseUrl() {
         var profile = new ProviderProfile("glhf", ProviderType.OPENAI_COMPATIBLE, "GLHF",
                 "https://glhf.chat", "k");
-
         assertThat(factory.chatModel(profile, "some-model")).isInstanceOf(OpenAiChatModel.class);
         assertThat(factory.embeddingModel(profile, "some-embedding")).isInstanceOf(OpenAiEmbeddingModel.class);
     }

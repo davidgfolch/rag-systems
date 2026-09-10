@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.WebSocketSession;
+import org.mockito.ArgumentCaptor;
 import org.springframework.web.socket.client.WebSocketClient;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
@@ -44,8 +45,8 @@ class ChatGatewayTest {
         doNothing().when(session).sendMessage(any(TextMessage.class));
         runner = new Thread(() -> sut.ask("hello", 4, tokens::add));
         runner.start();
-        org.mockito.ArgumentCaptor<WebSocketHandler> captor =
-                org.mockito.ArgumentCaptor.forClass(WebSocketHandler.class);
+        ArgumentCaptor<WebSocketHandler> captor =
+                ArgumentCaptor.forClass(WebSocketHandler.class);
         verify(webSocketClient, timeout(2000)).execute(captor.capture(), anyString());
         handler = (TextWebSocketHandler) captor.getValue();
     }

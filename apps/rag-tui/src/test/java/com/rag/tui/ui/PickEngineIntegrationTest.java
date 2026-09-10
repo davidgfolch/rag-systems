@@ -2,6 +2,7 @@ package com.rag.tui.ui;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 
 import static com.rag.tui.ui.Key.KeyType.DOWN;
 import static com.rag.tui.ui.Key.KeyType.ENTER;
@@ -16,7 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class PickEngineIntegrationTest {
 
-    private static final java.util.List<Prompter.Choice> CHOICES = java.util.List.of(
+    private static final List<Prompter.Choice> CHOICES = List.of(
             new Prompter.Choice("OpenAI", "openai"),
             new Prompter.Choice("OpenRouter", "openrouter"),
             new Prompter.Choice("Anthropic", "anthropic"));
@@ -27,9 +28,7 @@ class PickEngineIntegrationTest {
         var sut = new InteractivePrompter(
                 keys(typeChar('o'), key(DOWN), key(ENTER)),
                 sink::append, 8);
-
         var result = sut.pick("Provider", CHOICES);
-
         assertThat(result).hasValue("openrouter");
         assertThat(sink).contains("> OpenRouter");
     }

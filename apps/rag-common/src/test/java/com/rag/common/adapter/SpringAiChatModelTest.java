@@ -20,9 +20,7 @@ class SpringAiChatModelTest {
         when(requestSpec.user("prompt text")).thenReturn(requestSpec);
         when(requestSpec.call()).thenReturn(responseSpec);
         when(responseSpec.content()).thenReturn("the answer");
-
         ChatModelPort sut = new SpringAiChatModel(chatClient);
-
         assertThat(sut.complete("prompt text")).isEqualTo("the answer");
         verify(chatClient).prompt();
     }

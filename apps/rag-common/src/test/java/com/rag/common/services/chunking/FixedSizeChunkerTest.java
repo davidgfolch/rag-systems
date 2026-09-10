@@ -21,7 +21,6 @@ class FixedSizeChunkerTest {
     void splitReturnsExpectedChunksForInput(String input, String expectedMode) {
         Document doc = new Document("d1", input, Map.of());
         var chunks = chunker.split(doc);
-
         switch (expectedMode) {
             case "MULTI" -> {
                 assertThat(chunks).hasSizeGreaterThan(1);

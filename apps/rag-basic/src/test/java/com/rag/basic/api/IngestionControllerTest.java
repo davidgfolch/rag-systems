@@ -40,10 +40,8 @@ class IngestionControllerTest {
     @Test
     void ingestsValidRequest() {
         when(service.ingest(any())).thenReturn(new IngestionService.IngestionResult("d1", 5));
-
         ResponseEntity<IngestResponse> response =
                 controller.ingest(new IngestRequest().content("some content"));
-
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody().getDocumentId()).isEqualTo("d1");
         assertThat(response.getBody().getChunkCount()).isEqualTo(5);
@@ -53,7 +51,6 @@ class IngestionControllerTest {
     void rejectsBlankContent() {
         ResponseEntity<IngestResponse> response =
                 controller.ingest(new IngestRequest().content("   "));
-
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         verify(service, never()).ingest(any());
     }
@@ -61,11 +58,9 @@ class IngestionControllerTest {
     @Test
     void ingestsBinaryContentViaRawMetadata() {
         when(service.ingest(any())).thenReturn(new IngestionService.IngestionResult("d1", 7));
-
         ResponseEntity<IngestResponse> response =
                 controller.ingest(new IngestRequest().content("")
                         .metadata(Map.of(MetadataKeys.RAW, Base64.getEncoder().encodeToString(new byte[]{0x25, 0x50, 0x44, 0x46}))));
-
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody().getDocumentId()).isEqualTo("d1");
         assertThat(response.getBody().getChunkCount()).isEqualTo(7);
@@ -76,10 +71,8 @@ class IngestionControllerTest {
         when(service.ingest(any())).thenReturn(new IngestionService.IngestionResult("d1", 7));
         MockMultipartFile file = new MockMultipartFile("file", "doc.pdf", "application/pdf",
                 new byte[]{0x25, 0x50, 0x44, 0x46});
-
         ResponseEntity<IngestResponse> response =
                 controller.ingestFile(file, Map.of(MetadataKeys.SOURCE, "x.pdf"));
-
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody().getDocumentId()).isEqualTo("d1");
         assertThat(response.getBody().getChunkCount()).isEqualTo(7);
@@ -88,10 +81,8 @@ class IngestionControllerTest {
     @Test
     void rejectsEmptyMultipartFile() throws Exception {
         MockMultipartFile file = new MockMultipartFile("file", "empty.pdf", "application/pdf", new byte[0]);
-
         ResponseEntity<IngestResponse> response =
                 controller.ingestFile(file, Map.of());
-
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         verify(service, never()).ingest(any());
     }
@@ -100,7 +91,6 @@ class IngestionControllerTest {
     void rejectsEmptyContentWithoutRawMetadata() {
         ResponseEntity<IngestResponse> response =
                 controller.ingest(new IngestRequest().content(""));
-
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         verify(service, never()).ingest(any());
     }
@@ -110,10 +100,8 @@ class IngestionControllerTest {
         PageDTO page = new PageDTO().url("https://example.com").title("Example").text("page text");
         when(webCrawlerClient.fetch("https://example.com")).thenReturn(page);
         when(service.ingest(any())).thenReturn(new IngestionService.IngestionResult("d2", 3));
-
         ResponseEntity<IngestResponse> response =
                 controller.ingestUrl(new IngestUrlRequest().url(URI.create("https://example.com")));
-
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody().getDocumentId()).isEqualTo("d2");
         assertThat(response.getBody().getChunkCount()).isEqualTo(3);
@@ -123,7 +111,6 @@ class IngestionControllerTest {
     void rejectsBlankUrl() {
         ResponseEntity<IngestResponse> response =
                 controller.ingestUrl(new IngestUrlRequest().url(URI.create("")));
-
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         verify(service, never()).ingest(any());
     }
@@ -135,10 +122,8 @@ class IngestionControllerTest {
                 new AsyncIngestionService(service), null);
         MockMultipartFile file = new MockMultipartFile("file", "doc.pdf", "application/pdf",
                 new byte[]{0x25, 0x50, 0x44, 0x46});
-
         ResponseEntity<IngestJobResponse> response =
                 asyncController.ingestFileAsync(file, Map.of(MetadataKeys.SOURCE, "x.pdf"));
-
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
         assertThat(response.getBody().getDocumentId()).isNotBlank();
         String documentId = response.getBody().getDocumentId();
@@ -150,10 +135,8 @@ class IngestionControllerTest {
         IngestionController asyncController = new IngestionController(service, webCrawlerClient,
                 new AsyncIngestionService(service), null);
         MockMultipartFile file = new MockMultipartFile("file", "empty.pdf", "application/pdf", new byte[0]);
-
         ResponseEntity<IngestJobResponse> response =
                 asyncController.ingestFileAsync(file, Map.of());
-
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         verify(service, never()).ingest(any());
     }
@@ -175,9 +158,7 @@ class IngestionControllerTest {
         when(retrievalService.listDocuments()).thenReturn(List.of(
                 new DocumentSummary("d1", 3, Map.of(MetadataKeys.FILE_NAME, "note.txt", MetadataKeys.TITLE, "note.txt"))));
         IngestionController listController = new IngestionController(service, webCrawlerClient, null, retrievalService);
-
         ResponseEntity<List<DocumentSummaryDTO>> response = listController.listDocuments();
-
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).hasSize(1);
         DocumentSummaryDTO dto = response.getBody().get(0);
@@ -191,9 +172,7 @@ class IngestionControllerTest {
     void deletesDocumentViaRetrievalService() {
         RetrievalService retrievalService = mock(RetrievalService.class);
         IngestionController deleteController = new IngestionController(service, webCrawlerClient, null, retrievalService);
-
         ResponseEntity<Void> response = deleteController.deleteDocument("d1");
-
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         verify(retrievalService).delete("d1");
     }
@@ -201,7 +180,6 @@ class IngestionControllerTest {
     @Test
     void deleteReturnsUnavailableWhenRetrievalServiceMissing() {
         ResponseEntity<Void> response = controller.deleteDocument("d1");
-
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
     }
 }

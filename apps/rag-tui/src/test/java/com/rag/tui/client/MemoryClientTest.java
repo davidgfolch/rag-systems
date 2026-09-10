@@ -33,9 +33,7 @@ class MemoryClientTest {
                 .andExpect(method(HttpMethod.GET))
                 .andRespond(withSuccess("[{\"id\":\"c1\",\"title\":\"t1\"}]",
                         MediaType.APPLICATION_JSON));
-
         List<ConversationDTO> conversations = sut.conversations();
-
         assertThat(conversations).hasSize(1);
         assertThat(conversations.get(0).getId()).isEqualTo("c1");
         server.verify();
@@ -45,7 +43,6 @@ class MemoryClientTest {
     void returnsEmptyWhenNoConversations() {
         server.expect(requestTo(MEMORY_BASE_URL + CONVERSATIONS))
                 .andRespond(withSuccess("null", MediaType.APPLICATION_JSON));
-
         assertThat(sut.conversations()).isEmpty();
         server.verify();
     }
@@ -57,9 +54,7 @@ class MemoryClientTest {
                 .andRespond(withSuccess(
                         "[{\"id\":\"m1\",\"content\":\"hi\",\"role\":\"user\",\"conversationId\":\"c1\"}]",
                         MediaType.APPLICATION_JSON));
-
         List<ChatMessageDTO> messages = sut.messages("c1");
-
         assertThat(messages).hasSize(1);
         assertThat(messages.get(0).getContent()).isEqualTo("hi");
         server.verify();

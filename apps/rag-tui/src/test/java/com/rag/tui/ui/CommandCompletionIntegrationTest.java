@@ -40,14 +40,12 @@ class CommandCompletionIntegrationTest {
     @Test
     void showsProviderWithMatchingPrefixInConnectContext() {
         var result = sut.candidates("connect o", 9);
-
         assertThat(result).contains("ollama");
     }
 
     @Test
     void showsModelsForSelectedProvider() {
         var result = sut.candidates("connect chat ollama p", 21);
-
         assertThat(result).contains("phi4");
     }
 }

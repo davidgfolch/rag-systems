@@ -40,7 +40,6 @@ class RemoteChatModelPortTest {
     void shouldCompleteViaApiComplete() {
         server.createContext(ApiPaths.COMPLETE,
                 exchange -> respond(exchange, 200, "application/json", "{\"answer\":\"Hello!\"}"));
-
         assertThat(port.complete("hi")).isEqualTo("Hello!");
     }
 
@@ -48,7 +47,6 @@ class RemoteChatModelPortTest {
     void shouldThrowOnServerError() {
         server.createContext(ApiPaths.COMPLETE,
                 exchange -> respond(exchange, 500, "text/plain", "boom"));
-
         assertThatThrownBy(() -> port.complete("hi")).isInstanceOf(IllegalStateException.class);
     }
 
@@ -57,12 +55,9 @@ class RemoteChatModelPortTest {
         server.createContext(ApiPaths.CHAT_STREAM, exchange -> respond(exchange, 200, "text/event-stream",
                 """
                         data:{"type":"token","content":"Hel"}
-
                         data:{"type":"token","content":"lo"}
-
                         data:{"type":"done","content":null,"conversationId":null}
                         """));
-
         StepVerifier.create(port.completeStream("hi"))
                 .expectNext("Hel", "lo")
                 .verifyComplete();
@@ -72,7 +67,6 @@ class RemoteChatModelPortTest {
     void shouldFailOnProviderErrorFrame() {
         server.createContext(ApiPaths.CHAT_STREAM, exchange -> respond(exchange, 200, "text/event-stream",
                 "data:{\"type\":\"error\",\"content\":\"nope\",\"conversationId\":null}\n\n"));
-
         StepVerifier.create(port.completeStream("hi"))
                 .expectErrorSatisfies(error -> assertThat(error).hasMessageContaining("nope"))
                 .verify();

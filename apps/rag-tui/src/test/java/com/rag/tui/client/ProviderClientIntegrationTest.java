@@ -29,7 +29,6 @@ class ProviderClientIntegrationTest {
     @Test
     void loadsProviderStatusOverHttp() {
         var status = sut.status();
-
         assertThat(status.chat().providerId()).isEqualTo("ollama");
         assertThat(status.chat().model()).isEqualTo("phi4");
         assertThat(status.embedding().model()).isEqualTo("nomic-embed-text");
@@ -39,7 +38,6 @@ class ProviderClientIntegrationTest {
     @Test
     void loadsCatalogOverHttp() {
         var catalog = sut.catalog();
-
         assertThat(catalog.models()).hasSize(1);
         assertThat(catalog.models().getFirst().modelId()).isEqualTo("phi4");
         assertThat(catalog.source()).isEqualTo("https://models.dev/api.json");
@@ -49,21 +47,18 @@ class ProviderClientIntegrationTest {
     @Test
     void refreshesCatalogOverHttp() {
         var catalog = sut.refreshCatalog();
-
         assertThat(catalog.models()).hasSize(1);
     }
 
     @Test
     void switchesChatModelOverHttp() {
         sut.switchChat("ollama", "phi4");
-
         assertThat(server.lastSwitchBody()).contains("\"providerId\":\"ollama\"", "\"model\":\"phi4\"");
     }
 
     @Test
     void switchesEmbeddingModelOverHttp() {
         sut.switchEmbedding("ollama", "nomic-embed-text");
-
         assertThat(server.lastSwitchBody()).contains("\"providerId\":\"ollama\"", "\"model\":\"nomic-embed-text\"");
     }
 }

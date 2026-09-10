@@ -30,9 +30,7 @@ class LineEditorIntegrationTest {
         var sut = new InteractivePrompter(
                 keys(typeChar('o')),
                 sink::append, 8, PROVIDERS);
-
         sut.prompt("> ");
-
         assertThat(sink).contains("openai").contains("openrouter").contains("ollama");
     }
 
@@ -41,9 +39,7 @@ class LineEditorIntegrationTest {
         var sut = new InteractivePrompter(
                 keys(typeChar('o'), key(DOWN), key(ENTER), key(ENTER)),
                 s -> { }, 8, PROVIDERS);
-
         var result = sut.prompt("> ");
-
         assertThat(result).isEqualTo("openrouter");
     }
 
@@ -52,9 +48,7 @@ class LineEditorIntegrationTest {
         var sut = new InteractivePrompter(
                 keys(typeChar('h'), typeChar('i'), key(ENTER)),
                 s -> { }, 8, PROVIDERS);
-
         var result = sut.prompt("> ");
-
         assertThat(result).isEqualTo("hi");
     }
 
@@ -63,9 +57,7 @@ class LineEditorIntegrationTest {
         var sut = new InteractivePrompter(
                 keys(typeChar('o'), key(Key.KeyType.ESC), key(ENTER)),
                 s -> { }, 8, PROVIDERS);
-
         var result = sut.prompt("> ");
-
         assertThat(result).isEqualTo("o");
     }
 

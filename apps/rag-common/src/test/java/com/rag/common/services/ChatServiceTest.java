@@ -27,9 +27,7 @@ class ChatServiceTest {
         var source = new Chunk("c1", "d1", "Spring AI simplifies RAG.", 0, Map.of());
         when(vectorStore.similaritySearch("what is spring ai", 3)).thenReturn(List.of(source));
         when(chatModel.complete(anyString())).thenReturn("Spring AI is a framework.");
-
         var result = sut.ask("what is spring ai", 3);
-
         assertThat(result.answer()).isEqualTo("Spring AI is a framework.");
         assertThat(result.sources()).containsExactly(source);
         verify(chatModel).complete(anyString());
@@ -40,9 +38,7 @@ class ChatServiceTest {
         var source = new Chunk("c1", "d1", "Retrieval fetches relevant chunks.", 0, Map.of());
         when(vectorStore.similaritySearch("how does retrieval work", 2)).thenReturn(List.of(source));
         when(chatModel.complete(anyString())).thenReturn("It fetches chunks.");
-
         sut.ask("how does retrieval work", 2);
-
         verify(chatModel).complete(contains("Retrieval fetches relevant chunks."));
     }
 
@@ -52,9 +48,7 @@ class ChatServiceTest {
         when(vectorStore.similaritySearch("q", 2)).thenReturn(List.of(source));
         when(chatModel.completeStream(anyString()))
                 .thenReturn(Flux.just("Spring", " AI", " works."));
-
         var stream = sut.askStream("q", 2);
-
         StepVerifier.create(stream)
                 .expectNext("Spring", " AI", " works.")
                 .verifyComplete();
@@ -65,9 +59,7 @@ class ChatServiceTest {
     void handlesNoContextRetrieved() {
         when(vectorStore.similaritySearch("q", 2)).thenReturn(List.of());
         when(chatModel.complete(anyString())).thenReturn("I don't know.");
-
         var result = sut.ask("q", 2);
-
         assertThat(result.answer()).isEqualTo("I don't know.");
         assertThat(result.sources()).isEmpty();
     }

@@ -19,9 +19,7 @@ class LlmLinkPrioritizerTest {
     @Test
     void fallsBackWhenNoQuestion() {
         var links = List.of("https://a", "https://b");
-
         var result = sut.prioritize(links, "  ");
-
         assertThat(result).containsExactly("https://a", "https://b");
     }
 
@@ -30,9 +28,7 @@ class LlmLinkPrioritizerTest {
         var links = List.of("https://ex.com/a", "https://ex.com/b");
         when(chatModel.complete(anyString()))
                 .thenReturn("https://ex.com/b\nhttps://ex.com/a\n");
-
         var result = sut.prioritize(links, "hello world");
-
         assertThat(result).containsExactly("https://ex.com/b", "https://ex.com/a");
     }
 
@@ -40,9 +36,7 @@ class LlmLinkPrioritizerTest {
     void fallsBackWhenModelReturnsNothingUsable() {
         var links = List.of("https://ex.com/a", "https://ex.com/b");
         when(chatModel.complete(anyString())).thenReturn("I don't know.");
-
         var result = sut.prioritize(links, "hello world");
-
         assertThat(result.get(0)).isEqualTo("https://ex.com/a");
     }
 }

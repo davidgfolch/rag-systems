@@ -36,10 +36,8 @@ class AsyncIngestionServiceTest {
         var chunk = new Chunk("c1", "d1", "hello world", 0, Map.of());
         when(splitter.split(any())).thenReturn(List.of(chunk));
         when(embeddingModel.embed("hello world")).thenReturn(List.of(1.0f, 0.0f));
-
         var service = new AsyncIngestionService(delegate);
         var id = service.submit(new Document("d1", "", Map.of(MetadataKeys.RAW_BYTES, new byte[]{1})));
-
         var status = await(service, id);
         assertThat(status.state()).isEqualTo("COMPLETED");
         assertThat(status.chunkCount()).isEqualTo(1);
@@ -49,10 +47,8 @@ class AsyncIngestionServiceTest {
     void marksFailedWhenIngestionThrows() {
         var delegate = mock(IngestionService.class);
         when(delegate.ingest(any())).thenThrow(new IllegalStateException("boom"));
-
         var service = new AsyncIngestionService(delegate);
         var id = service.submit(new Document("d1", "content", Map.of()));
-
         var status = await(service, id);
         assertThat(status.state()).isEqualTo("FAILED");
         assertThat(status.message()).contains("boom");
@@ -64,10 +60,8 @@ class AsyncIngestionServiceTest {
         var store = mock(VectorStorePort.class);
         doThrow(new IllegalStateException("Vector store not available: DataAccessResourceFailureException: Connection refused"))
                 .when(store).checkAvailable();
-
         var service = new AsyncIngestionService(delegate, store, null);
         var id = service.submit(new Document("d1", "content", Map.of()));
-
         var status = await(service, id);
         assertThat(status.state()).isEqualTo("FAILED");
         assertThat(status.message()).contains("Connection refused");
@@ -77,9 +71,7 @@ class AsyncIngestionServiceTest {
     @Test
     void reportsFailedForUnknownJob() {
         var service = new AsyncIngestionService(mock(IngestionService.class));
-
         var status = service.status("nope");
-
         assertThat(status.state()).isEqualTo("FAILED");
         assertThat(status.message()).contains("No such ingestion job");
     }

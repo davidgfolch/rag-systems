@@ -36,7 +36,6 @@ class ModelsDevCatalogClientTest {
     @Test
     void shouldParseCatalogEntriesDefensively() throws Exception {
         List<ModelInfo> models = ModelsDevCatalogClient.parse(OM, SAMPLE);
-
         assertThat(models).hasSize(3);
         var phi4 = find(models, "ollama", "phi4");
         assertThat(phi4.name()).isEqualTo("Phi 4");
@@ -49,7 +48,6 @@ class ModelsDevCatalogClientTest {
         assertThat(phi4.status()).isNull();
         assertThat(phi4.baseUrl()).isEqualTo("http://localhost:11434");
         assertThat(phi4.apiKeyEnv()).isEqualTo("OLLAMA_API_KEY");
-
         assertThat(find(models, "ollama", "nomic-embed-text").status()).isEqualTo("beta");
         var gpt4o = find(models, "openai", "gpt-4o");
         assertThat(gpt4o.cost().inputPerMillion()).isEqualTo(2.5);
@@ -64,9 +62,7 @@ class ModelsDevCatalogClientTest {
         var server = server("/api.json", 200, SAMPLE);
         try {
             var client = client(server, "/api.json");
-
             var models = client.fetch();
-
             assertThat(models).hasSize(3);
         } finally {
             server.stop(0);
@@ -78,7 +74,6 @@ class ModelsDevCatalogClientTest {
         var server = server("/error", 500, "boom");
         try {
             var client = client(server, "/error");
-
             assertThatThrownBy(client::fetch)
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("Failed to fetch model catalog");
@@ -92,7 +87,6 @@ class ModelsDevCatalogClientTest {
         var server = server("/broken", 200, "{oops");
         try {
             var client = client(server, "/broken");
-
             assertThatThrownBy(client::fetch)
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessageContaining("Failed to parse model catalog");
@@ -100,31 +94,26 @@ class ModelsDevCatalogClientTest {
             server.stop(0);
         }
     }
-
     @Test
     void shouldReturnEmptyListOnBlankBody() throws Exception {
         var server = server("/empty", 200, "");
         try {
             var client = client(server, "/empty");
-
             assertThat(client.fetch()).isEmpty();
         } finally {
             server.stop(0);
         }
     }
-
     private static ModelsDevCatalogClient client(HttpServer server, String path) {
         var restClient = RestClient.builder().baseUrl(baseUrl(server) + path).build();
         return new ModelsDevCatalogClient("test", restClient, OM);
     }
-
     private static ModelInfo find(List<ModelInfo> models, String providerId, String modelId) {
         return models.stream()
                 .filter(m -> m.providerId().equals(providerId) && m.modelId().equals(modelId))
                 .findFirst()
                 .orElseThrow();
     }
-
     private static HttpServer server(String path, int status, String body) throws IOException {
         var server = HttpServer.create(new InetSocketAddress(0), 0);
         server.createContext(path, exchange -> {
@@ -138,7 +127,6 @@ class ModelsDevCatalogClientTest {
         server.start();
         return server;
     }
-
     private static String baseUrl(HttpServer server) {
         return "http://localhost:" + server.getAddress().getPort();
     }

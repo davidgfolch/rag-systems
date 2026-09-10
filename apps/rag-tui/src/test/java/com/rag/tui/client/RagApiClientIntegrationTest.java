@@ -44,10 +44,8 @@ class RagApiClientIntegrationTest {
     @Test
     void ingestsFileBytesOverMultipartHttp() {
         byte[] bytes = new byte[]{1, 2, 3, 0, -1};
-
         IngestResponse response = sut.ingestFile(bytes, "x.pdf",
                 Map.of("sourceType", "file", "source", "x.pdf", "fileName", "x.pdf"));
-
         assertThat(response.getDocumentId()).isEqualTo("i-1");
         assertThat(response.getChunkCount()).isEqualTo(2);
         assertThat(stub.lastIngestContentType()).startsWith("multipart/form-data");
@@ -61,7 +59,6 @@ class RagApiClientIntegrationTest {
                 List.of(new Module("rag-basic", "http://localhost:1")), "rag-basic");
         RagApiClient client = new RagApiClient(dead, RestClient.builder());
         Map<String, Object> metadata = Map.of();
-
         assertThatThrownBy(() -> client.ingest("text", metadata))
                 .isInstanceOf(RestClientException.class)
                 .hasMessageContaining("localhost");

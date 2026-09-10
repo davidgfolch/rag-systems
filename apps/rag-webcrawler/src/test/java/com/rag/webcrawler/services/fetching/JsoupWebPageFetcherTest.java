@@ -20,11 +20,8 @@ class JsoupWebPageFetcherTest {
                         + "<p>RAG retrieval augmented generation.</p>"
                         + "<a href=\"/guide.html\">Guide</a></body></html>",
                 "https://example.com/spring"));
-
         JsoupWebPageFetcher sut = new JsoupWebPageFetcher(connection);
-
         PageDTO page = sut.fetch("https://example.com/spring");
-
         assertThat(page.getUrl()).isEqualTo("https://example.com/spring");
         assertThat(page.getTitle()).isEqualTo("Spring");
         assertThat(page.getText()).contains("RAG retrieval augmented generation");

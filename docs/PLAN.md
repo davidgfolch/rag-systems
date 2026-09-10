@@ -492,7 +492,7 @@ Local **SonarQube Community Build 26.8** (Docker) runs `mvn verify sonar:sonar` 
 
 - **Compose overlay**: `docker/docker-compose.sonarqube.yml` (port `9000`, persistent volumes).
 - **Scanner config**: `sonar-project.properties`; plugin in `pom.xml` (`sonar-maven-plugin`).
-- **Quality gate**: "Clean as You Code" - new-code coverage ≥ 80%, no new violations, no new duplication.
+- **Quality gate**: "RAG 85% Coverage" - overall coverage ≥ 85%, no new violations, no new duplication.
 - **Workflow**: `.\scripts\sonar.bat up-scan %SONAR_TOKEN%`, review at `http://localhost:9000` (project `com.rag:rag-systems`).
 
 See [guides/sonarqube.md](guides/sonarqube.md) and [ADR-0004](architecture/decision-records/adr-0004-sonarqube-static-analysis.md).

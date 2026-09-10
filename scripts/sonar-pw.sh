@@ -89,6 +89,39 @@ else
     echo "SONAR_TOKEN=$TOKEN_VALUE" >> "$SECRETS_FILE"
 fi
 
+# --- Quality Gate: enforce 85% overall coverage ---
+GATE_NAME="RAG 85% Coverage"
+GATE_CONDITION_METRIC="overall_code"
+GATE_CONDITION_OP="LT"
+GATE_CONDITION_VALUE="85"
+PROJECT_KEY="com.rag:rag-systems"
+
+echo "Configuring quality gate (>= 85% coverage)..."
+HTTP_CODE=$(curl -sf -o /dev/null -w "%{http_code}" \
+    -u "$ADMIN_USER:$NEW_PW" \
+    -X POST "$HOST/api/qualitygates/create" \
+    -d "name=$GATE_NAME" 2>/dev/null || true)
+
+if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "409" ]; then
+    curl -sf -o /dev/null \
+        -u "$ADMIN_USER:$NEW_PW" \
+        -X POST "$HOST/api/qualitygates/create_condition" \
+        -d "gateName=$GATE_NAME" \
+        -d "metric=$GATE_CONDITION_METRIC" \
+        -d "op=$GATE_CONDITION_OP" \
+        -d "error=$GATE_CONDITION_VALUE" 2>/dev/null || true
+
+    curl -sf -o /dev/null \
+        -u "$ADMIN_USER:$NEW_PW" \
+        -X POST "$HOST/api/qualitygates/select" \
+        -d "gateName=$GATE_NAME" \
+        -d "projectKey=$PROJECT_KEY" 2>/dev/null || true
+
+    echo "Quality gate '$GATE_NAME' configured (>= $GATE_CONDITION_VALUE% coverage)."
+else
+    echo "Warning: could not create quality gate (HTTP $HTTP_CODE)."
+fi
+
 # Write marker
 mkdir -p "$(dirname "$MARKER")"
 touch "$MARKER"

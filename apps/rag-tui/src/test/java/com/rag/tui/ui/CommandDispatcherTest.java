@@ -76,9 +76,7 @@ class CommandDispatcherTest {
     @Test
     void listsModulesWithActiveAndState() {
         when(lifecycle.isRunning(BASIC)).thenReturn(true);
-
         var result = handle("modules");
-
         assertThat(result)
                 .contains(BASIC, "running", "(active)")
                 .contains(ADVANCED, "stopped");
@@ -88,9 +86,7 @@ class CommandDispatcherTest {
     void marksExternallyStartedModuleAsRunning() {
         when(lifecycle.isRunning(ADVANCED)).thenReturn(false);
         when(healthClient.isUp(ADVANCED_URL)).thenReturn(true);
-
         var result = handle("modules");
-
         assertThat(result).contains(ADVANCED, "running (external)");
     }
 
@@ -99,9 +95,7 @@ class CommandDispatcherTest {
         when(healthClient.isUp(BASIC_URL)).thenReturn(true);
         when(healthClient.isUp(ADVANCED_URL)).thenReturn(false);
         when(apiClient.listDocuments(BASIC_URL)).thenReturn(List.of(withId("d1")));
-
         var result = handle("documents");
-
         assertThat(result)
                 .contains(BASIC)
                 .contains("note.txt", "3 chunks", "[d1]")
@@ -111,16 +105,13 @@ class CommandDispatcherTest {
     @Test
     void reportsNoReachableModulesForDocuments() {
         when(healthClient.isUp(anyString())).thenReturn(false);
-
         var result = handle("documents");
-
         assertThat(result).contains("No rag-* modules are reachable");
     }
 
     @Test
     void switchesActiveModule() {
         var result = handle("use " + ADVANCED);
-
         assertThat(result).contains("Active module: " + ADVANCED);
         assertThat(registry.active().name()).isEqualTo(ADVANCED);
     }
@@ -128,16 +119,13 @@ class CommandDispatcherTest {
     @Test
     void rejectsUnknownModule() {
         var result = handle("use nope");
-
         assertThat(result).contains("Unknown module");
     }
 
     @Test
     void usePromptsForModuleWhenNoArgumentGiven() {
         when(prompter.pick(eq("Switch active module"), anyList())).thenReturn(Optional.of(ADVANCED));
-
         var result = handle("use");
-
         assertThat(result).contains("Active module: " + ADVANCED);
         assertThat(registry.active().name()).isEqualTo(ADVANCED);
     }
@@ -145,9 +133,7 @@ class CommandDispatcherTest {
     @Test
     void useCancelledPromptIsNoOp() {
         when(prompter.pick(eq("Switch active module"), anyList())).thenReturn(Optional.empty());
-
         var result = handle("use");
-
         assertThat(result).isEmpty();
         assertThat(registry.active().name()).isEqualTo(BASIC);
     }
@@ -157,9 +143,7 @@ class CommandDispatcherTest {
         when(prompter.pick(eq("Start module"), anyList())).thenReturn(Optional.of(BASIC));
         when(lifecycle.start(registry.find(BASIC).get())).thenReturn(true);
         when(healthClient.waitUntilUp(anyString(), anyLong(), any())).thenReturn(true);
-
         var result = handle("start");
-
         assertThat(result).contains("Started " + BASIC, "ready");
     }
 
@@ -167,9 +151,7 @@ class CommandDispatcherTest {
     void startsModuleWaitingForHealth() {
         when(lifecycle.start(registry.find(BASIC).get())).thenReturn(true);
         when(healthClient.waitUntilUp(anyString(), anyLong(), any())).thenReturn(true);
-
         var result = handle("start " + BASIC);
-
         assertThat(result).contains("Started " + BASIC, "ready");
     }
 
@@ -177,9 +159,7 @@ class CommandDispatcherTest {
     void reportsStartedModuleThatNeverBecomesReady() {
         when(lifecycle.start(registry.find(BASIC).get())).thenReturn(true);
         when(healthClient.waitUntilUp(anyString(), anyLong(), any())).thenReturn(false);
-
         var result = handle("start " + BASIC);
-
         assertThat(result).contains("Started " + BASIC, "not ready");
     }
 
@@ -187,10 +167,8 @@ class CommandDispatcherTest {
     void reportsProgressWhileModuleStarts() {
         when(lifecycle.start(registry.find(BASIC).get())).thenReturn(true);
         when(healthClient.waitUntilUp(anyString(), anyLong(), any())).thenReturn(true);
-
         List<String> tokens = new ArrayList<>();
         var result = sut.handle("start " + BASIC, tokens::add);
-
         assertThat(tokens).containsExactly("Waiting for " + BASIC + " to become ready...\n");
         assertThat(result).contains("Started " + BASIC, "ready");
     }
@@ -198,9 +176,7 @@ class CommandDispatcherTest {
     @Test
     void stopsModule() {
         when(lifecycle.stop(BASIC)).thenReturn(true);
-
         var result = handle("stop " + BASIC);
-
         assertThat(result).contains("Stopped " + BASIC);
     }
 
@@ -214,10 +190,8 @@ class CommandDispatcherTest {
                 .thenReturn(job);
         when(apiClient.ingestStatus("d1")).thenReturn(new IngestStatusDTO().documentId("d1")
                 .state(IngestStatusDTO.StateEnum.COMPLETED).chunkCount(3));
-
         List<String> tokens = new ArrayList<>();
         var result = sut.handle("add-file note.txt", tokens::add);
-
         assertThat(result).contains("submitted", "d1", "keep typing");
         await(tokens, "complete", 3);
         assertThat(tokens).anyMatch(t -> t.contains("complete") && t.contains("3 chunks"));
@@ -227,9 +201,7 @@ class CommandDispatcherTest {
     void ingestsUrlViaActiveModule() {
         when(apiClient.ingestUrl("https://example.com"))
                 .thenReturn(new IngestResponse().documentId("d1").chunkCount(3));
-
         var result = handle("add-url https://example.com");
-
         assertThat(result).contains("d1", "3");
     }
 
@@ -237,9 +209,7 @@ class CommandDispatcherTest {
     void deletesDocumentFromItsModuleWhenActiveModuleHasIt() {
         when(healthClient.isUp(BASIC_URL)).thenReturn(true);
         when(apiClient.listDocuments(BASIC_URL)).thenReturn(List.of(withId("d1")));
-
         var result = handle("delete d1");
-
         assertThat(result).contains("Deleted document d1", BASIC);
         verify(apiClient).deleteDocument(BASIC_URL, "d1");
     }
@@ -250,9 +220,7 @@ class CommandDispatcherTest {
         when(healthClient.isUp(ADVANCED_URL)).thenReturn(true);
         when(apiClient.listDocuments(BASIC_URL)).thenReturn(List.of());
         when(apiClient.listDocuments(ADVANCED_URL)).thenReturn(List.of(withId("d1")));
-
         var result = handle("delete d1");
-
         assertThat(result).contains("Deleted document d1", ADVANCED);
         verify(apiClient).deleteDocument(ADVANCED_URL, "d1");
     }
@@ -261,9 +229,7 @@ class CommandDispatcherTest {
     void deleteWithoutArgumentCancelsWhenNoReachableDocuments() {
         when(healthClient.isUp(BASIC_URL)).thenReturn(false);
         when(healthClient.isUp(ADVANCED_URL)).thenReturn(false);
-
         var result = handle("delete");
-
         assertThat(result).isEmpty();
         verify(apiClient, never()).deleteDocument(anyString(), anyString());
     }
@@ -274,9 +240,7 @@ class CommandDispatcherTest {
         when(apiClient.listDocuments(BASIC_URL)).thenReturn(List.of(withId("d1")));
         when(apiClient.listDocuments(ADVANCED_URL)).thenReturn(List.of());
         when(prompter.pick(eq("Delete document"), anyList())).thenReturn(Optional.of("d1"));
-
         var result = handle("delete");
-
         assertThat(result).contains("Deleted document d1", BASIC);
         verify(apiClient).deleteDocument(BASIC_URL, "d1");
     }
@@ -285,9 +249,7 @@ class CommandDispatcherTest {
     void deleteReportsDocumentNotFoundOnReachableModules() {
         when(healthClient.isUp(BASIC_URL)).thenReturn(true);
         when(apiClient.listDocuments(BASIC_URL)).thenReturn(List.of(withId("other")));
-
         var result = handle("delete d1");
-
         assertThat(result).contains("Document d1 not found");
         verify(apiClient, never()).deleteDocument(anyString(), anyString());
     }
@@ -305,10 +267,8 @@ class CommandDispatcherTest {
                 .thenReturn(new IngestJobResponse().documentId("db"));
         when(apiClient.ingestStatus(anyString())).thenReturn(new IngestStatusDTO().documentId("da")
                 .state(IngestStatusDTO.StateEnum.COMPLETED).chunkCount(2));
-
         List<String> tokens = new ArrayList<>();
         var result = sut.handle("add-folder notes", tokens::add);
-
         assertThat(result).contains("Submitted 2 files", "notes");
         verify(apiClient).submitIngestFile(eq(bytes), eq("a.txt"), any());
         verify(apiClient).submitIngestFile(eq(bytes), eq("b.txt"), any());
@@ -318,7 +278,6 @@ class CommandDispatcherTest {
     @Test
     void addFolderWithoutArgumentShowsUsage() {
         var result = handle("add-folder");
-
         assertThat(result).contains("Usage: add-folder <path>");
         verify(fileLoader, never()).loadFolder(anyString());
     }
@@ -326,9 +285,7 @@ class CommandDispatcherTest {
     @Test
     void addFolderReportsEmptyFolder() {
         when(fileLoader.loadFolder("empty")).thenReturn(List.of());
-
         var result = handle("add-folder empty");
-
         assertThat(result).contains("No ingestible files found");
     }
 
@@ -336,9 +293,7 @@ class CommandDispatcherTest {
     void addFolderReportsUnreadableFolder() {
         when(fileLoader.loadFolder("missing"))
                 .thenThrow(new FileDocumentLoader.DocumentLoadException("Failed to read folder: missing", null));
-
         var result = handle("add-folder missing");
-
         assertThat(result).contains("Failed to read folder");
     }
 
@@ -351,9 +306,7 @@ class CommandDispatcherTest {
             sink.accept("tok2");
             return "tok1tok2";
         });
-
         sut.handle("ask what is rag", tokens::add);
-
         assertThat(tokens).containsExactly("tok1", "tok2");
     }
 
@@ -363,18 +316,14 @@ class CommandDispatcherTest {
         when(memoryClient.conversations()).thenReturn(List.of(conversation));
         when(memoryClient.messages("c1")).thenReturn(List.of(
                 new ChatMessageDTO().content("hi")));
-
         var result = handle("history");
-
         assertThat(result).contains("c1", "t1", "1 messages");
     }
 
     @Test
     void showsEmptyHistory() {
         when(memoryClient.conversations()).thenReturn(List.of());
-
         var result = handle("history");
-
         assertThat(result).contains("No conversations yet");
     }
 
@@ -387,7 +336,6 @@ class CommandDispatcherTest {
     @Test
     void rejectsUnknownCommand() {
         var result = handle("frobnicate");
-
         assertThat(result).contains("Unknown command");
     }
 
@@ -398,9 +346,7 @@ class CommandDispatcherTest {
                 .thenReturn(new FileDocumentLoader.LoadedFile(bytes, Map.of("fileName", "note.txt")));
         when(apiClient.submitIngestFile(eq(bytes), eq("note.txt"), any()))
                 .thenThrow(new RestClientException("Connection refused"));
-
         var result = handle("add-file note.txt");
-
         assertThat(result).contains("Module unreachable", "Connection refused");
     }
 
@@ -413,9 +359,7 @@ class CommandDispatcherTest {
     void reportsFileNameErrorsWithoutCrashing() {
         when(fileLoader.load("missing.pdf")).thenThrow(
                 new FileDocumentLoader.DocumentLoadException("Failed to read file: missing.pdf", null));
-
         var result = handle("add-file missing.pdf");
-
         assertThat(result).contains("Failed to read file");
     }
 
@@ -423,9 +367,7 @@ class CommandDispatcherTest {
     void reportsChatErrorsWithoutCrashing() {
         when(chatGateway.ask(eq("hello"), eq(4), any()))
                 .thenThrow(new ChatGateway.ChatException("Module " + basic().wsUrl() + " unreachable", null));
-
         var result = handle("ask hello");
-
         assertThat(result).contains("Chat error", "unreachable");
     }
 
@@ -433,9 +375,7 @@ class CommandDispatcherTest {
     void connectShowsProviderStatusAndCatalogFreshness() {
         mockStatus();
         when(providerClient.catalog()).thenReturn(catalog(Instant.parse("2026-09-08T10:00:00Z")));
-
         var result = handle("connect");
-
         assertThat(result)
                 .contains("chat: ollama/phi4", "embedding: ollama/nomic-embed-text", "dimension 768")
                 .contains("fetched 2026-09-08T10:00:00Z", "2 models");
@@ -445,18 +385,14 @@ class CommandDispatcherTest {
     void connectReportsCatalogNotFetchedYet() {
         mockStatus();
         when(providerClient.catalog()).thenReturn(catalog(null));
-
         var result = handle("connect");
-
         assertThat(result).contains("not fetched yet");
     }
 
     @Test
     void connectListsCatalogGroupedByProvider() {
         when(providerClient.catalog()).thenReturn(catalog(Instant.parse("2026-09-08T10:00:00Z")));
-
         var result = handle("connect catalog");
-
         assertThat(result)
                 .contains("ollama:", "openai:")
                 .contains("phi4 (Phi-4)")
@@ -466,34 +402,27 @@ class CommandDispatcherTest {
     @Test
     void connectFiltersCatalogByProvider() {
         when(providerClient.catalog()).thenReturn(catalog(Instant.parse("2026-09-08T10:00:00Z")));
-
         var result = handle("connect catalog open");
-
         assertThat(result).contains("openai:").doesNotContain("ollama:");
     }
 
     @Test
     void connectReportsUnknownProviderFilter() {
         when(providerClient.catalog()).thenReturn(catalog(Instant.parse("2026-09-08T10:00:00Z")));
-
         var result = handle("connect catalog meta");
-
         assertThat(result).contains("No models for provider 'meta'");
     }
 
     @Test
     void connectReportsEmptyCatalog() {
         when(providerClient.catalog()).thenReturn(new ModelCatalogDTO(List.of(), "https://models.dev/api.json", null));
-
         var result = handle("connect catalog");
-
         assertThat(result).contains("Catalog is empty", "connect refresh");
     }
 
     @Test
     void connectSwitchesChatModel() {
         var result = handle("connect chat ollama phi4");
-
         assertThat(result).contains("Chat model switched", "ollama/phi4");
         verify(providerClient).switchChat("ollama", "phi4");
     }
@@ -501,7 +430,6 @@ class CommandDispatcherTest {
     @Test
     void connectSwitchesEmbeddingModel() {
         var result = handle("connect embedding openai text-embedding-3-small");
-
         assertThat(result).contains("Embedding model switched", "openai/text-embedding-3-small");
         verify(providerClient).switchEmbedding("openai", "text-embedding-3-small");
     }
@@ -509,9 +437,7 @@ class CommandDispatcherTest {
     @Test
     void connectCancelsSwitchWhenModelPromptCancelled() {
         when(providerClient.catalog()).thenReturn(catalog(Instant.parse("2026-09-08T10:00:00Z")));
-
         var result = handle("connect chat ollama");
-
         assertThat(result).isEmpty();
         verify(providerClient, never()).switchChat(anyString(), anyString());
     }
@@ -519,9 +445,7 @@ class CommandDispatcherTest {
     @Test
     void connectRefreshesCatalog() {
         when(providerClient.refreshCatalog()).thenReturn(catalog(Instant.parse("2026-09-08T11:00:00Z")));
-
         var result = handle("connect refresh");
-
         assertThat(result).contains("Catalog refreshed", "2 models");
         verify(providerClient).refreshCatalog();
     }
@@ -529,16 +453,13 @@ class CommandDispatcherTest {
     @Test
     void connectShowsUsageForUnknownSubcommand() {
         var result = handle("connect frobnicate");
-
         assertThat(result).contains("Usage: connect");
     }
 
     @Test
     void connectReportsUnreachableProvider() {
         when(providerClient.status()).thenThrow(new RestClientException("Connection refused"));
-
         var result = handle("connect");
-
         assertThat(result).contains("Module unreachable", "Connection refused");
     }
 

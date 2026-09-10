@@ -22,9 +22,7 @@ class ModuleLifecycleManagerTest {
         Process process = mock(Process.class);
         when(process.isAlive()).thenReturn(true);
         when(starter.start(expectedScript(), "rag-basic")).thenReturn(process);
-
         boolean started = sut.start(module);
-
         assertThat(started).isTrue();
         assertThat(sut.isRunning("rag-basic")).isTrue();
     }
@@ -35,18 +33,14 @@ class ModuleLifecycleManagerTest {
         when(process.isAlive()).thenReturn(true);
         when(starter.start(any(String[].class))).thenReturn(process);
         sut.start(module);
-
         boolean second = sut.start(module);
-
         assertThat(second).isFalse();
     }
 
     @Test
     void stopsRunningModule() {
         runningModule();
-
         boolean stopped = sut.stop("rag-basic");
-
         assertThat(stopped).isTrue();
         assertThat(sut.isRunning("rag-basic")).isFalse();
     }
@@ -61,7 +55,6 @@ class ModuleLifecycleManagerTest {
     void throwsStartExceptionWhenLaunchFails() throws Exception {
         when(starter.start(any(String[].class)))
                 .thenThrow(new IOException("boom"));
-
         assertThatThrownBy(() -> sut.start(module))
                 .isInstanceOf(ModuleLifecycleManager.StartException.class);
     }
@@ -70,7 +63,6 @@ class ModuleLifecycleManagerTest {
     void defaultStarterFailsFastWhenScriptMissing() {
         Path projectDir = Path.of(System.getProperty("java.io.tmpdir"));
         ModuleLifecycleManager raw = new ModuleLifecycleManager(projectDir.toString());
-
         assertThatThrownBy(() -> raw.start(module))
                 .isInstanceOf(ModuleLifecycleManager.StartException.class);
     }

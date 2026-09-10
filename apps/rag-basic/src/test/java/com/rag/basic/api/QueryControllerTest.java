@@ -27,9 +27,7 @@ class QueryControllerTest {
     @Test
     void returnsRetrievedChunks() {
         when(service.retrieve("q", 3)).thenReturn(List.of(chunk()));
-
         QueryResponse response = controller.query(new QueryRequest().question("q").topK(3));
-
         assertThat(response.getQuestion()).isEqualTo("q");
         assertThat(response.getResults()).hasSize(1);
         ChunkResult result = response.getResults().get(0);
@@ -42,16 +40,13 @@ class QueryControllerTest {
     @Test
     void passesDocumentIdScoping() {
         controller.query(new QueryRequest().question("q").documentId("d1"));
-
         verify(service).retrieve("q", 5, "d1");
     }
 
     @Test
     void returnsEmptyResultsWhenNoMatches() {
         when(service.retrieve("q", 5)).thenReturn(List.of());
-
         QueryResponse response = controller.query(new QueryRequest().question("q"));
-
         assertThat(response.getResults()).isEmpty();
     }
 }

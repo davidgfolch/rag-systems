@@ -12,7 +12,6 @@ class ConversationEntityTest {
     void exposesFields() {
         ConversationEntity conversation =
                 new ConversationEntity("c1", "Title", OffsetDateTime.parse("2026-01-01T10:00:00+01:00"));
-
         assertThat(conversation.getId()).isEqualTo("c1");
         assertThat(conversation.getTitle()).isEqualTo("Title");
         assertThat(conversation.getCreatedAt()).isEqualTo("2026-01-01T10:00:00+01:00");

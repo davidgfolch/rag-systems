@@ -68,12 +68,10 @@ class RagBasicPostgresIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.documentId").isNotEmpty())
                 .andExpect(jsonPath("$.chunkCount").isNumber());
-
         mockMvc.perform(get("/api/documents"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$[0].title").value("DDD Overview"));
-
         mockMvc.perform(post("/api/query")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""

@@ -21,9 +21,7 @@ class RetrievalServiceTest {
     void delegatesQueryAndReturnsChunks() {
         var result = new Chunk("c1", "d1", "content", 0, Map.of());
         when(vectorStore.similaritySearch("query", 5)).thenReturn(List.of(result));
-
         var chunks = service.retrieve("query", 5);
-
         assertThat(chunks).hasSize(1);
         assertThat(chunks.get(0).getId()).isEqualTo("c1");
     }
@@ -31,21 +29,18 @@ class RetrievalServiceTest {
     @Test
     void returnsEmptyWhenNoMatches() {
         when(vectorStore.similaritySearch("query", 3)).thenReturn(List.of());
-
         assertThat(service.retrieve("query", 3)).isEmpty();
     }
 
     @Test
     void delegatesDocumentScopedQuery() {
         when(vectorStore.similaritySearch("query", 5, "d1")).thenReturn(List.of());
-
         assertThat(service.retrieve("query", 5, "d1")).isEmpty();
     }
 
     @Test
     void delegatesDeleteToVectorStore() {
         service.delete("d1");
-
         verify(vectorStore).delete("d1");
     }
 }

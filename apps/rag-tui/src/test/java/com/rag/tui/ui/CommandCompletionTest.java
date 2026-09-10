@@ -44,36 +44,28 @@ class CommandCompletionTest {
     })
     void showsProvidersMatchingTypedToken(String line, int cursor) {
         catalog();
-
         var result = sut.candidates(line, cursor);
-
         assertThat(result).containsExactly("ollama", "openai", "openrouter");
     }
 
     @Test
     void showsCommandNamesWhileTypingCommand() {
         catalog();
-
         var result = sut.candidates("c", 1);
-
         assertThat(result).containsExactly("connect");
     }
 
     @Test
     void showsOnlySubcommandsForEmptyConnectArgument() {
         catalog();
-
         var result = sut.candidates("connect ", 8);
-
         assertThat(result).containsExactly("catalog", "chat", "embedding", "refresh");
     }
 
     @Test
     void containsFallbackMatchesSubcommandNamesWhenPrefixMisses() {
         catalog();
-
         var result = sut.candidates("connect at", 10);
-
         assertThat(result).containsExactly("catalog", "chat");
     }
 
@@ -85,66 +77,52 @@ class CommandCompletionTest {
     })
     void yieldsNoCandidates(String line, int cursor) {
         catalog();
-
         var result = sut.candidates(line, cursor);
-
         assertThat(result).isEmpty();
     }
 
     @Test
     void showsModelsAfterChatProviderSelectedAndTyped() {
         catalog();
-
         var result = sut.candidates("connect chat openai g", 21);
-
         assertThat(result).contains("gpt-4o");
     }
 
     @Test
     void showsModuleNamesForUseCommand() {
         catalog();
-
         var result = sut.candidates("use ", 4);
-
         assertThat(result).containsExactly(TestModules.BASIC, TestModules.ADVANCED);
     }
 
     @Test
     void filtersModuleNamesByPrefix() {
         catalog();
-
         var result = sut.candidates("start rag-ad", 12);
-
         assertThat(result).containsExactly(TestModules.ADVANCED);
     }
 
     @Test
     void degradesGracefullyWhenCatalogUnreachable() {
         when(providerClient.catalog()).thenThrow(new RuntimeException("down"));
-
         var result = sut.candidates("connect o", 9);
-
         assertThat(result).containsExactly("catalog");
     }
 
     @Test
     void cachesCatalogAcrossKeystrokes() {
         catalog();
-
         sut.candidates("connect o", 9);
         sut.candidates("connect chat ", 13);
         sut.candidates("connect chat ollama ", 20);
-
         verify(providerClient, times(1)).catalog();
     }
 
     @Test
     void doesNotRetryUnreachableCatalogImmediately() {
         when(providerClient.catalog()).thenThrow(new RuntimeException("down"));
-
         sut.candidates("connect o", 9);
         sut.candidates("connect chat ", 13);
-
         verify(providerClient, times(1)).catalog();
     }
 }

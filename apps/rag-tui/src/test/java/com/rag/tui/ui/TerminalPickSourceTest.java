@@ -30,7 +30,6 @@ class TerminalPickSourceTest {
     @Test
     void decodesPlainKeys() throws Exception {
         var source = new InteractivePrompter.TerminalPickSource(terminal(13, 8, 'x', 'q'));
-
         assertThat(source.read()).isEqualTo(new Key(ENTER, ' '));
         assertThat(source.read()).isEqualTo(new Key(BACKSPACE, ' '));
         assertThat(source.read()).isEqualTo(new Key(TYPE, 'x'));
@@ -42,7 +41,6 @@ class TerminalPickSourceTest {
     void decodesEscapeArrowsAndVimKeys() throws Exception {
         var source = new InteractivePrompter.TerminalPickSource(
                 terminal(27, '[', 'A', 27, '[', 'B', 'k', 'j', 'q', EOF));
-
         assertThat(source.read()).isEqualTo(new Key(UP, ' '));
         assertThat(source.read()).isEqualTo(new Key(DOWN, ' '));
         assertThat(source.read()).isEqualTo(new Key(UP, ' '));
@@ -55,7 +53,6 @@ class TerminalPickSourceTest {
     void keepsVimLettersWhenNavigationIsDisabled() throws Exception {
         var source = new InteractivePrompter.TerminalPickSource(
                 terminal('s', 'k', '-', 'o', 'r', '-', 'v', '1', EOF), false);
-
         assertThat(source.read()).isEqualTo(new Key(TYPE, 's'));
         assertThat(source.read()).isEqualTo(new Key(TYPE, 'k'));
         assertThat(source.read()).isEqualTo(new Key(TYPE, '-'));
@@ -71,7 +68,6 @@ class TerminalPickSourceTest {
     void decodesSs3ApplicationArrows() throws Exception {
         var source = new InteractivePrompter.TerminalPickSource(
                 terminal(27, 'O', 'A', 27, 'O', 'B', 27, 'O', 'C', 27, 'O', 'D'));
-
         assertThat(source.read()).isEqualTo(new Key(UP, ' '));
         assertThat(source.read()).isEqualTo(new Key(DOWN, ' '));
         assertThat(source.read()).isEqualTo(new Key(RIGHT, ' '));
@@ -81,21 +77,18 @@ class TerminalPickSourceTest {
     @Test
     void returnsEscapeWhenSecondByteIsNotASequencePrefix() throws Exception {
         var source = new InteractivePrompter.TerminalPickSource(terminal(27, EOF));
-
         assertThat(source.read()).isEqualTo(new Key(ESC, ' '));
     }
 
     @Test
     void returnsEscapeAndNullOnClosedStream() throws Exception {
         var source = new InteractivePrompter.TerminalPickSource(terminal(EOF));
-
         assertThat(source.read()).isNull();
     }
 
     @Test
     void mapsCtrlCDToEscape() throws Exception {
         var source = new InteractivePrompter.TerminalPickSource(terminal(3, 4, EOF));
-
         assertThat(source.read()).isEqualTo(new Key(ESC, ' '));
         assertThat(source.read()).isEqualTo(new Key(ESC, ' '));
         assertThat(source.read()).isNull();
@@ -104,7 +97,6 @@ class TerminalPickSourceTest {
     @Test
     void mapsUnknownBytesToNoneKey() throws Exception {
         var source = new InteractivePrompter.TerminalPickSource(terminal('!', '[', EOF));
-
         assertThat(source.read()).isEqualTo(new Key(NONE, ' '));
         assertThat(source.read()).isEqualTo(new Key(NONE, ' '));
         assertThat(source.read()).isNull();
@@ -115,7 +107,6 @@ class TerminalPickSourceTest {
         Terminal terminal = terminal('s', 'k', '-', 'o', 'r', '-', 'v', '1', '-', 'a', 'b', 13);
         when(terminal.writer()).thenReturn(new PrintWriter(Writer.nullWriter()));
         var sut = new InteractivePrompter(terminal, (line, cursor) -> List.of());
-
         assertThat(sut.prompt("> ")).isEqualTo("sk-or-v1-ab");
     }
 

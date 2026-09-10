@@ -25,9 +25,7 @@ class FetchControllerTest {
     void fetchesSinglePage() {
         PageDTO page = new PageDTO("https://ex.com", "T", "text");
         when(service.fetch("https://ex.com")).thenReturn(page);
-
         ResponseEntity<PageDTO> result = sut.fetch(new FetchRequest(URI.create("https://ex.com")));
-
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(result.getBody().getUrl()).isEqualTo("https://ex.com");
     }
@@ -36,11 +34,9 @@ class FetchControllerTest {
     void fetchesRelevantLinks() {
         when(service.fetchRelevantLinks("https://ex.com", "q", 5))
                 .thenReturn(List.of(new PageDTO("https://ex.com/a", "A", "a")));
-
         FetchLinksRequest request =
                 new FetchLinksRequest(URI.create("https://ex.com")).question("q");
         ResponseEntity<List<PageDTO>> result = sut.fetchLinks(request);
-
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(result.getBody()).hasSize(1);
         verify(service).fetchRelevantLinks("https://ex.com", "q", 5);

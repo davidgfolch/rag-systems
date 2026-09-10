@@ -43,11 +43,9 @@ class ModelRouterTest {
         when(factory.chatModel(any(), anyString())).thenReturn(chatModel);
         when(factory.embeddingModel(any(), anyString())).thenReturn(embeddingModel);
         when(embeddingModel.dimensions()).thenReturn(768);
-
         var router = newRouter();
         router.switchChat(new ModelSpec("ollama", "qwen3"));
         router.switchEmbedding(EMBED_SPEC);
-
         assertThat(router.currentChat().model()).isEqualTo("qwen3");
         assertThat(router.chatModel()).isSameAs(chatModel);
         assertThat(router.embeddingModel()).isSameAs(embeddingModel);
@@ -62,10 +60,8 @@ class ModelRouterTest {
         when(factory.embeddingModel(any(), anyString())).thenReturn(embeddingModel);
         when(embeddingModel.dimensions()).thenReturn(-1);
         when(embeddingModel.embed("probe")).thenReturn(new float[1536]);
-
         var router = newRouter();
         router.switchEmbedding(EMBED_SPEC);
-
         assertThat(router.embeddingDimension()).isEqualTo(1536);
     }
 
@@ -82,11 +78,9 @@ class ModelRouterTest {
     void shouldRebuildActiveModelsAfterConfigure() {
         when(factory.chatModel(any(), anyString())).thenReturn(chatModel);
         when(factory.embeddingModel(any(), anyString())).thenReturn(embeddingModel);
-
         var router = newRouter();
         router.configure(new ConfigureProviderRequest("ollama", "OLLAMA", "Ollama",
                 "http://localhost:11434", ""));
-
         verify(factory).chatModel(any(), anyString());
         verify(factory).embeddingModel(any(), anyString());
         assertThat(router.currentChat()).isEqualTo(CHAT_SPEC);
@@ -97,7 +91,6 @@ class ModelRouterTest {
         var router = newRouter();
         router.configure(new ConfigureProviderRequest("glhf", "OPENAI_COMPATIBLE", "GLHF",
                 "https://glhf.chat", "k"));
-
         assertThat(router.currentChat()).isEqualTo(CHAT_SPEC);
     }
 }

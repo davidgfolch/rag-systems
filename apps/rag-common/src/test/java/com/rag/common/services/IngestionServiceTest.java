@@ -35,9 +35,7 @@ class IngestionServiceTest {
         var chunk = new Chunk("c1", "d1", "content", 0, Map.of());
         when(splitter.split(doc)).thenReturn(List.of(chunk));
         when(embeddingModel.embed("content")).thenReturn(List.of(1.0f, 0.0f));
-
         var result = service.ingest(doc);
-
         assertThat(result.documentId()).isEqualTo("d1");
         assertThat(result.chunkCount()).isEqualTo(1);
         verify(vectorStore).add(any());
@@ -50,9 +48,7 @@ class IngestionServiceTest {
         var c1 = new Chunk("c1", "d1", "part one", 0, Map.of());
         var c2 = new Chunk("c2", "d1", "part two", 1, Map.of());
         when(splitter.split(doc)).thenReturn(List.of(c1, c2));
-
         service.ingest(doc);
-
         verify(embeddingModel, times(2)).embed(any(String.class));
         assertThat(c1.getEmbedding()).isNotNull();
         assertThat(c2.getEmbedding()).isNotNull();
@@ -62,7 +58,6 @@ class IngestionServiceTest {
     void rejectsAnyDocumentThatYieldsNoText() {
         var doc = new Document("d1", "", Map.of());
         when(parser.parse(doc)).thenReturn("");
-
         assertThatThrownBy(() -> service.ingest(doc))
                 .isInstanceOf(EmptyExtractionException.class)
                 .hasMessageContaining(EmptyExtractionException.MSG);
@@ -72,7 +67,6 @@ class IngestionServiceTest {
     void rejectsBinaryDocumentThatYieldsNoText() {
         var doc = new Document("d1", "", Map.of(MetadataKeys.RAW_BYTES, new byte[]{0x25, 0x50, 0x44, 0x46}));
         when(parser.parse(doc)).thenReturn("");
-
         assertThatThrownBy(() -> service.ingest(doc))
                 .isInstanceOf(EmptyExtractionException.class)
                 .hasMessageContaining(EmptyExtractionException.MSG);

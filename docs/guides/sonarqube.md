@@ -160,15 +160,15 @@ If `jq` (Linux/Mac) is missing or the analysis is not yet available on the serve
 
 ## The Quality Gate
 
-SonarQube's default "Clean as You Code" quality gate evaluates **new code** only:
+During first bootstrap (`sonar-pw.{sh,bat}`), a custom quality gate **"RAG 85% Coverage"** is created and assigned to the project. It enforces the same 85% overall coverage threshold that the JaCoCo build-time check uses, so SonarQube and the Maven build agree on the minimum:
 
 | Condition | Requirement |
 |-----------|-------------|
-| `new_coverage` | ≥ 80% on new code |
+| `overall_code` coverage | ≥ 85% on overall code |
 | `new_duplicated_lines_density` | < 3% |
 | `new_violations` | 0 (no new issues, unless security hotspot) |
 
-Because the gate measures **new/modified lines**, refactoring a method (e.g., splitting a large method into helpers) counts the refactored lines as "new code" and can lower `new_coverage` until those branches are covered by tests.
+The `overall_code` metric covers both new and existing code, aligning the SonarQube quality gate with the JaCoCo `INSTRUCTION` check (`minimum=0.85` in the parent POM). Because the gate measures **overall code**, refactoring a method (e.g., splitting a large method into helpers) can lower coverage until those branches are covered by tests.
 
 ## Fixing Findings (workflow)
 

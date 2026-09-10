@@ -81,6 +81,28 @@ if exist "%SECRETS_FILE%" (
     echo SONAR_TOKEN=%TOKEN_VALUE%>> "%SECRETS_FILE%"
 )
 
+REM --- Quality Gate: enforce 85% overall coverage ---
+set "GATE_NAME=RAG 85%% Coverage"
+set "GATE_CONDITION_METRIC=overall_code"
+set "GATE_CONDITION_OP=LT"
+set "GATE_CONDITION_VALUE=85"
+set "PROJECT_KEY=com.rag:rag-systems"
+
+echo Configuring quality gate ^(>= 85%% coverage^)...
+curl -sf -o nul -w "%%{http_code}" -u "admin:%NEW_PW%" -X POST "%HOST%/api/qualitygates/create" -d "name=%GATE_NAME%" > "%TEMP%\sonar_qg.txt" 2>&1
+set /p QG_HTTP=<"%TEMP%\sonar_qg.txt"
+
+if "%QG_HTTP%"=="200" goto :create_qg_condition
+if "%QG_HTTP%"=="409" goto :create_qg_condition
+goto :skip_qg
+
+:create_qg_condition
+curl -sf -o nul -u "admin:%NEW_PW%" -X POST "%HOST%/api/qualitygates/create_condition" -d "gateName=%GATE_NAME%" -d "metric=%GATE_CONDITION_METRIC%" -d "op=%GATE_CONDITION_OP%" -d "error=%GATE_CONDITION_VALUE%" 2>nul
+curl -sf -o nul -u "admin:%NEW_PW%" -X POST "%HOST%/api/qualitygates/select" -d "gateName=%GATE_NAME%" -d "projectKey=%PROJECT_KEY%" 2>nul
+echo Quality gate '%GATE_NAME%' configured ^(>= %GATE_CONDITION_VALUE%%% coverage^).
+
+:skip_qg
+
 REM Write marker
 if not exist ".sonarqube" mkdir ".sonarqube"
 type nul > "%MARKER%"

@@ -27,9 +27,7 @@ class EmbeddingServiceTest {
         when(embeddingModel.call(any(EmbeddingRequest.class))).thenReturn(
                 new EmbeddingResponse(List.of(new Embedding(new float[]{1f, 2f}, 0))));
         when(router.embeddingDimension()).thenReturn(2);
-
         var vectors = new EmbeddingService(router).embed(List.of("a", "b"));
-
         assertThat(vectors).containsExactly(List.of(1f, 2f));
     }
 }

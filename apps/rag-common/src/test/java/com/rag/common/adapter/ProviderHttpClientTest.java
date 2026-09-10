@@ -41,9 +41,7 @@ class ProviderHttpClientTest {
     void shouldPostJsonAndParse() {
         server.createContext(ApiPaths.COMPLETE,
                 exchange -> respond(exchange, 200, "application/json", "{\"answer\":\"Hi\"}"));
-
         var answer = client.postJson(ApiPaths.COMPLETE, new CompleteRequest("hi"), CompleteResponse.class);
-
         assertThat(answer.answer()).isEqualTo("Hi");
     }
 
@@ -52,9 +50,7 @@ class ProviderHttpClientTest {
         server.createContext(ApiPaths.PROVIDER,
                 exchange -> respond(exchange, 200, "application/json",
                         "{\"chat\":{\"providerId\":\"o\",\"model\":\"m\"},\"embedding\":{\"providerId\":\"o\",\"model\":\"em\"},\"provider\":\"o\",\"embeddingDimension\":768}"));
-
         var status = client.get(ApiPaths.PROVIDER, ProviderStatusDTO.class);
-
         assertThat(status.embeddingDimension()).isEqualTo(768);
     }
 
@@ -62,7 +58,6 @@ class ProviderHttpClientTest {
     void shouldThrowOnServerError() {
         server.createContext(ApiPaths.COMPLETE,
                 exchange -> respond(exchange, 500, "text/plain", "boom"));
-
         var request = new CompleteRequest("hi");
         assertThatThrownBy(() -> client.postJson(ApiPaths.COMPLETE, request, CompleteResponse.class))
                 .isInstanceOf(IllegalStateException.class)
@@ -73,7 +68,6 @@ class ProviderHttpClientTest {
     void shouldThrowOnMalformedResponse() {
         server.createContext(ApiPaths.COMPLETE,
                 exchange -> respond(exchange, 200, "application/json", "not-json"));
-
         var request = new CompleteRequest("hi");
         assertThatThrownBy(() -> client.postJson(ApiPaths.COMPLETE, request, CompleteResponse.class))
                 .isInstanceOf(IllegalStateException.class)
@@ -84,7 +78,6 @@ class ProviderHttpClientTest {
     void shouldOpenStreamForPost() throws IOException {
         server.createContext(ApiPaths.CHAT_STREAM,
                 exchange -> respond(exchange, 200, "text/event-stream", "data:{}\n\n"));
-
         try (var body = client.postStream(ApiPaths.CHAT_STREAM, new CompleteRequest("hi"))) {
             assertThat(body).isNotNull();
         }

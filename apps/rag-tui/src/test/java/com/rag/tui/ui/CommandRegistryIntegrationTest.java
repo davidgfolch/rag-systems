@@ -11,7 +11,6 @@ class CommandRegistryIntegrationTest {
     @Test
     void usageTextListsEveryRegisteredCommand() {
         String usage = sut.generateUsage();
-
         for (CommandDescriptor cmd : sut.all()) {
             assertThat(usage).contains(cmd.name());
         }

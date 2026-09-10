@@ -23,9 +23,7 @@ class ProviderProfileFileStoreTest {
                         "https://glhf.chat", "secret-key"),
                 new ProviderProfile("openrouter", ProviderType.OPENAI_COMPATIBLE,
                         "OpenRouter", "https://openrouter.ai/api/v1", "sk-or-2"));
-
         sut.save(profiles);
-
         assertThat(sut.load()).usingRecursiveFieldByFieldElementComparator().isEqualTo(profiles);
         assertThat(Files.readString(file)).contains("secret-key");
     }
@@ -34,7 +32,6 @@ class ProviderProfileFileStoreTest {
     void loadsEmptyWhenFileMissing() throws Exception {
         var file = Files.createTempDirectory("profiles").resolve("missing.json");
         var sut = new ProviderProfileFileStore(mapper, file);
-
         assertThat(sut.load()).isEmpty();
     }
 
@@ -43,7 +40,6 @@ class ProviderProfileFileStoreTest {
         var file = Files.createTempDirectory("profiles").resolve("corrupt.json");
         Files.writeString(file, "{not json");
         var sut = new ProviderProfileFileStore(mapper, file);
-
         assertThat(sut.load()).isEmpty();
     }
 }

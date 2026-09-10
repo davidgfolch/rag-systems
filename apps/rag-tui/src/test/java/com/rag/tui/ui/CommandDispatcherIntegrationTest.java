@@ -74,9 +74,7 @@ class CommandDispatcherIntegrationTest {
         byte[] bytes = "%PDF-1.4 fake binary content \u0000\u0001\u0002".getBytes(StandardCharsets.UTF_8);
         Files.write(pdf, bytes);
         List<String> tokens = new ArrayList<>();
-
         var result = sut.handle("add-file " + pdf, tokens::add);
-
         assertThat(result).contains("submitted", "i-1");
         await(tokens, "2 chunks");
         assertThat(tokens).anyMatch(t -> t.contains("complete") && t.contains("2 chunks"));
@@ -93,7 +91,6 @@ class CommandDispatcherIntegrationTest {
     @Test
     void readsHistoryFromStubbedModule() {
         var history = sut.handle("history", token -> {});
-
         assertThat(history).contains("No conversations yet");
     }
 
@@ -111,9 +108,7 @@ class CommandDispatcherIntegrationTest {
                         new ProviderClient("http://localhost:1", RestClient.builder())),
                 new CommandDispatcher.Settings(1_000, 4, 60), new CommandRegistry(),
                 new NoopPrompter(new StringReader("")));
-
         var result = dead.handle("add-file " + testFile(), token -> {});
-
         assertThat(result).contains("Module unreachable");
     }
 
@@ -121,9 +116,7 @@ class CommandDispatcherIntegrationTest {
     void startWaitsForModuleToBecomeHealthy() {
         when(lifecycle.start(registry.active())).thenReturn(true);
         when(lifecycle.isRunning(TestModules.BASIC)).thenReturn(true);
-
         var result = sut.handle("start " + TestModules.BASIC, token -> {});
-
         assertThat(result).contains("ready");
     }
 

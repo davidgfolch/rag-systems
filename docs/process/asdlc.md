@@ -31,7 +31,10 @@ implementation begins. Once accepted, the plan enters the SDLC and must
 follow every step below without shortcuts:
 
 1. Working in a per-feature clone on branch `feat/<name>` (via `dev new`);
-   never commit to `main` directly.
+   never commit to `main` directly. **Exception:** if the developer is already
+   on the `main` branch and explicitly asks to bypass the feature branch
+   requirement, direct commits to `main` are allowed — all other rules (tests,
+   SonarQube, quality gate) still apply.
 2. Modify code only inside the clone's `workdir`.
 3. **Execute all tests** after implementation (see Rule 1 and the Stop-gate
    hooks in `.claude/settings.json` and `.opencode/plugin/sdlc-gate.ts`).
@@ -75,7 +78,7 @@ After any code modification:
 2. Run SonarQube and fix every issue it reports:
    `.\scripts\sonar.bat scan <token>`.
 3. The quality gate must pass before code is committed or merged:
-   `new_coverage >= 80%`, `new_duplicated_lines_density < 3%`, `new_violations == 0`.
+   `overall_code >= 85%`, `new_duplicated_lines_density < 3%`, `new_violations == 0`.
 
 Architecture rules are enforced automatically by the `ArchitectureTest` suites
 in every module - they run as part of every test run. Use `.\scripts\test.bat`
@@ -133,6 +136,13 @@ names on domain/entity record fields, Spring bean/property bound fields, and
 where a short form would hurt clarity. Full list and rationale in
 `.claude/skills/rules/SKILL.md`.
 
+### 3d. Compact test style
+
+Test methods (`@Test`, `@ParameterizedTest`) must have **no blank lines**
+inside the method body. Setup, action, and assertion flow directly without
+separating blank lines. Blank lines between methods (before the next
+annotation) are allowed. See `.claude/skills/rules/SKILL.md` section 6.
+
 ### 4. Suffix bean classes; keep domain beans plain
 
 To avoid fully-qualified types and name collisions between layers:
@@ -151,6 +161,7 @@ These rules are enforced by the architecture tests:
 
 | Rule | Where enforced |
 |------|----------------|
+| Feature branch required (bypassable on `main` with explicit ask) | This document |
 | Tests + SonarQube after every change | This document, `.claude/rules/architecture-guidelines.md`, Stop-gate hook |
 | Tests always run after implementation | Stop-gate hooks: `.claude/settings.json` (Claude Code), `.opencode/plugin/sdlc-gate.ts` (opencode) |
 | Auto-merge green PRs + conflict resolution | `scripts/dev.bat`/`dev.sh` `auto-merge` |
@@ -162,3 +173,4 @@ These rules are enforced by the architecture tests:
 | No magic literals in production code | This document, `.claude/rules/architecture-guidelines.md`, `rag-common/.../ArchitectureTest` |
 | Shared test fixtures | `.claude/skills/test-implementer/SKILL.md`, `.claude/rules/architecture-guidelines.md` |
 | Parameterized tests where applicable | `.claude/skills/test-implementer/SKILL.md`, `.claude/rules/architecture-guidelines.md` |
+| Compact test style (no blank lines inside method bodies) | `.claude/skills/rules/SKILL.md`, this document |

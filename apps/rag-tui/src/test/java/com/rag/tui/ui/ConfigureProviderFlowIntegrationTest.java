@@ -38,9 +38,7 @@ class ConfigureProviderFlowIntegrationTest {
                 "https://openrouter.ai/api/v1", "sk-or-1");
         var sut = new ConfigureProviderFlow(
                 new ProviderClient(server.baseUrl(), RestClient.builder()), prompter);
-
         boolean configured = sut.configure("openrouter");
-
         assertThat(configured).isTrue();
         assertThat(server.lastConfigureBody())
                 .contains("\"providerId\":\"openrouter\"")
@@ -54,9 +52,7 @@ class ConfigureProviderFlowIntegrationTest {
         var prompter = new ScriptedPrompter("OLLAMA", "http://localhost:11434");
         var sut = new ConfigureProviderFlow(
                 new ProviderClient(server.baseUrl(), RestClient.builder()), prompter);
-
         boolean configured = sut.configure("ollama-pc");
-
         assertThat(configured).isTrue();
         assertThat(server.lastConfigureBody())
                 .contains("\"type\":\"OLLAMA\"")
@@ -68,9 +64,7 @@ class ConfigureProviderFlowIntegrationTest {
         var prompter = new ScriptedPrompter("OPENAI_COMPATIBLE", "sk-ollama");
         var sut = new ConfigureProviderFlow(
                 new ProviderClient(server.baseUrl(), RestClient.builder()), prompter);
-
         boolean configured = sut.configure("ollama");
-
         assertThat(configured).isTrue();
         assertThat(server.lastConfigureBody())
                 .contains("\"baseUrl\":\"http://ollama.local\"")
@@ -82,7 +76,6 @@ class ConfigureProviderFlowIntegrationTest {
         var prompter = new ScriptedPrompter(null);
         var sut = new ConfigureProviderFlow(
                 new ProviderClient(server.baseUrl(), RestClient.builder()), prompter);
-
         assertThat(sut.configure("glhf")).isFalse();
         assertThat(server.lastConfigureBody()).isNull();
     }

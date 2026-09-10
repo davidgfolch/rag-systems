@@ -32,12 +32,9 @@ class InteractiveShellTest {
                 .thenReturn("answer: hi");
         when(dispatcher.handle(eq("quit"), any()))
                 .thenThrow(new ShellExitException());
-
         var out = new StringWriter();
         var sut = new InteractiveShell(dispatcher, new NoopPrompter(new StringReader("ask hi\nquit\n")), out);
-
         sut.run();
-
         verify(dispatcher, times(2)).handle(anyString(), any());
         assertThat(out.toString()).contains("answer: hi");
         assertThat(out.toString()).contains("Bye.");
@@ -47,12 +44,9 @@ class InteractiveShellTest {
     void colorsPlainResponsesButKeepsStyledOutputUnchanged() {
         when(dispatcher.handle(eq("documents"), any())).thenReturn("Documents:\n - d1");
         when(dispatcher.handle(eq("quit"), any())).thenThrow(new ShellExitException());
-
         var out = new StringWriter();
         var sut = new InteractiveShell(dispatcher, new NoopPrompter(new StringReader("documents\nquit\n")), out);
-
         sut.run();
-
         var text = out.toString();
         assertThat(text)
                 .contains("\033[36mDocuments:")
@@ -68,12 +62,9 @@ class InteractiveShellTest {
                     token.accept("lo");
                     return "done";
                 });
-
         var out = new StringWriter();
         var sut = new InteractiveShell(dispatcher, new NoopPrompter(new StringReader("ask a\n")), out);
-
         sut.run();
-
         assertThat(out.toString()).contains("Hel").contains("lo");
     }
 
@@ -83,12 +74,9 @@ class InteractiveShellTest {
                 .thenReturn("Chat model: " + PROVIDER_OLLAMA + "/" + LOCAL_CHAT
                         + "\nEmbedding model: " + PROVIDER_OLLAMA + "/" + LOCAL_EMBED);
         when(dispatcher.handle(eq("quit"), any())).thenThrow(new ShellExitException());
-
         var out = new StringWriter();
         var sut = new InteractiveShell(dispatcher, new NoopPrompter(new StringReader("quit\n")), out);
-
         sut.run();
-
         assertThat(out.toString())
                 .contains("RAG TUI")
                 .contains("Chat model: " + PROVIDER_OLLAMA + "/" + LOCAL_CHAT)
@@ -100,12 +88,9 @@ class InteractiveShellTest {
     void skipsProviderSummaryWhenUnreachable() {
         when(dispatcher.providerSummary()).thenReturn("");
         when(dispatcher.handle(eq("quit"), any())).thenThrow(new ShellExitException());
-
         var out = new StringWriter();
         var sut = new InteractiveShell(dispatcher, new NoopPrompter(new StringReader("quit\n")), out);
-
         sut.run();
-
         String text = out.toString();
         assertThat(text)
                 .doesNotContain("Providers:")
@@ -119,20 +104,16 @@ class InteractiveShellTest {
             public void write(char[] cbuf, int off, int len) throws IOException {
                 throw new IOException("terminal gone");
             }
-
             @Override
             public void flush() {
                 // no-op: failing writer stays silent
             }
-
             @Override
             public void close() {
                 // no-op: failing writer stays silent
             }
         };
-
         var sut = new InteractiveShell(dispatcher, new NoopPrompter(new StringReader("ask hi\n")), failing);
-
         assertThatThrownBy(sut::run)
                 .isInstanceOf(InteractiveShell.ShellException.class)
                 .hasMessageContaining("Terminal I/O error");
@@ -144,12 +125,9 @@ class InteractiveShellTest {
                 .thenThrow(new RuntimeException("Module unreachable: Connection refused"));
         when(dispatcher.handle(eq("quit"), any()))
                 .thenThrow(new ShellExitException());
-
         var out = new StringWriter();
         var sut = new InteractiveShell(dispatcher, new NoopPrompter(new StringReader("add-file x\nquit\n")), out);
-
         sut.run();
-
         assertThat(out.toString()).contains("Error: Module unreachable");
         assertThat(out.toString()).contains("Bye.");
     }

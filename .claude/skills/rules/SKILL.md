@@ -159,6 +159,29 @@ Conventions:
 Logger field name is always `log` (never `logger`), and it is
 `private static final`. Do not use Lombok `@Slf4j`.
 
+## 6. Compact test style
+
+Test methods (`@Test`, `@ParameterizedTest`) must have **no blank lines**
+inside the method body. The setup, action, and assertion blocks flow
+directly without separating blank lines.
+
+```java
+@Test
+void first() {
+    var result = sut.method();
+    assertThat(result).isTrue();
+}
+
+@Test
+void second() {
+    var result = sut.other();
+    assertThat(result).isEqualTo("x");
+}
+```
+
+Blank lines between test methods (before the next `@Test` annotation) are
+allowed. Blank lines inside *helper* methods (non-`@Test`) are also allowed.
+
 ## Enforcement
 
 Prefer consistency with the surrounding file. If an existing block already uses

@@ -54,7 +54,6 @@ class CommandRegistryTest {
     @Test
     void generatesUsageWithAllCommands() {
         String usage = sut.generateUsage();
-
         assertThat(usage)
                 .contains("Available commands:")
                 .contains("help", "modules", "use", "start", "stop")
@@ -71,7 +70,6 @@ class CommandRegistryTest {
                 .map(line -> line.lastIndexOf("  ") + 2)
                 .distinct()
                 .toList();
-
         assertThat(descStarts).hasSize(1);
     }
 }

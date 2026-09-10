@@ -26,9 +26,7 @@ class LineEditorTest {
     void showsPopupWhenTypingMatchesCandidates() {
         sut.setCompletion(PREFIX);
         sut.start();
-
         sut.type('o');
-
         assertThat(sut.popupVisible()).isTrue();
         assertThat(sut.popup()).containsExactly("openai", "openrouter", "ollama");
     }
@@ -39,7 +37,6 @@ class LineEditorTest {
         sut.start();
         sut.type('o');
         sut.type('p');
-
         assertThat(sut.popup()).containsExactly("openai", "openrouter");
     }
 
@@ -48,9 +45,7 @@ class LineEditorTest {
         sut.setCompletion(PREFIX);
         sut.start();
         sut.type('o');
-
         sut.accept(new Key(Key.KeyType.DOWN, ' '));
-
         assertThat(sut.popupCursor()).isEqualTo(1);
     }
 
@@ -59,9 +54,7 @@ class LineEditorTest {
         sut.setCompletion(PREFIX);
         sut.start();
         sut.type('o');
-
         boolean moved = sut.selectPopup();
-
         assertThat(moved).isTrue();
         assertThat(sut.text()).isEqualTo("openai");
         assertThat(sut.popupVisible()).isFalse();
@@ -74,9 +67,7 @@ class LineEditorTest {
         sut.type('a');
         sut.type('b');
         sut.accept(new Key(Key.KeyType.ESC, ' '));
-
         boolean submitted = sut.accept(new Key(Key.KeyType.ENTER, ' '));
-
         assertThat(submitted).isTrue();
         assertThat(sut.submitted()).isEqualTo("ab");
         assertThat(sut.text()).isEmpty();
@@ -92,7 +83,6 @@ class LineEditorTest {
         sut.type('n');
         sut.type('a');
         sut.type('i');
-
         assertThat(sut.popupVisible()).isFalse();
         assertThat(sut.text()).isEqualTo("openai");
     }
@@ -103,10 +93,8 @@ class LineEditorTest {
         sut.start();
         sut.type('o');
         assertThat(sut.popupVisible()).isTrue();
-
         sut.accept(new Key(Key.KeyType.ESC, ' '));
         sut.accept(new Key(Key.KeyType.ENTER, ' '));
-
         assertThat(sut.text()).isEmpty();
     }
 
@@ -116,9 +104,7 @@ class LineEditorTest {
         sut.start();
         sut.type('o');
         sut.type('p');
-
         sut.accept(new Key(Key.KeyType.BACKSPACE, ' '));
-
         assertThat(sut.popup()).containsExactly("openai", "openrouter", "ollama");
     }
 
@@ -129,9 +115,7 @@ class LineEditorTest {
         sut.type('h');
         sut.accept(new Key(Key.KeyType.ENTER, ' '));
         sut.start();
-
         sut.accept(new Key(Key.KeyType.UP, ' '));
-
         assertThat(sut.text()).isEqualTo("h");
     }
 
@@ -140,9 +124,7 @@ class LineEditorTest {
         sut.setCompletion(PREFIX);
         sut.start();
         sut.type('o');
-
         sut.accept(new Key(Key.KeyType.UP, ' '));
-
         assertThat(sut.popupCursor()).isEqualTo(2);
     }
 
@@ -154,7 +136,6 @@ class LineEditorTest {
         sut.type('s');
         sut.type('e');
         sut.type(' ');
-
         assertThat(sut.popup()).containsExactly("rag-basic", "rag-advanced", "rag-agentic");
     }
 }

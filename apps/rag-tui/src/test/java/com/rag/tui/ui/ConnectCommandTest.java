@@ -49,9 +49,7 @@ class ConnectCommandTest {
         when(prompter.pick(eq("Choose chat provider"), anyList())).thenReturn(Optional.of("openrouter"));
         when(prompter.pick(eq("Choose chat model for openrouter"), anyList()))
                 .thenReturn(Optional.of(CLOUD_CHAT));
-
         var result = sut.execute("chat");
-
         assertThat(result).contains("Chat model switched", "openrouter/" + CLOUD_CHAT);
         verify(client).switchChat("openrouter", CLOUD_CHAT);
     }
@@ -61,9 +59,7 @@ class ConnectCommandTest {
         when(client.catalog()).thenReturn(catalog());
         when(prompter.pick(eq("Choose embedding model for openrouter"), anyList()))
                 .thenReturn(Optional.of("text-embedding-3-small"));
-
         var result = sut.execute("embedding openrouter");
-
         assertThat(result).contains("Embedding model switched", "openrouter/text-embedding-3-small");
         verify(client).switchEmbedding("openrouter", "text-embedding-3-small");
         verify(prompter, never()).pick(eq("Choose embedding provider"), anyList());
@@ -73,9 +69,7 @@ class ConnectCommandTest {
     void cancelsProviderPickerWithoutSwitching() {
         when(client.catalog()).thenReturn(catalog());
         when(prompter.pick(eq("Choose chat provider"), anyList())).thenReturn(Optional.empty());
-
         var result = sut.execute("chat");
-
         assertThat(result).isEmpty();
         verify(client, never()).switchChat(anyString(), anyString());
     }
@@ -85,9 +79,7 @@ class ConnectCommandTest {
         when(client.catalog()).thenReturn(catalog());
         when(prompter.pick(eq("Choose chat provider"), anyList())).thenReturn(Optional.of("openrouter"));
         when(prompter.pick(eq("Choose chat model for openrouter"), anyList())).thenReturn(Optional.empty());
-
         var result = sut.execute("chat");
-
         assertThat(result).isEmpty();
         verify(client, never()).switchChat(anyString(), anyString());
     }
@@ -95,7 +87,6 @@ class ConnectCommandTest {
     @Test
     void keepsTypedArgsWithoutPrompts() {
         var result = sut.execute("chat openrouter " + CLOUD_CHAT);
-
         assertThat(result).contains("Chat model switched", "openrouter/" + CLOUD_CHAT);
         verify(client).switchChat("openrouter", CLOUD_CHAT);
         verify(prompter, never()).pick(anyString(), anyList());
@@ -106,9 +97,7 @@ class ConnectCommandTest {
         doThrow(HttpClientErrorException.create(HttpStatus.BAD_REQUEST, "Bad Request", HttpHeaders.EMPTY,
                 "Model 'openrouter/free' is not allowed by provider 'openrouter'".getBytes(StandardCharsets.UTF_8), null))
                 .when(client).switchChat("openrouter", "openrouter/free");
-
         var result = sut.execute("chat openrouter openrouter/free");
-
         assertThat(result)
                 .contains("Request rejected by rag-provider", "not allowed")
                 .doesNotContain("Module unreachable");
@@ -125,9 +114,7 @@ class ConnectCommandTest {
                 .thenReturn(Optional.of("OPENAI_COMPATIBLE"));
         when(prompter.prompt(contains("Base URL"))).thenReturn("https://openrouter.ai/api/v1");
         when(prompter.prompt(contains("API key"))).thenReturn("sk-or-123");
-
         var result = sut.execute("chat openrouter openrouter/free");
-
         assertThat(result).contains("Chat model switched", "openrouter/openrouter/free");
         verify(client, times(2)).switchChat("openrouter", "openrouter/free");
         verify(client).configure(new ConfigureProviderRequest("openrouter", "OPENAI_COMPATIBLE",
@@ -140,9 +127,7 @@ class ConnectCommandTest {
                 "Unknown provider: openrouter".getBytes(StandardCharsets.UTF_8), null))
                 .when(client).switchChat("openrouter", "openrouter/free");
         when(prompter.pick(anyString(), anyList())).thenReturn(Optional.empty());
-
         var result = sut.execute("chat openrouter openrouter/free");
-
         assertThat(result).isEmpty();
         verify(client, never()).configure(any());
         verify(client, times(1)).switchChat("openrouter", "openrouter/free");
@@ -152,9 +137,7 @@ class ConnectCommandTest {
     void reportsProviderModuleUnreachableForConnectionFailures() {
         doThrow(new ResourceAccessException("connection refused"))
                 .when(client).switchChat("openrouter", CLOUD_CHAT);
-
         var result = sut.execute("chat openrouter " + CLOUD_CHAT);
-
         assertThat(result).contains("Provider module unreachable", "connection refused");
     }
 
@@ -163,9 +146,7 @@ class ConnectCommandTest {
         when(client.status()).thenReturn(new ProviderStatusDTO(
                 new ModelSpecDTO(PROVIDER_OLLAMA, LOCAL_CHAT),
                 new ModelSpecDTO(PROVIDER_OLLAMA, LOCAL_EMBED), PROVIDER_OLLAMA, 768));
-
         var result = sut.activeSpecs();
-
         assertThat(result)
                 .contains("Chat model: " + PROVIDER_OLLAMA + "/" + LOCAL_CHAT)
                 .contains("Embedding model: " + PROVIDER_OLLAMA + "/" + LOCAL_EMBED + " (dimension 768)");

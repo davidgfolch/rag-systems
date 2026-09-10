@@ -49,9 +49,7 @@ class ModelCatalogServiceTest {
     @Test
     void shouldFetchCatalogOnFirstAccess() {
         when(port.fetch()).thenReturn(List.of(PHI4));
-
         ModelCatalogDTO catalog = sut.catalog();
-
         assertThat(catalog.models()).hasSize(1);
         assertThat(catalog.source()).isEqualTo(SOURCE);
         assertThat(catalog.fetchedAt()).isEqualTo(clock.instant());
@@ -66,21 +64,17 @@ class ModelCatalogServiceTest {
     @Test
     void shouldReuseCacheWithinTtl() {
         when(port.fetch()).thenReturn(List.of(PHI4));
-
         sut.catalog();
         sut.catalog();
-
         verify(port, times(1)).fetch();
     }
 
     @Test
     void shouldRefetchWhenStale() {
         when(port.fetch()).thenReturn(List.of(PHI4));
-
         sut.catalog();
         clock.advance(TTL);
         sut.catalog();
-
         verify(port, times(2)).fetch();
     }
 
@@ -90,9 +84,7 @@ class ModelCatalogServiceTest {
         var first = sut.catalog();
         clock.advance(TTL);
         when(port.fetch()).thenThrow(new RestClientException("network down"));
-
         var stale = sut.catalog();
-
         assertThat(stale.models()).containsExactlyElementsOf(first.models());
         assertThat(stale.fetchedAt()).isEqualTo(first.fetchedAt());
         verify(port, times(2)).fetch();
@@ -101,7 +93,6 @@ class ModelCatalogServiceTest {
     @Test
     void shouldReturnEmptyCatalogWhenDisabled() {
         sut = new ModelCatalogService(port, SOURCE, TTL, false, clock);
-
         assertThat(sut.catalog().models()).isEmpty();
         assertThat(sut.refresh().models()).isEmpty();
         verify(port, times(0)).fetch();
@@ -110,18 +101,14 @@ class ModelCatalogServiceTest {
     @Test
     void shouldTreatEmptyCatalogAsUnverifiable() {
         when(port.fetch()).thenReturn(List.of());
-
         sut.catalog();
-
         assertThat(sut.isKnown("ollama", "phi4")).isTrue();
     }
 
     @Test
     void shouldReportKnownAndUnknownModels() {
         when(port.fetch()).thenReturn(List.of(PHI4));
-
         sut.catalog();
-
         assertThat(sut.isKnown("ollama", "phi4")).isTrue();
         assertThat(sut.isKnown("ollama", "missing")).isFalse();
         assertThat(sut.isKnown("openai", "phi4")).isFalse();

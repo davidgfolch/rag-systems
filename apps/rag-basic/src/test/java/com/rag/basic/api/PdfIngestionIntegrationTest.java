@@ -49,19 +49,15 @@ class PdfIngestionIntegrationTest {
     void ingestsTextPdfIntoChunksAndRetrievesThem() throws Exception {
         var pdfBytes = textPdf("""
                 Learning Domain-Driven Design
-
                 This book explains how to apply domain-driven design to software
                 systems. It covers tactical patterns such as aggregates, value
                 objects, and domain services, alongside strategic design.""");
-
         ResponseEntity<IngestResponse> res = controller.ingestFile(
                 new MockMultipartFile("file", "book.pdf", "application/pdf", pdfBytes),
                 Map.of("sourceType", "file", "fileName", "book.pdf"));
-
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(res.getBody().getDocumentId()).isNotBlank();
         assertThat(res.getBody().getChunkCount()).isPositive();
-
         List<Chunk> hits = retrievalService.retrieve("domain-driven design aggregates", 5);
         assertThat(hits).isNotEmpty();
         assertTrue(hits.stream().map(Chunk::getContent).anyMatch(c -> c.contains("domain-driven design")));
@@ -72,7 +68,6 @@ class PdfIngestionIntegrationTest {
         ResponseEntity<IngestResponse> res = controller.ingestFile(
                 new MockMultipartFile("file", "empty.pdf", "application/pdf", new byte[0]),
                 Map.of());
-
         assertThat(res.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 

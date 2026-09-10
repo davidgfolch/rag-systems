@@ -36,14 +36,12 @@ class MemoryClientIntegrationTest {
     @Test
     void listsConversationsFromStubServer() {
         List<ConversationDTO> conversations = sut.conversations();
-
         assertThat(conversations).isEmpty();
     }
 
     @Test
     void listsMessagesForConversation() {
         List<ChatMessageDTO> messages = sut.messages("c1");
-
         assertThat(messages).isEmpty();
     }
 }

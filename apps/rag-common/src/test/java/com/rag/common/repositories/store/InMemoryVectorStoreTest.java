@@ -26,9 +26,7 @@ class InMemoryVectorStoreTest {
         var aboutDogs = chunk("c1", new float[]{1, 0});
         var aboutCats = chunk("c2", new float[]{0, 1});
         store.add(List.of(aboutDogs, aboutCats));
-
         var results = store.similaritySearch("dogs", 1);
-
         assertThat(results).hasSize(1);
         assertThat(results.getFirst().getId()).isEqualTo("c1");
     }
@@ -39,7 +37,6 @@ class InMemoryVectorStoreTest {
         store.add(List.of(chunk("c1", new float[]{1, 0}),
                 chunk("c2", new float[]{0.8f, 0.2f}),
                 chunk("c3", new float[]{0, 1})));
-
         assertThat(store.similaritySearch("dogs", 2)).hasSize(2);
     }
 
@@ -71,9 +68,7 @@ class InMemoryVectorStoreTest {
         var otherDoc = new Chunk("c3", "d2", "text", 0, Map.of());
         otherDoc.setEmbedding(List.of(1f, 0f));
         store.add(List.of(a, b, otherDoc));
-
         var results = store.similaritySearch("q", 5, "d1");
-
         assertThat(results).hasSize(2).allMatch(c -> c.getDocumentId().equals("d1"));
     }
 
@@ -86,9 +81,7 @@ class InMemoryVectorStoreTest {
         var c = new Chunk("c3", "d2", "text c", 0, Map.of(MetadataKeys.FILE_NAME, "other.txt"));
         c.setEmbedding(List.of(1f, 0f));
         store.add(List.of(a, b, c));
-
         var documents = store.listDocuments();
-
         assertThat(documents).hasSize(2);
         var d1 = documents.stream()
                 .filter(d -> d.documentId().equals("d1")).findFirst().orElseThrow();
@@ -106,9 +99,7 @@ class InMemoryVectorStoreTest {
         var otherDoc = new Chunk("c2", "d2", "text", 0, Map.of());
         otherDoc.setEmbedding(List.of(1f, 0f));
         store.add(List.of(chunk("c1", new float[]{1, 0}), otherDoc));
-
         store.delete("d1");
-
         assertThat(store.listDocuments()).hasSize(1);
         assertThat(store.listDocuments().getFirst().documentId()).isEqualTo("d2");
     }
@@ -116,9 +107,7 @@ class InMemoryVectorStoreTest {
     @Test
     void deleteIsIdempotentForUnknownDocument() {
         store.add(List.of(chunk("c1", new float[]{1, 0})));
-
         store.delete("no-such-doc");
-
         assertThat(store.listDocuments()).hasSize(1);
     }
 
