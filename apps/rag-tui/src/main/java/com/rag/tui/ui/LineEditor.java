@@ -3,8 +3,6 @@ package com.rag.tui.ui;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.rag.tui.ui.Key.KeyType;
-
 /**
  * Pure state machine for a single editable input line with an auto-complete
  * popup. Independent of any terminal I/O so it can be unit-tested without a
@@ -126,11 +124,13 @@ final class LineEditor {
     }
 
     private void popupDown() {
-        if (popup.size() > 0) popupCursor = (popupCursor + 1) % popup.size();
+        if (popup.isEmpty()) return;
+        popupCursor = (popupCursor + 1) % popup.size();
     }
 
     private void popupUp() {
-        if (popup.size() > 0) popupCursor = (popupCursor - 1 + popup.size()) % popup.size();
+        if (popup.isEmpty()) return;
+        popupCursor = (popupCursor - 1 + popup.size()) % popup.size();
     }
 
     /** Selects the highlighted popup entry, inserting it and closing the popup. */

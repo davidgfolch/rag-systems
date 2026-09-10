@@ -17,6 +17,7 @@ public interface ProviderProfileStore {
 
         @Override
         public void save(List<ProviderProfile> profiles) {
+            // no-op: NOOP store does not persist
         }
     };
 

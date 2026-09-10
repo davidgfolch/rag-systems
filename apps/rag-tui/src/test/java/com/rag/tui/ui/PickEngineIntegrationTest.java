@@ -2,7 +2,6 @@ package com.rag.tui.ui;
 
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 
 import static com.rag.tui.ui.Key.KeyType.DOWN;
 import static com.rag.tui.ui.Key.KeyType.ENTER;
@@ -23,7 +22,7 @@ class PickEngineIntegrationTest {
             new Prompter.Choice("Anthropic", "anthropic"));
 
     @Test
-    void filtersThenNavigatesAndSelects() throws IOException {
+    void filtersThenNavigatesAndSelects() {
         var sink = new StringBuilder();
         var sut = new InteractivePrompter(
                 keys(typeChar('o'), key(DOWN), key(ENTER)),
@@ -40,7 +39,7 @@ class PickEngineIntegrationTest {
             int i = 0;
 
             @Override
-            public Key read() throws IOException {
+            public Key read() {
                 return i < keys.length ? keys[i++] : null;
             }
         };

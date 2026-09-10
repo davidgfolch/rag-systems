@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -40,7 +41,7 @@ public class ConversationService {
         String resolvedTitle = title == null || title.isBlank() ? "New conversation" : title.trim();
         var conversation = conversationRepo.save(
                 new ConversationEntity(UUID.randomUUID().toString(),
-                        resolvedTitle, OffsetDateTime.now()));
+                        resolvedTitle, OffsetDateTime.now(ZoneOffset.UTC)));
         log.info("Created conversation {} ('{}')", conversation.getId(), conversation.getTitle());
         return toContract(conversation);
     }
@@ -60,7 +61,7 @@ public class ConversationService {
         }
         var saved = messageRepo.save(new ChatMessageEntity(
                 UUID.randomUUID().toString(), conversationId, message.getRole().getValue(),
-                message.getContent(), OffsetDateTime.now()));
+                message.getContent(), OffsetDateTime.now(ZoneOffset.UTC)));
         log.info("Added message {} to conversation {}", saved.getId(), conversationId);
         return toContract(saved);
     }

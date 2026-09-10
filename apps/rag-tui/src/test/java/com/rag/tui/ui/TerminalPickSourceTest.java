@@ -4,7 +4,6 @@ import org.jline.terminal.Terminal;
 import org.jline.utils.NonBlockingReader;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.util.ArrayDeque;
@@ -16,6 +15,7 @@ import static com.rag.tui.ui.Key.KeyType.DOWN;
 import static com.rag.tui.ui.Key.KeyType.ENTER;
 import static com.rag.tui.ui.Key.KeyType.ESC;
 import static com.rag.tui.ui.Key.KeyType.LEFT;
+import static com.rag.tui.ui.Key.KeyType.NONE;
 import static com.rag.tui.ui.Key.KeyType.RIGHT;
 import static com.rag.tui.ui.Key.KeyType.TYPE;
 import static com.rag.tui.ui.Key.KeyType.UP;
@@ -93,7 +93,25 @@ class TerminalPickSourceTest {
     }
 
     @Test
-    void promptKeepsPastedApiKeyIntact() throws Exception {
+    void mapsCtrlCDToEscape() throws Exception {
+        var source = new InteractivePrompter.TerminalPickSource(terminal(3, 4, EOF));
+
+        assertThat(source.read()).isEqualTo(new Key(ESC, ' '));
+        assertThat(source.read()).isEqualTo(new Key(ESC, ' '));
+        assertThat(source.read()).isNull();
+    }
+
+    @Test
+    void mapsUnknownBytesToNoneKey() throws Exception {
+        var source = new InteractivePrompter.TerminalPickSource(terminal('!', '[', EOF));
+
+        assertThat(source.read()).isEqualTo(new Key(NONE, ' '));
+        assertThat(source.read()).isEqualTo(new Key(NONE, ' '));
+        assertThat(source.read()).isNull();
+    }
+
+    @Test
+    void promptKeepsPastedApiKeyIntact() {
         Terminal terminal = terminal('s', 'k', '-', 'o', 'r', '-', 'v', '1', '-', 'a', 'b', 13);
         when(terminal.writer()).thenReturn(new PrintWriter(Writer.nullWriter()));
         var sut = new InteractivePrompter(terminal, (line, cursor) -> List.of());
@@ -101,7 +119,7 @@ class TerminalPickSourceTest {
         assertThat(sut.prompt("> ")).isEqualTo("sk-or-v1-ab");
     }
 
-    private static Terminal terminal(int... bytes) throws IOException {
+    private static Terminal terminal(int... bytes) {
         Terminal terminal = mock(Terminal.class);
         when(terminal.reader()).thenReturn(new FakeReader(bytes));
         return terminal;
@@ -110,7 +128,7 @@ class TerminalPickSourceTest {
     private static final class FakeReader extends NonBlockingReader {
         private final Queue<Integer> bytes;
 
-        FakeReader(int[] bytes) throws IOException {
+        FakeReader(int[] bytes) {
             this.bytes = new ArrayDeque<>();
             addAll(this.bytes, bytes);
         }

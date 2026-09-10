@@ -50,6 +50,6 @@ class ProviderClientFactoryTest {
         assertThat(ProviderClientFactory.withoutApiVersion("https://v2.glhf.chat"))
                 .isEqualTo("https://v2.glhf.chat");
         assertThat(ProviderClientFactory.withoutApiVersion(null)).isNull();
-        assertThat(ProviderClientFactory.withoutApiVersion("")).isEqualTo("");
+        assertThat(ProviderClientFactory.withoutApiVersion("")).isEmpty();
     }
 }

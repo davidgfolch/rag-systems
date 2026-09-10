@@ -6,6 +6,8 @@ import com.rag.tui.client.ProviderClient;
 import com.rag.tui.launcher.ModuleRegistry;
 import com.rag.tui.testfixture.TestModules;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.time.Instant;
 import java.util.List;
@@ -35,11 +37,15 @@ class CommandCompletionTest {
                         new ProviderModelDTO("cohere", "command", null, null, null, null, null)), "models.dev", Instant.now()));
     }
 
-    @Test
-    void showsProvidersStartingWithTypedToken() {
+    @ParameterizedTest(name = "candidates(\"{0}\") shows providers matching the typed token")
+    @CsvSource({
+            "'connect o', 9",
+            "'connect chat o', 14"
+    })
+    void showsProvidersMatchingTypedToken(String line, int cursor) {
         catalog();
 
-        var result = sut.candidates("connect o", 9);
+        var result = sut.candidates(line, cursor);
 
         assertThat(result).containsExactly("ollama", "openai", "openrouter");
     }
@@ -63,37 +69,24 @@ class CommandCompletionTest {
     }
 
     @Test
-    void showsMatchingProvidersOnTypedConnectToken() {
+    void containsFallbackMatchesSubcommandNamesWhenPrefixMisses() {
         catalog();
 
-        var result = sut.candidates("connect o", 9);
+        var result = sut.candidates("connect at", 10);
 
-        assertThat(result).containsExactly("ollama", "openai", "openrouter");
+        assertThat(result).containsExactly("catalog", "chat");
     }
 
-    @Test
-    void showsProvidersForChatSubcommandPosition() {
+    @ParameterizedTest(name = "candidates(\"{0}\") yields no candidates")
+    @CsvSource({
+            "'connect chat ', 13",
+            "'connect chat openai ', 20",
+            "'frobnicate x', 12"
+    })
+    void yieldsNoCandidates(String line, int cursor) {
         catalog();
 
-        var result = sut.candidates("connect chat o", 14);
-
-        assertThat(result).containsExactly("ollama", "openai", "openrouter");
-    }
-
-    @Test
-    void hidesProviderListUntilTokenIsTyped() {
-        catalog();
-
-        var result = sut.candidates("connect chat ", 13);
-
-        assertThat(result).isEmpty();
-    }
-
-    @Test
-    void hidesModelListUntilTokenIsTyped() {
-        catalog();
-
-        var result = sut.candidates("connect chat openai ", 20);
+        var result = sut.candidates(line, cursor);
 
         assertThat(result).isEmpty();
     }
@@ -123,15 +116,6 @@ class CommandCompletionTest {
         var result = sut.candidates("start rag-ad", 12);
 
         assertThat(result).containsExactly(TestModules.ADVANCED);
-    }
-
-    @Test
-    void noCandidatesForUnknownCommandArgument() {
-        catalog();
-
-        var result = sut.candidates("frobnicate x", 12);
-
-        assertThat(result).isEmpty();
     }
 
     @Test

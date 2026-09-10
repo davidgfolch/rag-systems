@@ -95,7 +95,7 @@ class ArchitectureTest {
     }
 
     @Test
-    void testFixturesShouldBeUnder100Lines() throws IOException {
+    void testFixturesShouldBeUnder100Lines() {
         var allClasses = new ClassFileImporter().importPackages(ROOT);
         List<String> tooLong = allClasses.stream()
                 .filter(c -> c.getPackageName().contains(".testfixture"))

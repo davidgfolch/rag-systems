@@ -2,12 +2,13 @@ package com.rag.tui.ui;
 
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.util.List;
 
 import static com.rag.tui.ui.Key.KeyType.DOWN;
 import static com.rag.tui.ui.Key.KeyType.ENTER;
 import static com.rag.tui.ui.Key.KeyType.ESC;
+import static com.rag.tui.ui.Key.KeyType.LEFT;
+import static com.rag.tui.ui.Key.KeyType.RIGHT;
 import static com.rag.tui.ui.Key.KeyType.TYPE;
 import static com.rag.tui.ui.Key.KeyType.UP;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -26,7 +27,7 @@ class InteractivePrompterIntegrationTest {
             new Prompter.Choice("Anthropic", "anthropic"));
 
     @Test
-    void typesToFilterAndSelectsWithEnter() throws IOException {
+    void typesToFilterAndSelectsWithEnter() {
         var sink = new StringBuilder();
         var sut = new InteractivePrompter(
                 keys(typeChar('o'), typeChar('p'), key(ENTER)),
@@ -39,7 +40,7 @@ class InteractivePrompterIntegrationTest {
     }
 
     @Test
-    void filterThenNavigateDownSelectsSecondVisible() throws IOException {
+    void filterThenNavigateDownSelectsSecondVisible() {
         var sink = new StringBuilder();
         var sut = new InteractivePrompter(
                 keys(typeChar('o'), key(DOWN), key(ENTER)),
@@ -52,7 +53,7 @@ class InteractivePrompterIntegrationTest {
     }
 
     @Test
-    void escapeCancelsSelection() throws IOException {
+    void escapeCancelsSelection() {
         var sut = new InteractivePrompter(keys(key(ESC)), s -> { }, 8);
 
         var result = sut.pick("Provider", CHOICES);
@@ -61,7 +62,7 @@ class InteractivePrompterIntegrationTest {
     }
 
     @Test
-    void returnsEmptyWhenNoChoices() throws IOException {
+    void returnsEmptyWhenNoChoices() {
         var sut = new InteractivePrompter(keys(key(ENTER)), s -> { }, 8);
 
         var result = sut.pick("Provider", List.of());
@@ -70,7 +71,7 @@ class InteractivePrompterIntegrationTest {
     }
 
     @Test
-    void abortsWhenSourceEndsMidSelection() throws IOException {
+    void abortsWhenSourceEndsMidSelection() {
         var sut = new InteractivePrompter(keys(typeChar('a')), s -> { }, 8);
 
         var result = sut.pick("Provider", CHOICES);
@@ -79,7 +80,7 @@ class InteractivePrompterIntegrationTest {
     }
 
     @Test
-    void recallsPreviousSubmissionViaArrowUpOnNextPrompt() throws IOException {
+    void recallsPreviousSubmissionViaArrowUpOnNextPrompt() {
         var sut = new InteractivePrompter(
                 keys(typeChar('h'), typeChar('i'), key(ENTER), key(UP), key(ENTER)),
                 s -> { }, 8);
@@ -89,7 +90,7 @@ class InteractivePrompterIntegrationTest {
     }
 
     @Test
-    void keepsSubmittedLineVisibleAndClearsOnlyPopupAreaOnSubmit() throws IOException {
+    void keepsSubmittedLineVisibleAndClearsOnlyPopupAreaOnSubmit() {
         var sink = new StringBuilder();
         var sut = new InteractivePrompter(keys(typeChar('h'), typeChar('i'), key(ENTER)), sink::append, 8);
 
@@ -99,12 +100,24 @@ class InteractivePrompterIntegrationTest {
         assertThat(sink.toString()).doesNotEndWith("\u001B[2K\u001B[J");
     }
 
+    @Test
+    void ignoresUnusedMovementKeysInPick() {
+        var sink = new StringBuilder();
+        var sut = new InteractivePrompter(
+                keys(key(LEFT), key(RIGHT), typeChar('o'), key(ENTER)),
+                sink::append, 8);
+
+        var result = sut.pick("Provider", CHOICES);
+
+        assertThat(result).hasValue("openai");
+    }
+
     private static InteractivePrompter.PickSource keys(Key... keys) {
         return new InteractivePrompter.PickSource() {
             int i = 0;
 
             @Override
-            public Key read() throws IOException {
+            public Key read() {
                 return i < keys.length ? keys[i++] : null;
             }
         };

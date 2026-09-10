@@ -28,6 +28,7 @@ class RecursiveCharacterChunkerTest {
                 assertThat(chunks).hasSize(1);
                 assertThat(chunks.get(0).getContent()).isEqualTo("Hello world");
             }
+            default -> throw new AssertionError("Unexpected mode: " + expectedMode);
         }
     }
 

@@ -19,13 +19,17 @@ public class InteractiveShell {
         try {
             write(TerminalStyle.welcome("RAG TUI - type 'help' for commands, 'quit' to exit"));
             writeProviderStatus();
-            String line;
-            while ((line = prompter.prompt("> ")) != null) {
-                if (line.isEmpty()) continue;
-                if (runCommand(line)) break;
-            }
+            promptLoop();
         } catch (IOException e) {
             throw new ShellException("Terminal I/O error", e);
+        }
+    }
+
+    private void promptLoop() throws IOException {
+        String line;
+        while ((line = prompter.prompt("> ")) != null) {
+            if (line.isEmpty()) continue;
+            if (runCommand(line)) return;
         }
     }
 

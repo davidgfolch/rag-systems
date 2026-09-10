@@ -65,6 +65,7 @@ class ProviderRegistryTest {
 
             @Override
             public void save(List<ProviderProfile> profiles) {
+                // no-op: seeding store persists nothing
             }
         };
         var registry = new ProviderRegistry(List.of(
