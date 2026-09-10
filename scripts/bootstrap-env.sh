@@ -9,9 +9,14 @@ cd "$ROOT"
 
 gen_pw() {
     if command -v openssl >/dev/null 2>&1; then
-        openssl rand -hex 16
+        # SonarQube 26.8+ requires 12+ chars with uppercase, lowercase, and digit
+        UPPER=$(openssl rand -hex 1 | tr 'a-f' 'A-F')
+        LOWER=$(openssl rand -hex 1)
+        DIGIT=$(openssl rand -hex 1 | tr 'a-f' '0-7')
+        REST=$(openssl rand -hex 13)
+        echo "${UPPER}${LOWER}${DIGIT}${REST}"
     else
-        echo "$RANDOM$RANDOM$RANDOM-$(date +%s%N)"
+        echo "S${RANDOM}a${RANDOM}$(date +%s%N | tail -c 10)"
     fi
 }
 

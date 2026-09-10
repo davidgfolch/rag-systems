@@ -47,7 +47,7 @@ if "%READY%"=="0" (
 )
 
 echo Setting admin password...
-curl -sf -o nul -w "%%{http_code}" -u "admin:admin" -X POST "%HOST%/api/authentication/change_password" -d "login=admin" -d "previousPassword=admin" -d "password=%NEW_PW%" > "%TEMP%\sonar_http.txt" 2>&1
+curl -sf -o nul -w "%%{http_code}" -u "admin:admin" -X POST "%HOST%/api/users/change_password" -d "login=admin" -d "previousPassword=admin" -d "password=%NEW_PW%" > "%TEMP%\sonar_http.txt" 2>&1
 set /p HTTP_CODE=<"%TEMP%\sonar_http.txt"
 
 if not "%HTTP_CODE%"=="200" (
