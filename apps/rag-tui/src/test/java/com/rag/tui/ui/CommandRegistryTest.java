@@ -1,6 +1,9 @@
 package com.rag.tui.ui;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -17,11 +20,10 @@ class CommandRegistryTest {
                         "connect", "quit");
     }
 
-    @Test
-    void findsCommandByNameCaseInsensitive() {
-        assertThat(sut.findByName("HELP")).isPresent();
-        assertThat(sut.findByName("help")).isPresent();
-        assertThat(sut.findByName("Help")).isPresent();
+    @ParameterizedTest(name = "findByName(\"{0}\") is present")
+    @ValueSource(strings = {"HELP", "help", "Help"})
+    void findsCommandByNameCaseInsensitive(String name) {
+        assertThat(sut.findByName(name)).isPresent();
     }
 
     @Test
@@ -29,16 +31,19 @@ class CommandRegistryTest {
         assertThat(sut.findByName("frobnicate")).isEmpty();
     }
 
-    @Test
-    void filtersCommandsByPrefix() {
-        assertThat(sut.filter("a")).hasSize(4);
-        assertThat(sut.filter("a").stream().map(CommandDescriptor::name))
-                .contains("add-file", "add-folder", "add-url", "ask");
+    @ParameterizedTest(name = "filter(\"{0}\") → size {1}")
+    @CsvSource({
+            "a,4",
+            "ADD,3"
+    })
+    void filterReturnsExpectedCount(String prefix, int expectedSize) {
+        assertThat(sut.filter(prefix)).hasSize(expectedSize);
     }
 
     @Test
-    void filtersCommandsCaseInsensitive() {
-        assertThat(sut.filter("ADD")).hasSize(3);
+    void filtersCommandsByPrefix() {
+        assertThat(sut.filter("a").stream().map(CommandDescriptor::name))
+                .contains("add-file", "add-folder", "add-url", "ask");
     }
 
     @Test

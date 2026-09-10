@@ -10,10 +10,14 @@ import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.library.Architectures;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -80,6 +84,62 @@ class ArchitectureTest {
                 .as("every REST/WS/terminal boundary class must be exercised by a real-socket "
                         + "integration test (<Class>IntegrationTest), not only mocked unit tests")
                 .isEmpty();
+    }
+
+    @Test
+    void testFixturesShouldStartWithTestPrefix() {
+        var allClasses = new ClassFileImporter().importPackages(ROOT);
+        classes().that().resideInAPackage("..testfixture..")
+                .should().haveSimpleNameStartingWith("Test")
+                .check(allClasses);
+    }
+
+    @Test
+    void testFixturesShouldBeUnder100Lines() throws IOException {
+        var allClasses = new ClassFileImporter().importPackages(ROOT);
+        List<String> tooLong = allClasses.stream()
+                .filter(c -> c.getPackageName().contains(".testfixture"))
+                .map(c -> {
+                    try {
+                        int lines = countSourceLines(c);
+                        return lines > 100
+                                ? c.getSimpleName() + " (" + lines + " lines > 100)"
+                                : null;
+                    } catch (IOException e) {
+                        return c.getSimpleName() + " (cannot read source)";
+                    }
+                })
+                .filter(java.util.Objects::nonNull)
+                .sorted()
+                .toList();
+        assertThat(tooLong)
+                .as("test fixtures should stay under 100 lines to remain focused")
+                .isEmpty();
+    }
+
+    private static int countSourceLines(JavaClass clazz) throws IOException {
+        String pkg = clazz.getPackageName();
+        String[] parts = pkg.split("\\.");
+        String module = "rag-" + parts[2];
+        String relPath = pkg.replace('.', '/') + "/" + clazz.getSimpleName() + ".java";
+        Path source = repoRoot().resolve("apps").resolve(module)
+                .resolve("src").resolve("test").resolve("java").resolve(relPath);
+        return (int) Files.lines(source).count();
+    }
+
+    private static Path repoRoot() {
+        Path dir = Path.of("").toAbsolutePath();
+        while (dir != null && !isRepoRoot(dir)) {
+            dir = dir.getParent();
+        }
+        return dir;
+    }
+
+    private static boolean isRepoRoot(Path dir) {
+        return Files.isDirectory(dir.resolve("scripts"))
+                && Files.isDirectory(dir.resolve("apps"))
+                && Files.isDirectory(dir.resolve("docs"))
+                && Files.isRegularFile(dir.resolve("README.md"));
     }
 
     private static Set<String> integrationTestNames() {

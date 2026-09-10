@@ -1,9 +1,12 @@
 package com.rag.common.architecture;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.tngtech.archunit.core.domain.JavaClass;
+import com.tngtech.archunit.core.domain.JavaFieldAccess;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.lang.ArchCondition;
@@ -124,6 +127,53 @@ class ArchitectureTest {
                 "Every script needs a .sh + .bat/.ps1 pair (project must stay portable): " + problems);
     }
 
+    @Test
+    void testFixturesShouldStartWithTestPrefix() {
+        var allClasses = new ClassFileImporter().importPackages(ROOT);
+        classes().that().resideInAPackage("..testfixture..")
+                .should().haveSimpleNameStartingWith("Test")
+                .check(allClasses);
+    }
+
+    @Test
+    void testFixturesShouldBeUnder100Lines() throws IOException {
+        var allClasses = new ClassFileImporter().importPackages(ROOT);
+        List<String> tooLong = allClasses.stream()
+                .filter(c -> c.getPackageName().contains(".testfixture"))
+                .map(c -> {
+                    try {
+                        int lines = countSourceLines(c);
+                        return lines > 100
+                                ? c.getSimpleName() + " (" + lines + " lines > 100)"
+                                : null;
+                    } catch (IOException e) {
+                        return c.getSimpleName() + " (cannot read source)";
+                    }
+                })
+                .filter(java.util.Objects::nonNull)
+                .sorted()
+                .toList();
+        assertThat(tooLong)
+                .as("test fixtures should stay under 100 lines to remain focused")
+                .isEmpty();
+    }
+
+    @Test
+    void metadataKeysShouldBeUsedInServicesAndAdapters() {
+        var allClasses = new ClassFileImporter().importPackages("com.rag");
+        Set<String> callers = allClasses.stream()
+                .flatMap(c -> c.getFieldAccessesToSelf().stream())
+                .map(access -> access.getOrigin().getOwner())
+                .filter(c -> c.getPackageName().contains("services")
+                        || c.getPackageName().contains("adapter"))
+                .map(JavaClass::getSimpleName)
+                .collect(Collectors.toSet());
+        assertThat(callers)
+                .as("MetadataKeys constants should be used by services and adapters, "
+                        + "not replaced by magic string literals")
+                .isNotEmpty();
+    }
+
     private static Path repoRoot() {
         Path dir = Path.of("").toAbsolutePath();
         while (dir != null && !isRepoRoot(dir)) {
@@ -153,6 +203,16 @@ class ArchitectureTest {
                     .map(name -> name.substring(0, name.lastIndexOf('.')))
                     .collect(Collectors.toSet());
         }
+    }
+
+    private static int countSourceLines(JavaClass clazz) throws IOException {
+        String pkg = clazz.getPackageName();
+        String[] parts = pkg.split("\\.");
+        String module = "rag-" + parts[2];
+        String relPath = pkg.replace('.', '/') + "/" + clazz.getSimpleName() + ".java";
+        Path source = repoRoot().resolve("apps").resolve(module)
+                .resolve("src").resolve("test").resolve("java").resolve(relPath);
+        return (int) Files.lines(source).count();
     }
 
     @Test
