@@ -12,8 +12,9 @@ Rules for all code in this repository. These enforce quality, maintainability, a
 2. **Method Length**: Maximum 30 lines per method.
 3. **Parameters**: Maximum 5 parameters per method.
 4. **Nesting**: Maximum 3 levels of nesting.
-5. **Preserve Existing Code**: When editing files, only make changes necessary for the task. Do NOT reformat, reword, or restyle code that isn't being intentionally modified.
-6. **Compact Style**: Use compact style for new code:
+5. **No Magic Literals**: Every string literal and numeric literal (other than `0`, `1`, `-1`) used in business logic must be a named `static final` constant. Use shared constants from `rag-common` / `rag-contract` (`MetadataKeys`, `FrameTypes`, `ApiPaths`) when available; define module-local constants otherwise. Exemptions: single-char format strings, annotation values, simple regex patterns.
+6. **Preserve Existing Code**: When editing files, only make changes necessary for the task. Do NOT reformat, reword, or restyle code that isn't being intentionally modified.
+7. **Compact Style**: Use compact style for new code:
    - Keep parameters on same line when possible
    - Keep closing braces/parens on same line as last content
    - No extra spaces inside parentheses
@@ -61,11 +62,13 @@ Rules for all code in this repository. These enforce quality, maintainability, a
 
 1. **Test location**: Tests in `src/test/java/[module]/[layer]/` parallel to source.
 2. **SUT instance**: Variable name for the service/class under test is `sut`.
-3. **Parameterized tests**: Use JUnit `@ParameterizedTest` with `@CsvSource`/`@MethodSource` with descriptive names.
-4. **Mocking**: Mock all external dependencies (LLMs, vector stores, DB) for unit tests.
-5. **Performance**: Unit tests must run quickly (< 500ms).
-6. **Coverage**: Minimum 85% per module (enforced by JaCoCo).
-7. **Architecture test**: Every module has an `ArchitectureTest` enforcing the layer/dependency rules.
+3. **Parameterized tests**: Use JUnit `@ParameterizedTest` with `@CsvSource`/`@MethodSource` with descriptive names when 2+ test methods share the same structure but differ in inputs.
+4. **Shared fixtures**: Test data repeated across 2+ test files must live in a shared fixture class (`testfixture` package) in rag-common (cross-module) or the relevant module (module-specific).
+5. **No magic literals in tests**: Import production constants (`MetadataKeys`, `FrameTypes`, `ApiPaths`) and shared fixtures instead of duplicating string/number literals.
+6. **Mocking**: Mock all external dependencies (LLMs, vector stores, DB) for unit tests.
+7. **Performance**: Unit tests must run quickly (< 500ms).
+8. **Coverage**: Minimum 85% per module (enforced by JaCoCo).
+9. **Architecture test**: Every module has an `ArchitectureTest` enforcing the layer/dependency rules.
 
 ## Repository Organization Rules
 
