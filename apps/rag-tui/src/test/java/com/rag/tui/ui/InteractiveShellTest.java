@@ -16,6 +16,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static com.rag.tui.testfixture.TestModelCatalogs.LOCAL_CHAT;
+import static com.rag.tui.testfixture.TestModelCatalogs.LOCAL_EMBED;
+import static com.rag.tui.testfixture.TestModelCatalogs.PROVIDER_OLLAMA;
 
 import java.util.function.Consumer;
 
@@ -76,7 +79,9 @@ class InteractiveShellTest {
 
     @Test
     void printsProviderSummaryAtStartupWhenAvailable() {
-        when(dispatcher.providerSummary()).thenReturn("Chat model: ollama/phi4\nEmbedding model: ollama/nomic-embed-text");
+        when(dispatcher.providerSummary())
+                .thenReturn("Chat model: " + PROVIDER_OLLAMA + "/" + LOCAL_CHAT
+                        + "\nEmbedding model: " + PROVIDER_OLLAMA + "/" + LOCAL_EMBED);
         when(dispatcher.handle(eq("quit"), any())).thenThrow(new ShellExitException());
 
         var out = new StringWriter();
@@ -86,8 +91,8 @@ class InteractiveShellTest {
 
         assertThat(out.toString())
                 .contains("RAG TUI")
-                .contains("Chat model: ollama/phi4")
-                .contains("Embedding model: ollama/nomic-embed-text")
+                .contains("Chat model: " + PROVIDER_OLLAMA + "/" + LOCAL_CHAT)
+                .contains("Embedding model: " + PROVIDER_OLLAMA + "/" + LOCAL_EMBED)
                 .contains("Bye.");
     }
 

@@ -1,6 +1,7 @@
 package com.rag.common.adapter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rag.contract.constants.ApiPaths;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.AfterEach;
@@ -37,7 +38,7 @@ class RemoteChatModelPortTest {
 
     @Test
     void shouldCompleteViaApiComplete() {
-        server.createContext("/api/complete",
+        server.createContext(ApiPaths.COMPLETE,
                 exchange -> respond(exchange, 200, "application/json", "{\"answer\":\"Hello!\"}"));
 
         assertThat(port.complete("hi")).isEqualTo("Hello!");
@@ -45,7 +46,7 @@ class RemoteChatModelPortTest {
 
     @Test
     void shouldThrowOnServerError() {
-        server.createContext("/api/complete",
+        server.createContext(ApiPaths.COMPLETE,
                 exchange -> respond(exchange, 500, "text/plain", "boom"));
 
         assertThatThrownBy(() -> port.complete("hi")).isInstanceOf(IllegalStateException.class);
@@ -53,7 +54,7 @@ class RemoteChatModelPortTest {
 
     @Test
     void shouldStreamTokensAndCompleteOnDone() {
-        server.createContext("/api/chat/stream", exchange -> respond(exchange, 200, "text/event-stream",
+        server.createContext(ApiPaths.CHAT_STREAM, exchange -> respond(exchange, 200, "text/event-stream",
                 """
                         data:{"type":"token","content":"Hel"}
 
@@ -69,7 +70,7 @@ class RemoteChatModelPortTest {
 
     @Test
     void shouldFailOnProviderErrorFrame() {
-        server.createContext("/api/chat/stream", exchange -> respond(exchange, 200, "text/event-stream",
+        server.createContext(ApiPaths.CHAT_STREAM, exchange -> respond(exchange, 200, "text/event-stream",
                 "data:{\"type\":\"error\",\"content\":\"nope\",\"conversationId\":null}\n\n"));
 
         StepVerifier.create(port.completeStream("hi"))

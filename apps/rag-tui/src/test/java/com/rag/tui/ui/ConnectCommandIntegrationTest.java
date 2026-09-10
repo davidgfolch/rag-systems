@@ -10,6 +10,9 @@ import org.springframework.web.client.RestClient;
 import java.io.IOException;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static com.rag.tui.testfixture.TestModelCatalogs.LOCAL_CHAT;
+import static com.rag.tui.testfixture.TestModelCatalogs.LOCAL_EMBED;
+import static com.rag.tui.testfixture.TestModelCatalogs.PROVIDER_OLLAMA;
 
 class ConnectCommandIntegrationTest {
 
@@ -33,7 +36,8 @@ class ConnectCommandIntegrationTest {
         var result = sut.execute("");
 
         assertThat(result)
-                .contains("chat: ollama/phi4", "embedding: ollama/nomic-embed-text", "dimension 768")
+                .contains("chat: " + PROVIDER_OLLAMA + "/" + LOCAL_CHAT,
+                        "embedding: " + PROVIDER_OLLAMA + "/" + LOCAL_EMBED, "dimension 768")
                 .contains("1 models");
     }
 
@@ -43,16 +47,16 @@ class ConnectCommandIntegrationTest {
 
         assertThat(result)
                 .contains("ollama:")
-                .contains("- phi4 (Phi-4)", "ctx 16384")
+                .contains("- " + LOCAL_CHAT + " (Phi-4)", "ctx 16384")
                 .contains("reasoning");
     }
 
     @Test
     void switchesChatModel() {
-        var result = sut.execute("chat ollama phi4");
+        var result = sut.execute("chat " + PROVIDER_OLLAMA + " " + LOCAL_CHAT);
 
-        assertThat(result).contains("Chat model switched", "ollama/phi4");
-        assertThat(server.lastSwitchBody()).contains("\"providerId\":\"ollama\"");
+        assertThat(result).contains("Chat model switched", PROVIDER_OLLAMA + "/" + LOCAL_CHAT);
+        assertThat(server.lastSwitchBody()).contains("\"providerId\":\"" + PROVIDER_OLLAMA + "\"");
     }
 
     @Test

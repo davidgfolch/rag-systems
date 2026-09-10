@@ -1,6 +1,7 @@
 package com.rag.common.services.chunking;
 
 import com.rag.common.domain.Document;
+import com.rag.common.domain.MetadataKeys;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -24,7 +25,7 @@ class RecursiveCharacterChunkerTest {
         var chunks = chunker.split(doc);
 
         assertThat(chunks).isNotEmpty();
-        assertThat(chunks.get(0).getMetadata()).containsEntry("strategy", "recursive");
+        assertThat(chunks.get(0).getMetadata()).containsEntry(MetadataKeys.STRATEGY, "recursive");
     }
 
     @Test

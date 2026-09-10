@@ -3,8 +3,8 @@ package com.rag.tui.ui;
 import com.rag.contract.provider.ModelCatalogDTO;
 import com.rag.contract.provider.ProviderModelDTO;
 import com.rag.tui.client.ProviderClient;
-import com.rag.tui.launcher.Module;
 import com.rag.tui.launcher.ModuleRegistry;
+import com.rag.tui.testfixture.TestModules;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
@@ -22,8 +22,8 @@ class CommandCompletionTest {
     private final CommandCompletion sut = new CommandCompletion(
             new CommandRegistry(),
             new ModuleRegistry(List.of(
-                    new Module("rag-basic", "http://localhost:8081"),
-                    new Module("rag-advanced", "http://localhost:8082")), "rag-basic"),
+                    TestModules.basic(),
+                    TestModules.advanced()), TestModules.BASIC),
             providerClient);
 
     private void catalog() {
@@ -113,7 +113,7 @@ class CommandCompletionTest {
 
         var result = sut.candidates("use ", 4);
 
-        assertThat(result).containsExactly("rag-basic", "rag-advanced");
+        assertThat(result).containsExactly(TestModules.BASIC, TestModules.ADVANCED);
     }
 
     @Test
@@ -122,7 +122,7 @@ class CommandCompletionTest {
 
         var result = sut.candidates("start rag-ad", 12);
 
-        assertThat(result).containsExactly("rag-advanced");
+        assertThat(result).containsExactly(TestModules.ADVANCED);
     }
 
     @Test

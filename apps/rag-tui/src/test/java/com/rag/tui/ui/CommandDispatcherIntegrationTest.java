@@ -7,10 +7,10 @@ import com.rag.tui.client.MemoryClient;
 import com.rag.tui.client.ModuleHealthClient;
 import com.rag.tui.client.ProviderClient;
 import com.rag.tui.client.RagApiClient;
-import com.rag.tui.launcher.Module;
 import com.rag.tui.launcher.ModuleLifecycleManager;
 import com.rag.tui.launcher.ModuleRegistry;
 import com.rag.tui.support.StubModuleServer;
+import com.rag.tui.testfixture.TestModules;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,7 +47,7 @@ class CommandDispatcherIntegrationTest {
     void setUp() throws IOException {
         stub = new StubModuleServer();
         registry = new ModuleRegistry(
-                List.of(new Module("rag-basic", stub.baseUrl())), "rag-basic");
+                List.of(TestModules.withUrl(stub.baseUrl())), TestModules.BASIC);
         lifecycle = mock(ModuleLifecycleManager.class);
         RagApiClient apiClient = new RagApiClient(registry, RestClient.builder());
         ChatGateway chatGateway = new ChatGateway(
@@ -100,7 +100,7 @@ class CommandDispatcherIntegrationTest {
     @Test
     void reportsUnreachableModuleInsteadOfCrashing() throws IOException {
         ModuleRegistry deadRegistry = new ModuleRegistry(
-                List.of(new Module("rag-basic", "http://localhost:1")), "rag-basic");
+                List.of(TestModules.withUrl("http://localhost:1")), TestModules.BASIC);
         ChatGateway chatGateway = new ChatGateway(
                 deadRegistry, new StandardWebSocketClient(), new ObjectMapper(), 60);
         CommandDispatcher dead = new CommandDispatcher(deadRegistry, lifecycle,
@@ -120,9 +120,9 @@ class CommandDispatcherIntegrationTest {
     @Test
     void startWaitsForModuleToBecomeHealthy() {
         when(lifecycle.start(registry.active())).thenReturn(true);
-        when(lifecycle.isRunning("rag-basic")).thenReturn(true);
+        when(lifecycle.isRunning(TestModules.BASIC)).thenReturn(true);
 
-        var result = sut.handle("start rag-basic", token -> {});
+        var result = sut.handle("start " + TestModules.BASIC, token -> {});
 
         assertThat(result).contains("ready");
     }

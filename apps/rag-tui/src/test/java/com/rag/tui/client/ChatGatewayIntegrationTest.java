@@ -1,9 +1,9 @@
 package com.rag.tui.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rag.tui.launcher.Module;
 import com.rag.tui.launcher.ModuleRegistry;
 import com.rag.tui.support.WsChatStubApp;
+import com.rag.tui.testfixture.TestModules;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -32,7 +32,7 @@ class ChatGatewayIntegrationTest {
     @Test
     void streamsTokensAndFinalAnswerOverWebSocket() {
         ModuleRegistry registry = new ModuleRegistry(
-                List.of(new Module("rag-basic", "http://localhost:" + port)), "rag-basic");
+                List.of(TestModules.withUrl("http://localhost:" + port)), TestModules.BASIC);
         ChatGateway sut = new ChatGateway(registry, new StandardWebSocketClient(), new ObjectMapper(), 60);
         List<String> tokens = new ArrayList<>();
 

@@ -1,6 +1,7 @@
 package com.rag.common.services.chunking;
 
 import com.rag.common.domain.Document;
+import com.rag.common.domain.MetadataKeys;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -19,7 +20,7 @@ class TokenChunkerTest {
         var chunks = chunker.split(doc);
 
         assertThat(chunks).hasSizeGreaterThan(1);
-        assertThat(chunks.get(0).getMetadata()).containsEntry("strategy", "token");
+        assertThat(chunks.get(0).getMetadata()).containsEntry(MetadataKeys.STRATEGY, "token");
     }
 
     @Test

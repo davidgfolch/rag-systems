@@ -14,6 +14,12 @@ import reactor.core.publisher.Flux;
 
 import java.util.List;
 
+import static com.rag.contract.constants.ApiPaths.CHAT_STREAM;
+import static com.rag.contract.constants.ApiPaths.COMPLETE;
+import static com.rag.contract.constants.ApiPaths.EMBED;
+import static com.rag.contract.constants.FrameTypes.DONE;
+import static com.rag.contract.constants.FrameTypes.ERROR;
+import static com.rag.contract.constants.FrameTypes.TOKEN;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -38,7 +44,7 @@ class ComputeControllerTest {
     void shouldCompleteNonStreaming() throws Exception {
         when(chatService.complete("hi")).thenReturn("Hello!");
 
-        mockMvc.perform(post("/api/complete")
+        mockMvc.perform(post(COMPLETE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"prompt\":\"hi\"}"))
                 .andExpect(status().isOk())
@@ -50,7 +56,7 @@ class ComputeControllerTest {
         when(embeddingService.embed(List.of("a", "b"))).thenReturn(
                 List.of(List.of(0.1f), List.of(0.2f)));
 
-        mockMvc.perform(post("/api/embed")
+        mockMvc.perform(post(EMBED)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"texts\":[\"a\",\"b\"]}"))
                 .andExpect(status().isOk())
@@ -62,7 +68,7 @@ class ComputeControllerTest {
     void shouldStreamTokensThenDone() throws Exception {
         when(chatService.stream("hi")).thenReturn(Flux.just("Hel", "lo"));
 
-        var mvcResult = mockMvc.perform(post("/api/chat/stream")
+        var mvcResult = mockMvc.perform(post(CHAT_STREAM)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"prompt\":\"hi\"}"))
                 .andExpect(request().asyncStarted())
@@ -70,15 +76,15 @@ class ComputeControllerTest {
 
         mockMvc.perform(asyncDispatch(mvcResult))
                 .andExpect(status().isOk())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("\"type\":\"token\"")))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("\"type\":\"done\"")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("\"type\":\"" + TOKEN + "\"")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("\"type\":\"" + DONE + "\"")));
     }
 
     @Test
     void shouldStreamErrorFrameOnFailure() throws Exception {
         when(chatService.stream("boom")).thenReturn(Flux.error(new IllegalStateException("down")));
 
-        var mvcResult = mockMvc.perform(post("/api/chat/stream")
+        var mvcResult = mockMvc.perform(post(CHAT_STREAM)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"prompt\":\"boom\"}"))
                 .andExpect(request().asyncStarted())
@@ -86,6 +92,6 @@ class ComputeControllerTest {
 
         mockMvc.perform(asyncDispatch(mvcResult))
                 .andExpect(status().isOk())
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("\"type\":\"error\"")));
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("\"type\":\"" + ERROR + "\"")));
     }
 }

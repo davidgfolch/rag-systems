@@ -1,6 +1,7 @@
 package com.rag.common.services.chunking;
 
 import com.rag.common.domain.Document;
+import com.rag.common.domain.MetadataKeys;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -20,7 +21,7 @@ class FixedSizeChunkerTest {
 
         assertThat(chunks).hasSizeGreaterThan(1);
         assertThat(chunks.get(0).getDocumentId()).isEqualTo("d1");
-        assertThat(chunks.get(0).getMetadata()).containsEntry("strategy", "fixed");
+        assertThat(chunks.get(0).getMetadata()).containsEntry(MetadataKeys.STRATEGY, "fixed");
     }
 
     @Test

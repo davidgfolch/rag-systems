@@ -9,7 +9,7 @@ public final class TestDocumentSummaries {
 
     public static final String DOC_ID = "doc-001";
     public static final String TITLE = "note.txt";
-    public static final int CHUNK_COUNT = 5;
+    public static final int CHUNK_COUNT = 3;
 
     private TestDocumentSummaries() {
     }

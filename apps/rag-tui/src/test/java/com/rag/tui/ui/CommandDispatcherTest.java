@@ -1,7 +1,6 @@
 package com.rag.tui.ui;
 
 import com.rag.contract.model.ConversationDTO;
-import com.rag.contract.model.DocumentSummaryDTO;
 import com.rag.contract.model.IngestJobResponse;
 import com.rag.contract.model.IngestStatusDTO;
 import com.rag.contract.model.IngestResponse;
@@ -11,7 +10,6 @@ import com.rag.tui.client.MemoryClient;
 import com.rag.tui.client.ModuleHealthClient;
 import com.rag.tui.client.ProviderClient;
 import com.rag.tui.client.RagApiClient;
-import com.rag.tui.launcher.Module;
 import com.rag.tui.launcher.ModuleLifecycleManager;
 import com.rag.tui.launcher.ModuleRegistry;
 import com.rag.common.services.FileDocumentLoader;
@@ -44,13 +42,19 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static com.rag.tui.testfixture.TestDocumentSummaries.withId;
+import static com.rag.tui.testfixture.TestModules.ADVANCED;
+import static com.rag.tui.testfixture.TestModules.ADVANCED_URL;
+import static com.rag.tui.testfixture.TestModules.BASIC;
+import static com.rag.tui.testfixture.TestModules.BASIC_URL;
+import static com.rag.tui.testfixture.TestModules.advanced;
+import static com.rag.tui.testfixture.TestModules.basic;
 
 class CommandDispatcherTest {
 
     private final ModuleRegistry registry = new ModuleRegistry(
-            List.of(new Module("rag-basic", "http://localhost:8081"),
-                    new Module("rag-advanced", "http://localhost:8082")),
-            "rag-basic");
+            List.of(basic(), advanced()),
+            BASIC);
     private final ModuleLifecycleManager lifecycle = mock(ModuleLifecycleManager.class);
     private final RagApiClient apiClient = mock(RagApiClient.class);
     private final ChatGateway chatGateway = mock(ChatGateway.class);
@@ -71,38 +75,37 @@ class CommandDispatcherTest {
 
     @Test
     void listsModulesWithActiveAndState() {
-        when(lifecycle.isRunning("rag-basic")).thenReturn(true);
+        when(lifecycle.isRunning(BASIC)).thenReturn(true);
 
         var result = handle("modules");
 
         assertThat(result)
-                .contains("rag-basic", "running", "(active)")
-                .contains("rag-advanced", "stopped");
+                .contains(BASIC, "running", "(active)")
+                .contains(ADVANCED, "stopped");
     }
 
     @Test
     void marksExternallyStartedModuleAsRunning() {
-        when(lifecycle.isRunning("rag-advanced")).thenReturn(false);
-        when(healthClient.isUp("http://localhost:8082")).thenReturn(true);
+        when(lifecycle.isRunning(ADVANCED)).thenReturn(false);
+        when(healthClient.isUp(ADVANCED_URL)).thenReturn(true);
 
         var result = handle("modules");
 
-        assertThat(result).contains("rag-advanced", "running (external)");
+        assertThat(result).contains(ADVANCED, "running (external)");
     }
 
     @Test
     void listsDocumentsFromReachableModules() {
-        when(healthClient.isUp("http://localhost:8081")).thenReturn(true);
-        when(healthClient.isUp("http://localhost:8082")).thenReturn(false);
-        when(apiClient.listDocuments("http://localhost:8081")).thenReturn(List.of(
-                new DocumentSummaryDTO().documentId("d1").title("note.txt").chunkCount(3)));
+        when(healthClient.isUp(BASIC_URL)).thenReturn(true);
+        when(healthClient.isUp(ADVANCED_URL)).thenReturn(false);
+        when(apiClient.listDocuments(BASIC_URL)).thenReturn(List.of(withId("d1")));
 
         var result = handle("documents");
 
         assertThat(result)
-                .contains("rag-basic")
+                .contains(BASIC)
                 .contains("note.txt", "3 chunks", "[d1]")
-                .doesNotContain("rag-advanced");
+                .doesNotContain(ADVANCED);
     }
 
     @Test
@@ -116,10 +119,10 @@ class CommandDispatcherTest {
 
     @Test
     void switchesActiveModule() {
-        var result = handle("use rag-advanced");
+        var result = handle("use " + ADVANCED);
 
-        assertThat(result).contains("Active module: rag-advanced");
-        assertThat(registry.active().name()).isEqualTo("rag-advanced");
+        assertThat(result).contains("Active module: " + ADVANCED);
+        assertThat(registry.active().name()).isEqualTo(ADVANCED);
     }
 
     @Test
@@ -131,12 +134,12 @@ class CommandDispatcherTest {
 
     @Test
     void usePromptsForModuleWhenNoArgumentGiven() {
-        when(prompter.pick(eq("Switch active module"), anyList())).thenReturn(Optional.of("rag-advanced"));
+        when(prompter.pick(eq("Switch active module"), anyList())).thenReturn(Optional.of(ADVANCED));
 
         var result = handle("use");
 
-        assertThat(result).contains("Active module: rag-advanced");
-        assertThat(registry.active().name()).isEqualTo("rag-advanced");
+        assertThat(result).contains("Active module: " + ADVANCED);
+        assertThat(registry.active().name()).isEqualTo(ADVANCED);
     }
 
     @Test
@@ -146,59 +149,59 @@ class CommandDispatcherTest {
         var result = handle("use");
 
         assertThat(result).isEmpty();
-        assertThat(registry.active().name()).isEqualTo("rag-basic");
+        assertThat(registry.active().name()).isEqualTo(BASIC);
     }
 
     @Test
     void startPromptsForModuleWhenNoArgumentGiven() {
-        when(prompter.pick(eq("Start module"), anyList())).thenReturn(Optional.of("rag-basic"));
-        when(lifecycle.start(registry.find("rag-basic").get())).thenReturn(true);
+        when(prompter.pick(eq("Start module"), anyList())).thenReturn(Optional.of(BASIC));
+        when(lifecycle.start(registry.find(BASIC).get())).thenReturn(true);
         when(healthClient.waitUntilUp(anyString(), anyLong(), any())).thenReturn(true);
 
         var result = handle("start");
 
-        assertThat(result).contains("Started rag-basic", "ready");
+        assertThat(result).contains("Started " + BASIC, "ready");
     }
 
     @Test
     void startsModuleWaitingForHealth() {
-        when(lifecycle.start(registry.find("rag-basic").get())).thenReturn(true);
+        when(lifecycle.start(registry.find(BASIC).get())).thenReturn(true);
         when(healthClient.waitUntilUp(anyString(), anyLong(), any())).thenReturn(true);
 
-        var result = handle("start rag-basic");
+        var result = handle("start " + BASIC);
 
-        assertThat(result).contains("Started rag-basic", "ready");
+        assertThat(result).contains("Started " + BASIC, "ready");
     }
 
     @Test
     void reportsStartedModuleThatNeverBecomesReady() {
-        when(lifecycle.start(registry.find("rag-basic").get())).thenReturn(true);
+        when(lifecycle.start(registry.find(BASIC).get())).thenReturn(true);
         when(healthClient.waitUntilUp(anyString(), anyLong(), any())).thenReturn(false);
 
-        var result = handle("start rag-basic");
+        var result = handle("start " + BASIC);
 
-        assertThat(result).contains("Started rag-basic", "not ready");
+        assertThat(result).contains("Started " + BASIC, "not ready");
     }
 
     @Test
     void reportsProgressWhileModuleStarts() {
-        when(lifecycle.start(registry.find("rag-basic").get())).thenReturn(true);
+        when(lifecycle.start(registry.find(BASIC).get())).thenReturn(true);
         when(healthClient.waitUntilUp(anyString(), anyLong(), any())).thenReturn(true);
 
         List<String> tokens = new ArrayList<>();
-        var result = sut.handle("start rag-basic", tokens::add);
+        var result = sut.handle("start " + BASIC, tokens::add);
 
-        assertThat(tokens).containsExactly("Waiting for rag-basic to become ready...\n");
-        assertThat(result).contains("Started rag-basic", "ready");
+        assertThat(tokens).containsExactly("Waiting for " + BASIC + " to become ready...\n");
+        assertThat(result).contains("Started " + BASIC, "ready");
     }
 
     @Test
     void stopsModule() {
-        when(lifecycle.stop("rag-basic")).thenReturn(true);
+        when(lifecycle.stop(BASIC)).thenReturn(true);
 
-        var result = handle("stop rag-basic");
+        var result = handle("stop " + BASIC);
 
-        assertThat(result).contains("Stopped rag-basic");
+        assertThat(result).contains("Stopped " + BASIC);
     }
 
     @Test
@@ -232,34 +235,32 @@ class CommandDispatcherTest {
 
     @Test
     void deletesDocumentFromItsModuleWhenActiveModuleHasIt() {
-        when(healthClient.isUp("http://localhost:8081")).thenReturn(true);
-        when(apiClient.listDocuments("http://localhost:8081")).thenReturn(List.of(
-                new DocumentSummaryDTO().documentId("d1").title("note.txt").chunkCount(3)));
+        when(healthClient.isUp(BASIC_URL)).thenReturn(true);
+        when(apiClient.listDocuments(BASIC_URL)).thenReturn(List.of(withId("d1")));
 
         var result = handle("delete d1");
 
-        assertThat(result).contains("Deleted document d1", "rag-basic");
-        verify(apiClient).deleteDocument("http://localhost:8081", "d1");
+        assertThat(result).contains("Deleted document d1", BASIC);
+        verify(apiClient).deleteDocument(BASIC_URL, "d1");
     }
 
     @Test
     void deletesDocumentFromNonActiveModule() {
-        when(healthClient.isUp("http://localhost:8081")).thenReturn(true);
-        when(healthClient.isUp("http://localhost:8082")).thenReturn(true);
-        when(apiClient.listDocuments("http://localhost:8081")).thenReturn(List.of());
-        when(apiClient.listDocuments("http://localhost:8082")).thenReturn(List.of(
-                new DocumentSummaryDTO().documentId("d1").title("note.txt").chunkCount(3)));
+        when(healthClient.isUp(BASIC_URL)).thenReturn(true);
+        when(healthClient.isUp(ADVANCED_URL)).thenReturn(true);
+        when(apiClient.listDocuments(BASIC_URL)).thenReturn(List.of());
+        when(apiClient.listDocuments(ADVANCED_URL)).thenReturn(List.of(withId("d1")));
 
         var result = handle("delete d1");
 
-        assertThat(result).contains("Deleted document d1", "rag-advanced");
-        verify(apiClient).deleteDocument("http://localhost:8082", "d1");
+        assertThat(result).contains("Deleted document d1", ADVANCED);
+        verify(apiClient).deleteDocument(ADVANCED_URL, "d1");
     }
 
     @Test
     void deleteWithoutArgumentCancelsWhenNoReachableDocuments() {
-        when(healthClient.isUp("http://localhost:8081")).thenReturn(false);
-        when(healthClient.isUp("http://localhost:8082")).thenReturn(false);
+        when(healthClient.isUp(BASIC_URL)).thenReturn(false);
+        when(healthClient.isUp(ADVANCED_URL)).thenReturn(false);
 
         var result = handle("delete");
 
@@ -269,23 +270,21 @@ class CommandDispatcherTest {
 
     @Test
     void deletePromptsAndDeletesChosenDocument() {
-        when(healthClient.isUp("http://localhost:8081")).thenReturn(true);
-        when(apiClient.listDocuments("http://localhost:8081")).thenReturn(List.of(
-                new DocumentSummaryDTO().documentId("d1").title("note.txt").chunkCount(3)));
-        when(apiClient.listDocuments("http://localhost:8082")).thenReturn(List.of());
+        when(healthClient.isUp(BASIC_URL)).thenReturn(true);
+        when(apiClient.listDocuments(BASIC_URL)).thenReturn(List.of(withId("d1")));
+        when(apiClient.listDocuments(ADVANCED_URL)).thenReturn(List.of());
         when(prompter.pick(eq("Delete document"), anyList())).thenReturn(Optional.of("d1"));
 
         var result = handle("delete");
 
-        assertThat(result).contains("Deleted document d1", "rag-basic");
-        verify(apiClient).deleteDocument("http://localhost:8081", "d1");
+        assertThat(result).contains("Deleted document d1", BASIC);
+        verify(apiClient).deleteDocument(BASIC_URL, "d1");
     }
 
     @Test
     void deleteReportsDocumentNotFoundOnReachableModules() {
-        when(healthClient.isUp("http://localhost:8081")).thenReturn(true);
-        when(apiClient.listDocuments("http://localhost:8081")).thenReturn(List.of(
-                new DocumentSummaryDTO().documentId("other").title("note.txt").chunkCount(3)));
+        when(healthClient.isUp(BASIC_URL)).thenReturn(true);
+        when(apiClient.listDocuments(BASIC_URL)).thenReturn(List.of(withId("other")));
 
         var result = handle("delete d1");
 
@@ -423,7 +422,7 @@ class CommandDispatcherTest {
     @Test
     void reportsChatErrorsWithoutCrashing() {
         when(chatGateway.ask(eq("hello"), eq(4), any()))
-                .thenThrow(new ChatGateway.ChatException("Module ws://localhost:8081/ws/chat unreachable", null));
+                .thenThrow(new ChatGateway.ChatException("Module " + basic().wsUrl() + " unreachable", null));
 
         var result = handle("ask hello");
 

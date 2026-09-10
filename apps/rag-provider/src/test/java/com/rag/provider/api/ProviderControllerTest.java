@@ -14,6 +14,10 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import static com.rag.contract.constants.ApiPaths.PROVIDER;
+import static com.rag.contract.constants.ApiPaths.PROVIDER_CHAT;
+import static com.rag.contract.constants.ApiPaths.PROVIDER_CONFIGURE;
+import static com.rag.contract.constants.ApiPaths.PROVIDER_EMBEDDING;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
@@ -45,7 +49,7 @@ class ProviderControllerTest {
                 new ModelSpecDTO("ollama", "nomic-embed-text"),
                 "ollama", 768));
 
-        mockMvc.perform(get("/api/provider"))
+        mockMvc.perform(get(PROVIDER))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.provider").value("ollama"))
                 .andExpect(jsonPath("$.chat.model").value("phi4"))
@@ -56,7 +60,7 @@ class ProviderControllerTest {
     void shouldSwitchChatModel() throws Exception {
         when(catalogService.isKnown("ollama", "qwen3")).thenReturn(true);
 
-        mockMvc.perform(post("/api/provider/chat")
+        mockMvc.perform(post(PROVIDER_CHAT)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"providerId\":\"ollama\",\"model\":\"qwen3\"}"))
                 .andExpect(status().isNoContent());
@@ -68,7 +72,7 @@ class ProviderControllerTest {
     void shouldStillSwitchChatModelNotInCatalog() throws Exception {
         when(catalogService.isKnown("ollama", "custom-model")).thenReturn(false);
 
-        mockMvc.perform(post("/api/provider/chat")
+        mockMvc.perform(post(PROVIDER_CHAT)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"providerId\":\"ollama\",\"model\":\"custom-model\"}"))
                 .andExpect(status().isNoContent());
@@ -80,7 +84,7 @@ class ProviderControllerTest {
     void shouldStillSwitchEmbeddingModelNotInCatalog() throws Exception {
         when(catalogService.isKnown("ollama", "local-embed")).thenReturn(false);
 
-        mockMvc.perform(post("/api/provider/embedding")
+        mockMvc.perform(post(PROVIDER_EMBEDDING)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"providerId\":\"ollama\",\"model\":\"local-embed\"}"))
                 .andExpect(status().isNoContent());
@@ -92,7 +96,7 @@ class ProviderControllerTest {
     void shouldSwitchEmbeddingModel() throws Exception {
         when(catalogService.isKnown("ollama", "nomic-embed-text")).thenReturn(true);
 
-        mockMvc.perform(post("/api/provider/embedding")
+        mockMvc.perform(post(PROVIDER_EMBEDDING)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"providerId\":\"ollama\",\"model\":\"nomic-embed-text\"}"))
                 .andExpect(status().isNoContent());
@@ -107,7 +111,7 @@ class ProviderControllerTest {
                 new ModelSpecDTO("ollama", "nomic-embed-text"),
                 "glhf", -1));
 
-        mockMvc.perform(post("/api/provider/configure")
+        mockMvc.perform(post(PROVIDER_CONFIGURE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"providerId\":\"glhf\",\"type\":\"OPENAI_COMPATIBLE\"," +
                                 "\"displayName\":\"GLHF\",\"baseUrl\":\"https://glhf.chat\",\"apiKey\":\"k\"}"))
@@ -123,7 +127,7 @@ class ProviderControllerTest {
         doThrow(new IllegalArgumentException("Unknown provider: nope"))
                 .when(router).switchChat(any(ModelSpecDTO.class));
 
-        mockMvc.perform(post("/api/provider/chat")
+        mockMvc.perform(post(PROVIDER_CHAT)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"providerId\":\"nope\",\"model\":\"x\"}"))
                 .andExpect(status().isBadRequest())

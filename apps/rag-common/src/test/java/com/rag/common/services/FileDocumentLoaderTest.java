@@ -3,6 +3,7 @@ package com.rag.common.services;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.rag.common.domain.MetadataKeys;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -24,8 +25,8 @@ class FileDocumentLoaderTest {
         FileDocumentLoader.LoadedFile loaded = sut.load(file.toString());
 
         assertThat(loaded.bytes()).isEqualTo(bytes);
-        assertThat(loaded.metadata()).containsEntry("sourceType", "file");
-        assertThat(loaded.metadata()).containsEntry("fileName", "note.txt");
+        assertThat(loaded.metadata()).containsEntry(MetadataKeys.SOURCE_TYPE, "file");
+        assertThat(loaded.metadata()).containsEntry(MetadataKeys.FILE_NAME, "note.txt");
     }
 
     @Test
@@ -55,9 +56,9 @@ class FileDocumentLoaderTest {
         var loaded = sut.loadFolder(dir.toString());
 
         assertThat(loaded).hasSize(2);
-        assertThat(loaded).extracting(f -> f.metadata().get("fileName"))
+        assertThat(loaded).extracting(f -> f.metadata().get(MetadataKeys.FILE_NAME))
                 .containsExactlyInAnyOrder("a.txt", "b.md");
-        assertThat(loaded).extracting(f -> normalize(f.metadata().get("source").toString()))
+        assertThat(loaded).extracting(f -> normalize(f.metadata().get(MetadataKeys.SOURCE).toString()))
                 .containsExactlyInAnyOrder("a.txt", "sub/b.md");
     }
 

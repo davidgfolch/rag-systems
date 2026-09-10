@@ -4,9 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rag.contract.model.DocumentSummaryDTO;
 import com.rag.tui.client.ModuleHealthClient;
 import com.rag.tui.client.RagApiClient;
-import com.rag.tui.launcher.Module;
 import com.rag.tui.launcher.ModuleRegistry;
 import com.rag.tui.support.StubModuleServer;
+import com.rag.tui.testfixture.TestDocumentSummaries;
+import com.rag.tui.testfixture.TestModules;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,8 +22,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class DocumentListerIntegrationTest {
 
-    public static final DocumentSummaryDTO DOC_SUMMARY = new DocumentSummaryDTO().documentId("d1").title("note.txt").chunkCount(3);
-    public static final String RAG_BASIC = "rag-basic";
+    public static final DocumentSummaryDTO DOC_SUMMARY = TestDocumentSummaries.withId("d1");
     private StubModuleServer stub;
     private DocumentLister sut;
 
@@ -30,7 +30,7 @@ class DocumentListerIntegrationTest {
     void setUp() throws IOException {
         stub = new StubModuleServer();
         var registry = new ModuleRegistry(
-                List.of(new Module(RAG_BASIC, stub.baseUrl())), RAG_BASIC);
+                List.of(TestModules.withUrl(stub.baseUrl())), TestModules.BASIC);
         sut = new DocumentLister(registry,
                 new RagApiClient(registry, RestClient.builder()),
                 new ModuleHealthClient(RestClient.builder()));
@@ -46,7 +46,7 @@ class DocumentListerIntegrationTest {
     @Test
     void listsDocumentsFromReachableModule() throws Exception {
         stub.documents(new ObjectMapper().writeValueAsString(List.of(DOC_SUMMARY)));
-        assertThat(sut.list()).contains(RAG_BASIC)
+        assertThat(sut.list()).contains(TestModules.BASIC)
                 .contains("[d1]")
                 .contains("note.txt");
     }

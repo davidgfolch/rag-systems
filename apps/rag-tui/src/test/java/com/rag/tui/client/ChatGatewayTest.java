@@ -1,8 +1,8 @@
 package com.rag.tui.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rag.tui.launcher.Module;
 import com.rag.tui.launcher.ModuleRegistry;
+import com.rag.tui.testfixture.TestModules;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketHandler;
@@ -23,11 +23,14 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static com.rag.contract.constants.FrameTypes.DONE;
+import static com.rag.contract.constants.FrameTypes.ERROR;
+import static com.rag.contract.constants.FrameTypes.TOKEN;
 
 class ChatGatewayTest {
 
     private final ModuleRegistry registry = new ModuleRegistry(
-            List.of(new Module("rag-basic", "http://localhost:8081")), "rag-basic");
+            List.of(TestModules.basic()), TestModules.BASIC);
     private final WebSocketClient webSocketClient = mock(WebSocketClient.class);
     private final WebSocketSession session = mock(WebSocketSession.class);
     private final ChatGateway sut = new ChatGateway(registry, webSocketClient, new ObjectMapper(), 60);
@@ -54,9 +57,9 @@ class ChatGatewayTest {
     @Test
     void streamsTokensUntilDone() throws Exception {
         startAsk();
-        feedEvent(session, "{\"type\":\"token\",\"content\":\"Hel\",\"conversationId\":\"x\"}");
-        feedEvent(session, "{\"type\":\"token\",\"content\":\"lo\",\"conversationId\":\"x\"}");
-        feedEvent(session, "{\"type\":\"done\",\"content\":\"Hello\",\"conversationId\":\"x\"}");
+        feedEvent(session, "{\"type\":\"" + TOKEN + "\",\"content\":\"Hel\",\"conversationId\":\"x\"}");
+        feedEvent(session, "{\"type\":\"" + TOKEN + "\",\"content\":\"lo\",\"conversationId\":\"x\"}");
+        feedEvent(session, "{\"type\":\"" + DONE + "\",\"content\":\"Hello\",\"conversationId\":\"x\"}");
         runner.join(2000);
         assertThat(runner.isAlive()).isFalse();
         assertThat(tokens).containsExactly("Hel", "lo");
@@ -67,7 +70,7 @@ class ChatGatewayTest {
         startAsk();
         sut.cancel();
         verify(session).close();
-        feedEvent(session, "{\"type\":\"done\",\"content\":\"\",\"conversationId\":\"x\"}");
+        feedEvent(session, "{\"type\":\"" + DONE + "\",\"content\":\"\",\"conversationId\":\"x\"}");
         runner.join(2000);
         assertThat(runner.isAlive()).isFalse();
     }
@@ -75,7 +78,7 @@ class ChatGatewayTest {
     @Test
     void throwsWhenModuleReportsError() throws Exception {
         startAsk();
-        feedEvent(session, "{\"type\":\"error\",\"content\":\"boom\",\"conversationId\":\"x\"}");
+        feedEvent(session, "{\"type\":\"" + ERROR + "\",\"content\":\"boom\",\"conversationId\":\"x\"}");
         runner.join(2000);
         assertThat(runner.isAlive()).isFalse();
     }

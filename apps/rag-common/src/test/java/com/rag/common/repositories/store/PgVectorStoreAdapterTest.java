@@ -1,6 +1,7 @@
 package com.rag.common.repositories.store;
 
 import com.rag.common.domain.Chunk;
+import com.rag.common.domain.MetadataKeys;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.ai.document.Document;
@@ -31,7 +32,7 @@ class PgVectorStoreAdapterTest {
     @Test
     void addsChunksAsSpringDocuments() {
         var meta = new HashMap<String, Object>();
-        meta.put("source", "test");
+        meta.put(MetadataKeys.SOURCE, "test");
         var chunk = new Chunk("c1", "d1", "content", 3, meta);
 
         adapter.add(List.of(chunk));
@@ -42,8 +43,8 @@ class PgVectorStoreAdapterTest {
     @Test
     void convertsSearchResultsToChunks() {
         var meta = new HashMap<String, Object>();
-        meta.put("documentId", "d1");
-        meta.put("chunkIndex", 2);
+        meta.put(MetadataKeys.DOCUMENT_ID, "d1");
+        meta.put(MetadataKeys.CHUNK_INDEX, 2);
         var springDoc = new Document.Builder()
                 .id("c1")
                 .text("retrieved content")
@@ -104,7 +105,7 @@ class PgVectorStoreAdapterTest {
         assertThat(docs).hasSize(2);
         assertThat(docs.getFirst().documentId()).isEqualTo("d1");
         assertThat(docs.get(0).chunkCount()).isEqualTo(3);
-        assertThat(docs.get(0).metadata()).containsEntry("fileName", "note.txt");
+        assertThat(docs.get(0).metadata()).containsEntry(MetadataKeys.FILE_NAME, "note.txt");
         assertThat(docs.get(1).documentId()).isEqualTo("d2");
         assertThat(docs.get(1).metadata()).isEmpty();
 
@@ -153,7 +154,7 @@ class PgVectorStoreAdapterTest {
         assertThat(captor.getValue())
                 .contains("DELETE FROM")
                 .contains("\"rag_basic\".\"chunks\"")
-                .contains("metadata->>'documentId'");
+                .contains("metadata->>'" + MetadataKeys.DOCUMENT_ID + "'");
         verify(statement).setString(1, "d1");
         verify(statement).executeUpdate();
     }
