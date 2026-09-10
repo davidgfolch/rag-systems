@@ -8,6 +8,9 @@ import org.springframework.web.client.RestClient;
 
 import java.util.List;
 
+import static com.rag.contract.ws.ApiPaths.CONVERSATIONS;
+import static com.rag.contract.ws.ApiPaths.CONVERSATIONS_MESSAGES;
+
 /**
  * REST client for rag-memory: conversation history owned outside the rag-* modules.
  */
@@ -23,7 +26,7 @@ public class MemoryClient {
 
     public List<ConversationDTO> conversations() {
         var conversations = restClient.get()
-                .uri("/api/conversations")
+                .uri(CONVERSATIONS)
                 .retrieve()
                 .body(ConversationDTO[].class);
         log.debug("Fetched {} conversations from memory", conversations == null ? 0 : conversations.length);
@@ -32,7 +35,7 @@ public class MemoryClient {
 
     public List<ChatMessageDTO> messages(String conversationId) {
         var messages = restClient.get()
-                .uri("/api/conversations/{id}/messages", conversationId)
+                .uri(CONVERSATIONS_MESSAGES, conversationId)
                 .retrieve()
                 .body(ChatMessageDTO[].class);
         log.debug("Fetched {} messages for conversation {}", messages == null ? 0 : messages.length, conversationId);

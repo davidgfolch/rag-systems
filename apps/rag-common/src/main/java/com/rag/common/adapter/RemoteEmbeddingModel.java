@@ -13,6 +13,9 @@ import org.springframework.ai.embedding.EmbeddingResponse;
 
 import java.util.List;
 
+import static com.rag.contract.ws.ApiPaths.EMBED;
+import static com.rag.contract.ws.ApiPaths.PROVIDER;
+
 /**
  * Spring AI {@link EmbeddingModel} backed by the rag-provider service's
  * {@code /api/embed} endpoint. The vector dimension is fetched once from
@@ -37,7 +40,7 @@ public class RemoteEmbeddingModel implements EmbeddingModel {
 
     @Override
     public EmbeddingResponse call(EmbeddingRequest request) {
-        var response = httpClient.postJson("/api/embed",
+        var response = httpClient.postJson(EMBED,
                 new EmbedRequest(request.getInstructions()), EmbedResponse.class);
         cacheDimension();
         var results = new java.util.ArrayList<Embedding>(response.embeddings().size());
@@ -50,7 +53,7 @@ public class RemoteEmbeddingModel implements EmbeddingModel {
 
     @Override
     public float[] embed(Document document) {
-        var response = httpClient.postJson("/api/embed",
+        var response = httpClient.postJson(EMBED,
                 new EmbedRequest(List.of(document.getText())), EmbedResponse.class);
         return toFloatArray(response.embeddings().get(0));
     }
@@ -59,7 +62,7 @@ public class RemoteEmbeddingModel implements EmbeddingModel {
     public int dimensions() {
         if (cachedDimension < 0) {
             try {
-                var status = httpClient.get("/api/provider", ProviderStatusDTO.class);
+                var status = httpClient.get(PROVIDER, ProviderStatusDTO.class);
                 cachedDimension = status.embeddingDimension();
                 log.info("Remote embedding dimension resolved: {}", cachedDimension);
             } catch (RuntimeException e) {

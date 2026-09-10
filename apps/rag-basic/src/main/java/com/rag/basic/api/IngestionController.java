@@ -36,6 +36,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static com.rag.common.domain.MetadataKeys.FILE_NAME;
+import static com.rag.common.domain.MetadataKeys.RAW;
+import static com.rag.common.domain.MetadataKeys.RAW_BYTES;
+import static com.rag.common.domain.MetadataKeys.SOURCE;
+import static com.rag.common.domain.MetadataKeys.SOURCE_TYPE;
+import static com.rag.common.domain.MetadataKeys.TITLE;
+
 /**
  * REST endpoints for ingesting documents (raw content, multipart file or via rag-webcrawler).
  */
@@ -44,8 +51,6 @@ import java.util.UUID;
 public class IngestionController {
 
     private static final Logger log = LoggerFactory.getLogger(IngestionController.class);
-    private static final String SOURCE_TYPE = "sourceType";
-    private static final String TITLE = "title";
 
     private final IngestionService ingestionService;
     private final WebCrawlerClient webCrawlerClient;
@@ -117,9 +122,9 @@ public class IngestionController {
             metadata.putAll(fileInfo);
         }
         metadata.putIfAbsent(SOURCE_TYPE, "file");
-        metadata.putIfAbsent("fileName", file.getOriginalFilename());
+        metadata.putIfAbsent(FILE_NAME, file.getOriginalFilename());
         metadata.putIfAbsent(TITLE, file.getOriginalFilename());
-        metadata.put("rawBytes", bytes);
+        metadata.put(RAW_BYTES, bytes);
         var document = new Document(UUID.randomUUID().toString(), "", metadata);
         log.info("Ingest-file '{}' -> document {}: parsing content...", original, document.getId());
         var result = ingestionService.ingest(document);
@@ -146,9 +151,9 @@ public class IngestionController {
             metadata.putAll(fileInfo);
         }
         metadata.putIfAbsent(SOURCE_TYPE, "file");
-        metadata.putIfAbsent("fileName", file.getOriginalFilename());
+        metadata.putIfAbsent(FILE_NAME, file.getOriginalFilename());
         metadata.putIfAbsent(TITLE, file.getOriginalFilename());
-        metadata.put("rawBytes", bytes);
+        metadata.put(RAW_BYTES, bytes);
         var document = new Document(UUID.randomUUID().toString(), "", metadata);
         var documentId = asyncIngestionService.submit(document);
         log.info("Ingest-file-async submitted: '{}' ({} bytes) -> document {}", original, bytes.length, documentId);
@@ -174,7 +179,7 @@ public class IngestionController {
     }
 
     private boolean hasRawBytes(IngestRequest request) {
-        return request.getMetadata() != null && request.getMetadata().get("raw") != null;
+        return request.getMetadata() != null && request.getMetadata().get(RAW) != null;
     }
 
     private DocumentSummaryDTO toDocumentSummary(DocumentSummary summary) {
@@ -193,7 +198,7 @@ public class IngestionController {
         }
         var page = webCrawlerClient.fetch(request.getUrl().toString());
         var document = new Document(UUID.randomUUID().toString(), page.getText(),
-                Map.of(SOURCE_TYPE, "web", "source", page.getUrl(), TITLE, page.getTitle()));
+                Map.of(SOURCE_TYPE, "web", SOURCE, page.getUrl(), TITLE, page.getTitle()));
         return created(ingestionService.ingest(document));
     }
 

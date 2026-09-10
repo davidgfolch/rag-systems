@@ -18,6 +18,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.rag.common.domain.MetadataKeys.CHUNK_INDEX;
+import static com.rag.common.domain.MetadataKeys.DOCUMENT_ID;
+
 /**
  * Adapter bridging the domain {@link VectorStorePort} interface onto Spring AI's
  * {@link VectorStore} (backed by PgVector).
@@ -194,8 +197,8 @@ public class PgVectorStoreAdapter implements VectorStorePort {
 
     private Document toSpringDocument(Chunk chunk) {
         var metadata = new HashMap<>(chunk.getMetadata());
-        metadata.put("documentId", chunk.getDocumentId());
-        metadata.put("chunkIndex", chunk.getIndex());
+        metadata.put(DOCUMENT_ID, chunk.getDocumentId());
+        metadata.put(CHUNK_INDEX, chunk.getIndex());
         return Document.builder()
                 .id(chunk.getId())
                 .text(chunk.getContent())
@@ -204,8 +207,8 @@ public class PgVectorStoreAdapter implements VectorStorePort {
     }
 
     private Chunk toChunk(Document doc) {
-        var docId = doc.getMetadata().get("documentId");
-        var index = doc.getMetadata().get("chunkIndex");
+        var docId = doc.getMetadata().get(DOCUMENT_ID);
+        var index = doc.getMetadata().get(CHUNK_INDEX);
         return new Chunk(
                 doc.getId(),
                 docId == null ? "unknown" : String.valueOf(docId),

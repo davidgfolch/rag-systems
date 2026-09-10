@@ -20,6 +20,7 @@ import java.util.List;
 public class FetchController {
 
     private static final Logger log = LoggerFactory.getLogger(FetchController.class);
+    private static final int DEFAULT_LINK_LIMIT = 5;
 
     private final WebCrawlService webCrawlService;
 
@@ -37,7 +38,7 @@ public class FetchController {
     public ResponseEntity<List<PageDTO>> fetchLinks(@RequestBody FetchLinksRequest request) {
         log.info("Fetch-links request for {}", request.getUrl());
         List<PageDTO> pages = webCrawlService.fetchRelevantLinks(
-                request.getUrl().toString(), request.getQuestion(), 5);
+                request.getUrl().toString(), request.getQuestion(), DEFAULT_LINK_LIMIT);
         return ResponseEntity.status(HttpStatus.CREATED).body(pages);
     }
 }

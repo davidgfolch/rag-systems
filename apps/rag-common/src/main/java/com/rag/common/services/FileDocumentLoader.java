@@ -10,6 +10,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import static com.rag.common.domain.MetadataKeys.FILE_NAME;
+import static com.rag.common.domain.MetadataKeys.SOURCE;
+import static com.rag.common.domain.MetadataKeys.SOURCE_TYPE;
+
 /**
  * Reads a local file's raw bytes and descriptive metadata for sending to the
  * active rag-module, where {@link DocumentParser} (e.g. Tika) performs the
@@ -52,9 +56,9 @@ public class FileDocumentLoader {
             var bytes = Files.readAllBytes(file);
             log.info("Loaded file '{}' ({} bytes)", file.getFileName(), bytes.length);
             return new LoadedFile(bytes, Map.of(
-                    "sourceType", "file",
-                    "source", source,
-                    "fileName", file.getFileName().toString()));
+                    SOURCE_TYPE, "file",
+                    SOURCE, source,
+                    FILE_NAME, file.getFileName().toString()));
         } catch (IOException e) {
             throw new DocumentLoadException("Failed to read file: " + source, e);
         }

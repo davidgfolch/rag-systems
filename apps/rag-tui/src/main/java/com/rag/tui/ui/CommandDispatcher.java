@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
+import static com.rag.common.domain.MetadataKeys.FILE_NAME;
 import static com.rag.tui.ui.TerminalStyle.error;
 import static com.rag.tui.ui.TerminalStyle.success;
 
@@ -176,7 +177,7 @@ public class CommandDispatcher {
             if (path.isEmpty()) return "Usage: add-file <path>";
         }
         var file = clients.fileLoader().load(path);
-        var fileName = file.metadata().get("fileName").toString();
+        var fileName = file.metadata().get(FILE_NAME).toString();
         var job = clients.apiClient().submitIngestFile(file.bytes(), fileName, file.metadata());
         var documentId = job.getDocumentId();
         pollIngestUntilDone(documentId, tokenSink);
@@ -193,7 +194,7 @@ public class CommandDispatcher {
         if (files.isEmpty())
             return error("No ingestible files found in: " + path);
         for (var file : files) {
-            var fileName = file.metadata().get("fileName").toString();
+            var fileName = file.metadata().get(FILE_NAME).toString();
             var job = clients.apiClient().submitIngestFile(file.bytes(), fileName, file.metadata());
             pollIngestUntilDone(job.getDocumentId(), tokenSink);
         }

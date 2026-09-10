@@ -13,6 +13,10 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
+import static com.rag.common.domain.MetadataKeys.MAX_CHUNK_SIZE;
+import static com.rag.common.domain.MetadataKeys.RAW_BYTES;
+import static com.rag.common.domain.MetadataKeys.STRATEGY;
+
 /**
  * Recursive character splitter. Tries paragraph → sentence → word boundaries
  * in order, only splitting at a finer level when needed.
@@ -51,8 +55,8 @@ public class RecursiveCharacterChunker implements TextSplitter {
         for (var chunkContent : rawChunks) {
             if (chunkContent.isBlank()) continue;
             var meta = new HashMap<>(baseMeta);
-            meta.put("strategy", "recursive");
-            meta.put("maxChunkSize", maxChunkSize);
+            meta.put(STRATEGY, "recursive");
+            meta.put(MAX_CHUNK_SIZE, maxChunkSize);
             result.add(new Chunk(
                     UUID.randomUUID().toString(),
                     document.getId(),
@@ -69,7 +73,7 @@ public class RecursiveCharacterChunker implements TextSplitter {
 
     private static Map<String, Object> documentMeta(Document document) {
         var meta = new HashMap<>(document.getMetadata());
-        meta.remove("rawBytes");
+        meta.remove(RAW_BYTES);
         return meta;
     }
 

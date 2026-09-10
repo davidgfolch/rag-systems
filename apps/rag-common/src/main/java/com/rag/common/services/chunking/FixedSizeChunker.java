@@ -12,6 +12,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static com.rag.common.domain.MetadataKeys.END;
+import static com.rag.common.domain.MetadataKeys.RAW_BYTES;
+import static com.rag.common.domain.MetadataKeys.START;
+import static com.rag.common.domain.MetadataKeys.STRATEGY;
+
 /**
  * Fixed-size sliding window chunker. Splits text into fixed-size pieces with overlap.
  *
@@ -50,9 +55,9 @@ public class FixedSizeChunker implements TextSplitter {
 
             if (!chunkContent.isEmpty()) {
                 var meta = new HashMap<>(baseMeta);
-                meta.put("strategy", "fixed");
-                meta.put("start", start);
-                meta.put("end", end);
+                meta.put(STRATEGY, "fixed");
+                meta.put(START, start);
+                meta.put(END, end);
                 chunks.add(new Chunk(
                         UUID.randomUUID().toString(),
                         document.getId(),
@@ -72,7 +77,7 @@ public class FixedSizeChunker implements TextSplitter {
 
     private static Map<String, Object> documentMeta(Document document) {
         var meta = new HashMap<>(document.getMetadata());
-        meta.remove("rawBytes");
+        meta.remove(RAW_BYTES);
         return meta;
     }
 }
