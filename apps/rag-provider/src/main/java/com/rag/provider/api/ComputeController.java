@@ -15,9 +15,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import static com.rag.contract.ws.ApiPaths.CHAT_STREAM;
-import static com.rag.contract.ws.ApiPaths.COMPLETE;
-import static com.rag.contract.ws.ApiPaths.EMBED;
+import static com.rag.contract.constants.ApiPaths.CHAT_STREAM;
+import static com.rag.contract.constants.ApiPaths.COMPLETE;
+import static com.rag.contract.constants.ApiPaths.EMBED;
 import static com.rag.contract.ws.FrameTypes.DONE;
 import static com.rag.contract.ws.FrameTypes.ERROR;
 import static com.rag.contract.ws.FrameTypes.TOKEN;

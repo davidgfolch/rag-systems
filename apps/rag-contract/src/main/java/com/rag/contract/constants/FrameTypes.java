@@ -1,4 +1,4 @@
-package com.rag.contract.ws;
+package com.rag.contract.constants;
 
 public final class FrameTypes {
 

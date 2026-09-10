@@ -20,10 +20,10 @@ import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.rag.contract.ws.FrameTypes.ASK;
-import static com.rag.contract.ws.FrameTypes.DONE;
-import static com.rag.contract.ws.FrameTypes.ERROR;
-import static com.rag.contract.ws.FrameTypes.TOKEN;
+import static com.rag.contract.constants.FrameTypes.ASK;
+import static com.rag.contract.constants.FrameTypes.DONE;
+import static com.rag.contract.constants.FrameTypes.ERROR;
+import static com.rag.contract.constants.FrameTypes.TOKEN;
 
 /**
  * Streaming chat client over WebSocket (/ws/chat) for the active module.

@@ -8,12 +8,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClient;
 
-import static com.rag.contract.ws.ApiPaths.CATALOG;
-import static com.rag.contract.ws.ApiPaths.CATALOG_REFRESH;
-import static com.rag.contract.ws.ApiPaths.PROVIDER;
-import static com.rag.contract.ws.ApiPaths.PROVIDER_CHAT;
-import static com.rag.contract.ws.ApiPaths.PROVIDER_CONFIGURE;
-import static com.rag.contract.ws.ApiPaths.PROVIDER_EMBEDDING;
+import static com.rag.contract.constants.ApiPaths.CATALOG;
+import static com.rag.contract.constants.ApiPaths.CATALOG_REFRESH;
+import static com.rag.contract.constants.ApiPaths.PROVIDER;
+import static com.rag.contract.constants.ApiPaths.PROVIDER_CHAT;
+import static com.rag.contract.constants.ApiPaths.PROVIDER_CONFIGURE;
+import static com.rag.contract.constants.ApiPaths.PROVIDER_EMBEDDING;
 
 /**
  * REST client for the rag-provider companion service: provider status, the

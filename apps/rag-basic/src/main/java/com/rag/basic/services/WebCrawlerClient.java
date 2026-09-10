@@ -8,7 +8,7 @@ import org.springframework.web.client.RestClient;
 
 import java.net.URI;
 
-import static com.rag.contract.ws.ApiPaths.FETCH;
+import static com.rag.contract.constants.ApiPaths.FETCH;
 
 /**
  * Client for the shared rag-webcrawler tool. The rag-module orchestrates URL

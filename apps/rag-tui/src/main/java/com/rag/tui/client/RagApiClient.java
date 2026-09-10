@@ -25,14 +25,14 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
-import static com.rag.contract.ws.ApiPaths.DOCUMENT_BY_ID;
-import static com.rag.contract.ws.ApiPaths.DOCUMENTS;
-import static com.rag.contract.ws.ApiPaths.INGEST;
-import static com.rag.contract.ws.ApiPaths.INGEST_FILE;
-import static com.rag.contract.ws.ApiPaths.INGEST_FILE_ASYNC;
-import static com.rag.contract.ws.ApiPaths.INGEST_STATUS;
-import static com.rag.contract.ws.ApiPaths.INGEST_URL;
-import static com.rag.contract.ws.ApiPaths.QUERY;
+import static com.rag.contract.constants.ApiPaths.DOCUMENT_BY_ID;
+import static com.rag.contract.constants.ApiPaths.DOCUMENTS;
+import static com.rag.contract.constants.ApiPaths.INGEST;
+import static com.rag.contract.constants.ApiPaths.INGEST_FILE;
+import static com.rag.contract.constants.ApiPaths.INGEST_FILE_ASYNC;
+import static com.rag.contract.constants.ApiPaths.INGEST_STATUS;
+import static com.rag.contract.constants.ApiPaths.INGEST_URL;
+import static com.rag.contract.constants.ApiPaths.QUERY;
 
 /**
  * REST client for the active rag-* module: ingestion and query endpoints,

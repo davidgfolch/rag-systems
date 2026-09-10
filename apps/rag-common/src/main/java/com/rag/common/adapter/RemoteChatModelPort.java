@@ -15,11 +15,11 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
-import static com.rag.contract.ws.ApiPaths.CHAT_STREAM;
-import static com.rag.contract.ws.ApiPaths.COMPLETE;
-import static com.rag.contract.ws.FrameTypes.DONE;
-import static com.rag.contract.ws.FrameTypes.ERROR;
-import static com.rag.contract.ws.FrameTypes.TOKEN;
+import static com.rag.contract.constants.ApiPaths.CHAT_STREAM;
+import static com.rag.contract.constants.ApiPaths.COMPLETE;
+import static com.rag.contract.constants.FrameTypes.DONE;
+import static com.rag.contract.constants.FrameTypes.ERROR;
+import static com.rag.contract.constants.FrameTypes.TOKEN;
 
 /**
  * Adapter bridging the domain {@link ChatModelPort} onto the rag-provider

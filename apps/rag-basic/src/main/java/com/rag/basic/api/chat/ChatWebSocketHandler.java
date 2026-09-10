@@ -19,11 +19,11 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.rag.contract.ws.FrameTypes.ASK;
-import static com.rag.contract.ws.FrameTypes.CANCEL;
-import static com.rag.contract.ws.FrameTypes.DONE;
-import static com.rag.contract.ws.FrameTypes.ERROR;
-import static com.rag.contract.ws.FrameTypes.TOKEN;
+import static com.rag.contract.constants.FrameTypes.ASK;
+import static com.rag.contract.constants.FrameTypes.CANCEL;
+import static com.rag.contract.constants.FrameTypes.DONE;
+import static com.rag.contract.constants.FrameTypes.ERROR;
+import static com.rag.contract.constants.FrameTypes.TOKEN;
 
 /**
  * Streaming chat over WebSocket: ask/cancel inbound, token/done/error outbound.

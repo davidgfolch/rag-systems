@@ -8,8 +8,8 @@ import org.springframework.web.client.RestClient;
 
 import java.util.List;
 
-import static com.rag.contract.ws.ApiPaths.CONVERSATIONS;
-import static com.rag.contract.ws.ApiPaths.CONVERSATIONS_MESSAGES;
+import static com.rag.contract.constants.ApiPaths.CONVERSATIONS;
+import static com.rag.contract.constants.ApiPaths.CONVERSATIONS_MESSAGES;
 
 /**
  * REST client for rag-memory: conversation history owned outside the rag-* modules.

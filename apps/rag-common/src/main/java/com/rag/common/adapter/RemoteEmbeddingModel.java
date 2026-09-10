@@ -13,8 +13,8 @@ import org.springframework.ai.embedding.EmbeddingResponse;
 
 import java.util.List;
 
-import static com.rag.contract.ws.ApiPaths.EMBED;
-import static com.rag.contract.ws.ApiPaths.PROVIDER;
+import static com.rag.contract.constants.ApiPaths.EMBED;
+import static com.rag.contract.constants.ApiPaths.PROVIDER;
 
 /**
  * Spring AI {@link EmbeddingModel} backed by the rag-provider service's
