@@ -8,6 +8,9 @@ import com.rag.tui.launcher.ModuleRegistry;
 
 public class DocumentLister {
 
+    public static final String NO_DOCUMENTS = "No rag-* modules contains documents";
+    public static final String RAG_MODULES_DOWN = "No rag-* modules are reachable. Start one first (e.g. 'start rag-basic').";
+
     private final ModuleRegistry registry;
     private final RagApiClient apiClient;
     private final ModuleHealthClient healthClient;
@@ -20,29 +23,33 @@ public class DocumentLister {
 
     public String list() {
         var sb = new StringBuilder("Documents:\n");
-        boolean any = false;
+        boolean anyModule = false;
+        boolean anyDoc = false;
         for (Module m : registry.modules()) {
             if (healthClient.isUp(m.baseUrl())) {
-                any = true;
-                appendModuleDocuments(sb, m);
+                anyModule = true;
+                anyDoc |= appendModuleDocuments(sb, m);
             }
         }
-        return any ? sb.toString()
-                : "No rag-* modules are reachable. Start one first (e.g. 'start rag-basic').";
+        if (anyDoc)
+            return sb.toString();
+        else if (anyModule)
+            return NO_DOCUMENTS;
+        return RAG_MODULES_DOWN;
     }
 
-    private void appendModuleDocuments(StringBuilder sb, Module m) {
-        sb.append(" ").append(m.name()).append(" (").append(m.baseUrl()).append("):\n");
+    private boolean appendModuleDocuments(StringBuilder sb, Module m) {
         var docs = apiClient.listDocuments(m.baseUrl());
         if (docs.isEmpty()) {
-            sb.append("   (no documents)\n");
-            return;
+            return false;
         }
+        sb.append(" ").append(m.name()).append(" (").append(m.baseUrl()).append("):\n");
         int maxChunksLength = docs.stream().map(DocumentSummaryDTO::getChunkCount).max(Integer::compareTo)
                 .map(String::valueOf).map(String::length).orElse(0);
         for (DocumentSummaryDTO doc : docs) {
             appendDocumentSummary(sb, doc, maxChunksLength);
         }
+        return true;
     }
 
     private static void appendDocumentSummary(StringBuilder sb, DocumentSummaryDTO doc, int maxChunksLength) {

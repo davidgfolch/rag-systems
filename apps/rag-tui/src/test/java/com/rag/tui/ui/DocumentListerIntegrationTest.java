@@ -15,23 +15,25 @@ import org.springframework.web.client.RestClient;
 import java.io.IOException;
 import java.util.List;
 
+import static com.rag.tui.ui.DocumentLister.NO_DOCUMENTS;
+import static com.rag.tui.ui.DocumentLister.RAG_MODULES_DOWN;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class DocumentListerIntegrationTest {
 
+    public static final DocumentSummaryDTO DOC_SUMMARY = new DocumentSummaryDTO().documentId("d1").title("note.txt").chunkCount(3);
+    public static final String RAG_BASIC = "rag-basic";
     private StubModuleServer stub;
-    private RagApiClient apiClient;
-    private ModuleHealthClient healthClient;
     private DocumentLister sut;
 
     @BeforeEach
     void setUp() throws IOException {
         stub = new StubModuleServer();
         var registry = new ModuleRegistry(
-                List.of(new Module("rag-basic", stub.baseUrl())), "rag-basic");
-        apiClient = new RagApiClient(registry, RestClient.builder());
-        healthClient = new ModuleHealthClient(RestClient.builder());
-        sut = new DocumentLister(registry, apiClient, healthClient);
+                List.of(new Module(RAG_BASIC, stub.baseUrl())), RAG_BASIC);
+        sut = new DocumentLister(registry,
+                new RagApiClient(registry, RestClient.builder()),
+                new ModuleHealthClient(RestClient.builder()));
     }
 
     @AfterEach
@@ -43,12 +45,8 @@ class DocumentListerIntegrationTest {
 
     @Test
     void listsDocumentsFromReachableModule() throws Exception {
-        stub.documents(new ObjectMapper().writeValueAsString(List.of(
-                new DocumentSummaryDTO().documentId("d1").title("note.txt").chunkCount(3))));
-
-        var result = sut.list();
-
-        assertThat(result).contains("rag-basic")
+        stub.documents(new ObjectMapper().writeValueAsString(List.of(DOC_SUMMARY)));
+        assertThat(sut.list()).contains(RAG_BASIC)
                 .contains("[d1]")
                 .contains("note.txt");
     }
@@ -57,9 +55,12 @@ class DocumentListerIntegrationTest {
     void reportsNoReachableModulesForDocuments() {
         stub.stop();
         stub = null;
+        assertThat(sut.list()).isEqualTo(RAG_MODULES_DOWN);
+    }
 
-        var result = sut.list();
-
-        assertThat(result).contains("No rag-* modules are reachable");
+    @Test
+    void skipsModulesWithNoDocuments() {
+        stub.documents("[]");
+        assertThat(sut.list()).contains(NO_DOCUMENTS);
     }
 }
