@@ -18,9 +18,9 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import static com.rag.contract.constants.ApiPaths.CHAT_STREAM;
 import static com.rag.contract.constants.ApiPaths.COMPLETE;
 import static com.rag.contract.constants.ApiPaths.EMBED;
-import static com.rag.contract.ws.FrameTypes.DONE;
-import static com.rag.contract.ws.FrameTypes.ERROR;
-import static com.rag.contract.ws.FrameTypes.TOKEN;
+import static com.rag.contract.constants.FrameTypes.DONE;
+import static com.rag.contract.constants.FrameTypes.ERROR;
+import static com.rag.contract.constants.FrameTypes.TOKEN;
 
 /**
  * Model-level compute endpoints consumed by the RAG modules' remote bridges.
