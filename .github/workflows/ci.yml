@@ -90,10 +90,11 @@ jobs:
         run: ./mvnw -pl apps/${{ matrix.module }} -am verify -B
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: coverage-${{ matrix.module }}
           path: apps/${{ matrix.module }}/target/site/jacoco/
+          if-no-files-found: ignore
 
   coverage-badges:
     name: Coverage Badges
@@ -118,7 +119,7 @@ jobs:
           cache: maven
 
       - name: Download all coverage artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           pattern: coverage-*
           path: coverage-artifacts
