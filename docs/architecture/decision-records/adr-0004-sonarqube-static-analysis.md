@@ -29,7 +29,7 @@ The **"RAG 85% Coverage" quality gate** (overall coverage ≥ 85%, no new violat
 ### Negative
 - Requires a running SonarQube container and a generated token to scan.
 - The coverage gate measures **new/modified lines**, so refactoring healthy code can temporarily fail the gate until new branches are tested.
-- Local Community Build does not require JRE provisioning when the project already uses Java 21, so `sonar.scanner.skipJreProvisioning=true` is kept for simplicity.
+- Local Community Build does not require JRE provisioning when the project already uses Java 25, so `sonar.scanner.skipJreProvisioning=true` is kept for simplicity.
 - Maven-plugin scanner settings must be passed via `-D` flags; the plugin does not reliably read `sonar.host.url`/`sonar.projectKey`/JaCoCo paths from `sonar-project.properties`.
 
 ## Reference

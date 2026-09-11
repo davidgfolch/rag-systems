@@ -86,7 +86,7 @@ Refuse to mark the task complete until:
 
 ## Gotchas
 
-- **JRE provisioning**: Community Build with Java 21 project does not require JRE provisioning; kept `skipJreProvisioning=true` for simplicity.
+- **JRE provisioning**: Community Build with Java 25 project does not require JRE provisioning; kept `skipJreProvisioning=true` for simplicity.
 - **`-D` flags required**: The Maven plugin does not reliably read `sonar.host.url`/`sonar.projectKey`/JaCoCo paths from `sonar-project.properties`; pass them via CLI.
 - **Stale results**: always use `mvn clean verify sonar:sonar` after source changes.
 - **PowerShell `.` splitting**: quote `-D` properties when invoking `mvnw.cmd` from PowerShell (`"-Dsonar.host.url=http://localhost:9000"`).

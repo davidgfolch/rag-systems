@@ -105,7 +105,7 @@ class ArchitectureTest {
                         return lines > 100
                                 ? c.getSimpleName() + " (" + lines + " lines > 100)"
                                 : null;
-                    } catch (IOException e) {
+                    } catch (IOException _) {
                         return c.getSimpleName() + " (cannot read source)";
                     }
                 })

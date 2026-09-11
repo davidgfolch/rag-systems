@@ -44,7 +44,7 @@ public class InteractiveShell {
         try {
             write(dispatcher.handle(line, this::writeToken));
             return false;
-        } catch (ShellExitException e) {
+        } catch (ShellExitException _) {
             write(TerminalStyle.success("Bye."));
             return true;
         } catch (RuntimeException e) {

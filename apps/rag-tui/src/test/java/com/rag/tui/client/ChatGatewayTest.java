@@ -38,12 +38,14 @@ class ChatGatewayTest {
     private final List<String> tokens = new ArrayList<>();
     private TextWebSocketHandler handler;
     private Thread runner;
+    private Throwable runnerError;
 
     private void startAsk() throws Exception {
         when(webSocketClient.execute(any(), anyString())).thenReturn(
                 CompletableFuture.completedFuture(session));
         doNothing().when(session).sendMessage(any(TextMessage.class));
         runner = new Thread(() -> sut.ask("hello", 4, tokens::add));
+        runner.setUncaughtExceptionHandler((thread, error) -> runnerError = error);
         runner.start();
         ArgumentCaptor<WebSocketHandler> captor =
                 ArgumentCaptor.forClass(WebSocketHandler.class);
@@ -82,6 +84,9 @@ class ChatGatewayTest {
         feedEvent(session, "{\"type\":\"" + ERROR + "\",\"content\":\"boom\",\"conversationId\":\"x\"}");
         runner.join(2000);
         assertThat(runner.isAlive()).isFalse();
+        assertThat(runnerError)
+                .isInstanceOf(ChatGateway.ChatException.class)
+                .hasMessage("boom");
     }
 
     @Test

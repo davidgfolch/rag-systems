@@ -80,7 +80,7 @@ Pluggable strategies via interfaces:
 The `VectorStorePort` interface abstracts storage so PgVector, in-memory stores can be swapped transparently.
 
 ### Reactive/Parallel
-- Java 21 virtual threads for blocking I/O (LLM/embedding calls)
+- Java 25 virtual threads for blocking I/O (LLM/embedding calls)
 - Project Reactor (Flux/Mono) for composable async
 - Parallel processing for batch ingestion/embedding
 

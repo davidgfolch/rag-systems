@@ -24,7 +24,7 @@ public class NoopPrompter implements Prompter {
     public String prompt(String promptText) {
         try {
             return ((java.io.BufferedReader) reader).readLine();
-        } catch (java.io.IOException e) {
+        } catch (java.io.IOException _) {
             return null;
         }
     }
