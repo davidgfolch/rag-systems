@@ -147,7 +147,7 @@ public class InteractivePrompter implements Prompter {
     private Key promptRead() {
         try {
             return promptSource.read();
-        } catch (IOException e) {
+        } catch (IOException _) {
             return null;
         }
     }

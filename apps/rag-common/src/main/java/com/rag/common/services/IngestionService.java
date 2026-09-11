@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.stream.IntStream;
 
 /**
  * Orchestrates the ingestion pipeline: parse → split → embed → store.
@@ -47,9 +48,16 @@ public class IngestionService {
         var cleanDoc = parsed.equals(doc.getContent()) ? doc : new Document(doc.getId(), parsed, doc.getMetadata());
         var chunks = splitter.split(cleanDoc);
         log.info("Ingestion {} split: {} chunks", doc.getId(), chunks.size());
-        chunks.forEach(c -> c.setEmbedding(embeddingModel.embed(c.getContent())));
+        embedChunks(chunks);
         log.info("Ingestion {} embedded: {} chunks", doc.getId(), chunks.size());
         return chunks;
+    }
+
+    private void embedChunks(List<Chunk> chunks) {
+        var texts = chunks.stream().map(Chunk::getContent).toList();
+        var vectors = embeddingModel.embed(texts);
+        IntStream.range(0, chunks.size())
+                .forEach(i -> chunks.get(i).setEmbedding(vectors.get(i)));
     }
 
     public record IngestionResult(String documentId, int chunkCount) {}

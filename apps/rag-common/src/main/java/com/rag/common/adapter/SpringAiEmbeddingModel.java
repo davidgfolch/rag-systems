@@ -1,12 +1,12 @@
 package com.rag.common.adapter;
 
+import com.rag.common.domain.FloatConversions;
 import com.rag.common.services.EmbeddingModelPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.embedding.EmbeddingRequest;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -30,8 +30,16 @@ public class SpringAiEmbeddingModel implements EmbeddingModelPort {
         var res = delegate.call(new EmbeddingRequest(List.of(text), null));
         var output = res.getResult().getOutput();
         log.debug("Embedded text ({} chars) -> {} dimensions", text.length(), output.length);
-        List<Float> out = new ArrayList<>(output.length);
-        for (float v : output) out.add(v);
-        return out;
+        return FloatConversions.toFloatList(output);
+    }
+
+    @Override
+    public List<List<Float>> embed(List<String> texts) {
+        var response = delegate.call(new EmbeddingRequest(texts, null));
+        var vectors = response.getResults().stream()
+                .map(e -> FloatConversions.toFloatList(e.getOutput()))
+                .toList();
+        log.debug("Batch embedded {} texts -> {} vectors", texts.size(), vectors.size());
+        return vectors;
     }
 }

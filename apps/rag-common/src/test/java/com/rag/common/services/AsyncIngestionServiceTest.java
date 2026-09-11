@@ -35,7 +35,8 @@ class AsyncIngestionServiceTest {
         when(parser.parse(any())).thenReturn("hello world");
         var chunk = new Chunk("c1", "d1", "hello world", 0, Map.of());
         when(splitter.split(any())).thenReturn(List.of(chunk));
-        when(embeddingModel.embed("hello world")).thenReturn(List.of(1.0f, 0.0f));
+        when(embeddingModel.embed(List.of("hello world")))
+                .thenReturn(List.of(List.of(1.0f, 0.0f)));
         var service = new AsyncIngestionService(delegate);
         var id = service.submit(new Document("d1", "", Map.of(MetadataKeys.RAW_BYTES, new byte[]{1})));
         var status = await(service, id);

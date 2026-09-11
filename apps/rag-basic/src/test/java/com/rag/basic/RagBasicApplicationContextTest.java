@@ -15,6 +15,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -53,6 +54,10 @@ class RagBasicApplicationContextTest {
         when(domainEmbeddingModel.embed(anyString())).thenAnswer(inv -> {
             var text = inv.getArgument(0, String.class);
             return toEmbeddingList(text);
+        });
+        when(domainEmbeddingModel.embed(anyList())).thenAnswer(inv -> {
+            List<String> texts = inv.getArgument(0);
+            return texts.stream().map(RagBasicApplicationContextTest::toEmbeddingList).toList();
         });
     }
 

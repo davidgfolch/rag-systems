@@ -42,11 +42,7 @@ public class AsyncIngestionService {
     public AsyncIngestionService(IngestionService delegate, VectorStorePort preflight, ExecutorService executor) {
         this.delegate = delegate;
         this.preflight = preflight;
-        this.executor = executor != null ? executor : Executors.newCachedThreadPool(runnable -> {
-            Thread thread = new Thread(runnable, "rag-ingest");
-            thread.setDaemon(true);
-            return thread;
-        });
+        this.executor = executor != null ? executor : Executors.newVirtualThreadPerTaskExecutor();
     }
 
     /**
