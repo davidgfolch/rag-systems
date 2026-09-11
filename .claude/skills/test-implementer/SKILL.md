@@ -25,29 +25,16 @@ Use this skill when implementing or running tests for the RAG Systems monorepo.
 
 ## 4. Coding Best Practices
 - **Abstraction**: Avoid duplicated code. Extract common setup into fixtures/mocks helpers.
-- **Constants**: Reuse production code constants (`MetadataKeys`, `FrameTypes`, `ApiPaths`); do NOT duplicate string literals or magic numbers in tests.
-- **Shared Test Fixtures**: Extract repeated test data into shared fixture classes (see section 4a).
-- **Parameterized Tests**: Use JUnit `@ParameterizedTest` (see section 4b).
-- **Performance**: Unit tests MUST run quickly (< 500ms each).
-- **Mocking**: Mock all external layers (LLMs, vector stores, databases, file system, network) with Mockito.
-- **Provider abstraction**: Test with a mocked/spied `EmbeddingModel` and `VectorStore`; never call real providers in unit tests.
+- **Assertion Helpers**: Use shared assertion helpers from `TestAssertions` in
+  `rag-common/testfixture/` (see rules skill, section 7). Do NOT duplicate status +
+  body assertion sequences across test files. Always import via
+  `import static com.rag.common.testfixture.TestIngestionAssertions.*` or
+  `import static com.rag.common.testfixture.TestControllerAssertions.*`.
 
 ## 4a. Shared Test Fixtures
 
 Any test data value (object, string, byte array) used in 2+ test files MUST be
 in a shared fixture class rather than constructed inline in each test.
-
-**Location**:
-- Cross-module fixtures (domain objects: `Chunk`, `Document`, `DocumentSummaryDTO`):
-  `apps/rag-common/src/test/java/com/rag/common/testfixture/`
-- Module-specific fixtures (module names, URLs, model catalogs):
-  `apps/rag-[module]/src/test/java/com/rag/[module]/testfixture/`
-
-**Convention**: Fixture classes are `public final` with `private` constructors.
-Constants are `public static final`. Factory methods for variants use descriptive
-names (e.g. `TestChunks.withIndex(5)`).
-
-**Examples**: `TestChunks`, `TestDocuments`, `TestModules`, `TestPdfBytes`.
 
 ## 4b. Parameterized Tests
 

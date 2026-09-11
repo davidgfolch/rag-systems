@@ -24,6 +24,12 @@
             <groupId>com.rag</groupId>
             <artifactId>rag-common</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.rag</groupId>
+            <artifactId>rag-common</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>

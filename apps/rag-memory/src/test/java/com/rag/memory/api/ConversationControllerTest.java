@@ -9,9 +9,9 @@ import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 
+import static com.rag.common.testfixture.TestControllerAssertions.assertEntityCreated;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class ConversationControllerTest {
@@ -30,9 +30,7 @@ class ConversationControllerTest {
     void createsConversationAndReturnsCreated() {
         when(service.createConversation("My chat")).thenReturn(new ConversationDTO().id("c1").title("My chat"));
         ResponseEntity<ConversationDTO> result = sut.createConversation("My chat");
-        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(result.getBody().getId()).isEqualTo("c1");
-        verify(service).createConversation("My chat");
+        assertEntityCreated(result, body -> assertThat(body.getId()).isEqualTo("c1"));
     }
 
     @Test
@@ -48,8 +46,7 @@ class ConversationControllerTest {
         ChatMessageDTO input = new ChatMessageDTO().content("hi");
         when(service.addMessage("c1", input)).thenReturn(new ChatMessageDTO().id("m1").conversationId("c1"));
         ResponseEntity<ChatMessageDTO> result = sut.addMessage("c1", input);
-        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(result.getBody().getConversationId()).isEqualTo("c1");
+        assertEntityCreated(result, body -> assertThat(body.getConversationId()).isEqualTo("c1"));
     }
 
     @Test

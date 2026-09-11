@@ -5,12 +5,12 @@ import com.rag.contract.model.FetchRequest;
 import com.rag.contract.model.PageDTO;
 import com.rag.webcrawler.services.WebCrawlService;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.net.URI;
 import java.util.List;
 
+import static com.rag.common.testfixture.TestControllerAssertions.assertEntityCreated;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -26,19 +26,16 @@ class FetchControllerTest {
         PageDTO page = new PageDTO("https://ex.com", "T", "text");
         when(service.fetch("https://ex.com")).thenReturn(page);
         ResponseEntity<PageDTO> result = sut.fetch(new FetchRequest(URI.create("https://ex.com")));
-        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(result.getBody().getUrl()).isEqualTo("https://ex.com");
+        assertEntityCreated(result, body -> assertThat(body.getUrl()).isEqualTo("https://ex.com"));
     }
 
     @Test
     void fetchesRelevantLinks() {
         when(service.fetchRelevantLinks("https://ex.com", "q", 5))
                 .thenReturn(List.of(new PageDTO("https://ex.com/a", "A", "a")));
-        FetchLinksRequest request =
-                new FetchLinksRequest(URI.create("https://ex.com")).question("q");
-        ResponseEntity<List<PageDTO>> result = sut.fetchLinks(request);
-        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(result.getBody()).hasSize(1);
+        ResponseEntity<List<PageDTO>> result = sut.fetchLinks(
+                new FetchLinksRequest(URI.create("https://ex.com")).question("q"));
+        assertEntityCreated(result, body -> assertThat(body).hasSize(1));
         verify(service).fetchRelevantLinks("https://ex.com", "q", 5);
     }
 }

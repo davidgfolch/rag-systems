@@ -21,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
+import static com.rag.common.testfixture.TestControllerAssertions.assertEntityCreated;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -55,9 +56,10 @@ class PdfIngestionIntegrationTest {
         ResponseEntity<IngestResponse> res = controller.ingestFile(
                 new MockMultipartFile("file", "book.pdf", "application/pdf", pdfBytes),
                 Map.of("sourceType", "file", "fileName", "book.pdf"));
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(res.getBody().getDocumentId()).isNotBlank();
-        assertThat(res.getBody().getChunkCount()).isPositive();
+        assertEntityCreated(res, body -> {
+            assertThat(body.getDocumentId()).isNotBlank();
+            assertThat(body.getChunkCount()).isPositive();
+        });
         List<Chunk> hits = retrievalService.retrieve("domain-driven design aggregates", 5);
         assertThat(hits).isNotEmpty();
         assertTrue(hits.stream().map(Chunk::getContent).anyMatch(c -> c.contains("domain-driven design")));

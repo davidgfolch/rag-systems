@@ -182,6 +182,23 @@ void second() {
 Blank lines between test methods (before the next `@Test` annotation) are
 allowed. Blank lines inside *helper* methods (non-`@Test`) are also allowed.
 
+## 7. Extract repeated test assertions
+
+Any assertion sequence (2+ `assertThat` lines checking status + body fields)
+that appears in 2+ test files MUST be extracted to a shared assertion helper in
+`rag-common/src/test/java/com/rag/common/testfixture/`. Inline assertion
+sequences that duplicate an existing helper are a DRY violation.
+
+**Existing helpers** (import via `import static com.rag.common.testfixture.*;`):
+- `assertDocumentCreated(response, id, chunkCount)` — CREATED + IngestResponse fields
+- `assertEntityCreated(response, bodyAssertion)` — CREATED + arbitrary body check
+- `assertBadRequest(response)` — BAD_REQUEST status check
+- `assertBadRequestAndNotIngested(response, service)` — BAD_REQUEST + verify never-ingested
+
+When writing new controller tests, use these helpers instead of inline
+`assertThat(response.getStatusCode()).isEqualTo(...)` + body field checks.
+If no existing helper fits, add one to the appropriate `Test*Assertions` class first.
+
 ## Enforcement
 
 Prefer consistency with the surrounding file. If an existing block already uses

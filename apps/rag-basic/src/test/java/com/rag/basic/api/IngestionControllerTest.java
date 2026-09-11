@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import static com.rag.common.testfixture.TestIngestionAssertions.assertBadRequestAndNotIngested;
+import static com.rag.common.testfixture.TestIngestionAssertions.assertDocumentCreated;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
@@ -42,17 +44,14 @@ class IngestionControllerTest {
         when(service.ingest(any())).thenReturn(new IngestionService.IngestionResult("d1", 5));
         ResponseEntity<IngestResponse> response =
                 controller.ingest(new IngestRequest().content("some content"));
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(response.getBody().getDocumentId()).isEqualTo("d1");
-        assertThat(response.getBody().getChunkCount()).isEqualTo(5);
+        assertDocumentCreated(response, "d1", 5);
     }
 
     @Test
     void rejectsBlankContent() {
         ResponseEntity<IngestResponse> response =
                 controller.ingest(new IngestRequest().content("   "));
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        verify(service, never()).ingest(any());
+        assertBadRequestAndNotIngested(response, service);
     }
 
     @Test
@@ -61,9 +60,7 @@ class IngestionControllerTest {
         ResponseEntity<IngestResponse> response =
                 controller.ingest(new IngestRequest().content("")
                         .metadata(Map.of(MetadataKeys.RAW, Base64.getEncoder().encodeToString(new byte[]{0x25, 0x50, 0x44, 0x46}))));
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(response.getBody().getDocumentId()).isEqualTo("d1");
-        assertThat(response.getBody().getChunkCount()).isEqualTo(7);
+        assertDocumentCreated(response, "d1", 7);
     }
 
     @Test
@@ -73,9 +70,7 @@ class IngestionControllerTest {
                 new byte[]{0x25, 0x50, 0x44, 0x46});
         ResponseEntity<IngestResponse> response =
                 controller.ingestFile(file, Map.of(MetadataKeys.SOURCE, "x.pdf"));
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(response.getBody().getDocumentId()).isEqualTo("d1");
-        assertThat(response.getBody().getChunkCount()).isEqualTo(7);
+        assertDocumentCreated(response, "d1", 7);
     }
 
     @Test
@@ -83,8 +78,7 @@ class IngestionControllerTest {
         MockMultipartFile file = new MockMultipartFile("file", "empty.pdf", "application/pdf", new byte[0]);
         ResponseEntity<IngestResponse> response =
                 controller.ingestFile(file, Map.of());
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        verify(service, never()).ingest(any());
+        assertBadRequestAndNotIngested(response, service);
     }
 
     @Test
@@ -102,9 +96,7 @@ class IngestionControllerTest {
         when(service.ingest(any())).thenReturn(new IngestionService.IngestionResult("d2", 3));
         ResponseEntity<IngestResponse> response =
                 controller.ingestUrl(new IngestUrlRequest().url(URI.create("https://example.com")));
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(response.getBody().getDocumentId()).isEqualTo("d2");
-        assertThat(response.getBody().getChunkCount()).isEqualTo(3);
+        assertDocumentCreated(response, "d2", 3);
     }
 
     @Test
