@@ -139,7 +139,7 @@ public class InteractivePrompter implements Prompter {
     private Key read() {
         try {
             return pickSource.read();
-        } catch (IOException e) {
+        } catch (IOException _) {
             return null;
         }
     }

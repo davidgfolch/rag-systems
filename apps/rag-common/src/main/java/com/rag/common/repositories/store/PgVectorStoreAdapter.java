@@ -234,7 +234,7 @@ public class PgVectorStoreAdapter implements VectorStorePort {
             return om.readValue(String.valueOf(raw),
                     new TypeReference<Map<String, Object>>() {
                     });
-        } catch (Exception e) {
+        } catch (Exception _) {
             return Map.of();
         }
     }

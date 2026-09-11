@@ -137,7 +137,7 @@ public class RagApiClient {
                     .get().uri(DOCUMENTS)
                     .retrieve().body(DocumentSummaryDTO[].class);
             return documents == null ? List.of() : List.of(documents);
-        } catch (HttpClientErrorException.NotFound e) {
+        } catch (HttpClientErrorException.NotFound _) {
             return List.of();
         }
     }

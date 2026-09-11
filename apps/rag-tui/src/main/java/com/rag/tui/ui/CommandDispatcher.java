@@ -273,7 +273,7 @@ public class CommandDispatcher {
                         return;
                     }
                 }
-            } catch (InterruptedException e) {
+            } catch (InterruptedException _) {
                 Thread.currentThread().interrupt();
             } catch (RuntimeException e) {
                 tokenSink.accept(error("Ingestion of document " + documentId + " could not be checked: " + e.getMessage() + "\n"));

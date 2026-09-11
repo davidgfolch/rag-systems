@@ -115,7 +115,7 @@ public class RagTuiConfig {
         try {
             var terminal = TerminalBuilder.builder().build();
             return new InteractivePrompter(terminal, completion);
-        } catch (Exception e) {
+        } catch (Exception _) {
             return new NoopPrompter(new java.io.InputStreamReader(System.in));
         }
     }

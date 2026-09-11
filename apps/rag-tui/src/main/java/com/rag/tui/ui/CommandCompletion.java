@@ -123,7 +123,7 @@ public class CommandCompletion implements CompletionCandidates {
         if (now - cachedAtMs < CACHE_TTL_MS) return cachedCatalog.get();
         try {
             cachedCatalog.set(providerClient.catalog());
-        } catch (RuntimeException e) {
+        } catch (RuntimeException _) {
             cachedCatalog.set(null);
         }
         cachedAtMs = now;
