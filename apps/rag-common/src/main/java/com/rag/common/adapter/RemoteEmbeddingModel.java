@@ -1,5 +1,6 @@
 package com.rag.common.adapter;
 
+import com.rag.common.domain.FloatConversions;
 import com.rag.contract.provider.EmbedRequest;
 import com.rag.contract.provider.EmbedResponse;
 import com.rag.contract.provider.ProviderStatusDTO;
@@ -45,7 +46,7 @@ public class RemoteEmbeddingModel implements EmbeddingModel {
         cacheDimension();
         var results = new java.util.ArrayList<Embedding>(response.embeddings().size());
         for (int i = 0; i < response.embeddings().size(); i++) {
-            results.add(new Embedding(toFloatArray(response.embeddings().get(i)), i));
+            results.add(new Embedding(FloatConversions.toFloatArray(response.embeddings().get(i)), i));
         }
         log.debug("Embedded {} texts via remote provider", results.size());
         return new EmbeddingResponse(results);
@@ -55,7 +56,7 @@ public class RemoteEmbeddingModel implements EmbeddingModel {
     public float[] embed(Document document) {
         var response = httpClient.postJson(EMBED,
                 new EmbedRequest(List.of(document.getText())), EmbedResponse.class);
-        return toFloatArray(response.embeddings().get(0));
+        return FloatConversions.toFloatArray(response.embeddings().get(0));
     }
 
     @Override
@@ -86,13 +87,5 @@ public class RemoteEmbeddingModel implements EmbeddingModel {
                 log.debug("Embedding dimension fetch deferred: {}", e.getMessage());
             }
         }
-    }
-
-    private static float[] toFloatArray(List<Float> values) {
-        var result = new float[values.size()];
-        for (int i = 0; i < values.size(); i++) {
-            result[i] = values.get(i);
-        }
-        return result;
     }
 }
