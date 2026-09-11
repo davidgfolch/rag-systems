@@ -1,7 +1,7 @@
 ﻿# RAG Systems
 
 [![CI](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml/badge.svg)](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml)
-[![Java](https://img.shields.io/badge/Java-21-007396?logo=openjdk&logoColor=white)](https://adoptium.net/)
+[![Java](https://img.shields.io/badge/Java-25-007396?logo=openjdk&logoColor=white)](https://adoptium.net/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.5-6DB33F?logo=spring)](https://spring.io/projects/spring-boot)
 [![Maven](https://img.shields.io/badge/Maven-3.9-C71A36?logo=apache-maven)](https://maven.apache.org/)
 <!-- COVERAGE_BADGES_START -->
@@ -14,7 +14,7 @@ Modules range from basic vector similarity search to advanced hybrid retrieval w
 
 ## Prerequisites
 
-- **Java 21** (LTS)
+- **Java 25** (LTS)
 - **Maven 3.9+**
 - **Docker** (for PostgreSQL/PgVector)
 - **Ollama** (optional, for local models)

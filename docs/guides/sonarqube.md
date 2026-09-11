@@ -60,7 +60,7 @@ Root-level properties used by the scanner:
 |----------|-------|-------|
 | `sonar.projectKey` | `rag-systems` | Used by non-Maven scans; Maven scan uses `com.rag:rag-systems` from the POM |
 | `sonar.exclusions` | `**/target/**` | Excludes build output |
-| `sonar.scanner.skipJreProvisioning` | `true` | Skips JRE auto-provisioning (project already uses Java 21) |
+| `sonar.scanner.skipJreProvisioning` | `true` | Skips JRE auto-provisioning (project already uses Java 25) |
 | `sonar.coverage.jacoco.xmlReportPaths` | `**/target/site/jacoco/jacoco.xml` | JaCoCo report location |
 | `sonar.junit.reportPaths` | `**/target/surefire-reports` | Test report location |
 | `sonar.host.url` | `http://localhost:9000` | Local server |

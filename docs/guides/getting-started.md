@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- **Java 21** (LTS)
+- **Java 25** (LTS)
 - **Maven 3.9+**
 - **Docker** (for PostgreSQL + observability)
 - **Ollama** (for local models) - optional but recommended for local development

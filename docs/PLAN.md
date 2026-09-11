@@ -42,7 +42,7 @@ Master architecture plan for learning and comparing different RAG (Retrieval-Aug
 **Reactive/Parallel Processing (When Applies)**
 - Use Project Reactor (Mono/Flux) for I/O-bound operations
 - Parallelize independent tasks: document ingestion, batch embedding, concurrent queries
-- Leverage Java 21 virtual threads for blocking I/O
+- Leverage Java 25 virtual threads for blocking I/O
 - Apply parallel streams for CPU-bound chunking operations
 - Avoid reactive for simple synchronous flows - only when performance benefit is clear
 
@@ -153,7 +153,7 @@ Core invariants:
 
 | Component | Version | Notes |
 |-----------|---------|-------|
-| Java | 21 LTS | Virtual threads, records, sealed classes |
+| Java | 25 LTS | Virtual threads, records, sealed classes |
 | Spring Boot | 3.4.x | Latest stable |
 | Spring AI | 1.1.x | Latest stable |
 | Maven | 3.9.x | Multi-module parent POM |
