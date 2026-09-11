@@ -5,7 +5,7 @@
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.5-6DB33F?logo=spring)](https://spring.io/projects/spring-boot)
 [![Maven](https://img.shields.io/badge/Maven-3.9-C71A36?logo=apache-maven)](https://maven.apache.org/)
 <!-- COVERAGE_BADGES_START -->
-![rag-common](https://img.shields.io/badge/rag--common-93%25-brightgreen)  ![rag-basic](https://img.shields.io/badge/rag--basic-95%25-brightgreen)  ![rag-memory](https://img.shields.io/badge/rag--memory-98%25-brightgreen)  ![rag-webcrawler](https://img.shields.io/badge/rag--webcrawler-96%25-brightgreen)  ![rag-tui](https://img.shields.io/badge/rag--tui-93%25-brightgreen)
+![rag-common](https://img.shields.io/badge/rag--common-91%25-brightgreen)  ![rag-basic](https://img.shields.io/badge/rag--basic-95%25-brightgreen)  ![rag-memory](https://img.shields.io/badge/rag--memory-98%25-brightgreen)  ![rag-webcrawler](https://img.shields.io/badge/rag--webcrawler-96%25-brightgreen)  ![rag-provider](https://img.shields.io/badge/rag--provider-95%25-brightgreen)  ![rag-tui](https://img.shields.io/badge/rag--tui-92%25-brightgreen)
 <!-- COVERAGE_BADGES_END -->
 
 A monorepo for learning and comparing different RAG (Retrieval-Augmented Generation) implementations using Java Spring Boot and Spring AI. Each module is a decoupled bounded context with interchangeable chunking, embedding, and retrieval strategies â€” designed to be reusable across knowledge domains and to run comfortably on a regular local machine.
@@ -28,13 +28,11 @@ ollama pull phi4                # small CPU-friendly LLM
 
 # Install project dependencies (Windows)
 .\scripts\install.bat
-
 # Linux/Mac
 ./scripts/install.sh
 
 # Start PostgreSQL (Windows)
 .\scripts\docker.bat up
-
 # Linux/Mac
 ./scripts/docker.sh up
 ```
@@ -44,7 +42,6 @@ ollama pull phi4                # small CPU-friendly LLM
 ```bash
 # Build all modules (Windows)
 .\scripts\build.bat
-
 # Build a specific module
 .\scripts\build.bat rag-tui
 ```
@@ -56,7 +53,6 @@ All RAG modules depend on **rag-provider** for LLM and embedding compute. Start 
 ```bash
 # Start rag-provider (Windows)
 .\scripts\run.bat rag-provider --profile local
-
 # Linux/Mac
 ./scripts/run.sh rag-provider --profile local
 ```
@@ -66,7 +62,6 @@ Then start the TUI (Terminal UI) — it lets you add local files or web pages as
 ```bash
 # Start the TUI with local models (Windows; rag-tui is the default)
 .\scripts\run.bat --profile local
-
 # Linux/Mac
 ./scripts/run.sh --profile local
 ```
@@ -99,6 +94,77 @@ The monorepo is organized around a **thin TUI + switchable RAG modules**. Each `
 | **rag-memory** | Conversation history (non-vector) | schema `rag_memory` | `RAG_MEMORY_URL` |
 | **rag-webcrawler** | Intelligent web fetching tool | - | `RAG_WEBCRAWLER_URL` |
 | **rag-tui** | Thin interface + control plane | - | `RAG_TUI_URL` |
+
+### Module Dependencies
+
+Compile-time (Maven) and runtime (HTTP/WebSocket) interactions between modules:
+
+```mermaid
+graph TB
+    subgraph Foundation
+        contract[rag-contract<br/>OpenAPI DTOs]
+        common[rag-common<br/>Shared strategies]
+        obs[rag-observability<br/>Tracing & metrics]
+    end
+
+    subgraph Runtime Services
+        provider[rag-provider<br/>LLM & embedding service]
+        memory[rag-memory<br/>Conversation history]
+        webcrawler[rag-webcrawler<br/>Web fetching tool]
+    end
+
+    subgraph RAG Implementations
+        basic[rag-basic<br/>Basic RAG]
+        advanced[rag-advanced<br/>Advanced RAG]
+        agentic[rag-agentic<br/>Agentic RAG]
+    end
+
+    subgraph Interfaces
+        tui[rag-tui<br/>Terminal UI + control plane]
+        cli[rag-cli<br/>Interactive CLI]
+    end
+
+    subgraph Tooling
+        evaluation[rag-evaluation<br/>Benchmarking]
+    end
+
+    %% Maven compile-time dependencies
+    common --> contract
+    obs --> common
+    basic --> common
+    basic --> contract
+    basic --> obs
+    advanced --> common
+    advanced --> obs
+    agentic --> common
+    agentic --> obs
+    tui --> common
+    tui --> contract
+    memory --> contract
+    webcrawler --> common
+    webcrawler --> contract
+    provider --> contract
+    provider --> obs
+    evaluation --> common
+    cli --> common
+
+    %% Runtime HTTP/WebSocket interactions (dashed)
+    tui -.->|start/stop + route requests| basic
+    tui -.->|start/stop + route requests| advanced
+    tui -.->|start/stop + route requests| agentic
+    tui -.->|conversation history| memory
+    tui -.->|add-url crawling| webcrawler
+    basic -.->|LLM + embeddings| provider
+    advanced -.->|LLM + embeddings| provider
+    agentic -.->|LLM + embeddings| provider
+    basic -.->|web content| webcrawler
+    evaluation -.->|benchmark against| basic
+    evaluation -.->|benchmark against| advanced
+    evaluation -.->|benchmark against| agentic
+    cli -.->|queries| common
+```
+
+**Legend:** solid arrows = Maven compile-time dependency, dashed arrows = runtime HTTP/WebSocket calls.
 
 **Data isolation:** each rag-* implementation stores vectors in its own PostgreSQL schema (`rag_basic`, `rag_advanced`, ...) in a single `chunks` table with a `document_id` column - no cross-module contamination. Conversation state lives separately in `rag_memory`.
 

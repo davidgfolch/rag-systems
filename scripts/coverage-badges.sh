@@ -25,6 +25,7 @@ EXPECTED_MODULES=(
     "rag-basic"
     "rag-memory"
     "rag-webcrawler"
+    "rag-provider"
     "rag-advanced"
     "rag-agentic"
     "rag-evaluation"
