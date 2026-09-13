@@ -78,7 +78,7 @@ After any code modification:
 2. Run SonarQube and fix every issue it reports:
    `.\scripts\sonar.bat scan <token>`.
 3. The quality gate must pass before code is committed or merged:
-   `overall_code >= 85%`, `new_duplicated_lines_density < 3%`, `new_violations == 0`.
+   `coverage >= 85%`.
 
 Architecture rules are enforced automatically by the `ArchitectureTest` suites
 in every module - they run as part of every test run. Use `.\scripts\test.bat`

@@ -28,7 +28,7 @@ if "%NEW_PW%"=="" set "NEW_PW=admin"
 REM Check marker
 if exist "%MARKER%" (
     echo SonarQube admin password already configured.
-    exit /b 0
+    goto :configure_qg
 )
 
 echo Waiting for SonarQube to be ready...
@@ -53,7 +53,7 @@ set /p HTTP_CODE=<"%TEMP%\sonar_http.txt"
 if not "%HTTP_CODE%"=="200" (
     echo Warning: could not set admin password ^(HTTP %HTTP_CODE%^).
     echo The server may have already been bootstrapped.
-    exit /b 0
+    goto :configure_qg
 )
 
 echo Admin password set.
@@ -68,7 +68,7 @@ set "TOKEN_VALUE=%TOKEN_VALUE:"=%"
 if "%TOKEN_VALUE%"=="" (
     echo Warning: could not generate token.
     echo Check SonarQube logs or generate manually at %HOST%
-    exit /b 0
+    goto :configure_qg
 )
 
 echo Token generated: %TOKEN_VALUE%
@@ -81,9 +81,10 @@ if exist "%SECRETS_FILE%" (
     echo SONAR_TOKEN=%TOKEN_VALUE%>> "%SECRETS_FILE%"
 )
 
+:configure_qg
 REM --- Quality Gate: enforce 85% overall coverage ---
 set "GATE_NAME=RAG 85%% Coverage"
-set "GATE_CONDITION_METRIC=overall_code"
+set "GATE_CONDITION_METRIC=coverage"
 set "GATE_CONDITION_OP=LT"
 set "GATE_CONDITION_VALUE=85"
 set "PROJECT_KEY=com.rag:rag-systems"

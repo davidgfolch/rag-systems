@@ -34,7 +34,7 @@ class ArchitectureTest {
     private static final String ROOT = "com.rag.common";
 
     private static final Set<String> ALLOWED_ROOT_ENTRIES = Set.of(
-            ".claude", ".github", ".git", ".idea", ".mvn", ".opencode",
+            ".claude", ".github", ".git", ".idea", ".mvn", ".opencode", ".sonarqube",
             "apps", "docs", "docker", "scripts", "target",
             ".dockerignore", ".gitignore", ".codegraph",
             ".env", ".env.secrets",

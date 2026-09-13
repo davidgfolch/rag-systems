@@ -51,6 +51,8 @@
 
         <!-- Static analysis -->
         <sonar.version>5.7.0.6970</sonar.version>
+        <!-- Mirrors the JaCoCo excludes: wiring/bootstrap/generated code is not counted toward the coverage gate -->
+        <sonar.coverage.exclusions>**/config/**,**/*Application.*,**/dto/**,**/generated-sources/**</sonar.coverage.exclusions>
 
         <!-- Testing -->
         <archunit.version>1.4.1</archunit.version>
@@ -189,6 +191,7 @@
                         </execution>
                         <execution>
                             <id>check</id>
+                            <phase>test</phase>
                             <goals>
                                 <goal>check</goal>
                             </goals>

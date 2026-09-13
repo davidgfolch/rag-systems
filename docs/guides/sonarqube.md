@@ -97,9 +97,9 @@ On first boot the script will fill in `SONAR_TOKEN` automatically — do **not**
 The script waits for the server to be ready, then runs `scripts/sonar-pw.{bat,sh}`, which:
 1. Sets the admin password to `SONAR_ADMIN_PASSWORD` (from `.env.secrets` or the shell, default `admin`).
 2. Generates a `rag-local-ci` analysis token and saves it to `SONAR_TOKEN` in `.env.secrets`.
-3. Writes a `.sonarqube/admin_pw_set` marker so it only runs once (uses the persistent `sonarqube_data` volume).
+3. Writes a `.sonarqube/admin_pw_set` marker so the admin/token bootstrap only runs once (uses the persistent `sonarqube_data` volume).
 
-Subsequent `up`/`up-scan` runs skip bootstrap. To force a reset (new password/token), delete the `.sonarqube/admin_pw_set` marker and restart (the `sonarqube_data` volume is retained):
+Subsequent `up`/`up-scan` runs skip the admin/token bootstrap (the marker exists) but still **re-apply the quality gate**. To force a reset (new password/token), delete the `.sonarqube/admin_pw_set` marker and restart (the `sonarqube_data` volume is retained):
 
 ```bash
 rm .sonarqube/admin_pw_set
@@ -160,15 +160,13 @@ If `jq` (Linux/Mac) is missing or the analysis is not yet available on the serve
 
 ## The Quality Gate
 
-During first bootstrap (`sonar-pw.{sh,bat}`), a custom quality gate **"RAG 85% Coverage"** is created and assigned to the project. It enforces the same 85% overall coverage threshold that the JaCoCo build-time check uses, so SonarQube and the Maven build agree on the minimum:
+During every bootstrap run (`sonar-pw.{sh,bat}`), a custom quality gate **"RAG 85% Coverage"** is created and assigned to the project. The gate setup is idempotent and re-applied on each run, so it also updates already-bootstrapped servers. It enforces the same 85% overall coverage threshold that the JaCoCo build-time check uses, so SonarQube and the Maven build agree on the minimum:
 
 | Condition | Requirement |
 |-----------|-------------|
-| `overall_code` coverage | ≥ 85% on overall code |
-| `new_duplicated_lines_density` | < 3% |
-| `new_violations` | 0 (no new issues, unless security hotspot) |
+| `coverage` `<` 85 | Gate fails when overall line coverage drops below 85% |
 
-The `overall_code` metric covers both new and existing code, aligning the SonarQube quality gate with the JaCoCo `INSTRUCTION` check (`minimum=0.85` in the parent POM). Because the gate measures **overall code**, refactoring a method (e.g., splitting a large method into helpers) can lower coverage until those branches are covered by tests.
+The `coverage` metric covers both new and existing code, aligning the SonarQube quality gate with the JaCoCo `INSTRUCTION` check (`minimum=0.85` in the parent POM) and the `sonar.coverage.exclusions` in `sonar-project.properties`. Because the gate measures **overall code**, refactoring a method (e.g., splitting a large method into helpers) can lower coverage until those branches are covered by tests.
 
 ## Fixing Findings (workflow)
 

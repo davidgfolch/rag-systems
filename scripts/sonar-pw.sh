@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # ===== SonarQube Bootstrap: set admin password + generate token (Linux/Mac) =====
 # Called automatically by sonar.sh after SonarQube is ready.
-# Idempotent: uses .sonarqube/admin_pw_set marker to skip on subsequent runs.
+# Idempotent: uses .sonarqube/admin_pw_set marker to skip admin/token setup on
+# subsequent runs, but always (re)applies the quality gate.
 # Env: SONAR_ADMIN_PASSWORD (from .env.secrets or shell), SONAR_TOKEN (from .env.secrets or shell).
 
 set -euo pipefail
@@ -25,8 +26,51 @@ NEW_PW="${SONAR_ADMIN_PASSWORD:-admin}"
 ADMIN_USER="admin"
 ADMIN_PASS="${NEW_PW}"
 
+# --- Quality Gate: enforce 85% overall coverage ---
+# The gate key must match the project key the Maven scan publishes under
+# (com.rag:rag-systems). Runs on every invocation (idempotent) so an
+# already-bootstrapped server also picks up gate changes.
+configure_qg() {
+    GATE_NAME="RAG 85% Coverage"
+    GATE_CONDITION_METRIC="coverage"
+    GATE_CONDITION_OP="LT"
+    GATE_CONDITION_VALUE="85"
+    PROJECT_KEY="com.rag:rag-systems"
+
+    echo "Configuring quality gate (>= 85% coverage)..."
+    HTTP_CODE=$(curl -sf -o /dev/null -w "%{http_code}" \
+        -u "$ADMIN_USER:$NEW_PW" \
+        -X POST "$HOST/api/qualitygates/create" \
+        -d "name=$GATE_NAME" 2>/dev/null || true)
+
+    if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "409" ]; then
+        curl -sf -o /dev/null \
+            -u "$ADMIN_USER:$NEW_PW" \
+            -X POST "$HOST/api/qualitygates/create_condition" \
+            -d "gateName=$GATE_NAME" \
+            -d "metric=$GATE_CONDITION_METRIC" \
+            -d "op=$GATE_CONDITION_OP" \
+            -d "error=$GATE_CONDITION_VALUE" 2>/dev/null || true
+
+        curl -sf -o /dev/null \
+            -u "$ADMIN_USER:$NEW_PW" \
+            -X POST "$HOST/api/qualitygates/select" \
+            -d "gateName=$GATE_NAME" \
+            -d "projectKey=$PROJECT_KEY" 2>/dev/null || true
+
+        echo "Quality gate '$GATE_NAME' configured (>= $GATE_CONDITION_VALUE% coverage)."
+    else
+        echo "Warning: could not create quality gate (HTTP $HTTP_CODE)."
+    fi
+
+    # Write marker
+    mkdir -p "$(dirname "$MARKER")"
+    touch "$MARKER"
+}
+
 if [ -f "$MARKER" ]; then
     echo "SonarQube admin password already configured."
+    configure_qg
     exit 0
 fi
 
@@ -55,6 +99,7 @@ HTTP_CODE=$(curl -sf -o /dev/null -w "%{http_code}" \
 if [ "$HTTP_CODE" -ne 200 ]; then
     echo "Warning: could not set admin password (HTTP $HTTP_CODE)."
     echo "The server may have already been bootstrapped."
+    configure_qg
     exit 0
 fi
 
@@ -71,6 +116,7 @@ TOKEN_VALUE=$(echo "$TOKEN_RESPONSE" | grep -o '"token":"[^"]*"' | cut -d'"' -f4
 if [ -z "$TOKEN_VALUE" ]; then
     echo "Warning: could not generate token."
     echo "Check SonarQube logs or generate manually at $HOST"
+    configure_qg
     exit 0
 fi
 
@@ -89,41 +135,6 @@ else
     echo "SONAR_TOKEN=$TOKEN_VALUE" >> "$SECRETS_FILE"
 fi
 
-# --- Quality Gate: enforce 85% overall coverage ---
-GATE_NAME="RAG 85% Coverage"
-GATE_CONDITION_METRIC="overall_code"
-GATE_CONDITION_OP="LT"
-GATE_CONDITION_VALUE="85"
-PROJECT_KEY="com.rag:rag-systems"
-
-echo "Configuring quality gate (>= 85% coverage)..."
-HTTP_CODE=$(curl -sf -o /dev/null -w "%{http_code}" \
-    -u "$ADMIN_USER:$NEW_PW" \
-    -X POST "$HOST/api/qualitygates/create" \
-    -d "name=$GATE_NAME" 2>/dev/null || true)
-
-if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "409" ]; then
-    curl -sf -o /dev/null \
-        -u "$ADMIN_USER:$NEW_PW" \
-        -X POST "$HOST/api/qualitygates/create_condition" \
-        -d "gateName=$GATE_NAME" \
-        -d "metric=$GATE_CONDITION_METRIC" \
-        -d "op=$GATE_CONDITION_OP" \
-        -d "error=$GATE_CONDITION_VALUE" 2>/dev/null || true
-
-    curl -sf -o /dev/null \
-        -u "$ADMIN_USER:$NEW_PW" \
-        -X POST "$HOST/api/qualitygates/select" \
-        -d "gateName=$GATE_NAME" \
-        -d "projectKey=$PROJECT_KEY" 2>/dev/null || true
-
-    echo "Quality gate '$GATE_NAME' configured (>= $GATE_CONDITION_VALUE% coverage)."
-else
-    echo "Warning: could not create quality gate (HTTP $HTTP_CODE)."
-fi
-
-# Write marker
-mkdir -p "$(dirname "$MARKER")"
-touch "$MARKER"
+configure_qg
 
 echo "SonarQube bootstrap complete. Token saved to $SECRETS_FILE."
