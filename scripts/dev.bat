@@ -88,22 +88,45 @@ popd
 if not "%CGERR%"=="0" echo Warning: CodeGraph index build failed for %~1.
 goto :eof
 
-:stop_codegraph
-REM Stop any CodeGraph daemon holding locks on the target clone's .codegraph db:
-REM the clone's own daemon (if any) and the main workspace daemon (locks clones
-REM opened via codegraph projectPath queries).
-set "TARGET=%~1"
-set "MAIN=%ROOT%\..\rag-systems"
-set "STOPPED="
-for %%P in ("%TARGET%\.codegraph\daemon.pid" "%MAIN%\.codegraph\daemon.pid") do (
-    if exist "%%~P" (
-        for /f "usebackq delims=" %%R in (`powershell -NoProfile -Command "$p=(Get-Content -Raw '%%~P' | ConvertFrom-Json).pid; if ($p -and (Get-Process -Id $p -ErrorAction SilentlyContinue)) { Stop-Process -Id $p -Force -ErrorAction SilentlyContinue; Write-Output $p }"`) do (
-            echo Stopped CodeGraph daemon %%R ^(tracked by %%~P^)
-            set "STOPPED=1"
-        )
-    )
+:stop_codegraph_daemon
+REM Stop the CodeGraph daemon recorded in %~1 (a daemon.pid JSON file), but only
+REM when the pid maps to a real CodeGraph process. Stale/recycled pids are skipped.
+if not exist "%~1" exit /b 0
+for /f "usebackq delims=" %%P in (`powershell -NoProfile -Command "$json = Get-Content -Raw '%~1' | ConvertFrom-Json; $p = $json.pid; if ($p) { $proc = Get-CimInstance Win32_Process -Filter ('ProcessId=' + $p) -ErrorAction SilentlyContinue; if ($proc -and $proc.ExecutablePath -like '*codegraph*') { Stop-Process -Id $p -Force -ErrorAction SilentlyContinue; Write-Output $p } }"`) do (
+    echo Stopped CodeGraph daemon %%P ^(tracked by %~1^)
 )
-if defined STOPPED echo CodeGraph daemons stopped; clone can be deleted.
+exit /b 0
+
+:release_codegraph_locks
+REM Release CodeGraph locks on the clone %~1. Only its own daemon can lock its
+REM index, so the main-workspace daemon is left alone unless the delete fails.
+set "RC_TARGET=%~1"
+if not exist "%RC_TARGET%\.codegraph\codegraph.db" (
+    echo No CodeGraph index in %RC_TARGET% - nothing to release.
+    exit /b 0
+)
+call :stop_codegraph_daemon "%RC_TARGET%\.codegraph\daemon.pid"
+exit /b 0
+
+:delete_clone
+REM Delete clone %~1. First release its own CodeGraph daemon, then delete. If the
+REM directory survives (main-workspace daemon holds its DB open), release that
+REM daemon as well and retry once.
+set "DC_TARGET=%~1"
+call :release_codegraph_locks "%DC_TARGET%"
+cd /d "%DC_TARGET%\.."
+echo Deleting clone %DC_TARGET%...
+rmdir /s /q "%DC_TARGET%"
+if exist "%DC_TARGET%" (
+    echo Delete blocked; releasing main-workspace CodeGraph daemon and retrying...
+    call :stop_codegraph_daemon "%ROOT%\..\rag-systems\.codegraph\daemon.pid"
+    rmdir /s /q "%DC_TARGET%"
+)
+if exist "%DC_TARGET%" (
+    echo Error: could not delete %DC_TARGET% even after releasing CodeGraph daemons.
+    exit /b 1
+)
+echo Clone deleted.
 exit /b 0
 
 :checkout
@@ -237,11 +260,7 @@ if not errorlevel 1 (
         set "SUFFIX=%CURBRANCH:feat/=%"
         set "TARGET=%ROOT%\..\rag-systems-%SUFFIX%"
         if exist "%TARGET%" (
-            call :stop_codegraph "%TARGET%"
-            cd /d "%TARGET%\.."
-            echo Deleting clone %TARGET%...
-            rmdir /s /q "%TARGET%"
-            echo Clone deleted.
+            call :delete_clone "%TARGET%"
         )
     )
 ) else (
@@ -254,10 +273,7 @@ set "NAME=%~2"
 if "%NAME%"=="" goto :usage
 set "TARGET=%ROOT%\..\rag-systems-%NAME%"
 if exist "%TARGET%" (
-    call :stop_codegraph "%TARGET%"
-    echo Deleting %TARGET%...
-    rmdir /s /q "%TARGET%"
-    echo Deleted.
+    call :delete_clone "%TARGET%"
 ) else (
     echo Not found: %TARGET%
 )
