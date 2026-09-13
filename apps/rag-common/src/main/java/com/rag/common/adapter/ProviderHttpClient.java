@@ -1,6 +1,8 @@
 package com.rag.common.adapter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rag.common.tracing.TracePropagation;
+import io.micrometer.tracing.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,7 +15,9 @@ import java.net.http.HttpResponse;
 
 /**
  * Minimal JSON-over-HTTP client for the rag-provider service. Uses only the JDK
- * {@link HttpClient} so rag-common needs no Spring Web dependency.
+ * {@link HttpClient} so rag-common needs no Spring Web dependency. When a
+ * {@link Tracer} is available the current span is propagated as a W3C
+ * {@code traceparent} header so rag-provider keeps the same trace id.
  */
 public class ProviderHttpClient {
 
@@ -22,22 +26,32 @@ public class ProviderHttpClient {
     private final String baseUrl;
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
+    private final Tracer tracer;
 
     public ProviderHttpClient(String baseUrl, ObjectMapper objectMapper) {
-        this(baseUrl, HttpClient.newHttpClient(), objectMapper);
+        this(baseUrl, HttpClient.newHttpClient(), objectMapper, null);
+    }
+
+    public ProviderHttpClient(String baseUrl, ObjectMapper objectMapper, Tracer tracer) {
+        this(baseUrl, HttpClient.newHttpClient(), objectMapper, tracer);
     }
 
     public ProviderHttpClient(String baseUrl, HttpClient httpClient, ObjectMapper objectMapper) {
+        this(baseUrl, httpClient, objectMapper, null);
+    }
+
+    public ProviderHttpClient(String baseUrl, HttpClient httpClient, ObjectMapper objectMapper, Tracer tracer) {
         this.baseUrl = trimSlash(baseUrl);
         this.httpClient = httpClient;
         this.objectMapper = objectMapper;
+        this.tracer = tracer;
     }
 
     public <T> T postJson(String path, Object body, Class<T> responseType) {
         try {
-            var request = HttpRequest.newBuilder(uri(path))
+            var request = withTracePropagation(HttpRequest.newBuilder(uri(path))
                     .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body)))
+                    .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body))))
                     .build();
             var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             return parse(response, responseType);
@@ -50,7 +64,7 @@ public class ProviderHttpClient {
 
     public <T> T get(String path, Class<T> responseType) {
         try {
-            var request = HttpRequest.newBuilder(uri(path)).GET().build();
+            var request = withTracePropagation(HttpRequest.newBuilder(uri(path))).GET().build();
             var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             return parse(response, responseType);
         } catch (IOException | InterruptedException e) {
@@ -66,10 +80,10 @@ public class ProviderHttpClient {
      */
     public InputStream postStream(String path, Object body) {
         try {
-            var request = HttpRequest.newBuilder(uri(path))
+            var request = withTracePropagation(HttpRequest.newBuilder(uri(path))
                     .header("Content-Type", "application/json")
                     .header("Accept", "text/event-stream")
-                    .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body)))
+                    .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body))))
                     .build();
             log.debug("Opening provider stream at {}", path);
             var response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
@@ -82,6 +96,14 @@ public class ProviderHttpClient {
             throw new IllegalStateException(
                     "Provider stream request failed for " + path + " at " + baseUrl + ": " + describe(e), e);
         }
+    }
+
+    private HttpRequest.Builder withTracePropagation(HttpRequest.Builder builder) {
+        var span = tracer != null ? tracer.currentSpan() : null;
+        if (span != null) {
+            builder.header(TracePropagation.TRACEPARENT_HEADER, TracePropagation.w3cTraceparent(span.context()));
+        }
+        return builder;
     }
 
     private <T> T parse(HttpResponse<String> response, Class<T> responseType) {

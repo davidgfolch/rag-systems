@@ -1,16 +1,20 @@
 package com.rag.tui.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rag.common.tracing.TracePropagation;
 import com.rag.tui.launcher.ModuleRegistry;
 import com.rag.tui.testfixture.TestModules;
+import io.micrometer.tracing.test.simple.SimpleTracer;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketHandler;
+import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.WebSocketSession;
 import org.mockito.ArgumentCaptor;
 import org.springframework.web.socket.client.WebSocketClient;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -93,5 +97,31 @@ class ChatGatewayTest {
     void cancelWithoutActiveSessionDoesNothing() throws Exception {
         sut.cancel();
         verify(session, never()).close();
+    }
+
+    @Test
+    void attachesW3CTraceparentWhenSpanActive() throws Exception {
+        var tracer = new SimpleTracer();
+        var span = tracer.nextSpan().name("tui.command").start();
+        var gateway = new ChatGateway(registry, webSocketClient, new ObjectMapper(), 60, tracer);
+        ArgumentCaptor<WebSocketHandler> handlerCaptor =
+                ArgumentCaptor.forClass(WebSocketHandler.class);
+        ArgumentCaptor<WebSocketHttpHeaders> headersCaptor =
+                ArgumentCaptor.forClass(WebSocketHttpHeaders.class);
+        when(webSocketClient.execute(handlerCaptor.capture(), headersCaptor.capture(), any(URI.class)))
+                .thenReturn(CompletableFuture.completedFuture(session));
+        doNothing().when(session).sendMessage(any(TextMessage.class));
+        runner = new Thread(() ->
+                TracePropagation.runWithSpan(tracer, span, () -> gateway.ask("hello", 4, t -> {})));
+        runner.setUncaughtExceptionHandler((thread, error) -> runnerError = error);
+        runner.start();
+        verify(webSocketClient, timeout(2000)).execute(any(), any(WebSocketHttpHeaders.class), any(URI.class));
+        assertThat(headersCaptor.getValue().getFirst(TracePropagation.TRACEPARENT_HEADER))
+                .isEqualTo(TracePropagation.w3cTraceparent(span.context()));
+        handler = (TextWebSocketHandler) handlerCaptor.getValue();
+        feedEvent(session, "{\"type\":\"" + DONE + "\",\"content\":\"hi\",\"conversationId\":\"x\"}");
+        runner.join(2000);
+        assertThat(runner.isAlive()).isFalse();
+        span.end();
     }
 }

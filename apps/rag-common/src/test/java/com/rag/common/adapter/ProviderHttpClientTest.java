@@ -1,12 +1,14 @@
 package com.rag.common.adapter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rag.common.tracing.TracePropagation;
 import com.rag.contract.constants.ApiPaths;
 import com.rag.contract.provider.CompleteRequest;
 import com.rag.contract.provider.CompleteResponse;
 import com.rag.contract.provider.ProviderStatusDTO;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import io.micrometer.tracing.test.simple.SimpleTracer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -15,6 +17,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -81,6 +84,48 @@ class ProviderHttpClientTest {
         try (var body = client.postStream(ApiPaths.CHAT_STREAM, new CompleteRequest("hi"))) {
             assertThat(body).isNotNull();
         }
+    }
+
+    @Test
+    void shouldAttachW3CTraceparentWhenSpanActive() {
+        AtomicReference<String> traceparent = new AtomicReference<>();
+        server.createContext(ApiPaths.COMPLETE, exchange -> {
+            traceparent.set(exchange.getRequestHeaders().getFirst(TracePropagation.TRACEPARENT_HEADER));
+            respond(exchange, 200, "application/json", "{\"answer\":\"Hi\"}");
+        });
+        var tracer = new SimpleTracer();
+        var traced = new ProviderHttpClient("http://localhost:" + server.getAddress().getPort(),
+                new ObjectMapper(), tracer);
+        var span = tracer.nextSpan().name("test-call").start();
+        try (var _ = tracer.withSpan(span)) {
+            traced.postJson(ApiPaths.COMPLETE, new CompleteRequest("hi"), CompleteResponse.class);
+        }
+        assertThat(traceparent.get())
+                .matches("^00-" + span.context().traceId() + "-[0-9a-f]{16}-[01]{2}$");
+    }
+
+    @Test
+    void shouldSkipTraceparentWhenNoSpanActive() {
+        AtomicReference<String> traceparent = new AtomicReference<>();
+        server.createContext(ApiPaths.COMPLETE, exchange -> {
+            traceparent.set(exchange.getRequestHeaders().getFirst(TracePropagation.TRACEPARENT_HEADER));
+            respond(exchange, 200, "application/json", "{\"answer\":\"Hi\"}");
+        });
+        var traced = new ProviderHttpClient("http://localhost:" + server.getAddress().getPort(),
+                new ObjectMapper(), new SimpleTracer());
+        traced.postJson(ApiPaths.COMPLETE, new CompleteRequest("hi"), CompleteResponse.class);
+        assertThat(traceparent.get()).isNull();
+    }
+
+    @Test
+    void shouldSkipTraceparentWithoutTracer() {
+        AtomicReference<String> traceparent = new AtomicReference<>();
+        server.createContext(ApiPaths.COMPLETE, exchange -> {
+            traceparent.set(exchange.getRequestHeaders().getFirst(TracePropagation.TRACEPARENT_HEADER));
+            respond(exchange, 200, "application/json", "{\"answer\":\"Hi\"}");
+        });
+        client.postJson(ApiPaths.COMPLETE, new CompleteRequest("hi"), CompleteResponse.class);
+        assertThat(traceparent.get()).isNull();
     }
 
     @Test

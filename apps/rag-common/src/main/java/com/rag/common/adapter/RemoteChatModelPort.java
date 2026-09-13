@@ -2,9 +2,12 @@ package com.rag.common.adapter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rag.common.services.ChatModelPort;
+import com.rag.common.tracing.TracePropagation;
 import com.rag.contract.provider.CompleteRequest;
 import com.rag.contract.provider.CompleteResponse;
 import com.rag.contract.ws.ChatResponse;
+import io.micrometer.tracing.Span;
+import io.micrometer.tracing.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
@@ -32,10 +35,16 @@ public class RemoteChatModelPort implements ChatModelPort {
 
     private final ProviderHttpClient httpClient;
     private final ObjectMapper objectMapper;
+    private final Tracer tracer;
 
     public RemoteChatModelPort(ProviderHttpClient httpClient, ObjectMapper objectMapper) {
+        this(httpClient, objectMapper, null);
+    }
+
+    public RemoteChatModelPort(ProviderHttpClient httpClient, ObjectMapper objectMapper, Tracer tracer) {
         this.httpClient = httpClient;
         this.objectMapper = objectMapper;
+        this.tracer = tracer;
     }
 
     @Override
@@ -49,8 +58,9 @@ public class RemoteChatModelPort implements ChatModelPort {
     @Override
     public Flux<String> completeStream(String prompt) {
         log.info("Remote chat stream started: promptLength={}", prompt.length());
+        Span span = tracer != null ? tracer.currentSpan() : null;
         Sinks.Many<String> sink = Sinks.many().unicast().onBackpressureBuffer();
-        Thread.ofVirtual().start(() -> readStream(prompt, sink));
+        Thread.ofVirtual().start(() -> TracePropagation.runWithSpan(tracer, span, () -> readStream(prompt, sink)));
         return sink.asFlux();
     }
 

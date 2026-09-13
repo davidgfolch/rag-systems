@@ -23,6 +23,11 @@
 
         <dependency>
             <groupId>com.rag</groupId>
+            <artifactId>rag-observability</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.rag</groupId>
             <artifactId>rag-contract</artifactId>
         </dependency>
 
@@ -63,6 +68,11 @@
         <dependency>
             <groupId>org.awaitility</groupId>
             <artifactId>awaitility</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing-test</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

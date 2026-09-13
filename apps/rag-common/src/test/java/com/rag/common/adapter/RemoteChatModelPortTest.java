@@ -1,9 +1,11 @@
 package com.rag.common.adapter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rag.common.tracing.TracePropagation;
 import com.rag.contract.constants.ApiPaths;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import io.micrometer.tracing.test.simple.SimpleTracer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,6 +15,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -70,6 +73,26 @@ class RemoteChatModelPortTest {
         StepVerifier.create(port.completeStream("hi"))
                 .expectErrorSatisfies(error -> assertThat(error).hasMessageContaining("nope"))
                 .verify();
+    }
+
+    @Test
+    void shouldPropagateCallerSpanToStreamRequest() {
+        AtomicReference<String> traceparent = new AtomicReference<>();
+        server.createContext(ApiPaths.CHAT_STREAM, exchange -> {
+            traceparent.set(exchange.getRequestHeaders().getFirst(TracePropagation.TRACEPARENT_HEADER));
+            respond(exchange, 200, "text/event-stream",
+                    "data:{\"type\":\"done\",\"content\":null,\"conversationId\":null}\n\n");
+        });
+        var tracer = new SimpleTracer();
+        var tracedClient = new ProviderHttpClient("http://localhost:" + server.getAddress().getPort(),
+                new ObjectMapper(), tracer);
+        var tracedPort = new RemoteChatModelPort(tracedClient, new ObjectMapper(), tracer);
+        var span = tracer.nextSpan().name("test-stream").start();
+        try (var _ = tracer.withSpan(span)) {
+            StepVerifier.create(tracedPort.completeStream("hi")).verifyComplete();
+        }
+        assertThat(traceparent.get())
+                .matches("^00-" + span.context().traceId() + "-[0-9a-f]{16}-[01]{2}$");
     }
 
     private static void respond(HttpExchange exchange, int code, String contentType, String body)

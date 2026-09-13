@@ -1,6 +1,8 @@
 spring:
   application:
     name: rag-memory
+  profiles:
+    active: local,observability
   datasource:
     url: jdbc:postgresql://${PGVECTOR_HOST:localhost}:${PGVECTOR_PORT:5432}/${PGVECTOR_DB:rag}
     username: ${PGVECTOR_USER:rag}

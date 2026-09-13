@@ -2,6 +2,9 @@ package com.rag.common.services;
 
 import com.rag.common.domain.Document;
 import com.rag.common.repositories.VectorStorePort;
+import com.rag.common.tracing.TracePropagation;
+import io.micrometer.tracing.Span;
+import io.micrometer.tracing.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,20 +32,26 @@ public class AsyncIngestionService {
     private final IngestionService delegate;
     private final ExecutorService executor;
     private final VectorStorePort preflight;
+    private final Tracer tracer;
     private final Map<String, Job> jobs = new ConcurrentHashMap<>();
 
     public AsyncIngestionService(IngestionService delegate) {
-        this(delegate, null, null);
+        this(delegate, null, null, null);
     }
 
     public AsyncIngestionService(IngestionService delegate, ExecutorService executor) {
-        this(delegate, null, executor);
+        this(delegate, null, executor, null);
     }
 
     public AsyncIngestionService(IngestionService delegate, VectorStorePort preflight, ExecutorService executor) {
+        this(delegate, preflight, executor, null);
+    }
+
+    public AsyncIngestionService(IngestionService delegate, VectorStorePort preflight, ExecutorService executor, Tracer tracer) {
         this.delegate = delegate;
         this.preflight = preflight;
         this.executor = executor != null ? executor : Executors.newVirtualThreadPerTaskExecutor();
+        this.tracer = tracer;
     }
 
     /**
@@ -55,7 +64,8 @@ public class AsyncIngestionService {
         jobs.put(document.getId(), job);
         job.state = STATE_PENDING;
         log.info("Async ingestion submitted: document {}", document.getId());
-        executor.submit(() -> run(job, document));
+        Span span = tracer != null ? tracer.currentSpan() : null;
+        executor.submit(() -> TracePropagation.runWithSpan(tracer, span, () -> run(job, document)));
         return document.getId();
     }
 

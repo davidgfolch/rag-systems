@@ -48,6 +48,13 @@
             <artifactId>logstash-logback-encoder</artifactId>
         </dependency>
 
+        <!-- Loki logback appender -->
+        <dependency>
+            <groupId>com.github.loki4j</groupId>
+            <artifactId>loki-logback-appender</artifactId>
+            <version>2.1.0</version>
+        </dependency>
+
         <!-- Test -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
