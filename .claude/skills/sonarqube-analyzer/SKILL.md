@@ -44,7 +44,7 @@ Analysis always runs the full test suite first (`mvn verify` with JaCoCo), then 
 
 ### 3. Read the results
 - Dashboard: `http://localhost:9000` → project `com.rag:rag-systems`.
-- **Quality gate conditions** (`api/qualitygates/project_status`): `new_coverage ≥ 80%`, `new_duplicated_lines_density < 3%`, `new_violations == 0`.
+- **Quality gate conditions** (`api/qualitygates/project_status`): the local "RAG 85% Coverage" gate fails when overall `coverage < 85%`.
 - The Maven build does **not** fail on a red gate by default; always check the dashboard/API for gate status.
 
 ## Fixing Findings
@@ -61,7 +61,7 @@ mvn clean verify sonar:sonar -Dsonar.token=<token> -Dsonar.host.url=http://local
 
 ## Quality Gate on Refactors
 
-The gate measures **new/modified lines**. Refactoring a method (e.g., splitting a large method into helpers) counts the refactored lines as "new code" and can drop `new_coverage` until those branches are covered by tests. Always add tests for any newly introduced branches.
+The gate measures **overall code coverage** (metric `coverage`, mirroring the JaCoCo `INSTRUCTION` check at ≥ 85%). Because it covers existing code too, refactoring a method (e.g., splitting a large method into helpers) can lower coverage until those branches are covered by tests.
 
 ## Common Rules Seen in This Repo
 
@@ -81,7 +81,7 @@ The gate measures **new/modified lines**. Refactoring a method (e.g., splitting 
 Refuse to mark the task complete until:
 1. `.\scripts\sonar.bat scan` (or `sonar.sh`) runs the full suite without errors (token auto-loaded from `.env.secrets`).
 2. The SonarQube **quality gate is `OK`**.
-3. `new_coverage` on changed code is `≥ 80%`.
+3. Overall `coverage` is `≥ 85%` (the local "RAG 85% Coverage" gate is `OK`).
 4. Architecture tests still pass: `.\scripts\test.bat` (architecture tests always run as part of the suite).
 
 ## Gotchas
