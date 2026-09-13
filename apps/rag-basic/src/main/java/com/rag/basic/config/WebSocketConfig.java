@@ -14,13 +14,15 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 public class WebSocketConfig implements WebSocketConfigurer {
 
     private final ChatWebSocketHandler chatHandler;
+    private final TraceHandshakeInterceptor traceHandshakeInterceptor;
 
-    public WebSocketConfig(ChatWebSocketHandler chatHandler) {
+    public WebSocketConfig(ChatWebSocketHandler chatHandler, TraceHandshakeInterceptor traceHandshakeInterceptor) {
         this.chatHandler = chatHandler;
+        this.traceHandshakeInterceptor = traceHandshakeInterceptor;
     }
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(chatHandler, "/ws/chat");
+        registry.addHandler(chatHandler, "/ws/chat").addInterceptors(traceHandshakeInterceptor);
     }
 }

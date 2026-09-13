@@ -12,6 +12,34 @@ services:
     depends_on:
       - postgres
 
+  tempo:
+    image: grafana/tempo:2.6.1
+    container_name: rag-tempo
+    volumes:
+      - ./tempo/tempo.yml:/etc/tempo/tempo.yml:ro
+      - tempo_data:/var/tempo
+    ports:
+      - "4317:4317"   # OTLP gRPC (collector-compatible)
+      - "4318:4318"   # OTLP HTTP (used by Spring Boot exporters)
+      - "3200:3200"   # Tempo query frontend / UI
+    command:
+      - "-config.file=/etc/tempo/tempo.yml"
+    depends_on:
+      - postgres
+
+  loki:
+    image: grafana/loki:3.4.1
+    container_name: rag-loki
+    volumes:
+      - ./loki/loki.yml:/etc/loki/loki.yml:ro
+      - loki_data:/loki
+    ports:
+      - "3100:3100"
+    command:
+      - "-config.file=/etc/loki/loki.yml"
+    depends_on:
+      - postgres
+
   grafana:
     image: grafana/grafana:11.4.0
     container_name: rag-grafana
@@ -27,7 +55,11 @@ services:
       - "3000:3000"
     depends_on:
       - prometheus
+      - tempo
+      - loki
 
 volumes:
   prometheus_data:
+  tempo_data:
+  loki_data:
   grafana_data:

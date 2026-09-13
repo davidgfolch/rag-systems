@@ -4,14 +4,21 @@ import com.rag.common.domain.Chunk;
 import com.rag.common.domain.Document;
 import com.rag.common.domain.MetadataKeys;
 import com.rag.common.repositories.VectorStorePort;
+import com.rag.common.tracing.TracePropagation;
+import io.micrometer.tracing.test.simple.SimpleTracer;
 import org.junit.jupiter.api.Test;
+import org.slf4j.MDC;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -75,6 +82,32 @@ class AsyncIngestionServiceTest {
         var status = service.status("nope");
         assertThat(status.state()).isEqualTo("FAILED");
         assertThat(status.message()).contains("No such ingestion job");
+    }
+
+    @Test
+    void propagatesSubmitSpanOntoWorkerThread() {
+        SimpleTracer tracer = new SimpleTracer();
+        var delegate = ingestionService();
+        when(parser.parse(any())).thenReturn("hello world");
+        when(splitter.split(any())).thenReturn(List.of(new Chunk("c1", "d1", "hello world", 0, Map.of())));
+        AtomicReference<String> workerTraceId = new AtomicReference<>();
+        when(embeddingModel.embed(anyList())).thenAnswer(invocation -> {
+            workerTraceId.set(MDC.get(TracePropagation.MDC_TRACE_ID));
+            return List.of(List.of(1.0f, 0.0f));
+        });
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            var service = new AsyncIngestionService(delegate, null, executor, tracer);
+            var span = tracer.nextSpan().name("test-ingest").start();
+            try (var _ = tracer.withSpan(span)) {
+                service.submit(new Document("d1", "", Map.of(MetadataKeys.RAW_BYTES, new byte[]{1})));
+            }
+            var status = await(service, "d1");
+            assertThat(status.state()).isEqualTo("COMPLETED");
+            assertThat(workerTraceId.get()).isEqualTo(span.context().traceId());
+        } finally {
+            executor.shutdownNow();
+        }
     }
 
     private static AsyncIngestionService.JobStatus await(AsyncIngestionService service, String id) {
