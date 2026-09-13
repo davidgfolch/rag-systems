@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # ===== RAG Systems Test Script (Linux/Mac) =====
 # Usage: ./test.sh [options] [module]
-#   ./test.sh                     - Run all tests (incl. architecture tests)
-#   ./test.sh --coverage          - Run tests with coverage (JaCoCo)
-#   ./test.sh rag-basic           - Run only a specific module
-#   ./test.sh rag-basic --coverage - Combine module + coverage
+#   ./test.sh                     - Run all tests with coverage (verify; JaCoCo 85% check enforced)
+#   ./test.sh --coverage          - Alias of the default (verify + JaCoCo check)
+#   ./test.sh rag-basic           - Run only a specific module (verify)
+#   ./test.sh rag-basic --coverage - Combine module + verify
 # Architecture tests (ArchitectureTest) always run as part of the test suite.
 
 set -euo pipefail
@@ -14,7 +14,7 @@ cd "$ROOT"
 # Bootstrap root .env files from scripts/.env*.example (idempotent)
 bash scripts/bootstrap-env.sh
 
-COVERAGE_GOAL="test"
+COVERAGE_GOAL="verify"
 MODULE_SPEC=""
 
 for arg in "$@"; do
