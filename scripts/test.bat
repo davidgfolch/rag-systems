@@ -2,10 +2,10 @@
 setlocal
 REM ===== RAG Systems Test Script (Windows) =====
 REM Usage: test.bat [options] [module]
-REM   test.bat                     - Run all tests (incl. architecture tests)
-REM   test.bat --coverage          - Run tests with coverage (JaCoCo)
-REM   test.bat rag-basic           - Run only a specific module
-REM   test.bat rag-basic --coverage - Combine module + coverage
+REM   test.bat                     - Run all tests with coverage (verify; JaCoCo 85% check enforced)
+REM   test.bat --coverage          - Alias of the default (verify + JaCoCo check)
+REM   test.bat rag-basic           - Run only a specific module (verify)
+REM   test.bat rag-basic --coverage - Combine module + verify
 REM Architecture tests (ArchitectureTest) always run as part of the test suite.
 
 set "ROOT=%~dp0.."
@@ -14,7 +14,7 @@ cd /d "%ROOT%"
 REM Bootstrap root .env files from scripts\.env*.example (idempotent)
 call scripts\bootstrap-env.bat
 
-set "COVERAGE_GOAL=test"
+set "COVERAGE_GOAL=verify"
 set "MODULE_SPEC="
 
 :parse
