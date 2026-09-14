@@ -128,6 +128,10 @@ Logs are JSON with correlation IDs for joining with traces:
 - **Grafana**: http://localhost:3000 (admin/admin)
 - **Dashboards**: Prometheus queries at `/actuator/prometheus`
 
+> If the default ports (9090/3000) are already in use by another stack
+> the script auto-rotates to the next free ports and prints the actual
+> URLs when it starts.
+
 ## Grafana Dashboards
 
 Docker provisioning auto-loads three dashboards:
