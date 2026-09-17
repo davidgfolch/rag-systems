@@ -19,7 +19,9 @@ declare -a MODULES=()
 declare -a COVERAGES=()
 declare -a COLORS=()
 
-# Map of module directories we expect in the monorepo
+# Map of module directories we expect in the monorepo.
+# Note: rag-contract is intentionally NOT listed - excluded from coverage in SonarQube too
+# (see sonar.coverage.exclusions in pom.xml / sonar-project.properties).
 EXPECTED_MODULES=(
     "rag-common"
     "rag-basic"
@@ -42,14 +44,13 @@ for MODULE in "${EXPECTED_MODULES[@]}"; do
         continue
     fi
 
-    # Sum INSTRUCTION_MISSED and INSTRUCTION_COVERED across all classes
-    # JaCoCo CSV columns (0-indexed): 0=GROUP, 1=PACKAGE, 2=CLASS, 3=INSTRUCTION_MISSED, 4=INSTRUCTION_COVERED, ...
-    # Sum across all rows (skip header line 1)
-    MISSED_TOTAL=$(tail -n +2 "$CSV" | awk -F',' '{sum += $4} END {print sum+0}')
-    COVERED_TOTAL=$(tail -n +2 "$CSV" | awk -F',' '{sum += $5} END {print sum+0}')
+    # Sum LINE and BRANCH coverage to mirror SonarQube's blended coverage metric
+    # JaCoCo CSV columns (1-indexed): 6=BRANCH_MISSED, 7=BRANCH_COVERED, 8=LINE_MISSED, 9=LINE_COVERED
+    MISSED_TOTAL=$(tail -n +2 "$CSV" | awk -F',' '{sum += $6 + $8} END {print sum+0}')
+    COVERED_TOTAL=$(tail -n +2 "$CSV" | awk -F',' '{sum += $7 + $9} END {print sum+0}')
 
     if [ "$MISSED_TOTAL" -eq 0 ] && [ "$COVERED_TOTAL" -eq 0 ]; then
-        echo "  Skipping $MODULE: zero instruction data"
+        echo "  Skipping $MODULE: zero coverage data"
         continue
     fi
 

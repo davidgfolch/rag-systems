@@ -6,6 +6,7 @@ $ErrorActionPreference = 'Stop'
 $readme = Join-Path $Root 'README.md'
 $startMarker = '<!-- COVERAGE_BADGES_START -->'
 $endMarker = '<!-- COVERAGE_BADGES_END -->'
+# rag-contract is intentionally absent: it is excluded from coverage in SonarQube too (see sonar.coverage.exclusions).
 $moduleList = @('rag-common','rag-basic','rag-memory','rag-webcrawler','rag-provider','rag-advanced','rag-agentic','rag-evaluation','rag-observability','rag-cli','rag-tui')
 
 Write-Host "Generating per-module coverage badges..."
@@ -17,19 +18,23 @@ foreach ($mod in $moduleList) {
         Write-Host "  Skipping ${mod}: no JaCoCo CSV report"
         continue
     }
-    $rows = Get-Content $csv | Select-Object -Skip 1
+    $rows = Get-Content $csv -Encoding UTF8 | Select-Object -Skip 1
     if ($rows.Count -eq 0) {
         Write-Host "  Skipping ${mod}: empty CSV"
         continue
     }
-    $missed = 0; $covered = 0
+    $lineMissed = 0; $lineCovered = 0; $branchMissed = 0; $branchCovered = 0
     foreach ($r in $rows) {
         $cols = $r -split ','
-        $missed += [int]$cols[3]
-        $covered += [int]$cols[4]
+        $lineMissed += [int]$cols[7]
+        $lineCovered += [int]$cols[8]
+        $branchMissed += [int]$cols[5]
+        $branchCovered += [int]$cols[6]
     }
+    $covered = $lineCovered + $branchCovered
+    $missed = $lineMissed + $branchMissed
     if ($missed -eq 0 -and $covered -eq 0) {
-        Write-Host "  Skipping ${mod}: zero instruction data"
+        Write-Host "  Skipping ${mod}: zero coverage data"
         continue
     }
     $pct = if ($missed -eq 0) { 100 } else { [math]::Round(($covered / ($covered + $missed)) * 100) }
@@ -46,7 +51,7 @@ if ($badges.Count -eq 0) {
 }
 
 $badgeRow = $badges -join '  '
-$content = Get-Content $readme
+$content = Get-Content $readme -Encoding UTF8
 $startIdx = [Array]::IndexOf($content, $startMarker)
 $endIdx = [Array]::IndexOf($content, $endMarker)
 

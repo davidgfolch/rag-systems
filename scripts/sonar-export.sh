@@ -1,33 +1,44 @@
 #!/usr/bin/env bash
 # ===== RAG Systems SonarQube Results Exporter (Linux/Mac) =====
-# Usage: ./sonar-export.sh [projectKey] [hostUrl]
+# Usage: ./sonar-export.sh [projectKey] [hostUrl] [token]
 #   projectKey (default: com.rag:rag-systems)
 #   hostUrl    (default: http://localhost:9000)
+#   token      (default: SONAR_TOKEN env var, else .env.secrets root)
 # Fetches quality gate + key metrics from the SonarQube API and updates the
 # "SonarQube -> Latest Results" section of README.md (between the
 # <!-- SONARQUBE_RESULTS_START/END --> markers). Requires jq and curl.
 
 set -u
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
 PROJECT="${1:-com.rag:rag-systems}"
 HOST="${2:-http://localhost:9000}"
+TOKEN="${3:-${SONAR_TOKEN:-}}"
 MD_START="<!-- SONARQUBE_RESULTS_START -->"
 MD_END="<!-- SONARQUBE_RESULTS_END -->"
 METRICS="bugs,vulnerabilities,security_hotspots,code_smells,coverage,duplicated_lines_density"
+
+if [ -z "$TOKEN" ] && [ -f "$ROOT/.env.secrets" ]; then
+    TOKEN=$(grep '^SONAR_TOKEN=' "$ROOT/.env.secrets" | head -1 | cut -d= -f2- || true)
+fi
+
+AUTH_OPTS=()
+if [ -n "$TOKEN" ]; then AUTH_OPTS=(-u "$TOKEN:"); fi
 
 if ! command -v jq >/dev/null 2>&1; then
     echo "Warning: jq not installed; skipping README update."
     exit 0
 fi
 
-probe=$(curl -sf "$HOST/api/measures/component?component=$PROJECT&metricKeys=coverage") || {
+probe=$(curl -sf "${AUTH_OPTS[@]}" "$HOST/api/measures/component?component=$PROJECT&metricKeys=coverage") || {
     echo "Warning: no analysis found yet on server; skipping README update."
     exit 0
 }
-gate=$(curl -sf "$HOST/api/qualitygates/project_status?projectKey=$PROJECT") || {
+gate=$(curl -sf "${AUTH_OPTS[@]}" "$HOST/api/qualitygates/project_status?projectKey=$PROJECT") || {
     echo "Warning: could not fetch quality gate; skipping README update."
     exit 0
 }
-measures=$(curl -sf "$HOST/api/measures/component?component=$PROJECT&metricKeys=$METRICS") || {
+measures=$(curl -sf "${AUTH_OPTS[@]}" "$HOST/api/measures/component?component=$PROJECT&metricKeys=$METRICS") || {
     echo "Warning: could not fetch measures; skipping README update."
     exit 0
 }
