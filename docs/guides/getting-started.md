@@ -10,6 +10,12 @@
 
 ## 1. Install Ollama Models (Local Profile)
 
+Ollama serves the local models (`nomic-embed-text` embeddings, `phi4` chat). Run it natively, or containerized via Docker — both listen on port **11434**, so the rest of the setup is identical.
+
+### Option A — Native Ollama
+
+Install [Ollama](https://ollama.com) (desktop app or `ollama serve`), then pull the models:
+
 ```bash
 # Embedding model (essential)
 ollama pull nomic-embed-text
@@ -21,9 +27,39 @@ ollama pull phi4
 ollama pull qwen3:8b
 ```
 
-Verify:
+### Option B — Dockerized Ollama
+
+Start the Ollama container (together with PostgreSQL):
+
 ```bash
+# Windows
+.\scripts\docker.bat up-ollama
+
+# Linux/Mac
+./scripts/docker.sh up-ollama
+```
+
+Then pull the models into the container. The container is pinned to the name `rag-ollama`:
+
+```bash
+# Embedding model (essential)
+docker exec rag-ollama ollama pull nomic-embed-text
+
+# Small CPU-friendly LLM
+docker exec rag-ollama ollama pull phi4
+
+# GPU-friendly LLM (8GB VRAM+)
+docker exec rag-ollama ollama pull qwen3:8b
+```
+
+### Verify
+
+```bash
+# Native
 ollama list
+
+# Dockerized
+docker exec rag-ollama ollama list
 ```
 
 ## 2. Configure Environment
@@ -63,6 +99,16 @@ Start PostgreSQL (PgVector):
 
 # Linux/Mac
 ./scripts/docker.sh up
+```
+
+Optionally start Ollama (instead of a native install — see [Install Ollama Models](#1-install-ollama-models-local-profile)):
+
+```bash
+# Windows
+.\scripts\docker.bat up-ollama
+
+# Linux/Mac
+./scripts/docker.sh up-ollama
 ```
 
 Optionally start observability (Prometheus + Grafana):
@@ -153,7 +199,7 @@ All operations are centralized in `scripts/` with Windows (`.bat`) and Linux/Mac
 | `build` | Build modules | `.\scripts\build.bat`, `.\scripts\build.bat rag-basic` |
 | `test` | Run tests | `.\scripts\test.bat --coverage`, `.\scripts\test.bat rag-basic` |
 | `run` | Run a module | `.\scripts\run.bat rag-basic --profile local`, `.\scripts\run.bat rag-tui --profile local` |
-| `docker` | Docker operations | `.\scripts\docker.bat up`, `.\scripts\docker.bat up-obs`, `.\scripts\docker.bat up-sonar` |
+| `docker` | Docker operations | `.\scripts\docker.bat up`, `.\scripts\docker.bat up-ollama`, `.\scripts\docker.bat up-obs`, `.\scripts\docker.bat up-sonar`, `.\scripts\docker.bat up-all` |
 | `sonar` | SonarQube analysis | `.\scripts\sonar.bat up-scan %SONAR_TOKEN%` |
 
 ## Configuration Profiles
