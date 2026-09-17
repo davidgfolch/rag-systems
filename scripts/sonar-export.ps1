@@ -1,7 +1,8 @@
 param(
     [string]$ProjectKey = "com.rag:rag-systems",
     [string]$HostUrl = "http://localhost:9000",
-    [string]$RepoRoot = "."
+    [string]$RepoRoot = ".",
+    [string]$Token = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -10,6 +11,19 @@ $mdStart = "<!-- SONARQUBE_RESULTS_START -->"
 $mdEnd = "<!-- SONARQUBE_RESULTS_END -->"
 $metricKeys = "bugs,vulnerabilities,security_hotspots,code_smells,coverage,duplicated_lines_density"
 
+if (-not $Token) { $Token = $env:SONAR_TOKEN }
+if (-not $Token) {
+    $secrets = Join-Path $RepoRoot ".env.secrets"
+    if (Test-Path $secrets) {
+        $line = Get-Content $secrets | Where-Object { $_ -match "^SONAR_TOKEN=" } | Select-Object -First 1
+        if ($line) { $Token = $line -replace "^SONAR_TOKEN=", "" }
+    }
+}
+$headers = @{}
+if ($Token) {
+    $headers["Authorization"] = "Basic " + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($Token + ":"))
+}
+
 $tempDir = Join-Path $env:TEMP "rag-sonar"
 New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
 $probeFile = Join-Path $tempDir "probe.json"
@@ -17,7 +31,7 @@ $probeFile = Join-Path $tempDir "probe.json"
 $ready = $false
 for ($i = 0; $i -lt 12; $i++) {
     try {
-        Invoke-RestMethod -Uri "$api/measures/component?component=$ProjectKey&metricKeys=coverage" -TimeoutSec 10 | Out-Null
+        Invoke-RestMethod -Uri "$api/measures/component?component=$ProjectKey&metricKeys=coverage" -Headers $headers -TimeoutSec 10 | Out-Null
         $ready = $true
         break
     } catch {
@@ -29,8 +43,8 @@ if (-not $ready) {
     exit 0
 }
 
-$gate = Invoke-RestMethod -Uri "$api/qualitygates/project_status?projectKey=$ProjectKey" -TimeoutSec 15
-$measures = Invoke-RestMethod -Uri "$api/measures/component?component=$ProjectKey&metricKeys=$metricKeys" -TimeoutSec 15
+$gate = Invoke-RestMethod -Uri "$api/qualitygates/project_status?projectKey=$ProjectKey" -Headers $headers -TimeoutSec 15
+$measures = Invoke-RestMethod -Uri "$api/measures/component?component=$ProjectKey&metricKeys=$metricKeys" -Headers $headers -TimeoutSec 15
 
 $lookup = @{}
 foreach ($m in $measures.component.measures) { $lookup[$m.metric] = $m.value }

@@ -33,7 +33,7 @@ SCAN_ARGS="-Dsonar.host.url=http://localhost:9000 -Dsonar.scanner.skipJreProvisi
 
 export_results() {
     echo "Exporting SonarQube results to README.md..."
-    bash scripts/sonar-export.sh
+    bash scripts/sonar-export.sh com.rag:rag-systems http://localhost:9000 "$TOKEN"
 }
 
 case "$CMD" in

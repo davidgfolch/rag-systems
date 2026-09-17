@@ -98,5 +98,5 @@ goto :eof
 
 :export_results
 echo Exporting SonarQube results to README.md...
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "scripts\sonar-export.ps1" -RepoRoot "%ROOT%"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "scripts\sonar-export.ps1" -RepoRoot "%ROOT%" -Token "%TOKEN%"
 goto :eof

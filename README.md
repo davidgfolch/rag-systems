@@ -1,14 +1,28 @@
-﻿# RAG Systems
+# RAG Systems
 
 [![CI](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml/badge.svg)](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml)
 [![Java](https://img.shields.io/badge/Java-25-007396?logo=openjdk&logoColor=white)](https://adoptium.net/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.5-6DB33F?logo=spring)](https://spring.io/projects/spring-boot)
 [![Maven](https://img.shields.io/badge/Maven-3.9-C71A36?logo=apache-maven)](https://maven.apache.org/)
 <!-- COVERAGE_BADGES_START -->
-![rag-common](https://img.shields.io/badge/rag--common-90%25-brightgreen)  ![rag-basic](https://img.shields.io/badge/rag--basic-94%25-brightgreen)  ![rag-memory](https://img.shields.io/badge/rag--memory-98%25-brightgreen)  ![rag-webcrawler](https://img.shields.io/badge/rag--webcrawler-96%25-brightgreen)  ![rag-provider](https://img.shields.io/badge/rag--provider-95%25-brightgreen)  ![rag-tui](https://img.shields.io/badge/rag--tui-92%25-brightgreen)
+![rag-common](https://img.shields.io/badge/rag--common-86%25-brightgreen)  ![rag-basic](https://img.shields.io/badge/rag--basic-89%25-brightgreen)  ![rag-memory](https://img.shields.io/badge/rag--memory-94%25-brightgreen)  ![rag-webcrawler](https://img.shields.io/badge/rag--webcrawler-91%25-brightgreen)  ![rag-provider](https://img.shields.io/badge/rag--provider-91%25-brightgreen)  ![rag-tui](https://img.shields.io/badge/rag--tui-87%25-brightgreen)
 <!-- COVERAGE_BADGES_END -->
 
-A monorepo for learning and comparing different RAG (Retrieval-Augmented Generation) implementations using Java Spring Boot and Spring AI. Each module is a decoupled bounded context with interchangeable chunking, embedding, and retrieval strategies â€” designed to be reusable across knowledge domains and to run comfortably on a regular local machine.
+<!-- SONARQUBE_RESULTS_START -->
+| Metric | Value |
+|--------|-------|
+| Quality Gate | OK |
+| Bugs | 0 |
+| Vulnerabilities | 0 |
+| Security Hotspots | 0 |
+| Code Smells | 0 |
+| Coverage | 87.5% |
+| Duplication | 0.0% |
+
+*Last scan: 2026-09-17 06:01 UTC*
+<!-- SONARQUBE_RESULTS_END -->
+
+A monorepo for learning and comparing different RAG (Retrieval-Augmented Generation) implementations using Java Spring Boot and Spring AI. Each module is a decoupled bounded context with interchangeable chunking, embedding, and retrieval strategies — designed to be reusable across knowledge domains and to run comfortably on a regular local machine.
 
 Modules range from basic vector similarity search to advanced hybrid retrieval with reranking, agentic tool-calling pipelines, and a terminal UI for interactive ingestion and Q&A. Full observability (tracing, metrics, dashboards) and benchmarking are built in for quantitative comparison.
 
@@ -192,4 +206,4 @@ See the architecture decisions for the full rationale:
 
 ## License
 
-Learning project â€” no license restrictions on reuse.
+Learning project — no license restrictions on reuse.
