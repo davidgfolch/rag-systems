@@ -22,6 +22,8 @@ schema_config:
       store: tsdb
       object_store: filesystem
       schema: v13
+      index:
+        period: 24h
 
 limits_config:
   retention_period: 720h
