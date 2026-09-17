@@ -2,6 +2,8 @@ package com.rag.tui.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rag.tui.client.ChatGateway;
+import io.micrometer.observation.ObservationRegistry;
+import io.micrometer.tracing.Tracer;
 import com.rag.tui.client.MemoryClient;
 import com.rag.tui.client.ModuleHealthClient;
 import com.rag.tui.client.ProviderClient;
@@ -64,29 +66,36 @@ public class RagTuiConfig {
     }
 
     @Bean
-    public RagApiClient ragApiClient(ModuleRegistry registry) {
-        return new RagApiClient(registry, RestClient.builder());
+    public RestClient.Builder restClientBuilder(ObservationRegistry observationRegistry) {
+        return RestClient.builder().observationRegistry(observationRegistry);
     }
 
     @Bean
-    public MemoryClient memoryClient(@Value("${RAG_MEMORY_URL:http://localhost:8084}") String memoryUrl) {
-        return new MemoryClient(RestClient.builder().baseUrl(memoryUrl).build());
+    public RagApiClient ragApiClient(ModuleRegistry registry, RestClient.Builder builder) {
+        return new RagApiClient(registry, builder);
     }
 
     @Bean
-    public ModuleHealthClient moduleHealthClient() {
-        return new ModuleHealthClient(RestClient.builder());
+    public MemoryClient memoryClient(RestClient.Builder builder,
+                                     @Value("${RAG_MEMORY_URL:http://localhost:8084}") String memoryUrl) {
+        return new MemoryClient(builder.clone().baseUrl(memoryUrl).build());
     }
 
     @Bean
-    public ProviderClient providerClient(@Value("${RAG_PROVIDER_URL:http://localhost:8086}") String providerUrl) {
-        return new ProviderClient(providerUrl, RestClient.builder());
+    public ModuleHealthClient moduleHealthClient(RestClient.Builder builder) {
+        return new ModuleHealthClient(builder);
     }
 
     @Bean
-    public ChatGateway chatGateway(ModuleRegistry registry, ObjectMapper objectMapper,
+    public ProviderClient providerClient(RestClient.Builder builder,
+                                         @Value("${RAG_PROVIDER_URL:http://localhost:8086}") String providerUrl) {
+        return new ProviderClient(providerUrl, builder);
+    }
+
+    @Bean
+    public ChatGateway chatGateway(ModuleRegistry registry, ObjectMapper objectMapper, Tracer tracer,
                                    @Value("${rag.chat.timeout-seconds:180}") long chatTimeoutSeconds) {
-        return new ChatGateway(registry, new StandardWebSocketClient(), objectMapper, chatTimeoutSeconds);
+        return new ChatGateway(registry, new StandardWebSocketClient(), objectMapper, chatTimeoutSeconds, tracer);
     }
 
     @Bean
@@ -125,14 +134,14 @@ public class RagTuiConfig {
                                                RagApiClient apiClient, ChatGateway chatGateway,
                                                MemoryClient memoryClient, FileDocumentLoader fileLoader,
                                                ModuleHealthClient healthClient, ProviderClient providerClient,
-                                               CommandRegistry commandRegistry, Prompter prompter,
+                                               CommandRegistry commandRegistry, Prompter prompter, Tracer tracer,
                                                @Value("${rag.tui.start-timeout-ms:120000}") long startTimeoutMs,
                                                @Value("${rag.chat.top-k:4}") int topK,
                                                @Value("${rag.chat.timeout-seconds:180}") long chatTimeoutSeconds) {
         var clients = new CommandDispatcher.RagClients(apiClient, chatGateway, memoryClient, fileLoader, healthClient,
                 providerClient);
         var settings = new CommandDispatcher.Settings(startTimeoutMs, topK, chatTimeoutSeconds);
-        return new CommandDispatcher(registry, lifecycle, clients, settings, commandRegistry, prompter);
+        return new CommandDispatcher(registry, lifecycle, clients, settings, commandRegistry, prompter, tracer);
     }
 
     @Bean

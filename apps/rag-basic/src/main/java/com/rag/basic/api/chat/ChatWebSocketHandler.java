@@ -3,8 +3,11 @@ package com.rag.basic.api.chat;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rag.common.services.ChatService;
+import com.rag.common.tracing.TracePropagation;
 import com.rag.contract.ws.ChatRequest;
 import com.rag.contract.ws.ChatResponse;
+import io.micrometer.tracing.Span;
+import io.micrometer.tracing.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.socket.CloseStatus;
@@ -31,28 +34,44 @@ import static com.rag.contract.constants.FrameTypes.TOKEN;
  */
 public class ChatWebSocketHandler extends TextWebSocketHandler {
 
+    public static final String SPAN_ATTRIBUTE = "rag.tracing.span";
+
     private static final Logger log = LoggerFactory.getLogger(ChatWebSocketHandler.class);
 
     private final ChatService chatService;
     private final ObjectMapper objectMapper;
+    private final Tracer tracer;
     private final Map<String, Disposable> streams = new ConcurrentHashMap<>();
     private final Map<String, String> conversationBySession = new ConcurrentHashMap<>();
     private final Object sendLock = new Object();
 
     public ChatWebSocketHandler(ChatService chatService, ObjectMapper objectMapper) {
+        this(chatService, objectMapper, null);
+    }
+
+    public ChatWebSocketHandler(ChatService chatService, ObjectMapper objectMapper, Tracer tracer) {
         this.chatService = chatService;
         this.objectMapper = objectMapper;
+        this.tracer = tracer;
     }
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         ChatRequest request = objectMapper.readValue(message.getPayload(), ChatRequest.class);
+        TracePropagation.runWithSpan(tracer, handshakeSpan(session), () -> handleRequest(session, request));
+    }
+
+    private void handleRequest(WebSocketSession session, ChatRequest request) {
         if (CANCEL.equals(request.type())) {
             cancel(request.conversationId());
             send(session, new ChatResponse(DONE, "", request.conversationId()));
         } else if (ASK.equals(request.type()) && request.question() != null) {
             ask(session, request);
         }
+    }
+
+    private Span handshakeSpan(WebSocketSession session) {
+        return session.getAttributes().get(SPAN_ATTRIBUTE) instanceof Span span ? span : null;
     }
 
     private void ask(WebSocketSession session, ChatRequest request) {

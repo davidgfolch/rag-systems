@@ -23,6 +23,7 @@ import com.rag.common.services.chunking.RecursiveCharacterChunker;
 import com.rag.common.services.chunking.TokenChunker;
 import com.rag.common.services.parsing.PlainTextParser;
 import com.rag.common.services.parsing.TikaDocumentParser;
+import io.micrometer.tracing.Tracer;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
 import org.springframework.beans.factory.ObjectProvider;
@@ -67,8 +68,9 @@ public class RagBasicConfig {
     @Bean
     public ProviderHttpClient providerHttpClient(
             @Value("${rag.provider.url:http://localhost:8086}") String baseUrl,
-            ObjectMapper objectMapper) {
-        return new ProviderHttpClient(baseUrl, objectMapper);
+            ObjectMapper objectMapper,
+            Tracer tracer) {
+        return new ProviderHttpClient(baseUrl, objectMapper, tracer);
     }
 
     @Bean
@@ -139,8 +141,9 @@ public class RagBasicConfig {
     }
 
     @Bean
-    public AsyncIngestionService asyncIngestionService(IngestionService ingestionService, VectorStorePort vectorStore) {
-        return new AsyncIngestionService(ingestionService, vectorStore, null);
+    public AsyncIngestionService asyncIngestionService(
+            IngestionService ingestionService, VectorStorePort vectorStore, Tracer tracer) {
+        return new AsyncIngestionService(ingestionService, vectorStore, null, tracer);
     }
 
     @Bean
@@ -154,8 +157,9 @@ public class RagBasicConfig {
     }
 
     @Bean
-    public RemoteChatModelPort remoteChatModelPort(ProviderHttpClient providerHttpClient, ObjectMapper objectMapper) {
-        return new RemoteChatModelPort(providerHttpClient, objectMapper);
+    public RemoteChatModelPort remoteChatModelPort(
+            ProviderHttpClient providerHttpClient, ObjectMapper objectMapper, Tracer tracer) {
+        return new RemoteChatModelPort(providerHttpClient, objectMapper, tracer);
     }
 
     @Bean
@@ -165,13 +169,19 @@ public class RagBasicConfig {
 
     @Bean
     public WebCrawlerClient webCrawlerClient(
+            RestClient.Builder restClientBuilder,
             @Value("${rag.webcrawler.url:http://localhost:8085}") String baseUrl) {
-        return new WebCrawlerClient(RestClient.builder().baseUrl(baseUrl).build());
+        return new WebCrawlerClient(restClientBuilder.clone().baseUrl(baseUrl).build());
     }
 
     @Bean
     public ChatWebSocketHandler chatWebSocketHandler(
-            ChatService chatService, ObjectMapper objectMapper) {
-        return new ChatWebSocketHandler(chatService, objectMapper);
+            ChatService chatService, ObjectMapper objectMapper, Tracer tracer) {
+        return new ChatWebSocketHandler(chatService, objectMapper, tracer);
+    }
+
+    @Bean
+    public TraceHandshakeInterceptor traceHandshakeInterceptor(Tracer tracer) {
+        return new TraceHandshakeInterceptor(tracer);
     }
 }

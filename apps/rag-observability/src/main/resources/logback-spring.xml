@@ -17,8 +17,8 @@
                 <message>message</message>
                 <stackTrace>stack_trace</stackTrace>
             </fieldNames>
-            <includeMdcKeyName>trace_id</includeMdcKeyName>
-            <includeMdcKeyName>span_id</includeMdcKeyName>
+            <includeMdcKeyName>traceId</includeMdcKeyName>
+            <includeMdcKeyName>spanId</includeMdcKeyName>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <fileNamePattern>${LOG_DIR}/archive/${APP_NAME}-%d{yyyy-MM-dd}.%i.jsonl.gz</fileNamePattern>
@@ -57,12 +57,44 @@
                     <thread>thread</thread>
                     <message>message</message>
                 </fieldNames>
-                <includeMdcKeyName>trace_id</includeMdcKeyName>
-                <includeMdcKeyName>span_id</includeMdcKeyName>
+                <includeMdcKeyName>traceId</includeMdcKeyName>
+                <includeMdcKeyName>spanId</includeMdcKeyName>
             </encoder>
         </appender>
         <root level="INFO">
             <appender-ref ref="JSON_CONSOLE"/>
+        </root>
+
+        <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
+            <http>
+                <url>${LOKI_URL:-http://localhost:3100}/loki/api/v1/push</url>
+            </http>
+            <format>
+                <label>
+                    <pattern>app=${APP_NAME},level=%level</pattern>
+                </label>
+                <message class="com.github.loki4j.logback.JsonLayout">
+                    <timestamp>
+                        <format>yyyy-MM-dd'T'HH:mm:ss.SSS'Z'</format>
+                        <timeZone>UTC</timeZone>
+                    </timestamp>
+                    <loggerName/>
+                    <logLevel/>
+                    <threadName/>
+                    <mdc>
+                        <include>traceId</include>
+                        <include>spanId</include>
+                        <noPrefix>true</noPrefix>
+                    </mdc>
+                    <stackTrace/>
+                    <http>
+                        <url/>
+                    </http>
+                </message>
+            </format>
+        </appender>
+        <root level="INFO">
+            <appender-ref ref="LOKI"/>
         </root>
     </springProfile>
 

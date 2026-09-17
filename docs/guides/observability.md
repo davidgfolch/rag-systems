@@ -14,11 +14,13 @@ RAG systems have unique observability needs because answers depend on **retrieve
 
 | Component | Role |
 |-----------|------|
-| Micrometer | Metrics facade (Spring Boot standard) |
-| OpenTelemetry | Distributed tracing |
+| Micrometer | Metrics + tracing facade (Spring Boot standard) |
+| OpenTelemetry | Distributed tracing (Micrometer bridge + OTLP exporter) |
+| Tempo | Trace storage and querying |
+| Loki | Log aggregation (loki4j pushes structured JSON) |
 | Prometheus | Metrics storage |
-| Grafana | Visualization dashboards |
-| SLF4J + Logback | Structured logging |
+| Grafana | Visualization, trace-to-log correlation |
+| SLF4J + Logback | Structured logging with `traceId`/`spanId` MDC keys |
 
 ## Metrics Categories
 
@@ -59,8 +61,10 @@ RAG systems have unique observability needs because answers depend on **retrieve
 Every request gets a `traceId` following the full pipeline:
 
 ```
-User Query → Query Embedding → Vector Search → Context Assembly → LLM Generation → Response
+TUI command → REST/WebSocket (rag-basic) → rag-provider → LLM
 ```
+
+Spans are started in the TUI (`tui.command`), propagated W3C-style via the `traceparent` header on every outbound HTTP `RestClient`/`WebSocketClient` request (including the `/ws/chat` handshake), extracted by the receiving module's MVC `ServerHttpObservationFilter`, and re-created on asynchronous ingestion/streaming worker threads via `TracePropagation.runWithSpan`. Each module's logs carry the same `traceId`/`spanId`, so a single trace correlates logs across all processes.
 
 Each span captures:
 - Input/output sizes
@@ -82,14 +86,18 @@ Logs are JSON with correlation IDs for joining with traces:
   "level": "INFO",
   "traceId": "abc123",
   "spanId": "def456",
-  "service": "rag-basic",
-  "event": "query.completed",
-  "query": "What is Spring AI?",
-  "chunksRetrieved": 5,
-  "latencyMs": 234,
-  "tokensUsed": 1500
+  "app": "rag-basic",
+  "message": "ask: topK=4, sources=3, answerLength=25"
 }
 ```
+
+- Module MDC keys are `traceId`/`spanId` (camelCase, written by Micrometer) and flow into both the Logstash file/console encoders and the Loki4j appender.
+- With the `observability` profile active, each app pushes structured JSON to Loki (`${LOKI_URL:-http://localhost:3100}/loki/api/v1/push`) with `app` and `level` labels.
+
+### Trace ↔ Log correlation in Grafana
+
+- **Trace → Logs**: open a trace in Tempo and click the **Logs** icon; Grafana's `tracesToLogs` mapping filters Loki by the `app` label and the selected trace's `traceId`.
+- **Log → Trace**: every Loki log line embeds `"traceId":"<32-hex>"`; Grafana's derived-field regex `'"traceId":"([a-f0-9]{32})"'` turns it into a link that jumps to the matching Tempo trace.
 
 ## Setting Up Dashboards
 
@@ -114,9 +122,15 @@ Logs are JSON with correlation IDs for joining with traces:
 ```
 
 ### Access
+- **Tempo**: http://localhost:3200 (OTLP endpoint `http://localhost:4318/v1/traces`)
 - **Prometheus**: http://localhost:9090
+- **Loki**: http://localhost:3100 (push endpoint `/loki/api/v1/push`)
 - **Grafana**: http://localhost:3000 (admin/admin)
 - **Dashboards**: Prometheus queries at `/actuator/prometheus`
+
+> If the default ports (9090/3000) are already in use by another stack
+> the script auto-rotates to the next free ports and prints the actual
+> URLs when it starts.
 
 ## Grafana Dashboards
 

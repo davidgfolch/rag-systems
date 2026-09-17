@@ -1,17 +1,21 @@
 package com.rag.tui.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rag.common.tracing.TracePropagation;
 import com.rag.contract.ws.ChatRequest;
 import com.rag.contract.ws.ChatResponse;
 import com.rag.tui.launcher.Module;
 import com.rag.tui.launcher.ModuleRegistry;
+import io.micrometer.tracing.Tracer;
 import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketHttpHeaders;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.client.WebSocketClient;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -38,14 +42,21 @@ public class ChatGateway {
     private final WebSocketClient webSocketClient;
     private final ObjectMapper objectMapper;
     private final long timeoutSeconds;
+    private final Tracer tracer;
     private final AtomicReference<WebSocketSession> active = new AtomicReference<>();
 
     public ChatGateway(ModuleRegistry registry, WebSocketClient webSocketClient, ObjectMapper objectMapper,
                        long timeoutSeconds) {
+        this(registry, webSocketClient, objectMapper, timeoutSeconds, null);
+    }
+
+    public ChatGateway(ModuleRegistry registry, WebSocketClient webSocketClient, ObjectMapper objectMapper,
+                       long timeoutSeconds, Tracer tracer) {
         this.registry = registry;
         this.webSocketClient = webSocketClient;
         this.objectMapper = objectMapper;
         this.timeoutSeconds = timeoutSeconds;
+        this.tracer = tracer;
     }
 
     public String ask(String question, int topK, Consumer<String> onToken) {
@@ -92,9 +103,25 @@ public class ChatGateway {
                 }
             }
         };
-        WebSocketSession session = webSocketClient.execute(handler, module.wsUrl()).join();
+        WebSocketSession session = exchange(handler, module);
         active.set(session);
         return session;
+    }
+
+    private WebSocketSession exchange(WebSocketHandler handler, Module module) {
+        String traceparent = traceparent();
+        if (traceparent != null) {
+            var headers = new WebSocketHttpHeaders();
+            headers.set(TracePropagation.TRACEPARENT_HEADER, traceparent);
+            return webSocketClient.execute(handler, headers, URI.create(module.wsUrl())).join();
+        }
+        return webSocketClient.execute(handler, module.wsUrl()).join();
+    }
+
+    private String traceparent() {
+        if (tracer == null) return null;
+        var span = tracer.currentSpan();
+        return span == null ? null : TracePropagation.w3cTraceparent(span.context());
     }
 
     private void sendAsk(WebSocketSession session, String question, int topK, String conversationId) {

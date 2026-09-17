@@ -121,6 +121,10 @@ Optionally start observability (Prometheus + Grafana):
 ./scripts/docker.sh up-obs
 ```
 
+If another service already occupies the default ports (9090/3000), the host-side
+bindings automatically rotate to the next free ports and the script prints the
+actual URLs to open in your browser.
+
 ## 5. Start rag-provider
 
 All RAG modules (rag-basic, rag-advanced, etc.) depend on **rag-provider** for LLM and embedding compute. It must be running before any other module:

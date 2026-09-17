@@ -1,6 +1,8 @@
 spring:
   application:
     name: rag-webcrawler
+  profiles:
+    active: local,observability
 
 server:
   port: ${SERVER_PORT:8085}

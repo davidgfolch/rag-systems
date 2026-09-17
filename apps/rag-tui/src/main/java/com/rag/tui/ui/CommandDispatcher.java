@@ -11,6 +11,9 @@ import com.rag.tui.launcher.Module;
 import com.rag.tui.launcher.ModuleLifecycleManager;
 import com.rag.tui.launcher.ModuleRegistry;
 import com.rag.common.services.FileDocumentLoader;
+import com.rag.common.tracing.TracePropagation;
+import io.micrometer.tracing.Span;
+import io.micrometer.tracing.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClientException;
@@ -34,10 +37,19 @@ public class CommandDispatcher {
     private final CommandRegistry commandRegistry;
     private final Prompter prompter;
     private final DocumentLister documentLister;
+    private final Tracer tracer;
+
+    static final String SPAN_COMMAND = "tui.command";
 
     public CommandDispatcher(ModuleRegistry registry, ModuleLifecycleManager lifecycle,
                              RagClients clients, Settings settings, CommandRegistry commandRegistry,
                              Prompter prompter) {
+        this(registry, lifecycle, clients, settings, commandRegistry, prompter, null);
+    }
+
+    public CommandDispatcher(ModuleRegistry registry, ModuleLifecycleManager lifecycle,
+                             RagClients clients, Settings settings, CommandRegistry commandRegistry,
+                             Prompter prompter, Tracer tracer) {
         this.registry = registry;
         this.lifecycle = lifecycle;
         this.clients = clients;
@@ -45,9 +57,19 @@ public class CommandDispatcher {
         this.commandRegistry = commandRegistry;
         this.prompter = prompter;
         this.documentLister = new DocumentLister(registry, clients.apiClient(), clients.healthClient());
+        this.tracer = tracer;
     }
 
     public String handle(String input, Consumer<String> tokenSink) {
+        Span span = tracer == null ? null : tracer.nextSpan().name(SPAN_COMMAND).start();
+        try {
+            return TracePropagation.runWithSpan(tracer, span, () -> dispatch(input, tokenSink));
+        } finally {
+            if (span != null) span.end();
+        }
+    }
+
+    private String dispatch(String input, Consumer<String> tokenSink) {
         var in = input.trim().toLowerCase();
         switch (in) {
             case "" -> {
@@ -61,35 +83,43 @@ public class CommandDispatcher {
                 var parts = in.split("\\s+", 2);
                 var command = parts[0];
                 var arg = parts.length > 1 ? parts[1].trim() : "";
-                log.debug("Command: '{}'", command);
-                try {
-                    return switch (command) {
-                        case "modules" -> modules();
-                        case "use" -> use(arg);
-                        case "start" -> start(arg, tokenSink);
-                        case "stop" -> stop(arg);
-                        case "documents" -> documents();
-                        case "delete" -> delete(arg);
-                        case "add-file" -> addFile(arg, tokenSink);
-                        case "add-folder" -> addFolder(arg, tokenSink);
-                        case "add-url" -> addUrl(arg);
-                        case "ask" -> ask(arg, tokenSink);
-                        case "history" -> history();
-                        case "connect" -> new ConnectCommand(clients.providerClient(), prompter).execute(arg);
-                        default -> error("Unknown command. Type 'help' for usage.");
-                    };
-                } catch (RestClientException e) {
-                    log.warn("Module unreachable on command '{}': {}", parts[0], e.getMessage());
-                    return error("Module unreachable: " + e.getMessage());
-                } catch (ChatGateway.ChatException e) {
-                    log.error("Chat failed on command '{}': {}", parts[0], e.getMessage());
-                    return error("Chat error: " + e.getMessage());
-                } catch (FileDocumentLoader.DocumentLoadException | ModuleLifecycleManager.StartException e) {
-                    log.error("Command '{}' failed: {}", parts[0], e.getMessage());
-                    return error(e.getMessage());
-                }
+                return dispatchCommand(command, arg, tokenSink);
             }
         }
+    }
+
+    private String dispatchCommand(String command, String arg, Consumer<String> tokenSink) {
+        log.debug("Command: '{}'", command);
+        try {
+            return commandResult(command, arg, tokenSink);
+        } catch (RestClientException e) {
+            log.warn("Module unreachable on command '{}': {}", command, e.getMessage());
+            return error("Module unreachable: " + e.getMessage());
+        } catch (ChatGateway.ChatException e) {
+            log.error("Chat failed on command '{}': {}", command, e.getMessage());
+            return error("Chat error: " + e.getMessage());
+        } catch (FileDocumentLoader.DocumentLoadException | ModuleLifecycleManager.StartException e) {
+            log.error("Command '{}' failed: {}", command, e.getMessage());
+            return error(e.getMessage());
+        }
+    }
+
+    private String commandResult(String command, String arg, Consumer<String> tokenSink) {
+        return switch (command) {
+            case "modules" -> modules();
+            case "use" -> use(arg);
+            case "start" -> start(arg, tokenSink);
+            case "stop" -> stop(arg);
+            case "documents" -> documents();
+            case "delete" -> delete(arg);
+            case "add-file" -> addFile(arg, tokenSink);
+            case "add-folder" -> addFolder(arg, tokenSink);
+            case "add-url" -> addUrl(arg);
+            case "ask" -> ask(arg, tokenSink);
+            case "history" -> history();
+            case "connect" -> new ConnectCommand(clients.providerClient(), prompter).execute(arg);
+            default -> error("Unknown command. Type 'help' for usage.");
+        };
     }
 
     /**
@@ -257,12 +287,13 @@ public class CommandDispatcher {
     private static final long POLL_MILLIS = 2_000;
 
     private void pollIngestUntilDone(String documentId, Consumer<String> tokenSink) {
+        var span = tracer == null ? null : tracer.currentSpan();
         var poller = new Thread(() -> {
             try {
                 var label = "document " + documentId;
                 while (true) {
                     Thread.sleep(POLL_MILLIS);
-                    var status = clients.apiClient().ingestStatus(documentId);
+                    var status = ingestStatus(documentId, span);
                     var state = status.getState();
                     if (IngestStatusDTO.StateEnum.COMPLETED == state) {
                         tokenSink.accept(success("Ingestion of " + label + " complete: " + status.getChunkCount() + " chunks.\n"));
@@ -281,6 +312,12 @@ public class CommandDispatcher {
         }, "rag-ingest-poll");
         poller.setDaemon(true);
         poller.start();
+    }
+
+    private IngestStatusDTO ingestStatus(String documentId, Span span) {
+        return span == null ? clients.apiClient().ingestStatus(documentId)
+                : TracePropagation.runWithSpan(tracer, span,
+                        () -> clients.apiClient().ingestStatus(documentId));
     }
 
     private String history() {

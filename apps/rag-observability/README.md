@@ -44,8 +44,12 @@ Grafana provisioning (in `docker/grafana/`) auto-loads:
 ./scripts/run.sh rag-basic --profile local,observability
 ```
 
-- Prometheus: http://localhost:9090
+- Tempo (traces): http://localhost:3200
+- Prometheus (metrics): http://localhost:9090
+- Loki (logs): http://localhost:3100
 - Grafana: http://localhost:3000 (admin/admin)
+
+`up-obs` also runs Grafana's Tempo and Loki data sources; trace ↔ log correlation works both ways via Tempo's `tracesToLogs` and Loki's `traceId` derived field.
 
 ## Testing
 

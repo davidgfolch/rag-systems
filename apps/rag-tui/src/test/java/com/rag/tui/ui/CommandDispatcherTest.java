@@ -19,6 +19,7 @@ import com.rag.contract.provider.ModelLimitsDTO;
 import com.rag.contract.provider.ModelSpecDTO;
 import com.rag.contract.provider.ProviderModelDTO;
 import com.rag.contract.provider.ProviderStatusDTO;
+import io.micrometer.tracing.test.simple.SimpleTracer;
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.client.RestClientException;
@@ -331,6 +332,20 @@ class CommandDispatcherTest {
     void quits() {
         assertThatThrownBy(() -> handle("quit"))
                 .isInstanceOf(ShellExitException.class);
+    }
+
+    @Test
+    void wrapsEachCommandInATuiCommandSpan() {
+        when(chatGateway.ask(eq("hi"), eq(4), any())).thenReturn("");
+        var tracer = new SimpleTracer();
+        var dispatcher = new CommandDispatcher(registry, lifecycle,
+                new CommandDispatcher.RagClients(apiClient, chatGateway, memoryClient, fileLoader, healthClient,
+                        providerClient),
+                new CommandDispatcher.Settings(10_000, 4, 60), commandRegistry, prompter, tracer);
+        dispatcher.handle("ask hi", t -> {});
+        assertThat(tracer.getSpans()).hasSize(1);
+        assertThat(tracer.getSpans().getLast().getName()).isEqualTo(CommandDispatcher.SPAN_COMMAND);
+        assertThat(tracer.getSpans().getLast().getEndTimestamp()).isNotNull();
     }
 
     @Test
