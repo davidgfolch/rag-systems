@@ -10,7 +10,7 @@
   "permission": {
     "external_directory": {
       "~/projects/rag-systems-*/**": "allow",
-      "~/AppData/Local/Temp": "allow"
+      "~/AppData/Local/Temp/**": "allow"
     }
   }
 }
