@@ -36,6 +36,15 @@ class ChatServiceTest {
     }
 
     @Test
+    void shouldCompleteWithNullAnswerText() {
+        when(router.chatModel()).thenReturn(chatModel);
+        when(chatModel.call(any(Prompt.class)))
+                .thenReturn(new ChatResponse(List.of(new Generation(new AssistantMessage((String) null)))));
+        var service = new ChatService(router);
+        assertThat(service.complete("hi")).isNull();
+    }
+
+    @Test
     void shouldStreamTokensFromActiveModel() {
         when(router.chatModel()).thenReturn(chatModel);
         when(chatModel.stream(any(Prompt.class)))

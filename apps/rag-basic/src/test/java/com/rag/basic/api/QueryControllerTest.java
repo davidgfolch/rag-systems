@@ -44,6 +44,12 @@ class QueryControllerTest {
     }
 
     @Test
+    void defaultsTopKToFiveWhenNull() {
+        controller.query(new QueryRequest().question("q").topK(null));
+        verify(service).retrieve("q", 5);
+    }
+
+    @Test
     void returnsEmptyResultsWhenNoMatches() {
         when(service.retrieve("q", 5)).thenReturn(List.of());
         QueryResponse response = controller.query(new QueryRequest().question("q"));

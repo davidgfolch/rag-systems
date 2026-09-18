@@ -67,7 +67,7 @@ Rules for all code in this repository. These enforce quality, maintainability, a
 5. **No magic literals in tests**: Import production constants (`MetadataKeys`, `FrameTypes`, `ApiPaths`) and shared fixtures instead of duplicating string/number literals.
 6. **Mocking**: Mock all external dependencies (LLMs, vector stores, DB) for unit tests.
 7. **Performance**: Unit tests must run quickly (< 500ms).
-8. **Coverage**: Minimum 85% per module (enforced by JaCoCo).
+8. **Coverage**: Minimum 90% per module (enforced by JaCoCo).
 9. **Architecture test**: Every module has an `ArchitectureTest` enforcing the layer/dependency rules.
 
 ## Repository Organization Rules

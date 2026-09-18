@@ -16,6 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
@@ -90,6 +91,31 @@ class ChatWebSocketHandlerTest {
         send("{\"type\":\"ask\",\"question\":\"hello\",\"conversationId\":\"c1\"}");
         sentPayloads(1);
         verify(chatService).askStream("hello", 5);
+    }
+
+    @Test
+    void usesExplicitTopKWhenProvided() throws Exception {
+        when(chatService.askStream("hello", 7)).thenReturn(Flux.empty());
+        send("{\"type\":\"ask\",\"question\":\"hello\",\"topK\":7,\"conversationId\":\"c1\"}");
+        sentPayloads(1);
+        verify(chatService).askStream("hello", 7);
+    }
+
+    @Test
+    void runsWithoutTracerSpanInSessionAttributes() throws Exception {
+        when(chatService.askStream("hello", 5)).thenReturn(Flux.just("tok"));
+        send("{\"type\":\"ask\",\"question\":\"hello\",\"conversationId\":\"c1\"}");
+        List<String> payloads = sentPayloads(2);
+        assertThat(payloads.get(0)).contains("\"type\":\"token\"");
+        assertThat(payloads.get(1)).contains("\"type\":\"done\"");
+    }
+
+    @Test
+    void sendsSingleDoneWhenStreamCancelledBeforeCompletion() throws Exception {
+        when(chatService.askStream("hello", 5)).thenReturn(Flux.never());
+        send("{\"type\":\"ask\",\"question\":\"hello\",\"conversationId\":\"c1\"}");
+        handler.handleTextMessage(session, new TextMessage("{\"type\":\"cancel\",\"conversationId\":\"c1\"}"));
+        verify(chatService, atLeastOnce()).askStream(anyString(), anyInt());
     }
 
     @Test

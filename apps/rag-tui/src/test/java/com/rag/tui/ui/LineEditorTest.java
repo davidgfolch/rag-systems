@@ -129,6 +129,101 @@ class LineEditorTest {
     }
 
     @Test
+    void arrowLeftAndRightMoveCursorWithoutSubmitting() {
+        sut.setCompletion(PREFIX);
+        sut.start();
+        sut.type('a');
+        sut.type('b');
+        assertThat(sut.accept(new Key(Key.KeyType.LEFT, ' '))).isFalse();
+        sut.type('X');
+        assertThat(sut.text()).isEqualTo("aXb");
+        assertThat(sut.accept(new Key(Key.KeyType.RIGHT, ' '))).isFalse();
+        sut.type('C');
+        assertThat(sut.text()).isEqualTo("aXbC");
+    }
+
+    @Test
+    void backspaceAtLineStartIsNoop() {
+        sut.start();
+        sut.accept(new Key(Key.KeyType.BACKSPACE, ' '));
+        assertThat(sut.text()).isEmpty();
+    }
+
+    @Test
+    void historyDownReturnsToEmptyLineAfterHistoryUp() {
+        sut.start();
+        sut.type('h');
+        sut.accept(new Key(Key.KeyType.ENTER, ' '));
+        sut.start();
+        sut.accept(new Key(Key.KeyType.UP, ' '));
+        assertThat(sut.text()).isEqualTo("h");
+        sut.accept(new Key(Key.KeyType.DOWN, ' '));
+        assertThat(sut.text()).isEmpty();
+    }
+
+    @Test
+    void historyNavigationStopsAtBothEnds() {
+        sut.start();
+        sut.type('f');
+        sut.type('i');
+        sut.type('r');
+        sut.type('s');
+        sut.type('t');
+        sut.accept(new Key(Key.KeyType.ENTER, ' '));
+        sut.start();
+        sut.accept(new Key(Key.KeyType.UP, ' '));
+        sut.accept(new Key(Key.KeyType.UP, ' '));
+        assertThat(sut.text()).isEqualTo("first");
+        sut.accept(new Key(Key.KeyType.DOWN, ' '));
+        sut.accept(new Key(Key.KeyType.DOWN, ' '));
+        assertThat(sut.text()).isEmpty();
+    }
+
+    @Test
+    void popupDownWrapsAroundToFirstEntry() {
+        sut.setCompletion(PREFIX);
+        sut.start();
+        sut.type('o');
+        sut.accept(new Key(Key.KeyType.DOWN, ' '));
+        sut.accept(new Key(Key.KeyType.DOWN, ' '));
+        sut.accept(new Key(Key.KeyType.DOWN, ' '));
+        assertThat(sut.popupCursor()).isZero();
+    }
+
+    @Test
+    void selectPopupWithoutPopupReturnsFalse() {
+        sut.start();
+        assertThat(sut.selectPopup()).isFalse();
+    }
+
+    @Test
+    void blankLineIsNotAddedToHistory() {
+        sut.start();
+        sut.type(' ');
+        sut.type(' ');
+        sut.accept(new Key(Key.KeyType.ENTER, ' '));
+        sut.start();
+        sut.accept(new Key(Key.KeyType.UP, ' '));
+        assertThat(sut.text()).isEmpty();
+    }
+
+    @Test
+    void noCompletionCandidatesKeepsPopupClosed() {
+        sut.start();
+        sut.type('p');
+        sut.type('l');
+        assertThat(sut.popupVisible()).isFalse();
+        assertThat(sut.text()).isEqualTo("pl");
+    }
+
+    @Test
+    void noneKeyIsIgnored() {
+        sut.start();
+        assertThat(sut.accept(new Key(Key.KeyType.NONE, ' '))).isFalse();
+        assertThat(sut.text()).isEmpty();
+    }
+
+    @Test
     void moduleCompletionPopulatesModuleNames() {
         sut.setCompletion(MODULES);
         sut.start();

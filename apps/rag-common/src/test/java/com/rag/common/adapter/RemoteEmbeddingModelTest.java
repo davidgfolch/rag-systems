@@ -2,6 +2,7 @@ package com.rag.common.adapter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rag.contract.constants.ApiPaths;
+import com.rag.contract.provider.ProviderStatusDTO;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.AfterEach;
@@ -18,6 +19,9 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class RemoteEmbeddingModelTest {
 
@@ -92,6 +96,41 @@ class RemoteEmbeddingModelTest {
                 respond(exchange, 200, "application/json", STATUS_JSON));
         assertThat(sut.dimensions()).isEqualTo(768);
         down.stop(0);
+    }
+
+    @Test
+    void shouldRethrowWhenNoFallbackDimensionConfigured() {
+        var client = mock(ProviderHttpClient.class);
+        when(client.get(ApiPaths.PROVIDER, ProviderStatusDTO.class))
+                .thenThrow(new IllegalStateException("down"));
+        var sut = new RemoteEmbeddingModel(client, 0);
+        assertThatThrownBy(sut::dimensions)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("down");
+    }
+
+    @Test
+    void shouldDeferDimensionFetchWhenStatusUnavailableThenResolve() throws IOException {
+        var srv = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
+        srv.start();
+        AtomicInteger statusCalls = new AtomicInteger();
+        srv.createContext(ApiPaths.PROVIDER, exchange -> {
+            if (statusCalls.incrementAndGet() == 1) {
+                respond(exchange, 500, "text/plain", "down");
+            } else {
+                respond(exchange, 200, "application/json", STATUS_JSON);
+            }
+        });
+        srv.createContext(ApiPaths.EMBED, exchange ->
+                respond(exchange, 200, "application/json", "{\"embeddings\":[[0.0,1.0]]}"));
+        var client = new ProviderHttpClient("http://localhost:" + srv.getAddress().getPort(),
+                new ObjectMapper());
+        var sut = new RemoteEmbeddingModel(client, 512);
+        var response = sut.call(new EmbeddingRequest(List.of("a"), null));
+        assertThat(response.getResult().getOutput()).containsExactly(0.0f, 1.0f);
+        sut.call(new EmbeddingRequest(List.of("a"), null));
+        assertThat(sut.dimensions()).isEqualTo(768);
+        srv.stop(0);
     }
 
     private static void respond(HttpExchange exchange, int code, String contentType, String body)

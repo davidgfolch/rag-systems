@@ -14,7 +14,7 @@ The workflow lives at [.github/workflows/ci.yml](../../.github/workflows/ci.yml)
 |-----|---------|---------|
 | `build` | Compiles all modules without running tests (fast failure signal) | `./mvnw clean package -DskipTests -B` |
 | `architecture-tests` | Runs ArchUnit layer/dependency/quality rules | `./mvnw test -Dtest=ArchitectureTest -DfailIfNoTests=false -B` |
-| `tests` | Runs each module's tests with JaCoCo coverage (≥ 85% gate) | `./mvnw -pl apps/<module> -am verify -B` |
+| `tests` | Runs each module's tests with JaCoCo coverage (≥ 90% gate) | `./mvnw -pl apps/<module> -am verify -B` |
 
 The `tests` job uses a **matrix strategy** with `fail-fast: false` so one failing module does not cancel the others. Each module produces a coverage report uploaded as an artifact.
 

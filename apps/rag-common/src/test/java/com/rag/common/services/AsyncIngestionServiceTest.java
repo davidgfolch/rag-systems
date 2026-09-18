@@ -11,6 +11,8 @@ import org.slf4j.MDC;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.AbstractExecutorService;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -19,6 +21,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -60,6 +63,86 @@ class AsyncIngestionServiceTest {
         var status = await(service, id);
         assertThat(status.state()).isEqualTo("FAILED");
         assertThat(status.message()).contains("boom");
+    }
+
+    @Test
+    void reportsEmptyExtractionMessageDirectly() {
+        var delegate = mock(IngestionService.class);
+        when(delegate.ingest(any()))
+                .thenThrow(new IngestionService.EmptyExtractionException(new Document("d1", "  ", Map.of())));
+        var service = new AsyncIngestionService(delegate, Executors.newSingleThreadExecutor());
+        var id = service.submit(new Document("d1", "  ", Map.of()));
+        var status = await(service, id);
+        assertThat(status.state()).isEqualTo("FAILED");
+        assertThat(status.message()).isEqualTo("No text could be extracted from document d1");
+    }
+
+    @Test
+    void staysPendingUntilWorkerRunsJob() {
+        var delegate = mock(IngestionService.class);
+        when(delegate.ingest(any())).thenReturn(new IngestionService.IngestionResult("d1", 0));
+        AtomicReference<Runnable> captured = new AtomicReference<>();
+        var service = new AsyncIngestionService(delegate, capturingExecutor(captured));
+        var id = service.submit(new Document("d1", "content", Map.of()));
+        assertThat(service.status(id).state()).isEqualTo("PENDING");
+        captured.get().run();
+        assertThat(service.status(id).state()).isEqualTo("COMPLETED");
+    }
+
+    @Test
+    void countsRunningJobsWhilePreflightIsBlocked() {
+        var delegate = mock(IngestionService.class);
+        when(delegate.ingest(any())).thenReturn(new IngestionService.IngestionResult("d1", 2));
+        var store = mock(VectorStorePort.class);
+        var entered = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        doAnswer(inv -> {
+            entered.countDown();
+            release.await();
+            return null;
+        }).when(store).checkAvailable();
+        var service = new AsyncIngestionService(delegate, store, null);
+        var id = service.submit(new Document("d1", "content", Map.of()));
+        org.awaitility.Awaitility.await().atMost(5, TimeUnit.SECONDS).until(() -> service.running() == 1);
+        assertThat(service.status(id).state()).isEqualTo("RUNNING");
+        release.countDown();
+        var status = await(service, id);
+        assertThat(status.state()).isEqualTo("COMPLETED");
+        assertThat(status.chunkCount()).isEqualTo(2);
+    }
+
+    private static ExecutorService capturingExecutor(AtomicReference<Runnable> captured) {
+        return new AbstractExecutorService() {
+            @Override
+            public void execute(Runnable command) {
+                captured.set(command);
+            }
+
+            @Override
+            public void shutdown() {
+                // no-op: this capturing executor never owns real worker threads
+            }
+
+            @Override
+            public List<Runnable> shutdownNow() {
+                return List.of();
+            }
+
+            @Override
+            public boolean isShutdown() {
+                return false;
+            }
+
+            @Override
+            public boolean isTerminated() {
+                return false;
+            }
+
+            @Override
+            public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+                return false;
+            }
+        };
     }
 
     @Test

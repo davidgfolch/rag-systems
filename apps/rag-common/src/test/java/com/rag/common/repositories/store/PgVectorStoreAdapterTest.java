@@ -18,6 +18,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -158,5 +159,126 @@ class PgVectorStoreAdapterTest {
     @Test
     void deleteIsNoopWithoutDataSource() {
         assertThatCode(() -> adapter.delete("d1")).doesNotThrowAnyException();
+    }
+
+    @Test
+    void checkAvailableIsNoopWithoutDataSource() {
+        assertThatCode(adapter::checkAvailable).doesNotThrowAnyException();
+    }
+
+    @Test
+    void checkAvailableProbesConnectionSuccessfully() throws Exception {
+        var ds = mock(DataSource.class);
+        var conn = mock(Connection.class);
+        var statement = mock(java.sql.Statement.class);
+        var rs = mock(ResultSet.class);
+        when(ds.getConnection()).thenReturn(conn);
+        when(conn.createStatement()).thenReturn(statement);
+        when(statement.executeQuery("SELECT 1")).thenReturn(rs);
+        when(rs.next()).thenReturn(true);
+        var pgAdapter = new PgVectorStoreAdapter(delegate, ds);
+        assertThatCode(pgAdapter::checkAvailable).doesNotThrowAnyException();
+    }
+
+    @Test
+    void checkAvailableFailsWhenProbeReturnsNoRow() throws Exception {
+        var ds = mock(DataSource.class);
+        var conn = mock(Connection.class);
+        var statement = mock(java.sql.Statement.class);
+        var rs = mock(ResultSet.class);
+        when(ds.getConnection()).thenReturn(conn);
+        when(conn.createStatement()).thenReturn(statement);
+        when(statement.executeQuery("SELECT 1")).thenReturn(rs);
+        when(rs.next()).thenReturn(false);
+        var pgAdapter = new PgVectorStoreAdapter(delegate, ds);
+        assertThatThrownBy(pgAdapter::checkAvailable)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("did not respond to connectivity probe");
+    }
+
+    @Test
+    void checkAvailableWrapsConnectivityFailures() throws Exception {
+        var ds = mock(DataSource.class);
+        var sqlException = mock(SQLException.class);
+        when(sqlException.getMessage()).thenReturn("Connection refused");
+        when(ds.getConnection()).thenThrow(sqlException);
+        var pgAdapter = new PgVectorStoreAdapter(delegate, ds);
+        assertThatThrownBy(pgAdapter::checkAvailable)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Vector store not available: SQLException: Connection refused")
+                .hasCause(sqlException);
+    }
+
+    @Test
+    void listDocumentsThrowsOnNonMissingTableError() throws Exception {
+        var ds = mock(DataSource.class);
+        var conn = mock(Connection.class);
+        var statement = mock(PreparedStatement.class);
+        var failure = mock(SQLException.class);
+        when(failure.getSQLState()).thenReturn("28000");
+        when(failure.getMessage()).thenReturn("no auth");
+        when(ds.getConnection()).thenReturn(conn);
+        when(conn.prepareStatement(anyString())).thenReturn(statement);
+        when(statement.executeQuery()).thenThrow(failure);
+        var pgAdapter = new PgVectorStoreAdapter(delegate, ds, "rag_basic", "chunks");
+        assertThatThrownBy(pgAdapter::listDocuments)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Failed to list documents from vector store");
+    }
+
+    @Test
+    void deleteThrowsOnNonMissingTableError() throws Exception {
+        var ds = mock(DataSource.class);
+        var conn = mock(Connection.class);
+        var statement = mock(PreparedStatement.class);
+        var failure = mock(SQLException.class);
+        when(failure.getSQLState()).thenReturn("28000");
+        when(ds.getConnection()).thenReturn(conn);
+        when(conn.prepareStatement(anyString())).thenReturn(statement);
+        when(statement.executeUpdate()).thenThrow(failure);
+        var pgAdapter = new PgVectorStoreAdapter(delegate, ds, "rag_basic", "chunks");
+        assertThatThrownBy(() -> pgAdapter.delete("d1"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Failed to delete document d1 from vector store");
+    }
+
+    @Test
+    void treatsUnparsableMetadataAsEmptyMap() throws Exception {
+        var ds = mock(DataSource.class);
+        var conn = mock(Connection.class);
+        var statement = mock(PreparedStatement.class);
+        var rs = mock(ResultSet.class);
+        when(ds.getConnection()).thenReturn(conn);
+        when(conn.prepareStatement(anyString())).thenReturn(statement);
+        when(statement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(true, false);
+        when(rs.getString("document_id")).thenReturn("d1");
+        when(rs.getInt("chunk_count")).thenReturn(1);
+        when(rs.getString("first_meta")).thenReturn("not-json");
+        var pgAdapter = new PgVectorStoreAdapter(delegate, ds, "rag_basic", "chunks");
+        assertThat(pgAdapter.listDocuments().getFirst().metadata()).isEmpty();
+    }
+
+    @Test
+    void toChunkDefaultsIndexToZeroOnMissingAndPropagatesNonNumeric() {
+        var springDoc = new Document.Builder().id("c1").text("text").build();
+        when(delegate.similaritySearch(any(SearchRequest.class))).thenReturn(List.of(springDoc));
+        assertThat(adapter.similaritySearch("query", 5).getFirst().getIndex()).isZero();
+
+        var badIndex = new HashMap<String, Object>();
+        badIndex.put(MetadataKeys.CHUNK_INDEX, "abc");
+        var docWithBadIndex = new Document.Builder()
+                .id("c2").text("text2").metadata(badIndex).build();
+        when(delegate.similaritySearch(any(SearchRequest.class))).thenReturn(List.of(docWithBadIndex));
+        assertThatThrownBy(() -> adapter.similaritySearch("query", 5))
+                .isInstanceOf(NumberFormatException.class);
+    }
+
+    @Test
+    void supportsTwoAndThreeArgConstructors() {
+        var ds = mock(DataSource.class);
+        assertThatCode(() -> new PgVectorStoreAdapter(delegate, ds)).doesNotThrowAnyException();
+        assertThatCode(() -> new PgVectorStoreAdapter(delegate, ds, "chunks")).doesNotThrowAnyException();
+        assertThatCode(() -> new PgVectorStoreAdapter(delegate, ds, "  ", "chunks")).doesNotThrowAnyException();
     }
 }

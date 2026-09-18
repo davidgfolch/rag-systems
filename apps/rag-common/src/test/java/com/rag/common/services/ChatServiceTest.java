@@ -63,4 +63,22 @@ class ChatServiceTest {
         assertThat(result.answer()).isEqualTo("I don't know.");
         assertThat(result.sources()).isEmpty();
     }
+
+    @Test
+    void joinsMultipleChunkContextsWithSeparator() {
+        var first = new Chunk("c1", "d1", "first chunk", 0, Map.of());
+        var second = new Chunk("c2", "d1", "second chunk", 1, Map.of());
+        when(vectorStore.similaritySearch("q", 3)).thenReturn(List.of(first, second));
+        when(chatModel.complete(anyString())).thenReturn("answer");
+        sut.ask("q", 3);
+        verify(chatModel).complete(contains("first chunk\n---\nsecond chunk"));
+    }
+
+    @Test
+    void streamsWithNoContextPlaceholder() {
+        when(vectorStore.similaritySearch("q", 2)).thenReturn(List.of());
+        when(chatModel.completeStream(anyString())).thenReturn(Flux.just("I don't know."));
+        StepVerifier.create(sut.askStream("q", 2)).expectNext("I don't know.").verifyComplete();
+        verify(chatModel).completeStream(contains("(no context retrieved)"));
+    }
 }

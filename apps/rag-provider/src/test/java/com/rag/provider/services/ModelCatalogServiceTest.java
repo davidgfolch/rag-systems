@@ -79,6 +79,14 @@ class ModelCatalogServiceTest {
     }
 
     @Test
+    void shouldRefreshOnDemandWhenEnabled() {
+        when(port.fetch()).thenReturn(List.of(PHI4));
+        var refreshed = sut.refresh();
+        assertThat(refreshed.models()).hasSize(1);
+        verify(port, times(1)).fetch();
+    }
+
+    @Test
     void shouldKeepPreviousCacheWhenRefreshFails() {
         when(port.fetch()).thenReturn(List.of(PHI4));
         var first = sut.catalog();

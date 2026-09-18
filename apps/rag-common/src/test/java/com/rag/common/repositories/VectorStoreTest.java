@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 class VectorStoreTest {
 
@@ -17,6 +18,13 @@ class VectorStoreTest {
         VectorStorePort store = new ChunkStore(List.of(other, wanted));
         var result = store.similaritySearch("query", 5, "d2");
         assertThat(result).containsExactly(wanted);
+    }
+
+    @Test
+    void defaultCheckAvailableAndListDocumentsAreNoops() {
+        var store = new ChunkStore(List.of());
+        assertThatCode(store::checkAvailable).doesNotThrowAnyException();
+        assertThat(store.listDocuments()).isEmpty();
     }
 
     private record ChunkStore(List<Chunk> chunks) implements VectorStorePort {

@@ -26,18 +26,18 @@ NEW_PW="${SONAR_ADMIN_PASSWORD:-admin}"
 ADMIN_USER="admin"
 ADMIN_PASS="${NEW_PW}"
 
-# --- Quality Gate: enforce 85% overall coverage ---
+# --- Quality Gate: enforce 90% overall coverage ---
 # The gate key must match the project key the Maven scan publishes under
 # (com.rag:rag-systems). Runs on every invocation (idempotent) so an
 # already-bootstrapped server also picks up gate changes.
 configure_qg() {
-    GATE_NAME="RAG 85% Coverage"
+    GATE_NAME="RAG 90% Coverage"
     GATE_CONDITION_METRIC="coverage"
     GATE_CONDITION_OP="LT"
-    GATE_CONDITION_VALUE="85"
+    GATE_CONDITION_VALUE="90"
     PROJECT_KEY="com.rag:rag-systems"
 
-    echo "Configuring quality gate (>= 85% coverage)..."
+    echo "Configuring quality gate (>= 90% coverage)..."
     HTTP_CODE=$(curl -sf -o /dev/null -w "%{http_code}" \
         -u "$ADMIN_USER:$NEW_PW" \
         -X POST "$HOST/api/qualitygates/create" \

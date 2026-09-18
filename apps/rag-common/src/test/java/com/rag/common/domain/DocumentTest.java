@@ -40,4 +40,14 @@ class DocumentTest {
                 .isEqualTo(sut)
                 .hasSameHashCodeAs(sut);
     }
+
+    @Test
+    void shouldBeEqualWhenSameInstance() {
+        assertThat(sut).isEqualTo(sut);
+    }
+
+    @Test
+    void shouldNotEqualDifferentIdOrNonDocument() {
+        assertThat(sut).isNotEqualTo(new Document("other", "c", null)).isNotEqualTo("doc-1");
+    }
 }
