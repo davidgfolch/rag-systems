@@ -16,4 +16,12 @@ class ConversationEntityTest {
         assertThat(conversation.getTitle()).isEqualTo("Title");
         assertThat(conversation.getCreatedAt()).isEqualTo("2026-01-01T10:00:00+01:00");
     }
+
+    @Test
+    void exposesFieldsUnsetByJpaNoArgConstructor() {
+        ConversationEntity conversation = new ConversationEntity();
+        assertThat(conversation.getId()).isNull();
+        assertThat(conversation.getTitle()).isNull();
+        assertThat(conversation.getCreatedAt()).isNull();
+    }
 }

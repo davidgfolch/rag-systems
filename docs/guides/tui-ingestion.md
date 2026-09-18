@@ -61,4 +61,4 @@ VECTOR_STORE_TYPE=pgvector .\scripts\run.bat --profile local
 - `JsoupWebPageFetcherTest` injects a mock jsoup `Connection` (no network).
 - `InteractiveShellTest` drives a `StringReader` and checks `StringWriter` output.
 - `ArchitectureTest` enforces layer rules and interface implementations.
-- Coverage gate is ≥ 85%, enforced by the JaCoCo `check` rule on every test run (`.\scripts\test.bat`), for this module and all others with source code.
+- Coverage gate is ≥ 90%, enforced by the JaCoCo `check` rule on every test run (`.\scripts\test.bat`), for this module and all others with source code.

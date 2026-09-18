@@ -1,6 +1,7 @@
 package com.rag.tui.ui;
 
 import com.rag.contract.model.ConversationDTO;
+import com.rag.contract.model.DocumentSummaryDTO;
 import com.rag.contract.model.IngestJobResponse;
 import com.rag.contract.model.IngestStatusDTO;
 import com.rag.contract.model.IngestResponse;
@@ -35,6 +36,7 @@ import java.util.function.Consumer;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -476,6 +478,158 @@ class CommandDispatcherTest {
         when(providerClient.status()).thenThrow(new RestClientException("Connection refused"));
         var result = handle("connect");
         assertThat(result).contains("Module unreachable", "Connection refused");
+    }
+
+    @Test
+    void emptyInputReturnsEmptyString() {
+        assertThat(handle("")).isEmpty();
+        assertThat(handle("   ")).isEmpty();
+    }
+
+    @Test
+    void providerSummaryReturnsActiveSpecsOrEmptyWhenUnreachable() {
+        mockStatus();
+        assertThat(sut.providerSummary()).contains("ollama/phi4");
+        when(providerClient.status()).thenThrow(new RestClientException("Connection refused"));
+        assertThat(sut.providerSummary()).isEmpty();
+    }
+
+    @Test
+    void startCancelledPromptIsNoOp() {
+        when(prompter.pick(eq("Start module"), anyList())).thenReturn(Optional.empty());
+        var result = handle("start");
+        assertThat(result).isEmpty();
+        verify(lifecycle, never()).start(any());
+    }
+
+    @Test
+    void reportsModuleAlreadyRunning() {
+        when(lifecycle.start(registry.find(BASIC).get())).thenReturn(false);
+        var result = handle("start " + BASIC);
+        assertThat(result).contains("Module already running: " + BASIC);
+    }
+
+    @Test
+    void stopCancelledPromptIsNoOp() {
+        when(prompter.pick(eq("Stop module"), anyList())).thenReturn(Optional.empty());
+        var result = handle("stop");
+        assertThat(result).isEmpty();
+        verify(lifecycle, never()).stop(any());
+    }
+
+    @Test
+    void stopPromptsAndStopsChosenModule() {
+        when(prompter.pick(eq("Stop module"), anyList())).thenReturn(Optional.of(BASIC));
+        when(lifecycle.stop(BASIC)).thenReturn(true);
+        var result = handle("stop");
+        assertThat(result).contains("Stopped " + BASIC);
+    }
+
+    @Test
+    void reportsStopWhenModuleNotRunning() {
+        when(lifecycle.stop(BASIC)).thenReturn(false);
+        var result = handle("stop " + BASIC);
+        assertThat(result).contains("Module not running: " + BASIC);
+    }
+
+    @Test
+    void deleteSubtitleHandlesNullChunkCount() {
+        when(healthClient.isUp(BASIC_URL)).thenReturn(true);
+        when(apiClient.listDocuments(BASIC_URL)).thenReturn(
+                List.of(new DocumentSummaryDTO().documentId("d1").title("note.txt")));
+        when(prompter.pick(eq("Delete document"), anyList())).thenReturn(Optional.of("d1"));
+        var result = handle("delete");
+        assertThat(result).contains("Deleted document d1");
+    }
+
+    @Test
+    void addFileCancelledPromptShowsUsage() {
+        when(prompter.prompt("File path: ")).thenReturn(null);
+        var result = handle("add-file");
+        assertThat(result).isEqualTo("Usage: add-file <path>");
+        verify(fileLoader, never()).load(anyString());
+    }
+
+    @Test
+    void addUrlCancelledPromptShowsUsage() {
+        when(prompter.prompt("URL: ")).thenReturn(null);
+        var result = handle("add-url");
+        assertThat(result).isEqualTo("Usage: add-url <url>");
+        verify(apiClient, never()).ingestUrl(anyString());
+    }
+
+    @Test
+    void askCancelledPromptShowsUsage() {
+        when(prompter.prompt("Question: ")).thenReturn(null);
+        var result = handle("ask");
+        assertThat(result).isEqualTo("Usage: ask <question>");
+        verify(chatGateway, never()).ask(anyString(), anyInt(), any());
+    }
+
+    @Test
+    void marksChildStartedModuleAsRunningWithChildOrigin() {
+        when(lifecycle.isRunning(BASIC)).thenReturn(true);
+        when(healthClient.isUp(BASIC_URL)).thenReturn(true);
+        var result = handle("modules");
+        assertThat(result).contains(BASIC, "running (child)");
+    }
+
+    @Test
+    void addFileReportsFailedIngestion() {
+        byte[] bytes = new byte[]{1};
+        when(fileLoader.load("bad.txt"))
+                .thenReturn(new FileDocumentLoader.LoadedFile(bytes, Map.of("fileName", "bad.txt")));
+        when(apiClient.submitIngestFile(eq(bytes), eq("bad.txt"), any()))
+                .thenReturn(new IngestJobResponse().documentId("d9"));
+        when(apiClient.ingestStatus("d9")).thenReturn(new IngestStatusDTO().documentId("d9")
+                .state(IngestStatusDTO.StateEnum.FAILED).message("extraction failed"));
+        List<String> tokens = new ArrayList<>();
+        var result = sut.handle("add-file bad.txt", tokens::add);
+        assertThat(result).contains("submitted", "d9");
+        await(tokens, "failed", 3);
+        assertThat(tokens).anyMatch(t -> t.contains("failed") && t.contains("extraction failed"));
+    }
+
+    @Test
+    void addFileReportsIngestStatusCheckFailure() {
+        byte[] bytes = new byte[]{1};
+        when(fileLoader.load("x.txt"))
+                .thenReturn(new FileDocumentLoader.LoadedFile(bytes, Map.of("fileName", "x.txt")));
+        when(apiClient.submitIngestFile(eq(bytes), eq("x.txt"), any()))
+                .thenReturn(new IngestJobResponse().documentId("d8"));
+        when(apiClient.ingestStatus("d8")).thenThrow(new RestClientException("module went away"));
+        List<String> tokens = new ArrayList<>();
+        var result = sut.handle("add-file x.txt", tokens::add);
+        assertThat(result).contains("submitted", "d8");
+        await(tokens, "could not be checked", 3);
+    }
+
+    @Test
+    void addFilePollingPropagatesTraceSpan() {
+        byte[] bytes = new byte[]{1};
+        when(fileLoader.load("t.txt"))
+                .thenReturn(new FileDocumentLoader.LoadedFile(bytes, Map.of("fileName", "t.txt")));
+        when(apiClient.submitIngestFile(eq(bytes), eq("t.txt"), any()))
+                .thenReturn(new IngestJobResponse().documentId("d7"));
+        when(apiClient.ingestStatus("d7")).thenReturn(new IngestStatusDTO().documentId("d7")
+                .state(IngestStatusDTO.StateEnum.COMPLETED).chunkCount(1));
+        var tracer = new SimpleTracer();
+        var dispatcher = new CommandDispatcher(registry, lifecycle,
+                new CommandDispatcher.RagClients(apiClient, chatGateway, memoryClient, fileLoader, healthClient,
+                        providerClient),
+                new CommandDispatcher.Settings(10_000, 4, 60), commandRegistry, prompter, tracer);
+        List<String> tokens = new ArrayList<>();
+        dispatcher.handle("add-file t.txt", tokens::add);
+        await(tokens, "complete", 3);
+    }
+
+    @Test
+    void showsHistoryWithNullConversationTitle() {
+        ConversationDTO conversation = new ConversationDTO().id("c2");
+        when(memoryClient.conversations()).thenReturn(List.of(conversation));
+        when(memoryClient.messages("c2")).thenReturn(List.of(new ChatMessageDTO().content("hi")));
+        var result = handle("history");
+        assertThat(result).contains("c2", "1 messages");
     }
 
     private void mockStatus() {

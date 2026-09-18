@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class TikaDocumentParserTest {
 
@@ -40,6 +41,30 @@ class TikaDocumentParserTest {
     void throwsWhenRawIsNotString() {
         Document doc = new Document("d1", "", Map.of(MetadataKeys.RAW, 123));
         assertThat(parser.parse(doc)).isEmpty();
+    }
+
+    @Test
+    void throwsOnInvalidBase64LegacyRaw() {
+        Document doc = new Document("d1", "", Map.of(MetadataKeys.RAW, "!!not-base64!!"));
+        assertThatThrownBy(() -> parser.parse(doc)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void wrapsCorruptBinaryParseFailure() {
+        String corruptPdf = """
+                %PDF-1.4
+                1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj
+                xref
+                0 1
+                0000000000 65535 f
+                trailer<</Size 1/Root 1 0 R>>
+                startxref
+                99999999
+                %%EOF""";
+        Document doc = new Document("d1", "", Map.of(MetadataKeys.RAW_BYTES, corruptPdf.getBytes(StandardCharsets.UTF_8)));
+        assertThatThrownBy(() -> parser.parse(doc))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Failed to parse document d1");
     }
 
     private static String base64(String value) {

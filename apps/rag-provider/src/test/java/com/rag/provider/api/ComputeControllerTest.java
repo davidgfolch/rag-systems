@@ -78,6 +78,16 @@ class ComputeControllerTest {
     }
 
     @Test
+    void shouldEmbedEmptyTextList() throws Exception {
+        when(embeddingService.embed(List.of())).thenReturn(List.of());
+        mockMvc.perform(post(EMBED)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"texts\":[]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.embeddings").isEmpty());
+    }
+
+    @Test
     void shouldStreamErrorFrameOnFailure() throws Exception {
         when(chatService.stream("boom")).thenReturn(Flux.error(new IllegalStateException("down")));
         var mvcResult = mockMvc.perform(post(CHAT_STREAM)

@@ -2,6 +2,7 @@ package com.rag.basic.api;
 
 import com.rag.basic.services.RetrievalService;
 import com.rag.basic.services.WebCrawlerClient;
+import com.rag.common.domain.Document;
 import com.rag.common.domain.DocumentSummary;
 import com.rag.common.domain.MetadataKeys;
 import com.rag.common.services.AsyncIngestionService;
@@ -10,6 +11,7 @@ import com.rag.contract.model.DocumentSummaryDTO;
 import com.rag.contract.model.IngestJobResponse;
 import com.rag.contract.model.IngestRequest;
 import com.rag.contract.model.IngestResponse;
+import com.rag.contract.model.IngestStatusDTO;
 import com.rag.contract.model.IngestUrlRequest;
 import com.rag.contract.model.PageDTO;
 import org.junit.jupiter.api.Test;
@@ -173,5 +175,54 @@ class IngestionControllerTest {
     void deleteReturnsUnavailableWhenRetrievalServiceMissing() {
         ResponseEntity<Void> response = controller.deleteDocument("d1");
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    @Test
+    void listDocumentsReturnsUnavailableWhenRetrievalServiceMissing() {
+        ResponseEntity<List<DocumentSummaryDTO>> response = controller.listDocuments();
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    @Test
+    void ingestFileAsyncReturnsUnavailableWhenAsyncMissing() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("file", "doc.pdf", "application/pdf", new byte[]{1});
+        ResponseEntity<IngestJobResponse> response = controller.ingestFileAsync(file, null);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        verify(service, never()).ingest(any());
+    }
+
+    @Test
+    void ingestStatusReturnsUnavailableWhenAsyncMissing() {
+        ResponseEntity<IngestStatusDTO> response = controller.ingestStatus("d1");
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    @Test
+    void ingestStatusReturnsNotFoundForUnknownJob() {
+        AsyncIngestionService async = mock(AsyncIngestionService.class);
+        when(async.status("gone")).thenReturn(new AsyncIngestionService.JobStatus(
+                "gone", AsyncIngestionService.STATE_FAILED, 0, "No such ingestion job"));
+        IngestionController asyncController = new IngestionController(service, webCrawlerClient, async, null);
+        ResponseEntity<IngestStatusDTO> response = asyncController.ingestStatus("gone");
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void listsDocumentsWithoutTitleWhenMetadataLacksTitle() {
+        RetrievalService retrievalService = mock(RetrievalService.class);
+        when(retrievalService.listDocuments()).thenReturn(List.of(
+                new DocumentSummary("d1", 2, Map.of(MetadataKeys.FILE_NAME, "note.txt"))));
+        IngestionController listController = new IngestionController(service, webCrawlerClient, null, retrievalService);
+        ResponseEntity<List<DocumentSummaryDTO>> response = listController.listDocuments();
+        assertThat(response.getBody().get(0).getTitle()).isNull();
+        assertThat(response.getBody().get(0).getDocumentId()).isEqualTo("d1");
+    }
+
+    @Test
+    void mapsEmptyExtractionToUnprocessableEntity() {
+        var exception = new IngestionService.EmptyExtractionException(new Document("d1", "", Map.of()));
+        ResponseEntity<String> response = controller.handleEmptyExtraction(exception);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(response.getBody()).contains("d1");
     }
 }

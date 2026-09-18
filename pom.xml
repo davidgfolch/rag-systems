@@ -201,9 +201,9 @@
                                         <element>BUNDLE</element>
                                         <limits>
                                             <limit>
-                                                <counter>INSTRUCTION</counter>
-                                                <value>COVEREDRATIO</value>
-                                                <minimum>0.85</minimum>
+<counter>INSTRUCTION</counter>
+                                        <value>COVEREDRATIO</value>
+                                        <minimum>0.90</minimum>
                                             </limit>
                                         </limits>
                                     </rule>

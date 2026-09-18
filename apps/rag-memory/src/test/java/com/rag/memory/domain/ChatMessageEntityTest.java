@@ -18,4 +18,14 @@ class ChatMessageEntityTest {
         assertThat(message.getContent()).isEqualTo("hello");
         assertThat(message.getCreatedAt()).isEqualTo("2026-01-01T10:00:00+01:00");
     }
+
+    @Test
+    void exposesFieldsUnsetByJpaNoArgConstructor() {
+        ChatMessageEntity message = new ChatMessageEntity();
+        assertThat(message.getId()).isNull();
+        assertThat(message.getConversationId()).isNull();
+        assertThat(message.getRole()).isNull();
+        assertThat(message.getContent()).isNull();
+        assertThat(message.getCreatedAt()).isNull();
+    }
 }

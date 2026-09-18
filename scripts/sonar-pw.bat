@@ -82,14 +82,14 @@ if exist "%SECRETS_FILE%" (
 )
 
 :configure_qg
-REM --- Quality Gate: enforce 85% overall coverage ---
-set "GATE_NAME=RAG 85%% Coverage"
+REM --- Quality Gate: enforce 90% overall coverage ---
+set "GATE_NAME=RAG 90%% Coverage"
 set "GATE_CONDITION_METRIC=coverage"
 set "GATE_CONDITION_OP=LT"
-set "GATE_CONDITION_VALUE=85"
+set "GATE_CONDITION_VALUE=90"
 set "PROJECT_KEY=com.rag:rag-systems"
 
-echo Configuring quality gate ^(>= 85%% coverage^)...
+echo Configuring quality gate ^(>= 90%% coverage^)...
 curl -sf -o nul -w "%%{http_code}" -u "admin:%NEW_PW%" -X POST "%HOST%/api/qualitygates/create" -d "name=%GATE_NAME%" > "%TEMP%\sonar_qg.txt" 2>&1
 set /p QG_HTTP=<"%TEMP%\sonar_qg.txt"
 

@@ -1,6 +1,7 @@
 package com.rag.provider.services;
 
 import com.rag.contract.provider.ConfigureProviderRequest;
+import com.rag.contract.provider.ModelSpecDTO;
 import com.rag.provider.adapter.ProviderClientFactory;
 import com.rag.provider.domain.ModelSpec;
 import com.rag.provider.domain.ProviderProfile;
@@ -63,6 +64,26 @@ class ModelRouterTest {
         var router = newRouter();
         router.switchEmbedding(EMBED_SPEC);
         assertThat(router.embeddingDimension()).isEqualTo(1536);
+    }
+
+    @Test
+    void shouldSwitchModelsViaDtoOverloads() {
+        when(factory.chatModel(any(), anyString())).thenReturn(chatModel);
+        when(factory.embeddingModel(any(), anyString())).thenReturn(embeddingModel);
+        var router = newRouter();
+        router.switchChat(new ModelSpecDTO("ollama", "qwen3"));
+        router.switchEmbedding(new ModelSpecDTO("ollama", "nomic-embed-text"));
+        assertThat(router.currentChat().model()).isEqualTo("qwen3");
+        assertThat(router.currentEmbedding().model()).isEqualTo("nomic-embed-text");
+    }
+
+    @Test
+    void shouldReportUnknownDimensionWhenDetectionFails() {
+        when(factory.embeddingModel(any(), anyString())).thenReturn(embeddingModel);
+        when(embeddingModel.dimensions()).thenThrow(new IllegalStateException("provider down"));
+        var router = newRouter();
+        router.switchEmbedding(EMBED_SPEC);
+        assertThat(router.embeddingDimension()).isEqualTo(-1);
     }
 
     @Test

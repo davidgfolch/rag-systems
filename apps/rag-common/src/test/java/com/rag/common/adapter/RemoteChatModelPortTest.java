@@ -47,6 +47,13 @@ class RemoteChatModelPortTest {
     }
 
     @Test
+    void shouldReturnNullWhenAnswerMissing() {
+        server.createContext(ApiPaths.COMPLETE,
+                exchange -> respond(exchange, 200, "application/json", "{\"answer\":null}"));
+        assertThat(port.complete("hi")).isNull();
+    }
+
+    @Test
     void shouldThrowOnServerError() {
         server.createContext(ApiPaths.COMPLETE,
                 exchange -> respond(exchange, 500, "text/plain", "boom"));
@@ -67,11 +74,52 @@ class RemoteChatModelPortTest {
     }
 
     @Test
+    void shouldCompleteWhenStreamEndsWithoutDoneFrame() {
+        server.createContext(ApiPaths.CHAT_STREAM, exchange -> respond(exchange, 200, "text/event-stream",
+                "data:{\"type\":\"token\",\"content\":\"only\"}"));
+        StepVerifier.create(port.completeStream("hi"))
+                .expectNext("only")
+                .verifyComplete();
+    }
+
+    @Test
+    void shouldIgnoreNonDataLinesAndUnknownFrames() {
+        server.createContext(ApiPaths.CHAT_STREAM, exchange -> respond(exchange, 200, "text/event-stream",
+                """
+                        event: message
+                        
+                        data:{"type":"mystery","content":"ignored"}
+                        data:{"type":"done","content":null,"conversationId":null}
+                        """));
+        StepVerifier.create(port.completeStream("hi"))
+                .verifyComplete();
+    }
+
+    @Test
+    void shouldSkipTokensWithNullContent() {
+        server.createContext(ApiPaths.CHAT_STREAM, exchange -> respond(exchange, 200, "text/event-stream",
+                """
+                        data:{"type":"token","content":null}
+                        data:{"type":"done","content":null,"conversationId":null}
+                        """));
+        StepVerifier.create(port.completeStream("hi")).verifyComplete();
+    }
+
+    @Test
     void shouldFailOnProviderErrorFrame() {
         server.createContext(ApiPaths.CHAT_STREAM, exchange -> respond(exchange, 200, "text/event-stream",
                 "data:{\"type\":\"error\",\"content\":\"nope\",\"conversationId\":null}\n\n"));
         StepVerifier.create(port.completeStream("hi"))
                 .expectErrorSatisfies(error -> assertThat(error).hasMessageContaining("nope"))
+                .verify();
+    }
+
+    @Test
+    void shouldFailOnMalformedFrame() {
+        server.createContext(ApiPaths.CHAT_STREAM, exchange -> respond(exchange, 200, "text/event-stream",
+                "data:not-json\n\n"));
+        StepVerifier.create(port.completeStream("hi"))
+                .expectErrorSatisfies(error -> assertThat(error).hasMessageContaining("Provider stream failed"))
                 .verify();
     }
 

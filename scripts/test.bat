@@ -2,7 +2,7 @@
 setlocal
 REM ===== RAG Systems Test Script (Windows) =====
 REM Usage: test.bat [options] [module]
-REM   test.bat                     - Run all tests with coverage (verify; JaCoCo 85% check enforced)
+REM   test.bat                     - Run all tests with coverage (verify; JaCoCo 90% check enforced)
 REM   test.bat --coverage          - Alias of the default (verify + JaCoCo check)
 REM   test.bat rag-basic           - Run only a specific module (verify)
 REM   test.bat rag-basic --coverage - Combine module + verify

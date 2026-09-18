@@ -109,7 +109,7 @@ This runs ArchUnit tests enforcing layer dependencies, layer file-length/quality
 Before marking any task complete, verify:
 1. **No architecture violations**: Run `scripts\test.bat`
 2. **All tests pass**: Run `scripts\test.bat [module]`
-3. **Coverage ≥ 85%** for changed modules
+3. **Coverage ≥ 90%** for changed modules
 4. **No duplicate code**: Common logic in rag-common
 5. **Provider abstraction**: No hardcoded model/provider references
 

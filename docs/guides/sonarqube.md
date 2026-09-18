@@ -160,13 +160,13 @@ If `jq` (Linux/Mac) is missing or the analysis is not yet available on the serve
 
 ## The Quality Gate
 
-During every bootstrap run (`sonar-pw.{sh,bat}`), a custom quality gate **"RAG 85% Coverage"** is created and assigned to the project. The gate setup is idempotent and re-applied on each run, so it also updates already-bootstrapped servers. It enforces the same 85% overall coverage threshold that the JaCoCo build-time check uses, so SonarQube and the Maven build agree on the minimum:
+During every bootstrap run (`sonar-pw.{sh,bat}`), a custom quality gate **"RAG 90% Coverage"** is created and assigned to the project. The gate setup is idempotent and re-applied on each run, so it also updates already-bootstrapped servers. It enforces the same 90% overall coverage threshold that the JaCoCo build-time check uses, so SonarQube and the Maven build agree on the minimum:
 
 | Condition | Requirement |
 |-----------|-------------|
-| `coverage` `<` 85 | Gate fails when overall line coverage drops below 85% |
+| `coverage` `<` 90 | Gate fails when overall line coverage drops below 90% |
 
-The `coverage` metric covers both new and existing code, aligning the SonarQube quality gate with the JaCoCo `INSTRUCTION` check (`minimum=0.85` in the parent POM) and the `sonar.coverage.exclusions` in `sonar-project.properties`. Because the gate measures **overall code**, refactoring a method (e.g., splitting a large method into helpers) can lower coverage until those branches are covered by tests.
+The `coverage` metric covers both new and existing code, aligning the SonarQube quality gate with the JaCoCo `INSTRUCTION` check (`minimum=0.90` in the parent POM) and the `sonar.coverage.exclusions` in `sonar-project.properties`. Because the gate measures **overall code**, refactoring a method (e.g., splitting a large method into helpers) can lower coverage until those branches are covered by tests.
 
 ## Fixing Findings (workflow)
 

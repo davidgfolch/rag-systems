@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ===== RAG Systems Test Script (Linux/Mac) =====
 # Usage: ./test.sh [options] [module]
-#   ./test.sh                     - Run all tests with coverage (verify; JaCoCo 85% check enforced)
+#   ./test.sh                     - Run all tests with coverage (verify; JaCoCo 90% check enforced)
 #   ./test.sh --coverage          - Alias of the default (verify + JaCoCo check)
 #   ./test.sh rag-basic           - Run only a specific module (verify)
 #   ./test.sh rag-basic --coverage - Combine module + verify

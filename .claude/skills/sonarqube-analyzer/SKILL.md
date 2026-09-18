@@ -44,7 +44,7 @@ Analysis always runs the full test suite first (`mvn verify` with JaCoCo), then 
 
 ### 3. Read the results
 - Dashboard: `http://localhost:9000` → project `com.rag:rag-systems`.
-- **Quality gate conditions** (`api/qualitygates/project_status`): the local "RAG 85% Coverage" gate fails when overall `coverage < 85%`.
+- **Quality gate conditions** (`api/qualitygates/project_status`): the local "RAG 90% Coverage" gate fails when overall `coverage < 90%`.
 - The Maven build does **not** fail on a red gate by default; always check the dashboard/API for gate status.
 
 ## Fixing Findings
@@ -61,7 +61,7 @@ mvn clean verify sonar:sonar -Dsonar.token=<token> -Dsonar.host.url=http://local
 
 ## Quality Gate on Refactors
 
-The gate measures **overall code coverage** (metric `coverage`, mirroring the JaCoCo `INSTRUCTION` check at ≥ 85%). Because it covers existing code too, refactoring a method (e.g., splitting a large method into helpers) can lower coverage until those branches are covered by tests.
+The gate measures **overall code coverage** (metric `coverage`, mirroring the JaCoCo `INSTRUCTION` check at ≥ 90%). Because it covers existing code too, refactoring a method (e.g., splitting a large method into helpers) can lower coverage until those branches are covered by tests.
 
 ## Common Rules Seen in This Repo
 

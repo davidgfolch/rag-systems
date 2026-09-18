@@ -16,11 +16,17 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class ProviderHttpClientTest {
 
@@ -68,6 +74,15 @@ class ProviderHttpClientTest {
     }
 
     @Test
+    void shouldThrowOnServerErrorFromGet() {
+        server.createContext(ApiPaths.PROVIDER,
+                exchange -> respond(exchange, 500, "text/plain", "boom"));
+        assertThatThrownBy(() -> client.get(ApiPaths.PROVIDER, ProviderStatusDTO.class))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("HTTP 500");
+    }
+
+    @Test
     void shouldThrowOnMalformedResponse() {
         server.createContext(ApiPaths.COMPLETE,
                 exchange -> respond(exchange, 200, "application/json", "not-json"));
@@ -75,6 +90,86 @@ class ProviderHttpClientTest {
         assertThatThrownBy(() -> client.postJson(ApiPaths.COMPLETE, request, CompleteResponse.class))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Failed to parse");
+    }
+
+    @Test
+    void shouldThrowOnMalformedResponseFromGet() {
+        server.createContext(ApiPaths.PROVIDER,
+                exchange -> respond(exchange, 200, "application/json", "not-json"));
+        assertThatThrownBy(() -> client.get(ApiPaths.PROVIDER, ProviderStatusDTO.class))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Failed to parse");
+    }
+
+    @Test
+    void shouldThrowOnStreamErrorStatus() {
+        server.createContext(ApiPaths.CHAT_STREAM,
+                exchange -> respond(exchange, 500, "text/plain", "boom"));
+        var req = new CompleteRequest("hi");
+        assertThatThrownBy(() -> client.postStream(ApiPaths.CHAT_STREAM, req))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Provider stream failed: HTTP 500");
+    }
+
+    @Test
+    void shouldThrowWhenTransportFails() throws Exception {
+        var httpClient = mock(HttpClient.class);
+        when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+                .thenThrow(new IOException("refused"));
+        var failing = new ProviderHttpClient("http://localhost:1", httpClient, new ObjectMapper());
+        assertThatThrownBy(() -> failing.get(ApiPaths.PROVIDER, ProviderStatusDTO.class))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Provider request failed");
+        Thread.interrupted();
+    }
+
+    @Test
+    void shouldFailStreamRequestWhenTransportFails() throws Exception {
+        var httpClient = mock(HttpClient.class);
+        when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+                .thenThrow(new IOException("refused"));
+        var failing = new ProviderHttpClient("http://localhost:1", httpClient, new ObjectMapper());
+        var req = new CompleteRequest("hi");
+        assertThatThrownBy(() -> failing.postStream(ApiPaths.CHAT_STREAM, req))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Provider stream request failed");
+        Thread.interrupted();
+    }
+
+    @Test
+    void shouldDescribeUnknownExceptionsByClassName() throws Exception {
+        var httpClient = mock(HttpClient.class);
+        when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+                .thenThrow(new IOException("boom", new RuntimeException("root")));
+        var failing = new ProviderHttpClient("http://localhost:1", httpClient, new ObjectMapper());
+        var error = org.assertj.core.api.Assertions.catchThrowable(
+                () -> failing.get(ApiPaths.PROVIDER, ProviderStatusDTO.class));
+        assertThat(error).isInstanceOf(IllegalStateException.class).hasMessageContaining("boom");
+        assertThat(Thread.currentThread().isInterrupted()).isTrue();
+        Thread.interrupted();
+    }
+
+    @Test
+    void shouldDescribeNullMessageExceptionsByClassName() throws Exception {
+        var httpClient = mock(HttpClient.class);
+        when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+                .thenThrow(new IOException());
+        var failing = new ProviderHttpClient("http://localhost:1", httpClient, new ObjectMapper());
+        assertThatThrownBy(() -> failing.get(ApiPaths.PROVIDER, ProviderStatusDTO.class))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("IOException");
+        Thread.interrupted();
+    }
+
+    @Test
+    void shouldSupportInjectedHttpClientConstructor() throws Exception {
+        var httpClient = mock(HttpClient.class);
+        when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+                .thenThrow(new IOException("refused"));
+        var injected = new ProviderHttpClient("http://localhost:1", httpClient, new ObjectMapper());
+        assertThatThrownBy(() -> injected.get(ApiPaths.PROVIDER, ProviderStatusDTO.class))
+                .isInstanceOf(IllegalStateException.class);
+        Thread.interrupted();
     }
 
     @Test

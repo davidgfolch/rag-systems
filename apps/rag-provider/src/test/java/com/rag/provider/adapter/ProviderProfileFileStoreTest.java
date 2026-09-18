@@ -36,6 +36,16 @@ class ProviderProfileFileStoreTest {
     }
 
     @Test
+    void keepsProfilesWhenSaveFails() throws Exception {
+        var directory = Files.createTempDirectory("profiles-blocked");
+        var sut = new ProviderProfileFileStore(mapper, directory);
+        var profiles = List.of(new ProviderProfile("glhf", ProviderType.OPENAI_COMPATIBLE,
+                "GLHF", "https://glhf.chat", "k"));
+        sut.save(profiles);
+        assertThat(sut.load()).isEmpty();
+    }
+
+    @Test
     void loadsEmptyOnCorruptJson() throws Exception {
         var file = Files.createTempDirectory("profiles").resolve("corrupt.json");
         Files.writeString(file, "{not json");
