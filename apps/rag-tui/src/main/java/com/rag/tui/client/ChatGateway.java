@@ -1,7 +1,7 @@
 package com.rag.tui.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rag.common.tracing.TracePropagation;
+import com.rag.common.core.tracing.TracePropagation;
 import com.rag.contract.ws.ChatRequest;
 import com.rag.contract.ws.ChatResponse;
 import com.rag.tui.launcher.Module;

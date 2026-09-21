@@ -119,7 +119,7 @@ concise plural (`msgs`) that stays readable.
 
 Every string literal and numeric literal (other than `0`, `1`, `-1`) used in
 business logic, metadata keys, API paths, or frame types MUST be a named
-`static final` constant. Use shared constants from `rag-common` /
+`static final` constant. Use shared constants from `rag-common-core` /
 `rag-contract` when available; otherwise define a module-local constant.
 
 ```java
@@ -127,7 +127,7 @@ business logic, metadata keys, API paths, or frame types MUST be a named
 Map.of("sourceType", "file", "fileName", name)
 
 // GOOD — import from MetadataKeys
-import static com.rag.common.domain.MetadataKeys.*;
+import static com.rag.common.core.domain.MetadataKeys.*;
 Map.of(SOURCE_TYPE, "file", FILE_NAME, name)
 ```
 
@@ -186,10 +186,11 @@ allowed. Blank lines inside *helper* methods (non-`@Test`) are also allowed.
 
 Any assertion sequence (2+ `assertThat` lines checking status + body fields)
 that appears in 2+ test files MUST be extracted to a shared assertion helper in
-`rag-common/src/test/java/com/rag/common/testfixture/`. Inline assertion
+`rag-common-*/src/test/java/com/rag/common/<capability>/testfixture/` (published
+in the module's `test-jar`). Inline assertion
 sequences that duplicate an existing helper are a DRY violation.
 
-**Existing helpers** (import via `import static com.rag.common.testfixture.*;`):
+**Existing helpers** (import from `com.rag.common.core.testfixture.TestControllerAssertions` or `com.rag.common.ingestion.testfixture.TestIngestionAssertions`):
 - `assertDocumentCreated(response, id, chunkCount)` — CREATED + IngestResponse fields
 - `assertEntityCreated(response, bodyAssertion)` — CREATED + arbitrary body check
 - `assertBadRequest(response)` — BAD_REQUEST status check

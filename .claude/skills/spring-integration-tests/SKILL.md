@@ -39,7 +39,7 @@ Instead, replace the bean with a mock using `@MockitoBean` (or `@MockitoSpyBean`
 @SpringBootTest
 class FooTest {
     @MockitoBean
-    private com.rag.common.services.EmbeddingModel domainEmbeddingModel;
+    private com.rag.common.core.services.EmbeddingModelPort domainEmbeddingModel;
 }
 ```
 
@@ -64,19 +64,19 @@ This codebase bridges Spring AI and the domain layer. There are **two**
 embedding types:
 
 - `org.springframework.ai.embedding.EmbeddingModel` — the Spring AI interface.
-- `com.rag.common.services.EmbeddingModel` — the **domain** interface.
+- `com.rag.common.core.services.EmbeddingModelPort` — the **domain** interface.
 
 `InMemoryVectorStore`, `IngestionService`, and the retrieval pipeline consume
-the **domain** `EmbeddingModel`, which is backed by the adapter
+the **domain** `EmbeddingModelPort`, which is backed by the adapter
 `SpringAiEmbeddingModel` (which wraps the Spring AI bean).
 
-If you mock the Spring AI `EmbeddingModel`, the domain `EmbeddingModel`
+If you mock the Spring AI `EmbeddingModel`, the domain `EmbeddingModelPort`
 (`SpringAiEmbeddingModel`) was already constructed with the real delegate
 reference, so the mock never takes effect and you get NPEs at runtime.
 
 **Rule:** find the actual injected type of your SUT/consumer (read the
 constructor / `@Autowired` field) and mock **that** type. When in doubt, mock
-`com.rag.common.services.EmbeddingModel` for vector-store and retrieval tests.
+`com.rag.common.core.services.EmbeddingModelPort` for vector-store and retrieval tests.
 
 ## 4. Spring AI interface pitfalls
 
@@ -92,9 +92,9 @@ constructor / `@Autowired` field) and mock **that** type. When in doubt, mock
 
 ## 5. Domain model accessors
 
-- `com.rag.common.domain.Document` exposes text via **`getText()`**, not
+- `com.rag.common.core.domain.Document` exposes text via **`getText()`**, not
   `getContent()`.
-- Confirm the actual method against `apps/rag-common/src/main/java/.../Document.java`
+- Confirm the actual method against `apps/rag-common-core/src/main/java/com/rag/common/core/domain/Document.java`
   before writing test stubs.
 
 ## 6. JSON assertion gotchas (MockMvc)

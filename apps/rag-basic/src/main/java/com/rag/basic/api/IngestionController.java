@@ -1,9 +1,9 @@
 package com.rag.basic.api;
 
-import com.rag.common.domain.Document;
-import com.rag.common.domain.DocumentSummary;
-import com.rag.common.services.IngestionService;
-import com.rag.common.services.AsyncIngestionService;
+import com.rag.common.core.domain.Document;
+import com.rag.common.core.domain.DocumentSummary;
+import com.rag.common.ingestion.IngestionService;
+import com.rag.common.ingestion.AsyncIngestionService;
 import com.rag.basic.services.RetrievalService;
 import com.rag.basic.services.WebCrawlerClient;
 import com.rag.contract.model.IngestRequest;
@@ -36,12 +36,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static com.rag.common.domain.MetadataKeys.FILE_NAME;
-import static com.rag.common.domain.MetadataKeys.RAW;
-import static com.rag.common.domain.MetadataKeys.RAW_BYTES;
-import static com.rag.common.domain.MetadataKeys.SOURCE;
-import static com.rag.common.domain.MetadataKeys.SOURCE_TYPE;
-import static com.rag.common.domain.MetadataKeys.TITLE;
+import static com.rag.common.core.domain.MetadataKeys.FILE_NAME;
+import static com.rag.common.core.domain.MetadataKeys.RAW;
+import static com.rag.common.core.domain.MetadataKeys.RAW_BYTES;
+import static com.rag.common.core.domain.MetadataKeys.SOURCE;
+import static com.rag.common.core.domain.MetadataKeys.SOURCE_TYPE;
+import static com.rag.common.core.domain.MetadataKeys.TITLE;
 
 /**
  * REST endpoints for ingesting documents (raw content, multipart file or via rag-webcrawler).

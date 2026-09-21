@@ -10,7 +10,7 @@ Port: **8086** (override with `RAG_PROVIDER_PORT`).
 
 All RAG modules (rag-basic, rag-tui, future rag-advanced/rag-agentic) connect to rag-provider for model access. It must be running before any of them:
 
-- **Single source of provider clients** — Ollama/OpenAI clients are built and managed in one place; modules talk to it through thin `rag-common` bridges (`RemoteChatModelPort`, `RemoteEmbeddingModel`).
+- **Single source of provider clients** — Ollama/OpenAI clients are built and managed in one place; modules talk to it through thin `rag-common-generation` bridges (`RemoteChatModelPort`, `RemoteEmbeddingModel`).
 - **Runtime model switching** — the active chat/embedding model can be swapped with an HTTP call, no restart and no config-profile change.
 - **Provider profiles survive restarts** — providers added at runtime (e.g. a custom OpenAI-compatible endpoint) are persisted to `data/provider-profiles.json`.
 - **Lazy embedding dimension detection** — the active embedding dimension is cached and only resolved on demand; switching models resets it.

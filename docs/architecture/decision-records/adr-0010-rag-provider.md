@@ -13,10 +13,10 @@ Add a dedicated **`rag-provider`** Spring Boot module that owns all provider/mod
 
 - **Port 8086** (`RAG_PROVIDER_URL` default `http://localhost:8086`); rag-memory and rag-webcrawler keep 8084/8085.
 - **API contract** lives in `rag-contract` under `com.rag.contract.provider`: `GET /api/provider` (status), `POST /api/provider/chat|embedding` (switch active model), `POST /api/provider/configure` (upsert a provider profile), plus compute endpoints `POST /api/complete`, `POST /api/embed`, and `POST /api/chat/stream` (SSE, reusing the `ChatResponse` token/done/error frame shape).
-- **Self-contained module**: depends only on `rag-contract` + `rag-observability` + Spring AI starters, deliberately **not** on `rag-common` (avoid a dependency cycle; the module is plain WebMVC with `SseEmitter`, no reactive stack).
+- **Self-contained module**: depends only on `rag-contract` + `rag-observability` + Spring AI starters, deliberately **not** on any `rag-common-*` module (avoid a dependency cycle; the module is plain WebMVC with `SseEmitter`, no reactive stack).
 - **Domain layering**: `domain` (pure records: `ProviderType`, `ModelSpec`, `ProviderProfile`) ← `adapter` (`ProviderClientFactory` builds Ollama/OpenAI/OpenAI-compatible clients lazily — no network on boot) ← `services` (`ProviderRegistry` persists/upserts profiles, `ModelRouter` holds volatile active specs, `ChatService`, `EmbeddingService`) ← `api` (controllers, restful mapping of contract DTOs).
 - **Lazy dimension resolution**: an active embedding model's vector dimension is probed on demand (`dimensions()` with an `embed("probe")` fallback), cached, and invalidated on `switchEmbedding`. The provider may run fully offline at boot.
-- **Consumer side**: `rag-basic` drops its Ollama/OpenAI starters and talks to `rag-provider` through thin `rag-common` bridges (`ProviderHttpClient`, `RemoteChatModelPort`, `RemoteEmbeddingModel`), registered as the standard `ChatModelPort`/`EmbeddingModel` beans, selectable per profile.
+- **Consumer side**: `rag-basic` drops its Ollama/OpenAI starters and talks to `rag-provider` through thin `rag-common-generation` bridges (`ProviderHttpClient`, `RemoteChatModelPort`, `RemoteEmbeddingModel`), registered as the standard `ChatModelPort`/`EmbeddingModel` beans, selectable per profile.
 
 ## Consequences
 
@@ -24,7 +24,7 @@ Add a dedicated **`rag-provider`** Spring Boot module that owns all provider/mod
 - Runtime model switching without restarting the RAG module or the provider
 - Health check via `GET /api/provider` used by the TUI `connect` flow
 - Multiple providers coexist (Ollama local + OpenAI cloud + any OpenAI-compatible endpoint)
-- `rag-common` modules lose provider auto-configuration bloat and startup probing
+- `rag-common-*` modules lose provider auto-configuration bloat and startup probing
 - Provider module is small, testable in isolation, and enforces strict layering via ArchUnit
 
 ### Negative

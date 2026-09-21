@@ -15,7 +15,7 @@ add-url <url>   ──┘                    │        │        │         �
 ask <question> ──► retrieve (vector store, topK) ──► build prompt ──► chat model ──► answer + sources
 ```
 
-Two independent capabilities, both reusing the `rag-common` strategy interfaces:
+Two independent capabilities, both reusing the `rag-common-*` strategy interfaces:
 
 1. **Ingestion** — turn files/web pages into embedded chunks.
 2. **Chat (RAG QA)** — retrieve the most relevant chunks and generate a grounded answer.
@@ -33,7 +33,7 @@ dispatcher/services, keep I/O in the shell, and keep every file under 200 lines.
 
 ## Adding a new source (e.g. a Google Doc or a raw paste)
 
-1. Add a strategy interface in `rag-common` if the source crosses modules (like
+1. Add a strategy interface in `rag-common-core` if the source crosses modules (like
    `WebPageFetcher`), or keep it local to `rag-tui` if it is TUI-specific.
 2. Implement it behind the interface (provider abstraction), and inject it into
    `CommandDispatcher` via `RagTuiConfig`.

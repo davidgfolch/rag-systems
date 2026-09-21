@@ -18,7 +18,19 @@
     <dependencies>
         <dependency>
             <groupId>com.rag</groupId>
-            <artifactId>rag-common</artifactId>
+            <artifactId>rag-common-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.rag</groupId>
+            <artifactId>rag-common-ingestion</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.rag</groupId>
+            <artifactId>rag-common-retrieval</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.rag</groupId>
+            <artifactId>rag-common-generation</artifactId>
         </dependency>
         <dependency>
             <groupId>com.rag</groupId>
@@ -44,7 +56,19 @@
 
         <dependency>
             <groupId>com.rag</groupId>
-            <artifactId>rag-common</artifactId>
+            <artifactId>rag-common-core</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.rag</groupId>
+            <artifactId>rag-common-ingestion</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.rag</groupId>
+            <artifactId>rag-common-retrieval</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>

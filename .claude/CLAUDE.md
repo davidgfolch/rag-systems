@@ -10,7 +10,10 @@ RAG Systems is a monorepo for learning and comparing different RAG (Retrieval-Au
 
 | Module | Path | Description | Package Manager |
 |--------|------|-------------|-----------------|
-| **rag-common** | `apps/rag-common/` | Shared domain, services, repositories | Maven |
+| **rag-common-core** | `apps/rag-common-core/` | Kernel: domain, strategy ports, tracing | Maven |
+| **rag-common-ingestion** | `apps/rag-common-ingestion/` | Chunking, parsing, ingestion services | Maven |
+| **rag-common-retrieval** | `apps/rag-common-retrieval/` | In-memory + PgVector stores | Maven |
+| **rag-common-generation** | `apps/rag-common-generation/` | Chat/embedding adapters, generation service | Maven |
 | **rag-basic** | `apps/rag-basic/` | Basic RAG with fixed chunking | Maven |
 | **rag-advanced** | `apps/rag-advanced/` | Advanced RAG, reranking, hybrid search | Maven |
 | **rag-agentic** | `apps/rag-agentic/` | Agentic RAG with tool calling | Maven |
@@ -78,7 +81,7 @@ api/          - REST controllers (only in runnable modules)
 1. **File Length**: Maximum 200 lines (warn at 250, fail at 300)
 2. **Test Location**: Tests in `src/test/java/[module]/[layer]/[Class]Test.java`
 3. **Test Naming**: `[ClassName]Test` for classes, `should[Behavior]When[Condition]` for methods
-4. **DRY**: Extract common logic to rag-common; no duplicated code
+4. **DRY**: Extract common logic to the `rag-common-*` modules; no duplicated code
 5. **Composition over Inheritance**: Favor interfaces + delegation over class hierarchies
 6. **Reactive/Parallel**: Use Project Reactor and virtual threads strategically for I/O-bound operations
 7. **Provider Abstraction**: Never hardcode provider-specific code; use configuration profiles
@@ -102,7 +105,7 @@ Always run after significant changes:
 .\scripts\test.bat
 ```
 
-This runs ArchUnit tests enforcing layer dependencies, layer file-length/quality conventions via the `rag-common` `ArchitectureTest`, and repository hygiene (minimal root, docs/scripts placement, script portability).
+This runs ArchUnit tests enforcing layer dependencies, layer file-length/quality conventions via the `rag-common-core` `ArchitectureTest` (each capability module keeps its own layer/logger rules), and repository hygiene (minimal root, docs/scripts placement, script portability).
 
 ## Definition of Done
 
@@ -110,7 +113,7 @@ Before marking any task complete, verify:
 1. **No architecture violations**: Run `scripts\test.bat`
 2. **All tests pass**: Run `scripts\test.bat [module]`
 3. **Coverage ≥ 90%** for changed modules
-4. **No duplicate code**: Common logic in rag-common
+4. **No duplicate code**: Common logic in the `rag-common-*` modules
 5. **Provider abstraction**: No hardcoded model/provider references
 
 ## Skills

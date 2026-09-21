@@ -4,7 +4,7 @@ import java.util.List;
 
 /**
  * Port for fetching the model catalog from its remote source. The provider
- * module has no rag-common dependency, so the port deliberately lives in the
+ * module has no rag-common-* dependency, so the port deliberately lives in the
  * domain layer where the adapter can implement it (adapter &rarr; domain only).
  */
 public interface ModelCatalogPort {

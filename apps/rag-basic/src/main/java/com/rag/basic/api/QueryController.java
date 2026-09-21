@@ -1,7 +1,7 @@
 package com.rag.basic.api;
 
 import com.rag.basic.services.RetrievalService;
-import com.rag.common.domain.Chunk;
+import com.rag.common.core.domain.Chunk;
 import com.rag.contract.model.ChunkResult;
 import com.rag.contract.model.QueryRequest;
 import com.rag.contract.model.QueryResponse;

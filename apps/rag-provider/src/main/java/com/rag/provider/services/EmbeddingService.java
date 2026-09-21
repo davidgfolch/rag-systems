@@ -1,6 +1,6 @@
 package com.rag.provider.services;
 
-import com.rag.common.domain.FloatConversions;
+import com.rag.common.core.domain.FloatConversions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.embedding.Embedding;

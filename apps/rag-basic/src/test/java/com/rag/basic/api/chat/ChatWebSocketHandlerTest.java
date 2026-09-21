@@ -1,7 +1,7 @@
 package com.rag.basic.api.chat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rag.common.services.ChatService;
+import com.rag.common.generation.ChatService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.web.socket.CloseStatus;

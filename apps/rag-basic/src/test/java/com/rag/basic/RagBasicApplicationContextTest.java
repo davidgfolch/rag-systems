@@ -2,7 +2,7 @@ package com.rag.basic;
 
 import com.rag.basic.api.IngestionController;
 import com.rag.basic.services.RetrievalService;
-import com.rag.common.services.EmbeddingModelPort;
+import com.rag.common.core.services.EmbeddingModelPort;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

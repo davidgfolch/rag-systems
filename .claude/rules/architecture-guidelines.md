@@ -12,7 +12,7 @@ Rules for all code in this repository. These enforce quality, maintainability, a
 2. **Method Length**: Maximum 30 lines per method.
 3. **Parameters**: Maximum 5 parameters per method.
 4. **Nesting**: Maximum 3 levels of nesting.
-5. **No Magic Literals**: Every string literal and numeric literal (other than `0`, `1`, `-1`) used in business logic must be a named `static final` constant. Use shared constants from `rag-common` / `rag-contract` (`MetadataKeys`, `FrameTypes`, `ApiPaths`) when available; define module-local constants otherwise. Exemptions: single-char format strings, annotation values, simple regex patterns.
+5. **No Magic Literals**: Every string literal and numeric literal (other than `0`, `1`, `-1`) used in business logic must be a named `static final` constant. Use shared constants from `rag-common-core` / `rag-contract` (`MetadataKeys`, `FrameTypes`, `ApiPaths`) when available; define module-local constants otherwise. Exemptions: single-char format strings, annotation values, simple regex patterns.
 6. **Preserve Existing Code**: When editing files, only make changes necessary for the task. Do NOT reformat, reword, or restyle code that isn't being intentionally modified.
 7. **Compact Style**: Use compact style for new code:
    - Keep parameters on same line when possible
@@ -28,7 +28,7 @@ Rules for all code in this repository. These enforce quality, maintainability, a
 4. **Repository pattern** for all data access.
 5. **Dependency injection** (Spring) for all components.
 6. **Provider abstraction**: Never hardcode a specific model/provider. Use configuration profiles (local/cloud).
-7. **DRY**: Common logic goes in rag-common. No duplicated code across modules.
+7. **DRY**: Common logic goes in the `rag-common-*` modules. No duplicated code across modules.
 8. **Composition over Inheritance**: Favor interfaces + delegation over class hierarchies.
 9. **Reactive/Parallel**: Use Project Reactor and virtual threads strategically for I/O-bound operations; don't over-engineer simple flows.
 10. **Single Responsibility**: Classes and methods do one thing. Split "fat" classes.
@@ -56,14 +56,14 @@ Rules for all code in this repository. These enforce quality, maintainability, a
    - `debug`: internal details (prompt length, per-event routing)
 3. **Format**: Always use `{}` placeholders with arguments; never string concatenation (`+`). Never log sensitive content.
 4. **Correlation**: `trace_id`/`span_id` are injected by OpenTelemetry; do not add manual MDC keys for these.
-5. **Enforcement**: Enforced by the patch rule in `rag-common` `ArchitectureTest` (`everyServiceAndHandlerHasLogger`) and by code review.
+5. **Enforcement**: Enforced by the patch rule in each capability module's `ArchitectureTest` (`everyServiceAndHandlerHasLogger`) and by code review.
 
 ## Test Rules
 
 1. **Test location**: Tests in `src/test/java/[module]/[layer]/` parallel to source.
 2. **SUT instance**: Variable name for the service/class under test is `sut`.
 3. **Parameterized tests**: Use JUnit `@ParameterizedTest` with `@CsvSource`/`@MethodSource` with descriptive names when 2+ test methods share the same structure but differ in inputs.
-4. **Shared fixtures**: Test data repeated across 2+ test files must live in a shared fixture class (`testfixture` package) in rag-common (cross-module) or the relevant module (module-specific).
+4. **Shared fixtures**: Test data repeated across 2+ test files must live in a shared fixture class (`testfixture` package) in a `rag-common-*` test-jar (cross-module) or the relevant module (module-specific).
 5. **No magic literals in tests**: Import production constants (`MetadataKeys`, `FrameTypes`, `ApiPaths`) and shared fixtures instead of duplicating string/number literals.
 6. **Mocking**: Mock all external dependencies (LLMs, vector stores, DB) for unit tests.
 7. **Performance**: Unit tests must run quickly (< 500ms).
@@ -76,7 +76,7 @@ Rules for all code in this repository. These enforce quality, maintainability, a
 2. **Docs placement**: All documentation (`.md`) lives in `docs/`. The only `.md` allowed at the project root is `README.md`.
 3. **Scripts placement**: All executable scripts (`.bat`, `.sh`, `.ps1`) live in `scripts/`. None at the root. Maven wrapper (`mvnw`, `mvnw.cmd`) is the exception.
 4. **Portability**: The project must be portable across Windows and Linux/Mac. Every operational script needs both a Windows variant (`.bat` or `.ps1`) and a Unix variant (`.sh`) with identical behavior. Prefer cross-platform tools (`curl`, `jq`/PowerShell) over shell-only assumptions.
-5. **Enforcement**: Rules 1-4 are enforced by the filesystem checks in `rag-common` `ArchitectureTest` (`repoRootContainsOnlyAllowedEntries`, `noDocsOrScriptsAtRoot`, `scriptsArePortable`).
+5. **Enforcement**: Rules 1-4 are enforced by the filesystem checks in `rag-common-core` `ArchitectureTest` (`repoRootContainsOnlyAllowedEntries`, `noDocsOrScriptsAtRoot`, `scriptsArePortable`).
 
 ## Verification
 

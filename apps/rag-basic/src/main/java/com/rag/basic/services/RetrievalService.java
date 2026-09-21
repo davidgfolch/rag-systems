@@ -1,8 +1,8 @@
 package com.rag.basic.services;
 
-import com.rag.common.domain.Chunk;
-import com.rag.common.domain.DocumentSummary;
-import com.rag.common.repositories.VectorStorePort;
+import com.rag.common.core.domain.Chunk;
+import com.rag.common.core.domain.DocumentSummary;
+import com.rag.common.core.repositories.VectorStorePort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

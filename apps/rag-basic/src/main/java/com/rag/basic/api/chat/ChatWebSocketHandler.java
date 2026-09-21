@@ -2,8 +2,8 @@ package com.rag.basic.api.chat;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rag.common.services.ChatService;
-import com.rag.common.tracing.TracePropagation;
+import com.rag.common.generation.ChatService;
+import com.rag.common.core.tracing.TracePropagation;
 import com.rag.contract.ws.ChatRequest;
 import com.rag.contract.ws.ChatResponse;
 import io.micrometer.tracing.Span;

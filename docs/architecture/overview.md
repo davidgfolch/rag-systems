@@ -22,7 +22,7 @@ This document describes the high-level architecture of the RAG Systems monorepo.
 │  └─────────────────────────────────────────────────────────────┘   │
 │                                                                     │
 │  ┌───────────────┬───────────────┬───────────────┬───────────────┐ │
-│  │  rag-common   │   rag-basic   │ rag-advanced  │ rag-agentic   │ │
+│  │  rag-common-* │   rag-basic   │ rag-advanced  │ rag-agentic   │ │
 │  │ (shared lib)  │ (basic RAG)   │ (prod RAG)    │ (agents)      │ │
 │  ├───────────────┼───────────────┼───────────────┼───────────────┤ │
 │  │ Domain models │ Fixed chunk   │ Semantic chunk│ Tool calling  │ │
@@ -60,7 +60,7 @@ Each runnable module follows a strict layered architecture with **one-way depend
 ## Cross-Cutting Concerns
 
 ### Provider Abstraction (Critical)
-All provider connectivity is centralized in the **rag-provider** service: it owns the Ollama/OpenAI clients and exposes chat (`/api/complete`, `/api/chat/stream`), embedding (`/api/embed`), and model-switching (`/api/provider/*`) over HTTP. Downstream RAG modules used to hold direct provider dependencies; they now consume rag-provider through thin `rag-common` bridges (`RemoteChatModelPort`, `RemoteEmbeddingModel`). Swapping between OpenAI, Ollama, and any OpenAI-compatible provider is a runtime call — no code or config-profile change needed.
+All provider connectivity is centralized in the **rag-provider** service: it owns the Ollama/OpenAI clients and exposes chat (`/api/complete`, `/api/chat/stream`), embedding (`/api/embed`), and model-switching (`/api/provider/*`) over HTTP. Downstream RAG modules used to hold direct provider dependencies; they now consume rag-provider through thin `rag-common-generation` bridges (`RemoteChatModelPort`, `RemoteEmbeddingModel`). Swapping between OpenAI, Ollama, and any OpenAI-compatible provider is a runtime call — no code or config-profile change needed.
 
 | Profile | Embeddings | LLM | Use case |
 |---------|-----------|-----|----------|
@@ -105,7 +105,10 @@ OpenTelemetry spans + Micrometer metrics + Structured logs
 
 ```
 apps/
-├── rag-common/       # Shared library: domain, services, repositories
+├── rag-common-core/       # Kernel: domain models, strategy ports, tracing
+├── rag-common-ingestion/  # Chunkers, parsers, ingestion services
+├── rag-common-retrieval/  # In-memory + PgVector stores
+├── rag-common-generation/ # Chat/embedding adapters, ChatService
 ├── rag-provider/     # Centralized provider hub: model switching, chat/embed APIs
 ├── rag-basic/        # Basic RAG: fixed chunking, similarity search
 ├── rag-advanced/     # Advanced RAG: reranking, hybrid search, metadata
@@ -120,7 +123,10 @@ apps/
 
 | Module | Responsibility |
 |--------|---------------|
-| rag-common | Shared domain models, interfaces, configuration helpers |
+| rag-common-core | Shared domain models, strategy ports, tracing, file loader |
+| rag-common-ingestion | Chunking strategies, document parsers, ingestion services |
+| rag-common-retrieval | In-memory and PgVector store implementations |
+| rag-common-generation | Chat/embedding adapters and the generation service |
 | rag-provider | Centralized LLM/embedding clients, runtime model switching, provider profiles |
 | rag-basic | Baseline RAG: fixed/recursive chunking, similarity search |
 | rag-advanced | Reranking, hybrid search, semantic chunking, metadata filtering |
@@ -161,3 +167,4 @@ See [performance-metrics.md](../comparison/performance-metrics.md) for details.
 - [ADR-0010: rag-provider Service](decision-records/adr-0010-rag-provider.md)
 - [ADR-0011: Model Catalog](decision-records/adr-0011-model-catalog.md)
 - [ADR-0012: TUI connect Command](decision-records/adr-0012-tui-connect.md)
+- [ADR-0013: Split rag-common into Capability Modules](decision-records/adr-0013-rag-common-split.md)

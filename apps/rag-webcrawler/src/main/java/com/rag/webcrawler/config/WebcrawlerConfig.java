@@ -1,6 +1,6 @@
 package com.rag.webcrawler.config;
 
-import com.rag.common.services.ChatModelPort;
+import com.rag.common.core.services.ChatModelPort;
 import com.rag.webcrawler.services.WebCrawlService;
 import com.rag.webcrawler.services.fetching.JsoupWebPageFetcher;
 import com.rag.webcrawler.services.fetching.WebPageFetcher;

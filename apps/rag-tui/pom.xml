@@ -18,7 +18,7 @@
     <dependencies>
         <dependency>
             <groupId>com.rag</groupId>
-            <artifactId>rag-common</artifactId>
+            <artifactId>rag-common-core</artifactId>
         </dependency>
 
         <dependency>

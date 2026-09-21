@@ -3,7 +3,7 @@ package com.rag.tui.architecture;
 import com.rag.tui.config.RagTuiConfig;
 import com.rag.tui.ui.CommandDispatcher;
 import com.rag.tui.ui.TerminalStyle;
-import com.rag.common.services.FileDocumentLoader;
+import com.rag.common.core.services.FileDocumentLoader;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
@@ -24,7 +24,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Architecture rules for the thin rag-tui, enforced by ArchUnit. The TUI is a
  * control plane: launcher owns process/registry logic, clients talk to modules
- * over REST/WS, and ui routes commands. No RAG logic. The sole shared rag-common
+ * over REST/WS, and ui routes commands. No RAG logic. The sole shared rag-common-core
  * dependency is {@link FileDocumentLoader} (file I/O only, not RAG internals).
  */
 class ArchitectureTest {
@@ -52,9 +52,10 @@ class ArchitectureTest {
                 .that().resideInAPackage(ROOT)
                 .and().doNotBelongToAnyOf(CommandDispatcher.class, RagTuiConfig.class)
                 .should().dependOnClassesThat().resideInAnyPackage(
-                        "com.rag.common.services", "com.rag.common.repositories",
-                        "com.rag.common.domain", "com.rag.common.adapter")
-                .as("no TUI class may depend on rag-common RAG internals "
+                        "com.rag.common.core.repositories", "com.rag.common.core.domain",
+                        "com.rag.common.generation", "com.rag.common.ingestion",
+                        "com.rag.common.retrieval")
+                .as("no TUI class may depend on rag-common-* RAG internals "
                         + "(except CommandDispatcher/RagTuiConfig, pinned to the shared document loader)")
                 .check(importer.importPackages(ROOT));
     }

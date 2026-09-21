@@ -46,7 +46,7 @@ This is the default. Runs locally on CPU, no GPU needed.
 
 ## Abstraction
 
-All stores implement the `VectorStorePort` interface in `rag-common`. Swap via configuration, not code:
+All stores implement the `VectorStorePort` interface in `rag-common-core`. Swap via configuration, not code:
 
 ```yaml
 # application.yml

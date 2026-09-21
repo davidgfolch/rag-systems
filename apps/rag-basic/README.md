@@ -12,7 +12,7 @@ Demonstrate the core RAG pipeline (Ingest → Chunk → Embed → Store → Retr
 com.rag.basic
 ├── ingestion/    - Document ingestion from PDF, DOCX, HTML
 ├── chunking/     - Fixed-size, recursive, token-based splitters
-├── embedding/    - Embedding generation (via rag-common interface)
+├── embedding/    - Embedding generation (via rag-common-core port)
 ├── vectorstore/  - PgVector + in-memory stores
 ├── retrieval/    - Similarity search + prompt augmentation
 └── api/          - REST controllers (Swagger)

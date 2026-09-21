@@ -4,25 +4,26 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rag.basic.api.chat.ChatWebSocketHandler;
 import com.rag.basic.services.RetrievalService;
 import com.rag.basic.services.WebCrawlerClient;
-import com.rag.common.adapter.ProviderHttpClient;
-import com.rag.common.adapter.RemoteChatModelPort;
-import com.rag.common.adapter.RemoteEmbeddingModel;
-import com.rag.common.adapter.SpringAiEmbeddingModel;
-import com.rag.common.repositories.VectorStorePort;
-import com.rag.common.repositories.store.InMemoryVectorStore;
-import com.rag.common.repositories.store.PgVectorStoreAdapter;
-import com.rag.common.services.ChatModelPort;
-import com.rag.common.services.ChatService;
-import com.rag.common.services.AsyncIngestionService;
-import com.rag.common.services.DocumentParser;
-import com.rag.common.services.EmbeddingModelPort;
-import com.rag.common.services.IngestionService;
-import com.rag.common.services.TextSplitter;
-import com.rag.common.services.chunking.FixedSizeChunker;
-import com.rag.common.services.chunking.RecursiveCharacterChunker;
-import com.rag.common.services.chunking.TokenChunker;
-import com.rag.common.services.parsing.PlainTextParser;
-import com.rag.common.services.parsing.TikaDocumentParser;
+import com.rag.common.generation.adapter.ProviderHttpClient;
+import com.rag.common.generation.adapter.RemoteChatModelPort;
+import com.rag.common.generation.adapter.RemoteEmbeddingModel;
+import com.rag.common.generation.adapter.SpringAiEmbeddingModel;
+import com.rag.common.core.repositories.VectorStorePort;
+import com.rag.common.retrieval.store.InMemoryVectorStore;
+import com.rag.common.retrieval.store.PgVectorStoreAdapter;
+import com.rag.common.core.services.ChatModelPort;
+import com.rag.common.generation.ChatService;
+import com.rag.common.generation.StreamingChatModelPort;
+import com.rag.common.ingestion.AsyncIngestionService;
+import com.rag.common.core.services.DocumentParser;
+import com.rag.common.core.services.EmbeddingModelPort;
+import com.rag.common.ingestion.IngestionService;
+import com.rag.common.core.services.TextSplitter;
+import com.rag.common.ingestion.chunking.FixedSizeChunker;
+import com.rag.common.ingestion.chunking.RecursiveCharacterChunker;
+import com.rag.common.ingestion.chunking.TokenChunker;
+import com.rag.common.ingestion.parsing.PlainTextParser;
+import com.rag.common.ingestion.parsing.TikaDocumentParser;
 import io.micrometer.tracing.Tracer;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
@@ -158,14 +159,20 @@ public class RagBasicConfig {
     }
 
     @Bean
+    public StreamingChatModelPort streamingChatModel(RemoteChatModelPort remoteChatModelPort) {
+        return remoteChatModelPort;
+    }
+
+    @Bean
     public RemoteChatModelPort remoteChatModelPort(
             ProviderHttpClient providerHttpClient, ObjectMapper objectMapper, Tracer tracer) {
         return new RemoteChatModelPort(providerHttpClient, objectMapper, tracer);
     }
 
     @Bean
-    public ChatService chatService(VectorStorePort vectorStore, ChatModelPort chatModel) {
-        return new ChatService(vectorStore, chatModel);
+    public ChatService chatService(VectorStorePort vectorStore, ChatModelPort chatModel,
+                                   StreamingChatModelPort streamingChatModel) {
+        return new ChatService(vectorStore, chatModel, streamingChatModel);
     }
 
     @Bean

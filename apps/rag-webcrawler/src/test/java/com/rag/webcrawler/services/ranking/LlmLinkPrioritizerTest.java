@@ -1,6 +1,6 @@
 package com.rag.webcrawler.services.ranking;
 
-import com.rag.common.services.ChatModelPort;
+import com.rag.common.core.services.ChatModelPort;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

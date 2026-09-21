@@ -18,17 +18,17 @@ apps/rag-tui/src/main/java/com/rag/tui/
 ├── services/                    # IngestionService, ChatService, FileDocumentLoader
 ├── fetching/                    # WebPageFetcher interface + JsoupWebPageFetcher
 ├── adapter/                     # SpringAiChatModel, SpringAiEmbeddingModel
-├── chunking/ parsing/ vectorstore/  # concrete strategies (invoke rag-common interfaces)
+├── chunking/ parsing/ vectorstore/  # concrete strategies (invoke rag-common-core interfaces)
 └── src/test/java/com/rag/tui/...    # tests mirror production packages
 ```
 
 ## Architecture Rules (enforced by ArchUnit in ArchitectureTest)
 
 - `ui` must not depend on `config`, `adapter`, `chunking`, `parsing`,
-  `vectorstore`, or `com.rag.common.repositories`.
+  `vectorstore`, or `com.rag.common.core.repositories`.
 - `services` must not depend on `config`, `adapter`, `chunking`, `parsing`, `vectorstore`.
-- Strategies must implement their `rag-common` interface
-  (`WebPageFetcher`, `TextSplitter`, `DocumentParser`, `EmbeddingModel`, `ChatModel`, `VectorStore`).
+- Strategies must implement their `rag-common-core` interface
+  (`WebPageFetcher`, `TextSplitter`, `DocumentParser`, `EmbeddingModelPort`, `ChatModelPort`, `VectorStorePort`).
 - `config` is the only layer allowed to wire everything together.
 
 ## TDD Workflow
@@ -48,7 +48,7 @@ apps/rag-tui/src/main/java/com/rag/tui/
 
 ## Adding a new source or command
 
-1. Put the boundary behind an interface in `rag-common` (cross-module) or `fetching`/
+1. Put the boundary behind an interface in `rag-common-core` (cross-module) or `fetching`/
    `services` (TUI-local).
 2. Register the concrete bean in `RagTuiConfig`.
 3. Add a handler in `CommandDispatcher` that builds a `Document` with source metadata

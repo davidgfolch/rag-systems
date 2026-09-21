@@ -60,7 +60,10 @@ jobs:
       fail-fast: false
       matrix:
         module:
-          - rag-common
+          - rag-common-core
+          - rag-common-ingestion
+          - rag-common-retrieval
+          - rag-common-generation
           - rag-basic
           - rag-memory
           - rag-webcrawler

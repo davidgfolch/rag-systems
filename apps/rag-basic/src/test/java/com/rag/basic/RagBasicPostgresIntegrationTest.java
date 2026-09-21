@@ -1,7 +1,7 @@
 package com.rag.basic;
 
 import com.rag.basic.services.RetrievalService;
-import com.rag.common.testcontainers.PostgresContainerConfig;
+import com.rag.common.retrieval.testcontainers.PostgresContainerConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.embedding.Embedding;

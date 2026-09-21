@@ -25,7 +25,10 @@ The matrix is defined in `.github/workflows/ci.yml`:
 ```yaml
 matrix:
   module:
-    - rag-common
+    - rag-common-core
+    - rag-common-ingestion
+    - rag-common-retrieval
+    - rag-common-generation
     - rag-basic
     - rag-advanced
     - rag-agentic

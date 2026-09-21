@@ -2,11 +2,11 @@ package com.rag.basic.api;
 
 import com.rag.basic.services.RetrievalService;
 import com.rag.basic.services.WebCrawlerClient;
-import com.rag.common.domain.Document;
-import com.rag.common.domain.DocumentSummary;
-import com.rag.common.domain.MetadataKeys;
-import com.rag.common.services.AsyncIngestionService;
-import com.rag.common.services.IngestionService;
+import com.rag.common.core.domain.Document;
+import com.rag.common.core.domain.DocumentSummary;
+import com.rag.common.core.domain.MetadataKeys;
+import com.rag.common.ingestion.AsyncIngestionService;
+import com.rag.common.ingestion.IngestionService;
 import com.rag.contract.model.DocumentSummaryDTO;
 import com.rag.contract.model.IngestJobResponse;
 import com.rag.contract.model.IngestRequest;
@@ -25,8 +25,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import static com.rag.common.testfixture.TestIngestionAssertions.assertBadRequestAndNotIngested;
-import static com.rag.common.testfixture.TestIngestionAssertions.assertDocumentCreated;
+import static com.rag.common.ingestion.testfixture.TestIngestionAssertions.assertBadRequestAndNotIngested;
+import static com.rag.common.ingestion.testfixture.TestIngestionAssertions.assertDocumentCreated;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;

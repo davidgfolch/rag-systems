@@ -25,11 +25,11 @@ Use this skill when implementing or running tests for the RAG Systems monorepo.
 
 ## 4. Coding Best Practices
 - **Abstraction**: Avoid duplicated code. Extract common setup into fixtures/mocks helpers.
-- **Assertion Helpers**: Use shared assertion helpers from `TestAssertions` in
-  `rag-common/testfixture/` (see rules skill, section 7). Do NOT duplicate status +
+- **Assertion Helpers**: Use shared assertion helpers from `TestAssertions` in a
+  `rag-common-*` test-jar `testfixture/` package (see rules skill, section 7). Do NOT duplicate status +
   body assertion sequences across test files. Always import via
-  `import static com.rag.common.testfixture.TestIngestionAssertions.*` or
-  `import static com.rag.common.testfixture.TestControllerAssertions.*`.
+  `import static com.rag.common.ingestion.testfixture.TestIngestionAssertions.*` or
+  `import static com.rag.common.core.testfixture.TestControllerAssertions.*`.
 
 ## 4a. Shared Test Fixtures
 

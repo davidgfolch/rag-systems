@@ -10,8 +10,8 @@ import com.rag.tui.client.RagApiClient;
 import com.rag.tui.launcher.Module;
 import com.rag.tui.launcher.ModuleLifecycleManager;
 import com.rag.tui.launcher.ModuleRegistry;
-import com.rag.common.services.FileDocumentLoader;
-import com.rag.common.tracing.TracePropagation;
+import com.rag.common.core.services.FileDocumentLoader;
+import com.rag.common.core.tracing.TracePropagation;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
 import org.slf4j.Logger;
@@ -22,7 +22,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-import static com.rag.common.domain.MetadataKeys.FILE_NAME;
+import static com.rag.common.core.domain.MetadataKeys.FILE_NAME;
 import static com.rag.tui.ui.TerminalStyle.error;
 import static com.rag.tui.ui.TerminalStyle.success;
 
