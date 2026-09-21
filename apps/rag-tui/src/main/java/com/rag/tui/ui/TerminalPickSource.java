@@ -107,8 +107,8 @@ final class TerminalPickSource implements InteractivePrompter.PickSource {
     private Key decode(int first) {
         if (first == 3 || first == 4) return key(KeyType.ESC);
         if (first == 13 || first == 10) return key(KeyType.ENTER);
-        if (first == 127) return key(KeyType.BACKSPACE);
-        if (first == 8 || first == 31 || first == 23) return key(KeyType.WORD_BACKSPACE);
+        if (first == 127 || first == 8) return key(KeyType.BACKSPACE);
+        if (first == 23) return key(KeyType.WORD_BACKSPACE);
         if (navigationKeys) {
             if (first == 'k') return key(KeyType.UP);
             if (first == 'j') return key(KeyType.DOWN);

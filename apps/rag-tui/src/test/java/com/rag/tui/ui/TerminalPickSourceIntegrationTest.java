@@ -22,7 +22,8 @@ class TerminalPickSourceIntegrationTest {
     private static final String DELETE = "\u001B[3~";
     private static final String WORD_LEFT = "\u001B[1;5D";
     private static final String WORD_RIGHT = "\u001B[1;5C";
-    private static final String CTRL_BACKSPACE = "\u0008";
+    private static final String CTRL_BACKSPACE = "\u001B[3;5~";
+    private static final String BACKSPACE = "\u0008";
 
     @Test
     void homeDeleteAndEndEditTheLine() {
@@ -47,6 +48,11 @@ class TerminalPickSourceIntegrationTest {
     @Test
     void ctrlBackspaceDeletesPreviousWord() {
         assertThat(prompt("foo bar" + CTRL_BACKSPACE + ENTER)).isEqualTo("foo ");
+    }
+
+    @Test
+    void simpleBackspaceDeletesOneCharacter() {
+        assertThat(prompt("abcd" + BACKSPACE + ENTER)).isEqualTo("abc");
     }
 
     private static String prompt(String line) {

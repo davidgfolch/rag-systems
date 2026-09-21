@@ -163,9 +163,12 @@ class TerminalPickSourceTest {
                 27, '[', '3', ';', '5', '~',
                 27, '[', '1', '2', '7', ';', '5', 'u',
                 27, '[', '8', ';', '5', 'u', EOF));
-        for (int i = 0; i < 6; i++) {
-            assertThat(source.read()).isEqualTo(new Key(WORD_BACKSPACE, ' '));
-        }
+        assertThat(source.read()).isEqualTo(new Key(BACKSPACE, ' '));
+        assertThat(source.read()).isEqualTo(new Key(NONE, ' '));
+        assertThat(source.read()).isEqualTo(new Key(WORD_BACKSPACE, ' '));
+        assertThat(source.read()).isEqualTo(new Key(WORD_BACKSPACE, ' '));
+        assertThat(source.read()).isEqualTo(new Key(WORD_BACKSPACE, ' '));
+        assertThat(source.read()).isEqualTo(new Key(WORD_BACKSPACE, ' '));
         assertThat(source.read()).isNull();
     }
 
