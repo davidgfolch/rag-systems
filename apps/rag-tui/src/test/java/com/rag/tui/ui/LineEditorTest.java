@@ -143,6 +143,69 @@ class LineEditorTest {
     }
 
     @Test
+    void homeAndEndMoveCursorToLineBounds() {
+        sut.start();
+        sut.type('a');
+        sut.type('b');
+        sut.type('c');
+        sut.accept(new Key(Key.KeyType.HOME, ' '));
+        sut.type('X');
+        assertThat(sut.text()).isEqualTo("Xabc");
+        sut.accept(new Key(Key.KeyType.END, ' '));
+        sut.type('Y');
+        assertThat(sut.text()).isEqualTo("XabcY");
+    }
+
+    @Test
+    void deleteRemovesCharacterUnderCursor() {
+        sut.start();
+        sut.type('a');
+        sut.type('b');
+        sut.type('c');
+        sut.accept(new Key(Key.KeyType.HOME, ' '));
+        sut.accept(new Key(Key.KeyType.DELETE, ' '));
+        assertThat(sut.text()).isEqualTo("bc");
+        sut.accept(new Key(Key.KeyType.END, ' '));
+        sut.accept(new Key(Key.KeyType.DELETE, ' '));
+        assertThat(sut.text()).isEqualTo("bc");
+    }
+
+    @Test
+    void wordLeftAndRightJumpAcrossSpaces() {
+        sut.start();
+        sut.type('f');
+        sut.type('o');
+        sut.type('o');
+        sut.type(' ');
+        sut.type('b');
+        sut.type('a');
+        sut.type('r');
+        sut.accept(new Key(Key.KeyType.WORD_LEFT, ' '));
+        sut.type('X');
+        assertThat(sut.text()).isEqualTo("foo Xbar");
+        sut.accept(new Key(Key.KeyType.HOME, ' '));
+        sut.accept(new Key(Key.KeyType.WORD_RIGHT, ' '));
+        sut.type('Y');
+        assertThat(sut.text()).isEqualTo("foo YXbar");
+    }
+
+    @Test
+    void wordBackspaceDeletesWordBeforeCursor() {
+        sut.start();
+        sut.type('f');
+        sut.type('o');
+        sut.type('o');
+        sut.type(' ');
+        sut.type('b');
+        sut.type('a');
+        sut.type('r');
+        sut.accept(new Key(Key.KeyType.WORD_BACKSPACE, ' '));
+        assertThat(sut.text()).isEqualTo("foo ");
+        sut.accept(new Key(Key.KeyType.WORD_BACKSPACE, ' '));
+        assertThat(sut.text()).isEmpty();
+    }
+
+    @Test
     void backspaceAtLineStartIsNoop() {
         sut.start();
         sut.accept(new Key(Key.KeyType.BACKSPACE, ' '));

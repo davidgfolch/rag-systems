@@ -1,28 +1,28 @@
 package com.rag.tui.ui;
 
+import com.rag.tui.testfixture.TestTerminal;
 import org.jline.terminal.Terminal;
-import org.jline.utils.NonBlockingReader;
 import org.junit.jupiter.api.Test;
 
-import java.io.PrintWriter;
-import java.io.Writer;
-import java.util.ArrayDeque;
 import java.util.List;
-import java.util.Queue;
 import java.util.stream.IntStream;
 
 import static com.rag.tui.ui.Key.KeyType.BACKSPACE;
+import static com.rag.tui.ui.Key.KeyType.DELETE;
 import static com.rag.tui.ui.Key.KeyType.DOWN;
+import static com.rag.tui.ui.Key.KeyType.END;
 import static com.rag.tui.ui.Key.KeyType.ENTER;
 import static com.rag.tui.ui.Key.KeyType.ESC;
+import static com.rag.tui.ui.Key.KeyType.HOME;
 import static com.rag.tui.ui.Key.KeyType.LEFT;
 import static com.rag.tui.ui.Key.KeyType.NONE;
 import static com.rag.tui.ui.Key.KeyType.RIGHT;
 import static com.rag.tui.ui.Key.KeyType.TYPE;
 import static com.rag.tui.ui.Key.KeyType.UP;
+import static com.rag.tui.ui.Key.KeyType.WORD_BACKSPACE;
+import static com.rag.tui.ui.Key.KeyType.WORD_LEFT;
+import static com.rag.tui.ui.Key.KeyType.WORD_RIGHT;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 class TerminalPickSourceTest {
 
@@ -30,7 +30,7 @@ class TerminalPickSourceTest {
 
     @Test
     void decodesPlainKeys() throws Exception {
-        var source = new InteractivePrompter.TerminalPickSource(terminal(13, 8, 'x', 'q'));
+        var source = new TerminalPickSource(TestTerminal.withInput(13, 127, 'x', 'q'));
         assertThat(source.read()).isEqualTo(new Key(ENTER, ' '));
         assertThat(source.read()).isEqualTo(new Key(BACKSPACE, ' '));
         assertThat(source.read()).isEqualTo(new Key(TYPE, 'x'));
@@ -40,8 +40,8 @@ class TerminalPickSourceTest {
 
     @Test
     void decodesEscapeArrowsAndVimKeys() throws Exception {
-        var source = new InteractivePrompter.TerminalPickSource(
-                terminal(27, '[', 'A', 27, '[', 'B', 'k', 'j', 'q', EOF));
+        var source = new TerminalPickSource(
+                TestTerminal.withInput(27, '[', 'A', 27, '[', 'B', 'k', 'j', 'q', EOF));
         assertThat(source.read()).isEqualTo(new Key(UP, ' '));
         assertThat(source.read()).isEqualTo(new Key(DOWN, ' '));
         assertThat(source.read()).isEqualTo(new Key(UP, ' '));
@@ -52,8 +52,8 @@ class TerminalPickSourceTest {
 
     @Test
     void keepsVimLettersWhenNavigationIsDisabled() throws Exception {
-        var source = new InteractivePrompter.TerminalPickSource(
-                terminal('s', 'k', '-', 'o', 'r', '-', 'v', '1', EOF), false);
+        var source = new TerminalPickSource(
+                TestTerminal.withInput('s', 'k', '-', 'o', 'r', '-', 'v', '1', EOF), false);
         assertThat(source.read()).isEqualTo(new Key(TYPE, 's'));
         assertThat(source.read()).isEqualTo(new Key(TYPE, 'k'));
         assertThat(source.read()).isEqualTo(new Key(TYPE, '-'));
@@ -67,8 +67,8 @@ class TerminalPickSourceTest {
 
     @Test
     void decodesSs3ApplicationArrows() throws Exception {
-        var source = new InteractivePrompter.TerminalPickSource(
-                terminal(27, 'O', 'A', 27, 'O', 'B', 27, 'O', 'C', 27, 'O', 'D'));
+        var source = new TerminalPickSource(
+                TestTerminal.withInput(27, 'O', 'A', 27, 'O', 'B', 27, 'O', 'C', 27, 'O', 'D'));
         assertThat(source.read()).isEqualTo(new Key(UP, ' '));
         assertThat(source.read()).isEqualTo(new Key(DOWN, ' '));
         assertThat(source.read()).isEqualTo(new Key(RIGHT, ' '));
@@ -77,19 +77,19 @@ class TerminalPickSourceTest {
 
     @Test
     void returnsEscapeWhenSecondByteIsNotASequencePrefix() throws Exception {
-        var source = new InteractivePrompter.TerminalPickSource(terminal(27, EOF));
+        var source = new TerminalPickSource(TestTerminal.withInput(27, EOF));
         assertThat(source.read()).isEqualTo(new Key(ESC, ' '));
     }
 
     @Test
     void returnsEscapeAndNullOnClosedStream() throws Exception {
-        var source = new InteractivePrompter.TerminalPickSource(terminal(EOF));
+        var source = new TerminalPickSource(TestTerminal.withInput(EOF));
         assertThat(source.read()).isNull();
     }
 
     @Test
     void mapsCtrlCDToEscape() throws Exception {
-        var source = new InteractivePrompter.TerminalPickSource(terminal(3, 4, EOF));
+        var source = new TerminalPickSource(TestTerminal.withInput(3, 4, EOF));
         assertThat(source.read()).isEqualTo(new Key(ESC, ' '));
         assertThat(source.read()).isEqualTo(new Key(ESC, ' '));
         assertThat(source.read()).isNull();
@@ -97,7 +97,7 @@ class TerminalPickSourceTest {
 
     @Test
     void mapsControlBytesToNoneKey() throws Exception {
-        var source = new InteractivePrompter.TerminalPickSource(terminal(7, 9, 26, EOF));
+        var source = new TerminalPickSource(TestTerminal.withInput(7, 9, 26, EOF));
         assertThat(source.read()).isEqualTo(new Key(NONE, ' '));
         assertThat(source.read()).isEqualTo(new Key(NONE, ' '));
         assertThat(source.read()).isEqualTo(new Key(NONE, ' '));
@@ -106,8 +106,8 @@ class TerminalPickSourceTest {
 
     @Test
     void decodesPathPunctuationAsTypable() throws Exception {
-        var source = new InteractivePrompter.TerminalPickSource(
-                terminal(':', '\\', '/', '#', '~', '!', '[', EOF));
+        var source = new TerminalPickSource(
+                TestTerminal.withInput(':', '\\', '/', '#', '~', '!', '[', EOF));
         assertThat(source.read()).isEqualTo(new Key(TYPE, ':'));
         assertThat(source.read()).isEqualTo(new Key(TYPE, '\\'));
         assertThat(source.read()).isEqualTo(new Key(TYPE, '/'));
@@ -120,17 +120,59 @@ class TerminalPickSourceTest {
 
     @Test
     void decodesNonAsciiLettersAsTypable() throws Exception {
-        var source = new InteractivePrompter.TerminalPickSource(terminal('ñ', 'á', EOF));
+        var source = new TerminalPickSource(TestTerminal.withInput('ñ', 'á', EOF));
         assertThat(source.read()).isEqualTo(new Key(TYPE, 'ñ'));
         assertThat(source.read()).isEqualTo(new Key(TYPE, 'á'));
         assertThat(source.read()).isNull();
     }
 
     @Test
+    void decodesHomeAndEndKeyVariants() throws Exception {
+        var source = new TerminalPickSource(TestTerminal.withInput(
+                27, '[', 'H', 27, '[', 'F', 27, '[', '1', '~', 27, '[', '4', '~',
+                27, 'O', 'H', 27, 'O', 'F', EOF));
+        assertThat(source.read()).isEqualTo(new Key(HOME, ' '));
+        assertThat(source.read()).isEqualTo(new Key(END, ' '));
+        assertThat(source.read()).isEqualTo(new Key(HOME, ' '));
+        assertThat(source.read()).isEqualTo(new Key(END, ' '));
+        assertThat(source.read()).isEqualTo(new Key(HOME, ' '));
+        assertThat(source.read()).isEqualTo(new Key(END, ' '));
+        assertThat(source.read()).isNull();
+    }
+
+    @Test
+    void decodesDeleteKey() throws Exception {
+        var source = new TerminalPickSource(TestTerminal.withInput(27, '[', '3', '~', EOF));
+        assertThat(source.read()).isEqualTo(new Key(DELETE, ' '));
+        assertThat(source.read()).isNull();
+    }
+
+    @Test
+    void decodesCtrlArrowAsWordMovement() throws Exception {
+        var source = new TerminalPickSource(TestTerminal.withInput(
+                27, '[', '1', ';', '5', 'D', 27, '[', '1', ';', '5', 'C', EOF));
+        assertThat(source.read()).isEqualTo(new Key(WORD_LEFT, ' '));
+        assertThat(source.read()).isEqualTo(new Key(WORD_RIGHT, ' '));
+        assertThat(source.read()).isNull();
+    }
+
+    @Test
+    void decodesCtrlBackspaceVariants() throws Exception {
+        var source = new TerminalPickSource(TestTerminal.withInput(
+                8, 31, 23,
+                27, '[', '3', ';', '5', '~',
+                27, '[', '1', '2', '7', ';', '5', 'u',
+                27, '[', '8', ';', '5', 'u', EOF));
+        for (int i = 0; i < 6; i++) {
+            assertThat(source.read()).isEqualTo(new Key(WORD_BACKSPACE, ' '));
+        }
+        assertThat(source.read()).isNull();
+    }
+
+    @Test
     void promptKeepsPastedWindowsPathIntact() {
         String path = "D:\\documentos\\books\\DB\\# Confluent_Kafka_Definitive_Guide_Complete.pdf";
-        Terminal terminal = terminal(promptBytes("add-file " + path));
-        when(terminal.writer()).thenReturn(new PrintWriter(Writer.nullWriter()));
+        Terminal terminal = TestTerminal.withInput(promptBytes("add-file " + path));
         var sut = new InteractivePrompter(terminal, (line, cursor) -> List.of());
         assertThat(sut.prompt("> ")).isEqualTo("add-file " + path);
     }
@@ -141,68 +183,8 @@ class TerminalPickSourceTest {
 
     @Test
     void promptKeepsPastedApiKeyIntact() {
-        Terminal terminal = terminal('s', 'k', '-', 'o', 'r', '-', 'v', '1', '-', 'a', 'b', 13);
-        when(terminal.writer()).thenReturn(new PrintWriter(Writer.nullWriter()));
+        Terminal terminal = TestTerminal.withInput('s', 'k', '-', 'o', 'r', '-', 'v', '1', '-', 'a', 'b', 13);
         var sut = new InteractivePrompter(terminal, (line, cursor) -> List.of());
         assertThat(sut.prompt("> ")).isEqualTo("sk-or-v1-ab");
-    }
-
-    private static Terminal terminal(int... bytes) {
-        Terminal terminal = mock(Terminal.class);
-        when(terminal.reader()).thenReturn(new FakeReader(bytes));
-        return terminal;
-    }
-
-    private static final class FakeReader extends NonBlockingReader {
-        private final Queue<Integer> bytes;
-
-        FakeReader(int[] bytes) {
-            this.bytes = new ArrayDeque<>();
-            addAll(this.bytes, bytes);
-        }
-
-        @Override
-        public int read(long timeout, boolean isPeek) {
-            Integer next = bytes.peek();
-            if (next == null) return EOF;
-            if (!isPeek) {
-                bytes.poll();
-            }
-            return next;
-        }
-
-        @Override
-        public int read() {
-            Integer next = bytes.poll();
-            return next == null ? EOF : next;
-        }
-
-        @Override
-        public int readBuffered(char[] b, int off, int len, long timeout) {
-            int i = off;
-            while (i < off + len && !bytes.isEmpty()) {
-                b[i++] = (char) bytes.poll().intValue();
-            }
-            return i == off ? EOF : i - off;
-        }
-
-        @Override
-        public int available() {
-            return bytes.size();
-        }
-
-        @Override
-        public void close() {
-            bytes.clear();
-        }
-
-        private static void addAll(Queue<Integer> q, int... ints) {
-            for (int i : ints) {
-                if (i == EOF) {
-                    continue;
-                }
-                q.add(i);
-            }
-        }
     }
 }

@@ -83,6 +83,12 @@ final class LineEditor {
                 }
                 yield false;
             }
+            case HOME -> { moveTo(0); yield false; }
+            case END -> { moveTo(buffer.length()); yield false; }
+            case DELETE -> { deleteForward(); yield false; }
+            case WORD_LEFT -> { moveTo(backwardWord(cursor)); yield false; }
+            case WORD_RIGHT -> { moveTo(forwardWord(cursor)); yield false; }
+            case WORD_BACKSPACE -> { deleteWordBackward(); yield false; }
             case NONE -> false;
         };
     }
@@ -99,6 +105,44 @@ final class LineEditor {
         buffer.deleteCharAt(cursor - 1);
         cursor--;
         refresh();
+    }
+
+    private void moveTo(int position) {
+        int clamped = Math.clamp(position, 0, buffer.length());
+        if (clamped == cursor) return;
+        cursor = clamped;
+        refresh();
+    }
+
+    private void deleteForward() {
+        if (cursor >= buffer.length()) return;
+        buffer.deleteCharAt(cursor);
+        refresh();
+    }
+
+    private void deleteWordBackward() {
+        int start = backwardWord(cursor);
+        if (start == cursor) return;
+        buffer.delete(start, cursor);
+        cursor = start;
+        refresh();
+    }
+
+    /** Start of the word before the cursor, treating spaces as boundaries. */
+    private int backwardWord(int from) {
+        int i = from;
+        while (i > 0 && buffer.charAt(i - 1) == SPACE) i--;
+        while (i > 0 && buffer.charAt(i - 1) != SPACE) i--;
+        return i;
+    }
+
+    /** Start of the word after the cursor, skipping the spaces that follow it. */
+    private int forwardWord(int from) {
+        int i = from;
+        int length = buffer.length();
+        while (i < length && buffer.charAt(i) != SPACE) i++;
+        while (i < length && buffer.charAt(i) == SPACE) i++;
+        return i;
     }
 
     private void historyUp() {
