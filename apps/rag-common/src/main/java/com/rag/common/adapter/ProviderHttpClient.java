@@ -101,7 +101,10 @@ public class ProviderHttpClient {
     private HttpRequest.Builder withTracePropagation(HttpRequest.Builder builder) {
         var span = tracer != null ? tracer.currentSpan() : null;
         if (span != null) {
-            builder.header(TracePropagation.TRACEPARENT_HEADER, TracePropagation.w3cTraceparent(span.context()));
+            String traceparent = TracePropagation.w3cTraceparent(span.context());
+            if (traceparent != null) {
+                builder.header(TracePropagation.TRACEPARENT_HEADER, traceparent);
+            }
         }
         return builder;
     }

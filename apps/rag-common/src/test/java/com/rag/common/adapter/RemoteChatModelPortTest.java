@@ -5,6 +5,7 @@ import com.rag.common.tracing.TracePropagation;
 import com.rag.contract.constants.ApiPaths;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import io.micrometer.tracing.test.simple.SimpleTraceContext;
 import io.micrometer.tracing.test.simple.SimpleTracer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,6 +22,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class RemoteChatModelPortTest {
+
+    private static final String TRACE_ID = "0123456789abcdef0123456789abcdef";
+    private static final String SPAN_ID = "0123456789abcdef";
 
     private HttpServer server;
     private RemoteChatModelPort port;
@@ -136,11 +140,14 @@ class RemoteChatModelPortTest {
                 new ObjectMapper(), tracer);
         var tracedPort = new RemoteChatModelPort(tracedClient, new ObjectMapper(), tracer);
         var span = tracer.nextSpan().name("test-stream").start();
+        var context = (SimpleTraceContext) span.context();
+        context.setTraceId(TRACE_ID);
+        context.setSpanId(SPAN_ID);
+        context.setSampled(true);
         try (var _ = tracer.withSpan(span)) {
             StepVerifier.create(tracedPort.completeStream("hi")).verifyComplete();
         }
-        assertThat(traceparent.get())
-                .matches("^00-" + span.context().traceId() + "-[0-9a-f]{16}-[01]{2}$");
+        assertThat(traceparent.get()).isEqualTo("00-" + TRACE_ID + "-" + SPAN_ID + "-01");
     }
 
     private static void respond(HttpExchange exchange, int code, String contentType, String body)

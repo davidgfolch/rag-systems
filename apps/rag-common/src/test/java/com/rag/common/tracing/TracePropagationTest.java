@@ -1,5 +1,6 @@
 package com.rag.common.tracing;
 
+import io.micrometer.tracing.test.simple.SimpleTraceContext;
 import io.micrometer.tracing.test.simple.SimpleTracer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,6 +18,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class TracePropagationTest {
 
+    private static final String TRACE_ID = "0123456789abcdef0123456789abcdef";
+    private static final String SPAN_ID = "0123456789abcdef";
+
     private final SimpleTracer tracer = new SimpleTracer();
 
     @BeforeEach
@@ -29,28 +33,56 @@ class TracePropagationTest {
         MDC.clear();
     }
 
+    private static SimpleTraceContext validContext(SimpleTracer tracer) {
+        var context = (SimpleTraceContext) tracer.nextSpan().name("op").start().context();
+        context.setTraceId(TRACE_ID);
+        context.setSpanId(SPAN_ID);
+        return context;
+    }
+
     @Test
     void shouldBuildW3cTraceparentWhenSpanSampled() {
-        var span = tracer.nextSpan().name("op").start();
-        span.context().setSampled(true);
-        var header = w3cTraceparent(span.context());
-        assertThat(header).isEqualTo("00-" + span.context().traceId() + "-" + span.context().spanId() + "-01");
+        var context = validContext(tracer);
+        context.setSampled(true);
+        var header = w3cTraceparent(context);
+        assertThat(header).isEqualTo("00-" + TRACE_ID + "-" + SPAN_ID + "-01");
     }
 
     @Test
     void shouldBuildW3cTraceparentWhenSpanUnsampled() {
-        var span = tracer.nextSpan().name("op").start();
-        span.context().setSampled(false);
-        var header = w3cTraceparent(span.context());
-        assertThat(header).isEqualTo("00-" + span.context().traceId() + "-" + span.context().spanId() + "-00");
+        var context = validContext(tracer);
+        context.setSampled(false);
+        var header = w3cTraceparent(context);
+        assertThat(header).isEqualTo("00-" + TRACE_ID + "-" + SPAN_ID + "-00");
     }
 
     @Test
     void shouldBuildW3cTraceparentWhenSamplingUnknown() {
-        var span = tracer.nextSpan().name("op").start();
-        span.context().setSampled(null);
-        var header = w3cTraceparent(span.context());
+        var context = validContext(tracer);
+        context.setSampled(null);
+        var header = w3cTraceparent(context);
         assertThat(header).endsWith("-00");
+    }
+
+    @Test
+    void shouldSkipTraceparentWhenTraceIdTooShort() {
+        var context = validContext(tracer);
+        context.setTraceId("0123456789abcdef");
+        assertThat(w3cTraceparent(context)).isNull();
+    }
+
+    @Test
+    void shouldSkipTraceparentWhenTraceIdNonHex() {
+        var context = validContext(tracer);
+        context.setTraceId("g123456789abcdef0123456789abcdef");
+        assertThat(w3cTraceparent(context)).isNull();
+    }
+
+    @Test
+    void shouldSkipTraceparentWhenSpanIdTooShort() {
+        var context = validContext(tracer);
+        context.setSpanId("01234567");
+        assertThat(w3cTraceparent(context)).isNull();
     }
 
     @Test

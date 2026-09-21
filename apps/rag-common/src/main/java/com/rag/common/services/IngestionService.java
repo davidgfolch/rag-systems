@@ -17,19 +17,29 @@ import java.util.stream.IntStream;
  */
 public class IngestionService {
 
+    public static final int DEFAULT_EMBED_BATCH_SIZE = 100;
+
     private static final Logger log = LoggerFactory.getLogger(IngestionService.class);
 
     private final DocumentParser parser;
     private final TextSplitter splitter;
     private final EmbeddingModelPort embeddingModel;
     private final VectorStorePort vectorStore;
+    private final int maxEmbeddingBatchSize;
 
     public IngestionService(DocumentParser parser, TextSplitter splitter,
                             EmbeddingModelPort embeddingModel, VectorStorePort vectorStore) {
+        this(parser, splitter, embeddingModel, vectorStore, DEFAULT_EMBED_BATCH_SIZE);
+    }
+
+    public IngestionService(DocumentParser parser, TextSplitter splitter,
+                            EmbeddingModelPort embeddingModel, VectorStorePort vectorStore,
+                            int maxEmbeddingBatchSize) {
         this.parser = parser;
         this.splitter = splitter;
         this.embeddingModel = embeddingModel;
         this.vectorStore = vectorStore;
+        this.maxEmbeddingBatchSize = requirePositive(maxEmbeddingBatchSize);
     }
 
     public IngestionResult ingest(Document doc) {
@@ -54,10 +64,25 @@ public class IngestionService {
     }
 
     private void embedChunks(List<Chunk> chunks) {
-        var texts = chunks.stream().map(Chunk::getContent).toList();
+        for (int from = 0; from < chunks.size(); from += maxEmbeddingBatchSize) {
+            var window = chunks.subList(from, Math.min(chunks.size(), from + maxEmbeddingBatchSize));
+            embedChunkWindow(window);
+        }
+    }
+
+    private void embedChunkWindow(List<Chunk> window) {
+        log.debug("Embedding window of {} chunks", window.size());
+        var texts = window.stream().map(Chunk::getContent).toList();
         var vectors = embeddingModel.embed(texts);
-        IntStream.range(0, chunks.size())
-                .forEach(i -> chunks.get(i).setEmbedding(vectors.get(i)));
+        IntStream.range(0, window.size())
+                .forEach(i -> window.get(i).setEmbedding(vectors.get(i)));
+    }
+
+    private static int requirePositive(int value) {
+        if (value <= 0) {
+            throw new IllegalArgumentException("embedding batch size must be positive");
+        }
+        return value;
     }
 
     public record IngestionResult(String documentId, int chunkCount) {}

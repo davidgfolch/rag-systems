@@ -35,6 +35,8 @@ management:
 rag:
   provider:
     url: ${RAG_PROVIDER_URL:http://localhost:8086}
+  embedding:
+    batch-size: ${RAG_EMBED_BATCH_SIZE:100}
   vector-store:
     type: ${VECTOR_STORE_TYPE:pgvector}
   chunking:

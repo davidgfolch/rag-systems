@@ -8,6 +8,7 @@ import com.rag.contract.provider.CompleteResponse;
 import com.rag.contract.provider.ProviderStatusDTO;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import io.micrometer.tracing.test.simple.SimpleTraceContext;
 import io.micrometer.tracing.test.simple.SimpleTracer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +30,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class ProviderHttpClientTest {
+
+    private static final String TRACE_ID = "0123456789abcdef0123456789abcdef";
+    private static final String SPAN_ID = "0123456789abcdef";
 
     private HttpServer server;
     private ProviderHttpClient client;
@@ -192,11 +196,31 @@ class ProviderHttpClientTest {
         var traced = new ProviderHttpClient("http://localhost:" + server.getAddress().getPort(),
                 new ObjectMapper(), tracer);
         var span = tracer.nextSpan().name("test-call").start();
+        var context = (SimpleTraceContext) span.context();
+        context.setTraceId(TRACE_ID);
+        context.setSpanId(SPAN_ID);
+        context.setSampled(true);
         try (var _ = tracer.withSpan(span)) {
             traced.postJson(ApiPaths.COMPLETE, new CompleteRequest("hi"), CompleteResponse.class);
         }
-        assertThat(traceparent.get())
-                .matches("^00-" + span.context().traceId() + "-[0-9a-f]{16}-[01]{2}$");
+        assertThat(traceparent.get()).isEqualTo("00-" + TRACE_ID + "-" + SPAN_ID + "-01");
+    }
+
+    @Test
+    void shouldSkipTraceparentWhenSpanIdsNotW3CConformant() {
+        AtomicReference<String> traceparent = new AtomicReference<>();
+        server.createContext(ApiPaths.COMPLETE, exchange -> {
+            traceparent.set(exchange.getRequestHeaders().getFirst(TracePropagation.TRACEPARENT_HEADER));
+            respond(exchange, 200, "application/json", "{\"answer\":\"Hi\"}");
+        });
+        var tracer = new SimpleTracer();
+        var traced = new ProviderHttpClient("http://localhost:" + server.getAddress().getPort(),
+                new ObjectMapper(), tracer);
+        var span = tracer.nextSpan().name("test-call").start();
+        try (var _ = tracer.withSpan(span)) {
+            traced.postJson(ApiPaths.COMPLETE, new CompleteRequest("hi"), CompleteResponse.class);
+        }
+        assertThat(traceparent.get()).isNull();
     }
 
     @Test
