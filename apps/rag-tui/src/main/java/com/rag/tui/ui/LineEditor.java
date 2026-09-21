@@ -108,7 +108,7 @@ final class LineEditor {
     }
 
     private void moveTo(int position) {
-        int clamped = Math.max(0, Math.min(position, buffer.length()));
+        int clamped = Math.clamp(position, 0, buffer.length());
         if (clamped == cursor) return;
         cursor = clamped;
         refresh();
