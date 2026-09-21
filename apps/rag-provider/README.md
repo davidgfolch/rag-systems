@@ -2,6 +2,8 @@
 
 Dedicated Spring Boot service owning all LLM and embedding provider clients (Ollama, OpenAI, OpenAI-compatible). It is the **provider hub** of the monorepo: every other RAG module gets its chat and embedding compute from here over HTTP, so downstream modules keep no provider dependencies of their own.
 
+**Ollama is the preferred default** (`local` profile): native, containerized (`rag-ollama` via `docker.bat up-ollama`), or externally via `OLLAMA_BASE_URL`. With `INFRA_MODE=auto` the docker script reuses an already-reachable external Ollama instead of starting the container. OpenRouter and any OpenAI-compatible endpoint are drop-in alternatives registered at runtime (see below).
+
 Port: **8086** (override with `RAG_PROVIDER_PORT`).
 
 ## Why it is a required dependency
@@ -61,6 +63,8 @@ All properties are overridable via environment variables.
 | `rag.provider.catalog.url` | `MODEL_CATALOG_URL` | `https://models.dev/api.json` | Model catalog endpoint |
 | `rag.provider.catalog.ttl` | `MODEL_CATALOG_TTL` | `86400` | Catalog cache TTL in seconds |
 | `rag.provider.catalog.enabled` | `MODEL_CATALOG_ENABLED` | `true` | Enable catalog fetching |
+
+> `OLLAMA_BASE_URL` (default `http://localhost:11434`) can point at a remote or containerized Ollama. The `docker` script's `INFRA_MODE=auto` reuses an already-reachable Ollama at that URL instead of starting the `rag-ollama` container; `INFRA_MODE=local` always starts it.
 
 ## HTTP API
 

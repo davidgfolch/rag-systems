@@ -223,9 +223,13 @@ public class InteractivePrompter implements Prompter {
             return null;
         }
 
+        /**
+         * Any non-control character is typable so pasted file paths and URLs
+         * survive intact (':', '\\', '/', '#', '~', '!'). Only C0 control bytes
+         * and DEL are reserved for command decoding above.
+         */
         private static boolean isPrintable(int code) {
-            return Character.isLetterOrDigit(code) || code == '-' || code == '_'
-                    || code == '.' || code == ' ';
+            return code >= 32 && code != 127;
         }
     }
 }

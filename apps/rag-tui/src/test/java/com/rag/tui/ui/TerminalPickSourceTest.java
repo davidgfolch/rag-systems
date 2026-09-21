@@ -9,6 +9,7 @@ import java.io.Writer;
 import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Queue;
+import java.util.stream.IntStream;
 
 import static com.rag.tui.ui.Key.KeyType.BACKSPACE;
 import static com.rag.tui.ui.Key.KeyType.DOWN;
@@ -95,11 +96,47 @@ class TerminalPickSourceTest {
     }
 
     @Test
-    void mapsUnknownBytesToNoneKey() throws Exception {
-        var source = new InteractivePrompter.TerminalPickSource(terminal('!', '[', EOF));
+    void mapsControlBytesToNoneKey() throws Exception {
+        var source = new InteractivePrompter.TerminalPickSource(terminal(7, 9, 26, EOF));
+        assertThat(source.read()).isEqualTo(new Key(NONE, ' '));
         assertThat(source.read()).isEqualTo(new Key(NONE, ' '));
         assertThat(source.read()).isEqualTo(new Key(NONE, ' '));
         assertThat(source.read()).isNull();
+    }
+
+    @Test
+    void decodesPathPunctuationAsTypable() throws Exception {
+        var source = new InteractivePrompter.TerminalPickSource(
+                terminal(':', '\\', '/', '#', '~', '!', '[', EOF));
+        assertThat(source.read()).isEqualTo(new Key(TYPE, ':'));
+        assertThat(source.read()).isEqualTo(new Key(TYPE, '\\'));
+        assertThat(source.read()).isEqualTo(new Key(TYPE, '/'));
+        assertThat(source.read()).isEqualTo(new Key(TYPE, '#'));
+        assertThat(source.read()).isEqualTo(new Key(TYPE, '~'));
+        assertThat(source.read()).isEqualTo(new Key(TYPE, '!'));
+        assertThat(source.read()).isEqualTo(new Key(TYPE, '['));
+        assertThat(source.read()).isNull();
+    }
+
+    @Test
+    void decodesNonAsciiLettersAsTypable() throws Exception {
+        var source = new InteractivePrompter.TerminalPickSource(terminal('ñ', 'á', EOF));
+        assertThat(source.read()).isEqualTo(new Key(TYPE, 'ñ'));
+        assertThat(source.read()).isEqualTo(new Key(TYPE, 'á'));
+        assertThat(source.read()).isNull();
+    }
+
+    @Test
+    void promptKeepsPastedWindowsPathIntact() {
+        String path = "D:\\documentos\\books\\DB\\# Confluent_Kafka_Definitive_Guide_Complete.pdf";
+        Terminal terminal = terminal(promptBytes("add-file " + path));
+        when(terminal.writer()).thenReturn(new PrintWriter(Writer.nullWriter()));
+        var sut = new InteractivePrompter(terminal, (line, cursor) -> List.of());
+        assertThat(sut.prompt("> ")).isEqualTo("add-file " + path);
+    }
+
+    private static int[] promptBytes(String line) {
+        return IntStream.concat(line.chars(), IntStream.of(13)).toArray();
     }
 
     @Test

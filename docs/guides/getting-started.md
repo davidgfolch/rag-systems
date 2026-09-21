@@ -10,7 +10,7 @@
 
 ## 1. Install Ollama Models (Local Profile)
 
-Ollama serves the local models (`nomic-embed-text` embeddings, `phi4` chat). Run it natively, or containerized via Docker — both listen on port **11434**, so the rest of the setup is identical.
+**Ollama is the preferred default provider** — zero-cost, private, offline. Everything works with no API keys (set `OPENAI_API_KEY` only if you opt into cloud scores). Ollama serves the local models (`nomic-embed-text` embeddings, `phi4` chat). Run it natively, containerized via Docker, or reuse an external/remote instance — both local options listen on port **11434**, so the rest of the setup is identical.
 
 ### Option A — Native Ollama
 
@@ -51,6 +51,16 @@ docker exec rag-ollama ollama pull phi4
 # GPU-friendly LLM (8GB VRAM+)
 docker exec rag-ollama ollama pull qwen3:8b
 ```
+
+### Option C — External / Remote Ollama
+
+Already running Ollama on another machine, or a CI runner? Point every script at it via `OLLAMA_BASE_URL` in `.env`:
+
+```bash
+OLLAMA_BASE_URL=http://my-host:11434
+```
+
+With `INFRA_MODE=auto` (the default), `.\scripts\docker.bat up-ollama` detects an already-reachable `OLLAMA_BASE_URL` and **reuses it** instead of starting the `rag-ollama` container. Set `INFRA_MODE=local` to always start the container regardless. Pull models as usual against that host (`ollama pull` / `docker exec rag-ollama ollama pull`).
 
 ### Verify
 
@@ -143,6 +153,25 @@ rag-provider starts on port **8086** by default. It manages Ollama/OpenAI client
 
 See the [rag-provider README](../../apps/rag-provider/README.md) for full configuration, API reference, and how to connect external providers.
 
+## 5b. OpenRouter / OpenAI-Compatible Alternatives (Optional)
+
+Ollama is preferred for local development, but if you lack a GPU — or want frontier models — register **OpenRouter** (or any OpenAI-shaped API) with rag-provider at runtime, no restart:
+
+```bash
+# In the TUI: follow the interactive prompts (type = OpenAI-compatible, base URL = https://openrouter.ai/api/v1, API key = sk-or-...)
+connect chat openrouter gpt-4o
+
+# Or via HTTP, with a key from https://openrouter.ai/keys
+curl -X POST http://localhost:8086/api/provider/configure \
+  -H "Content-Type: application/json" \
+  -d '{"providerId":"openrouter","type":"OPENAI_COMPATIBLE","displayName":"OpenRouter","baseUrl":"https://openrouter.ai/api/v1","apiKey":"sk-or-..."}'
+curl -X POST http://localhost:8086/api/provider/chat \
+  -H "Content-Type: application/json" \
+  -d '{"providerId":"openrouter","model":"openai/gpt-4o"}'
+```
+
+Runtime-registered providers are persisted to `data/provider-profiles.json` and survive restarts. The same flow works for **any OpenAI-compatible endpoint** (GLHF, self-hosted vLLM, ...). See the [rag-provider README](../../apps/rag-provider/README.md) for the full API and profile-file option.
+
 ## 6. Run a Module
 
 Run rag-basic with the local (Ollama) profile:
@@ -210,9 +239,10 @@ All operations are centralized in `scripts/` with Windows (`.bat`) and Linux/Mac
 
 | Profile | Description |
 |---------|-------------|
-| `local` | Ollama models (nomic-embed-text, phi4) - default |
+| `local` | Ollama models (nomic-embed-text, phi4) - default, **preferred** |
 | `cloud` | OpenAI models (text-embedding-3-small, gpt-4o) |
 | `observability` | Enables OpenTelemetry, Prometheus, Grafana |
+| *(any runtime)* | OpenRouter / OpenAI-compatible providers registered via the TUI `connect` or the rag-provider API |
 
 Set via `SPRING_PROFILES_ACTIVE` env var or `--profile` script flag.
 

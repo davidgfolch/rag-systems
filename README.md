@@ -5,7 +5,7 @@
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.5-6DB33F?logo=spring)](https://spring.io/projects/spring-boot)
 [![Maven](https://img.shields.io/badge/Maven-3.9-C71A36?logo=apache-maven)](https://maven.apache.org/)
 <!-- COVERAGE_BADGES_START -->
-![rag-common](https://img.shields.io/badge/rag--common-96%25-brightgreen)  ![rag-basic](https://img.shields.io/badge/rag--basic-89%25-brightgreen)  ![rag-memory](https://img.shields.io/badge/rag--memory-99%25-brightgreen)  ![rag-webcrawler](https://img.shields.io/badge/rag--webcrawler-95%25-brightgreen)  ![rag-provider](https://img.shields.io/badge/rag--provider-96%25-brightgreen)  ![rag-tui](https://img.shields.io/badge/rag--tui-87%25-brightgreen)
+![rag-common](https://img.shields.io/badge/rag--common-96%25-brightgreen)  ![rag-basic](https://img.shields.io/badge/rag--basic-89%25-brightgreen)  ![rag-memory](https://img.shields.io/badge/rag--memory-94%25-brightgreen)  ![rag-webcrawler](https://img.shields.io/badge/rag--webcrawler-91%25-brightgreen)  ![rag-provider](https://img.shields.io/badge/rag--provider-91%25-brightgreen)  ![rag-tui](https://img.shields.io/badge/rag--tui-91%25-brightgreen)
 <!-- COVERAGE_BADGES_END -->
 
 <!-- SONARQUBE_RESULTS_START -->
@@ -31,7 +31,7 @@ Modules range from basic vector similarity search to advanced hybrid retrieval w
 - **Java 25** (LTS)
 - **Maven 3.9+**
 - **Docker** (for PostgreSQL/PgVector)
-- **Ollama** (optional, for local models)
+- **Ollama** (recommended, for local models) — or an OpenAI-compatible API key (e.g. [OpenRouter](https://openrouter.ai)) as an alternative
 
 ## Installation
 
@@ -50,6 +50,10 @@ ollama pull phi4                # small CPU-friendly LLM
 # Linux/Mac
 ./scripts/docker.sh up
 ```
+
+Ollama runs natively, containerized (`.\scripts\docker.bat up-ollama`), or points at an externally running instance via `OLLAMA_BASE_URL` — with `INFRA_MODE=auto` (default), `up-ollama` reuses an already-reachable Ollama instead of starting the `rag-ollama` container. See the [Getting Started guide](docs/guides/getting-started.md).
+
+Prefer Ollama for zero-cost, private local development. When you need frontier models without local GPUs, register OpenRouter (or any OpenAI-compatible endpoint) with rag-provider — at runtime via the TUI `connect` command, no restart needed.
 
 ## Build
 
@@ -90,6 +94,8 @@ exit                              # quit
 ```
 
 The pipeline: files and URLs are parsed, split into chunks, embedded, and stored in a vector store. Questions retrieve the most relevant chunks and generate a grounded answer via the configured LLM.
+
+Models default to **Ollama** (phi4 chat, nomic-embed-text embeddings). Switch chat/embedding providers at runtime — no restart — with the TUI `connect` command (e.g. `connect chat openrouter gpt-4o`), or via the rag-provider HTTP API.
 
 See the [TUI Guide](docs/guides/tui-ingestion.md) for details on extending sources and how the architecture works.
 
