@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rag.common.tracing.TracePropagation;
 import com.rag.tui.launcher.ModuleRegistry;
 import com.rag.tui.testfixture.TestModules;
+import io.micrometer.tracing.test.simple.SimpleTraceContext;
 import io.micrometer.tracing.test.simple.SimpleTracer;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.socket.TextMessage;
@@ -33,6 +34,9 @@ import static com.rag.contract.constants.FrameTypes.ERROR;
 import static com.rag.contract.constants.FrameTypes.TOKEN;
 
 class ChatGatewayTest {
+
+    private static final String TRACE_ID = "0123456789abcdef0123456789abcdef";
+    private static final String SPAN_ID = "0123456789abcdef";
 
     private final ModuleRegistry registry = new ModuleRegistry(
             List.of(TestModules.basic()), TestModules.BASIC);
@@ -103,6 +107,10 @@ class ChatGatewayTest {
     void attachesW3CTraceparentWhenSpanActive() throws Exception {
         var tracer = new SimpleTracer();
         var span = tracer.nextSpan().name("tui.command").start();
+        var context = (SimpleTraceContext) span.context();
+        context.setTraceId(TRACE_ID);
+        context.setSpanId(SPAN_ID);
+        context.setSampled(true);
         var gateway = new ChatGateway(registry, webSocketClient, new ObjectMapper(), 60, tracer);
         ArgumentCaptor<WebSocketHandler> handlerCaptor =
                 ArgumentCaptor.forClass(WebSocketHandler.class);
@@ -117,7 +125,30 @@ class ChatGatewayTest {
         runner.start();
         verify(webSocketClient, timeout(2000)).execute(any(), any(WebSocketHttpHeaders.class), any(URI.class));
         assertThat(headersCaptor.getValue().getFirst(TracePropagation.TRACEPARENT_HEADER))
-                .isEqualTo(TracePropagation.w3cTraceparent(span.context()));
+                .isEqualTo("00-" + TRACE_ID + "-" + SPAN_ID + "-01");
+        handler = (TextWebSocketHandler) handlerCaptor.getValue();
+        feedEvent(session, "{\"type\":\"" + DONE + "\",\"content\":\"hi\",\"conversationId\":\"x\"}");
+        runner.join(2000);
+        assertThat(runner.isAlive()).isFalse();
+        span.end();
+    }
+
+    @Test
+    void skipsTraceparentWhenSpanNotConformant() throws Exception {
+        var tracer = new SimpleTracer();
+        var span = tracer.nextSpan().name("tui.command").start();
+        var gateway = new ChatGateway(registry, webSocketClient, new ObjectMapper(), 60, tracer);
+        ArgumentCaptor<WebSocketHandler> handlerCaptor =
+                ArgumentCaptor.forClass(WebSocketHandler.class);
+        when(webSocketClient.execute(handlerCaptor.capture(), anyString()))
+                .thenReturn(CompletableFuture.completedFuture(session));
+        doNothing().when(session).sendMessage(any(TextMessage.class));
+        runner = new Thread(() ->
+                TracePropagation.runWithSpan(tracer, span, () -> gateway.ask("hello", 4, t -> {})));
+        runner.setUncaughtExceptionHandler((thread, error) -> runnerError = error);
+        runner.start();
+        verify(webSocketClient, timeout(2000)).execute(any(), anyString());
+        verify(webSocketClient, never()).execute(any(), any(WebSocketHttpHeaders.class), any(URI.class));
         handler = (TextWebSocketHandler) handlerCaptor.getValue();
         feedEvent(session, "{\"type\":\"" + DONE + "\",\"content\":\"hi\",\"conversationId\":\"x\"}");
         runner.join(2000);

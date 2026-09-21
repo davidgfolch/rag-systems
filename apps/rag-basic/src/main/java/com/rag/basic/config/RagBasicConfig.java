@@ -136,8 +136,9 @@ public class RagBasicConfig {
 
     @Bean
     public IngestionService ingestionService(DocumentParser parser, TextSplitter splitter,
-                                             EmbeddingModelPort embeddingModel, VectorStorePort vectorStore) {
-        return new IngestionService(parser, splitter, embeddingModel, vectorStore);
+                                             EmbeddingModelPort embeddingModel, VectorStorePort vectorStore,
+                                             @Value("${rag.embedding.batch-size:100}") int maxEmbeddingBatchSize) {
+        return new IngestionService(parser, splitter, embeddingModel, vectorStore, maxEmbeddingBatchSize);
     }
 
     @Bean

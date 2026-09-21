@@ -102,7 +102,9 @@ public class RagProviderConfig {
     }
 
     @Bean
-    public EmbeddingService embeddingService(ModelRouter router) {
-        return new EmbeddingService(router);
+    public EmbeddingService embeddingService(
+            ModelRouter router,
+            @Value("${rag.provider.embedding.batch-size:100}") int maxEmbeddingBatchSize) {
+        return new EmbeddingService(router, maxEmbeddingBatchSize);
     }
 }
