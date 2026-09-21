@@ -1,7 +1,7 @@
 package com.rag.tui.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rag.common.tracing.TracePropagation;
+import com.rag.common.core.tracing.TracePropagation;
 import com.rag.tui.launcher.ModuleRegistry;
 import com.rag.tui.testfixture.TestModules;
 import io.micrometer.tracing.test.simple.SimpleTraceContext;

@@ -41,11 +41,12 @@ class ArchitectureTest {
     }
 
     @Test
-    void servicesDoNotDependOnCommonServicesOrRepositories() {
+    void servicesDoNotDependOnCommonCapabilitiesOrRepositories() {
         noClasses()
                 .that().resideInAPackage(SERVICES)
                 .should().dependOnClassesThat().resideInAnyPackage(
-                        "com.rag.common.services..", "com.rag.common.repositories..")
+                        "com.rag.common.ingestion..", "com.rag.common.generation..",
+                        "com.rag.common.retrieval..", "com.rag.common.core.repositories..")
                 .check(importer.importPackages(ROOT));
     }
 

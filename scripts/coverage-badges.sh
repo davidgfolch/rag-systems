@@ -23,7 +23,10 @@ declare -a COLORS=()
 # Note: rag-contract is intentionally NOT listed - excluded from coverage in SonarQube too
 # (see sonar.coverage.exclusions in pom.xml / sonar-project.properties).
 EXPECTED_MODULES=(
-    "rag-common"
+    "rag-common-core"
+    "rag-common-ingestion"
+    "rag-common-retrieval"
+    "rag-common-generation"
     "rag-basic"
     "rag-memory"
     "rag-webcrawler"

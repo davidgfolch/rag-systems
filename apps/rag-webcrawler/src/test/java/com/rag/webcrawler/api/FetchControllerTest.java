@@ -10,7 +10,7 @@ import org.springframework.http.ResponseEntity;
 import java.net.URI;
 import java.util.List;
 
-import static com.rag.common.testfixture.TestControllerAssertions.assertEntityCreated;
+import static com.rag.common.core.testfixture.TestControllerAssertions.assertEntityCreated;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;

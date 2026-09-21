@@ -1,7 +1,7 @@
 package com.rag.basic.services;
 
-import com.rag.common.domain.Chunk;
-import com.rag.common.repositories.VectorStorePort;
+import com.rag.common.core.domain.Chunk;
+import com.rag.common.core.repositories.VectorStorePort;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

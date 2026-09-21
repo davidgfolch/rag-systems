@@ -1,6 +1,6 @@
 package com.rag.webcrawler.services.ranking;
 
-import com.rag.common.services.ChatModelPort;
+import com.rag.common.core.services.ChatModelPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

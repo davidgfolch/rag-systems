@@ -18,7 +18,7 @@ Enforce the architecture rules defined in `.claude/rules/architecture-guidelines
 4. **Naming conventions**: Packages `com.rag.[module].[layer]`, test class/method naming.
 5. **No hardcoded providers**: Type-safe access to configured models (local/cloud), never hardcoded.
 6. **File length**: Files under 200 lines (guideline; warn at 250).
-7. **Minimal root**: Root holds only the files needed for the GitHub landing page and the build (enforced by `rag-common` `ArchitectureTest.repoRootContainsOnlyAllowedEntries`).
+7. **Minimal root**: Root holds only the files needed for the GitHub landing page and the build (enforced by `rag-common-core` `ArchitectureTest.repoRootContainsOnlyAllowedEntries`).
 8. **Docs/scripts placement**: All `.md` in `docs/`, all `.bat`/`.sh`/`.ps1` in `scripts/`; only `README.md` allowed at root (enforced by `.noDocsOrScriptsAtRoot`).
 9. **Portability**: Every operational script has a `.sh` + `.bat`/`.ps1` twin (enforced by `.scriptsArePortable`).
 
@@ -39,7 +39,7 @@ Each runnable module has a test class:
 apps/[module]/src/test/java/com/rag/[module]/architecture/ArchitectureTest.java
 ```
 
-The class-based modules use `ClassFileImporter` (layer/interface rules). The `rag-common` `ArchitectureTest` additionally contains filesystem checks (`java.nio.file.Files`) that verify repository hygiene from the repo root:
+The class-based modules use `ClassFileImporter` (layer/interface rules). The `rag-common-core` `ArchitectureTest` additionally contains filesystem checks (`java.nio.file.Files`) that verify repository hygiene from the repo root:
 - `repoRootContainsOnlyAllowedEntries` - minimal root (README + badges at a glance)
 - `noDocsOrScriptsAtRoot` - docs live in `docs/`, scripts in `scripts/`
 - `scriptsArePortable` - every script has a Windows (`.bat`/`.ps1`) + Unix (`.sh`) pair

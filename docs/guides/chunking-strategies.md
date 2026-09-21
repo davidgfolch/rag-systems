@@ -71,7 +71,7 @@ Smaller chunks (256-384) are better for code; larger (512) for prose. Match your
 
 ## Implementation (Spring AI)
 
-Spring AI provides `TextSplitter` implementations that are swappable via the Strategy pattern. The `TextSplitter` interface in `rag-common` lets modules swap strategies via configuration.
+Spring AI provides `TextSplitter` implementations that are swappable via the Strategy pattern. The `TextSplitter` interface in `rag-common-core` lets modules swap strategies via configuration.
 
 ```java
 // Inject via interface

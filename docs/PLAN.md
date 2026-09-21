@@ -119,7 +119,7 @@ This architecture evolves around a **thin TUI + switchable RAG modules**. Each d
 | **TUI** | Thin interface over a control plane: starts/stops rag-* modules as child processes, routes REST/WebSocket to the active module | [ADR-0007](architecture/decision-records/adr-0007-tui-interface.md) |
 | **Conversation state** | `rag-memory` module owns chat/conversation history (schema `rag_memory`, non-vector) | [ADR-0008](architecture/decision-records/adr-0008-rag-memory.md) |
 | **Web ingestion** | `rag-webcrawler` module: intelligent fetching with LLM-driven link selection | [ADR-0009](architecture/decision-records/adr-0009-rag-webcrawler.md) |
-| **Provider abstraction** | Dedicated `rag-provider` service owns all model/provider clients; runtime model switching over HTTP; downstream modules talk to it via thin `rag-common` bridges | [ADR-0010](architecture/decision-records/adr-0010-rag-provider.md), [ADR-0011](architecture/decision-records/adr-0011-model-catalog.md), [ADR-0012](architecture/decision-records/adr-0012-tui-connect.md) |
+| **Provider abstraction** | Dedicated `rag-provider` service owns all model/provider clients; runtime model switching over HTTP; downstream modules talk to it via thin `rag-common-generation` bridges | [ADR-0010](architecture/decision-records/adr-0010-rag-provider.md), [ADR-0011](architecture/decision-records/adr-0011-model-catalog.md), [ADR-0012](architecture/decision-records/adr-0012-tui-connect.md) |
 
 Core invariants:
 
@@ -127,11 +127,11 @@ Core invariants:
 - **Modules own their strategy** - chunking, retrieval, and generation config live in each rag-* module because they differ per approach
 - **Crawl is module-orchestrated** - `add-url` goes TUI → active rag-module → rag-webcrawler → chunk/embed/store → notify TUI
 - **Chat streams over WebSocket** so the user can cancel an in-flight answer
-- **DRY** - shared strategy implementations (chunkers, parsers, adapters, ingestion) live in `rag-common`, not duplicated per module
+- **DRY** - shared strategy implementations (chunkers, parsers, adapters, ingestion) live in `rag-common-*`, not duplicated per module
 
 ### Naming Conventions
 
-- **Packages**: `com.rag.[module].[layer]` (e.g., `com.rag.common.domain`)
+- **Packages**: `com.rag.[module].[layer]` (e.g., `com.rag.common.core.domain`)
 - **Classes**: PascalCase (e.g., `DocumentIngestionService`)
 - **Methods**: camelCase (e.g., `ingestDocument()`)
 - **Constants**: UPPER_SNAKE_CASE (e.g., `MAX_CHUNK_SIZE`)
@@ -191,13 +191,18 @@ rag-systems/
 │   │   │   ├── adapter/              # ProviderClientFactory, FileStore, CatalogClient
 │   │   │   └── api/                  # ProviderController, ComputeController, CatalogController
 │   │   └── src/test/java/com/rag/provider/
-│   ├── rag-common/                   # Shared library
-│   │   ├── src/main/java/com/rag/common/
-│   │   │   ├── domain/              # Document, Chunk, Embedding
-│   │   │   ├── services/            # Parser, Splitter interfaces
-│   │   │   ├── repositories/        # VectorStore interface
-│   │   │   └── config/              # Configuration
-│   │   └── src/test/java/com/rag/common/
+│   ├── rag-common-core/              # Kernel: domain, strategy ports, tracing
+│   │   ├── src/main/java/com/rag/common/core/
+│   │   └── src/test/java/com/rag/common/core/
+│   ├── rag-common-ingestion/         # Chunkers, parsers, ingestion services
+│   │   ├── src/main/java/com/rag/common/ingestion/
+│   │   └── src/test/java/com/rag/common/ingestion/
+│   ├── rag-common-retrieval/         # In-memory + PgVector stores
+│   │   ├── src/main/java/com/rag/common/retrieval/
+│   │   └── src/test/java/com/rag/common/retrieval/
+│   ├── rag-common-generation/        # Chat/embedding adapters, ChatService
+│   │   ├── src/main/java/com/rag/common/generation/
+│   │   └── src/test/java/com/rag/common/generation/
 │   ├── rag-memory/                  # Conversation memory (schema rag_memory)
 │   │   ├── src/main/java/com/rag/memory/
 │   │   └── src/test/java/com/rag/memory/
@@ -283,18 +288,14 @@ Single source of truth for the module API. Holds `rag-api.yaml` (OpenAPI 3) and 
 - Generated `com.rag.contract.model.*` - Ingest/Query/Chat/Page/Conversation DTOs
 - Consumed by TUI (client), rag-* modules (server), rag-memory, rag-webcrawler
 
-### 1. rag-common (Shared Library)
+### 1. rag-common-* (Shared Libraries)
 
-Core domain models, services, and utilities shared across all RAG modules.
+Capability-split shared libraries (see [ADR-0013](architecture/decision-records/adr-0013-rag-common-split.md)), consumed as needed by the RAG modules.
 
-- `domain/Document.java` - Core document entity with metadata
-- `domain/Chunk.java` - Chunk entity with embeddings
-- `domain/Embedding.java` - Embedding vector representation
-- `services/DocumentParser.java` - Document parsing interface
-- `services/TextSplitter.java` - Text splitting interface
-- `services/EmbeddingModel.java` - Embedding generation interface
-- `repositories/VectorStore.java` - Vector storage interface
-- `config/SpringAiConfig.java` - Spring AI configuration
+- `rag-common-core` - `domain/` (Document, Chunk, DocumentSummary, MetadataKeys), `services/` (DocumentParser, TextSplitter, EmbeddingModelPort, ChatModelPort), `repositories/` (VectorStorePort), `tracing/` (TracePropagation), `services/FileDocumentLoader`
+- `rag-common-ingestion` - `chunking/` (FixedSize, RecursiveCharacter, Token), `parsing/` (PlainText, Tika), `IngestionService`, `AsyncIngestionService`
+- `rag-common-retrieval` - `store/` (InMemoryVectorStore, PgVectorStoreAdapter), `testcontainers/PostgresContainerConfig`
+- `rag-common-generation` - `ChatService`, `StreamingChatModelPort`, `adapter/` (ProviderHttpClient, RemoteChatModelPort, RemoteEmbeddingModel, SpringAiChatModel, SpringAiEmbeddingModel)
 
 ### 2. rag-basic (Basic RAG)
 
@@ -355,7 +356,7 @@ Dedicated Spring Boot service owning all LLM/embedding provider clients (Ollama,
 
 **API**: `GET /api/provider` (status), `POST /api/provider/chat|embedding` (switch model), `POST /api/provider/configure` (upsert provider profile), `POST /api/complete|/api/embed|/api/chat/stream` (compute), `GET /api/provider/catalog` (model discovery)
 **Domain**: `ProviderProfile`/`ProviderType` (OLLAMA, OPENAI, OPENAI_COMPATIBLE), `ModelRouter` (active chat/embedding + lazy dimension detection), `ProviderRegistry` (profiles persisted to `data/provider-profiles.json`)
-**Consumer side**: `rag-common` `RemoteChatModelPort` / `RemoteEmbeddingModel` bridges; modules connect via `rag.provider.url` (default `http://localhost:8086`)
+**Consumer side**: `rag-common-generation` `RemoteChatModelPort` / `RemoteEmbeddingModel` bridges; modules connect via `rag.provider.url` (default `http://localhost:8086`)
 **Why required**: runtime model switching without restarting modules, no duplicate provider clients per module, embedding dimension resolved lazily (see [ADR-0010](architecture/decision-records/adr-0010-rag-provider.md)).
 
 ## Local Development Profile
@@ -393,7 +394,7 @@ The project is designed to run comfortably on a **regular local machine** (CPU-o
 
 ### Provider Abstraction
 
-All provider connectivity is centralized in the **rag-provider** service. It owns the Ollama/OpenAI/OpenAI-compatible clients and exposes chat and embedding compute + runtime model switching over HTTP (port **8086**). Downstream modules no longer bundle provider dependencies; they consume rag-provider through thin `rag-common` bridges (`RemoteChatModelPort`, `RemoteEmbeddingModel`).
+All provider connectivity is centralized in the **rag-provider** service. It owns the Ollama/OpenAI/OpenAI-compatible clients and exposes chat and embedding compute + runtime model switching over HTTP (port **8086**). Downstream modules no longer bundle provider dependencies; they consume rag-provider through thin `rag-common-generation` bridges (`RemoteChatModelPort`, `RemoteEmbeddingModel`).
 
 - rag-provider reads Ollama/OpenAI defaults from its `application.yml` (overridable via `OLLAMA_*`, `OPENAI_*`, `DEFAULT_CHAT_PROVIDER`/`DEFAULT_EMBEDDING_PROVIDER` env vars, see [rag-provider README](../../apps/rag-provider/README.md))
 - Additional providers (any OpenAI-compatible endpoint) can be added at runtime via `POST /api/provider/configure` and are persisted
@@ -508,8 +509,9 @@ See [guides/sonarqube.md](guides/sonarqube.md) and [ADR-0004](architecture/decis
 
 ### Phase 2: API Contract & Common Consolidation
 - [x] `rag-contract` OpenAPI spec + codegen (generated DTOs build clean)
-- [ ] Consolidate chunking/parsing/adapters/ingestion into rag-common (kill duplication)
-- [ ] Remove rag-tui duplicates, point both modules at rag-common implementations
+- [x] Consolidate chunking/parsing/adapters/ingestion into `rag-common-*` (kill duplication)
+- [x] Remove rag-tui duplicates, point both modules at `rag-common-*` implementations
+- [x] Split `rag-common` into capability modules (`core`/`ingestion`/`retrieval`/`generation`)
 
 ### Phase 3: Data Store Isolation
 - [ ] rag-basic schema `rag_basic` + `chunks` table with `document_id`

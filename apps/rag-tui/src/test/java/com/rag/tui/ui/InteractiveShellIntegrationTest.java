@@ -1,7 +1,7 @@
 package com.rag.tui.ui;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rag.common.services.FileDocumentLoader;
+import com.rag.common.core.services.FileDocumentLoader;
 import com.rag.tui.client.ChatGateway;
 import com.rag.tui.client.MemoryClient;
 import com.rag.tui.client.ModuleHealthClient;

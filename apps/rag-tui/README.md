@@ -18,10 +18,10 @@ rag-basic and friends expose REST APIs; rag-tui gives you a lightweight, interac
 
 ## Architecture
 
-Layered per the monorepo guidelines, depending only on the `rag-common` strategy interfaces:
+Layered per the monorepo guidelines, depending only on the `rag-common-core` strategy interfaces:
 
 ```
-ui ──────────► services ──────────► rag-common (interfaces)
+ui ──────────► services ──────────► rag-common-core (interfaces)
  │               │   │
  │               │   └─► fetching (WebPageFetcher)      ui ──► fetching
  │               └─► adapter (Chat/Embedding)           config wires everything
@@ -84,4 +84,4 @@ Profiles: `local` (Ollama) and `cloud` (OpenAI). See the root `application.yml` 
 .\scripts\test.bat rag-tui --coverage   # enforces >= 85%
 ```
 
-See the architecture rules in `ArchitectureTest`: `ui` may not reach into config/adapters/stores; `services` depend only on the `rag-common` strategy interfaces.
+See the architecture rules in `ArchitectureTest`: `ui` may not reach into config/adapters/stores; `services` depend only on the `rag-common-core` strategy interfaces.

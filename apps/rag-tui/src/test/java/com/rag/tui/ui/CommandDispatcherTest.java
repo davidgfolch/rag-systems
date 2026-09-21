@@ -13,7 +13,7 @@ import com.rag.tui.client.ProviderClient;
 import com.rag.tui.client.RagApiClient;
 import com.rag.tui.launcher.ModuleLifecycleManager;
 import com.rag.tui.launcher.ModuleRegistry;
-import com.rag.common.services.FileDocumentLoader;
+import com.rag.common.core.services.FileDocumentLoader;
 import com.rag.contract.provider.ModelCapabilitiesDTO;
 import com.rag.contract.provider.ModelCatalogDTO;
 import com.rag.contract.provider.ModelLimitsDTO;

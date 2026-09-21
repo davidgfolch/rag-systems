@@ -22,6 +22,10 @@
         </dependency>
         <dependency>
             <groupId>com.rag</groupId>
+            <artifactId>rag-common-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.rag</groupId>
             <artifactId>rag-observability</artifactId>
         </dependency>
 

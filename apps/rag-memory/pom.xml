@@ -22,7 +22,7 @@
         </dependency>
         <dependency>
             <groupId>com.rag</groupId>
-            <artifactId>rag-common</artifactId>
+            <artifactId>rag-common-core</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>

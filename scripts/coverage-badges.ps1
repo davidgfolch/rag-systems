@@ -7,7 +7,7 @@ $readme = Join-Path $Root 'README.md'
 $startMarker = '<!-- COVERAGE_BADGES_START -->'
 $endMarker = '<!-- COVERAGE_BADGES_END -->'
 # rag-contract is intentionally absent: it is excluded from coverage in SonarQube too (see sonar.coverage.exclusions).
-$moduleList = @('rag-common','rag-basic','rag-memory','rag-webcrawler','rag-provider','rag-advanced','rag-agentic','rag-evaluation','rag-observability','rag-cli','rag-tui')
+$moduleList = @('rag-common-core','rag-common-ingestion','rag-common-retrieval','rag-common-generation','rag-basic','rag-memory','rag-webcrawler','rag-provider','rag-advanced','rag-agentic','rag-evaluation','rag-observability','rag-cli','rag-tui')
 
 Write-Host "Generating per-module coverage badges..."
 

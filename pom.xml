@@ -20,7 +20,10 @@
 
     <modules>
         <module>apps/rag-contract</module>
-        <module>apps/rag-common</module>
+        <module>apps/rag-common-core</module>
+        <module>apps/rag-common-ingestion</module>
+        <module>apps/rag-common-retrieval</module>
+        <module>apps/rag-common-generation</module>
         <module>apps/rag-basic</module>
         <module>apps/rag-provider</module>
         <module>apps/rag-memory</module>
@@ -51,6 +54,8 @@
 
         <!-- Static analysis -->
         <sonar.version>5.7.0.6970</sonar.version>
+        <!-- 3.11.0 is the first maven-dependency-plugin release that parses Java 25 bytecode (class file 69) -->
+        <dependency.version>3.11.0</dependency.version>
         <!-- Mirrors the JaCoCo excludes: wiring/bootstrap/generated code is not counted toward the coverage gate -->
         <sonar.coverage.exclusions>**/config/**,**/*Application.*,**/dto/**,**/generated-sources/**,**/rag-contract/**</sonar.coverage.exclusions>
 
@@ -133,12 +138,45 @@
             </dependency>
             <dependency>
                 <groupId>com.rag</groupId>
-                <artifactId>rag-common</artifactId>
+                <artifactId>rag-common-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.rag</groupId>
-                <artifactId>rag-common</artifactId>
+                <artifactId>rag-common-core</artifactId>
+                <type>test-jar</type>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.rag</groupId>
+                <artifactId>rag-common-ingestion</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.rag</groupId>
+                <artifactId>rag-common-ingestion</artifactId>
+                <type>test-jar</type>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.rag</groupId>
+                <artifactId>rag-common-retrieval</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.rag</groupId>
+                <artifactId>rag-common-retrieval</artifactId>
+                <type>test-jar</type>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.rag</groupId>
+                <artifactId>rag-common-generation</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.rag</groupId>
+                <artifactId>rag-common-generation</artifactId>
                 <type>test-jar</type>
                 <version>${project.version}</version>
             </dependency>
@@ -211,6 +249,40 @@
                             </configuration>
                         </execution>
                     </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-dependency-plugin</artifactId>
+                    <version>${dependency.version}</version>
+                    <configuration>
+                        <failOnWarning>true</failOnWarning>
+                        <ignoreNonCompile>true</ignoreNonCompile>
+                        <ignoredDependencies>
+                            <ignoredDependency>org.springframework:spring-core</ignoredDependency>
+                            <ignoredDependency>org.springframework:spring-context</ignoredDependency>
+                            <ignoredDependency>org.reactivestreams:reactive-streams</ignoredDependency>
+                        </ignoredDependencies>
+                        <ignoredUsedUndeclaredDependencies>
+                            <ignoredUsedUndeclaredDependency>org.slf4j:slf4j-api</ignoredUsedUndeclaredDependency>
+                            <ignoredUsedUndeclaredDependency>org.junit.jupiter:junit-jupiter-api</ignoredUsedUndeclaredDependency>
+                            <ignoredUsedUndeclaredDependency>org.junit.jupiter:junit-jupiter-params</ignoredUsedUndeclaredDependency>
+                            <ignoredUsedUndeclaredDependency>org.assertj:assertj-core</ignoredUsedUndeclaredDependency>
+                            <ignoredUsedUndeclaredDependency>org.mockito:mockito-core</ignoredUsedUndeclaredDependency>
+                            <ignoredUsedUndeclaredDependency>org.awaitility:awaitility</ignoredUsedUndeclaredDependency>
+                            <ignoredUsedUndeclaredDependency>com.tngtech.archunit:archunit</ignoredUsedUndeclaredDependency>
+                            <ignoredUsedUndeclaredDependency>com.fasterxml.jackson.core:jackson-core</ignoredUsedUndeclaredDependency>
+                            <ignoredUsedUndeclaredDependency>org.springframework:spring-core</ignoredUsedUndeclaredDependency>
+                            <ignoredUsedUndeclaredDependency>org.springframework:spring-context</ignoredUsedUndeclaredDependency>
+                            <ignoredUsedUndeclaredDependency>org.springframework.boot:spring-boot-test</ignoredUsedUndeclaredDependency>
+                            <ignoredUsedUndeclaredDependency>org.reactivestreams:reactive-streams</ignoredUsedUndeclaredDependency>
+                        </ignoredUsedUndeclaredDependencies>
+                        <ignoredUnusedDeclaredDependencies>
+                            <ignoredUnusedDeclaredDependency>org.springframework.boot:spring-boot-starter</ignoredUnusedDeclaredDependency>
+                            <ignoredUnusedDeclaredDependency>org.springframework.boot:spring-boot-starter-test</ignoredUnusedDeclaredDependency>
+                            <ignoredUnusedDeclaredDependency>com.tngtech.archunit:archunit-junit5</ignoredUnusedDeclaredDependency>
+                            <ignoredUnusedDeclaredDependency>org.apache.tika:tika-parsers-standard-package</ignoredUnusedDeclaredDependency>
+                        </ignoredUnusedDeclaredDependencies>
+                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.sonarsource.scanner.maven</groupId>

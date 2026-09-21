@@ -10,7 +10,7 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 /**
  * Architecture rules for rag-basic, enforced by ArchUnit.
  * All chunking/parsing/embedding/vector-store strategy implementations live in
- * rag-common; rag-basic only owns its API layer and retrieval service.
+ * the rag-common-* modules; rag-basic only owns its API layer and retrieval service.
  */
 class ArchitectureTest {
 
@@ -34,7 +34,7 @@ class ArchitectureTest {
         noClasses()
                 .that().resideInAPackage("..api..")
                 .should().dependOnClassesThat().resideInAnyPackage(
-                        "..config..", "com.rag.common.repositories")
+                        "..config..", "com.rag.common.core.repositories")
                 .check(importer.importPackages(ROOT));
     }
 }

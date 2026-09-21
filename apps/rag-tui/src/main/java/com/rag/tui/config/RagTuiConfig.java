@@ -11,7 +11,7 @@ import com.rag.tui.client.RagApiClient;
 import com.rag.tui.launcher.Module;
 import com.rag.tui.launcher.ModuleLifecycleManager;
 import com.rag.tui.launcher.ModuleRegistry;
-import com.rag.common.services.FileDocumentLoader;
+import com.rag.common.core.services.FileDocumentLoader;
 import com.rag.tui.ui.CommandDispatcher;
 import com.rag.tui.ui.CommandCompletion;
 import com.rag.tui.ui.CommandRegistry;
