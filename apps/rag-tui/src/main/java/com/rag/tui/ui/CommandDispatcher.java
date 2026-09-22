@@ -19,9 +19,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClientException;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 
+import static com.rag.common.core.domain.MetadataKeys.CONTENT_HASH;
 import static com.rag.common.core.domain.MetadataKeys.FILE_NAME;
 import static com.rag.tui.ui.TerminalStyle.error;
 import static com.rag.tui.ui.TerminalStyle.success;
@@ -37,6 +39,7 @@ public class CommandDispatcher {
     private final CommandRegistry commandRegistry;
     private final Prompter prompter;
     private final DocumentLister documentLister;
+    private final DuplicateFinder duplicates;
     private final Tracer tracer;
 
     static final String SPAN_COMMAND = "tui.command";
@@ -57,6 +60,7 @@ public class CommandDispatcher {
         this.commandRegistry = commandRegistry;
         this.prompter = prompter;
         this.documentLister = new DocumentLister(registry, clients.apiClient(), clients.healthClient());
+        this.duplicates = new DuplicateFinder(registry, clients.apiClient(), clients.healthClient());
         this.tracer = tracer;
     }
 
@@ -180,9 +184,8 @@ public class CommandDispatcher {
         final String id = documentId;
         for (Module module : registry.modules()) {
             if (!clients.healthClient().isUp(module.baseUrl())) continue;
-            boolean found = clients.apiClient().listDocuments(module.baseUrl()).stream()
-                    .anyMatch(d -> id.equals(d.getDocumentId()));
-            if (found) {
+            var docs = clients.apiClient().listDocuments(module.baseUrl());
+            if (docs.stream().anyMatch(d -> id.equals(d.getDocumentId()))) {
                 clients.apiClient().deleteDocument(module.baseUrl(), id);
                 log.info("Deleted document {} from {}", id, module.name());
                 return success("Deleted document " + id + " from " + module.name());
@@ -208,11 +211,35 @@ public class CommandDispatcher {
         }
         var file = clients.fileLoader().load(path);
         var fileName = file.metadata().get(FILE_NAME).toString();
+        var contentHash = contentHashOf(file.metadata());
+        var duplicate = contentHash == null ? Optional.<DuplicateFinder.Match>empty()
+                : duplicates.findByContentHash(contentHash);
+        if (duplicate.isPresent()) {
+            var chosen = promptOverride(duplicate.get(), "file with identical content");
+            if (chosen == null) return skipped(duplicate.get());
+            clients.apiClient().deleteDocument(chosen.baseUrl(), chosen.documentId());
+            log.info("Overriding duplicate document {} on {}", chosen.documentId(), chosen.moduleName());
+        }
         var job = clients.apiClient().submitIngestFile(file.bytes(), fileName, file.metadata());
         var documentId = job.getDocumentId();
         pollIngestUntilDone(documentId, tokenSink);
         return success(("Ingestion submitted for '%s' -> document %s. You can keep typing; I'll report when it completes.")
                 .formatted(path, documentId));
+    }
+
+    private static String contentHashOf(Map<String, Object> metadata) {
+        Object value = metadata.get(CONTENT_HASH);
+        return value == null ? null : value.toString();
+    }
+
+    private DuplicateFinder.Match promptOverride(DuplicateFinder.Match match, String description) {
+        return prompter.confirm("Duplicate %s already ingested as document %s on %s. Override? (y/N) "
+                .formatted(description, match.documentId(), match.moduleName())) ? match : null;
+    }
+
+    private static String skipped(DuplicateFinder.Match match) {
+        return "Skipped - already ingested as document " + match.documentId()
+                + " on " + match.moduleName() + ".";
     }
 
     private String addFolder(String path, Consumer<String> tokenSink) {
@@ -223,18 +250,43 @@ public class CommandDispatcher {
         var files = clients.fileLoader().loadFolder(path);
         if (files.isEmpty())
             return error("No ingestible files found in: " + path);
+        int skippedDuplicates = 0;
+        int submitted = 0;
         for (var file : files) {
+            var contentHash = contentHashOf(file.metadata());
+            var duplicate = contentHash == null ? Optional.<DuplicateFinder.Match>empty()
+                    : duplicates.findByContentHash(contentHash);
+            if (duplicate.isPresent() && prompter.confirm("Duplicate file with identical content already ingested as document "
+                    + duplicate.get().documentId() + " on " + duplicate.get().moduleName()
+                    + ". Override? (y/N) ")) {
+                var chosen = duplicate.get();
+                clients.apiClient().deleteDocument(chosen.baseUrl(), chosen.documentId());
+                log.info("Overriding duplicate document {} on {}", chosen.documentId(), chosen.moduleName());
+            } else if (duplicate.isPresent()) {
+                skippedDuplicates++;
+                continue;
+            }
             var fileName = file.metadata().get(FILE_NAME).toString();
             var job = clients.apiClient().submitIngestFile(file.bytes(), fileName, file.metadata());
             pollIngestUntilDone(job.getDocumentId(), tokenSink);
+            submitted++;
         }
-        return success("Submitted %d files from '%s'; I'll report as each completes.".formatted(files.size(), path));
+        return success("Submitted %d of %d files from '%s'; I'll report as each completes."
+                .formatted(submitted, files.size(), path)
+                + (skippedDuplicates > 0 ? " (" + skippedDuplicates + " duplicate(s) skipped)" : ""));
     }
 
     private String addUrl(String url) {
         if (url.isEmpty()) {
             url = orEmpty(prompter.prompt("URL: "));
             if (url.isEmpty()) return "Usage: add-url <url>";
+        }
+        var duplicate = duplicates.findBySource(url);
+        if (duplicate.isPresent()) {
+            var chosen = promptOverride(duplicate.get(), "web page " + url);
+            if (chosen == null) return skipped(duplicate.get());
+            clients.apiClient().deleteDocument(chosen.baseUrl(), chosen.documentId());
+            log.info("Overriding duplicate document {} for {}", chosen.documentId(), url);
         }
         var res = clients.apiClient().ingestUrl(url);
         return success("Ingested %s -> document %s, %d chunks".formatted(url, res.getDocumentId(), res.getChunkCount()));

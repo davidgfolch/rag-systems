@@ -45,7 +45,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static com.rag.tui.testfixture.TestDocumentSummaries.withHash;
 import static com.rag.tui.testfixture.TestDocumentSummaries.withId;
+import static com.rag.tui.testfixture.TestDocumentSummaries.withSource;
 import static com.rag.tui.testfixture.TestModules.ADVANCED;
 import static com.rag.tui.testfixture.TestModules.ADVANCED_URL;
 import static com.rag.tui.testfixture.TestModules.BASIC;
@@ -201,6 +203,139 @@ class CommandDispatcherTest {
     }
 
     @Test
+    void addFileSkipsSubmissionWhenContentHashAlreadyIngested() {
+        byte[] bytes = new byte[]{1, 2, 3};
+        when(fileLoader.load("note.txt"))
+                .thenReturn(new FileDocumentLoader.LoadedFile(bytes, Map.of("fileName", "note.txt", "contentHash", "abc")));
+        when(healthClient.isUp(BASIC_URL)).thenReturn(true);
+        when(apiClient.listDocuments(BASIC_URL)).thenReturn(List.of(withHash("d1", "old.txt", "abc")));
+        List<String> tokens = new ArrayList<>();
+        var result = sut.handle("add-file note.txt", tokens::add);
+        assertThat(result).contains("already ingested", "d1");
+        verify(apiClient, never()).submitIngestFile(any(), anyString(), any());
+    }
+
+    @Test
+    void addFileResubmitsWhenOverrideConfirmed() {
+        byte[] bytes = new byte[]{1, 2, 3};
+        when(fileLoader.load("note.txt"))
+                .thenReturn(new FileDocumentLoader.LoadedFile(bytes, Map.of("fileName", "note.txt", "contentHash", "abc")));
+        when(healthClient.isUp(BASIC_URL)).thenReturn(true);
+        when(apiClient.listDocuments(BASIC_URL)).thenReturn(List.of(withHash("d1", "old.txt", "abc")));
+        when(prompter.confirm(anyString())).thenReturn(true);
+        when(apiClient.submitIngestFile(eq(bytes), eq("note.txt"), any()))
+                .thenReturn(new IngestJobResponse().documentId("d2"));
+        var result = handle("add-file note.txt");
+        assertThat(result).contains("d2");
+        verify(apiClient).deleteDocument(BASIC_URL, "d1");
+        verify(apiClient).submitIngestFile(eq(bytes), eq("note.txt"), any());
+    }
+
+    @Test
+    void addFileSkipsSubmissionWhenOverrideDeclined() {
+        byte[] bytes = new byte[]{1, 2, 3};
+        when(fileLoader.load("note.txt"))
+                .thenReturn(new FileDocumentLoader.LoadedFile(bytes, Map.of("fileName", "note.txt", "contentHash", "abc")));
+        when(healthClient.isUp(BASIC_URL)).thenReturn(true);
+        when(apiClient.listDocuments(BASIC_URL)).thenReturn(List.of(withHash("d1", "old.txt", "abc")));
+        when(prompter.confirm(anyString())).thenReturn(false);
+        var result = handle("add-file note.txt");
+        assertThat(result).contains("Skipped");
+        verify(apiClient, never()).submitIngestFile(any(), anyString(), any());
+    }
+
+    @Test
+    void addFileSubmitsWithoutDedupCheckWhenReachableModuleHasNoMetadata() {
+        byte[] bytes = new byte[]{1, 2, 3};
+        when(fileLoader.load("note.txt"))
+                .thenReturn(new FileDocumentLoader.LoadedFile(bytes, Map.of("fileName", "note.txt", "contentHash", "abc")));
+        when(healthClient.isUp(BASIC_URL)).thenReturn(true);
+        when(apiClient.listDocuments(BASIC_URL)).thenReturn(List.of(withId("d1")));
+        when(apiClient.submitIngestFile(eq(bytes), eq("note.txt"), any()))
+                .thenReturn(new IngestJobResponse().documentId("d2"));
+        var result = handle("add-file note.txt");
+        assertThat(result).contains("d2");
+        verify(prompter, never()).confirm(anyString());
+    }
+
+    @Test
+    void addFolderOverridesDuplicateWhenConfirmed() {
+        byte[] bytes = new byte[]{1, 2, 3};
+        when(fileLoader.loadFolder("notes"))
+                .thenReturn(List.of(new FileDocumentLoader.LoadedFile(bytes, Map.of("fileName", "a.txt", "contentHash", "abc"))));
+        when(healthClient.isUp(BASIC_URL)).thenReturn(true);
+        when(apiClient.listDocuments(BASIC_URL)).thenReturn(List.of(withHash("d1", "old.txt", "abc")));
+        when(prompter.confirm(anyString())).thenReturn(true);
+        when(apiClient.submitIngestFile(eq(bytes), eq("a.txt"), any()))
+                .thenReturn(new IngestJobResponse().documentId("db"));
+        List<String> tokens = new ArrayList<>();
+        var result = sut.handle("add-folder notes", tokens::add);
+        assertThat(result).contains("Submitted 1 of 1 files");
+        verify(apiClient).deleteDocument(BASIC_URL, "d1");
+        verify(apiClient).submitIngestFile(eq(bytes), eq("a.txt"), any());
+    }
+
+    @Test
+    void addFolderSkipsFileWhenContentHashAlreadyIngested() {
+        byte[] bytes = new byte[]{1, 2, 3};
+        when(fileLoader.loadFolder("notes")).thenReturn(List.of(
+                new FileDocumentLoader.LoadedFile(bytes, Map.of("fileName", "a.txt", "contentHash", "abc")),
+                new FileDocumentLoader.LoadedFile(new byte[]{9}, Map.of("fileName", "b.txt", "contentHash", "def"))));
+        when(healthClient.isUp(BASIC_URL)).thenReturn(true);
+        when(apiClient.listDocuments(BASIC_URL)).thenReturn(List.of(withHash("d1", "old.txt", "abc")));
+        when(apiClient.submitIngestFile(eq(new byte[]{9}), eq("b.txt"), any()))
+                .thenReturn(new IngestJobResponse().documentId("db"));
+        List<String> tokens = new ArrayList<>();
+        var result = sut.handle("add-folder notes", tokens::add);
+        assertThat(result).contains("Submitted 1 of 2 files", "1 duplicate");
+        verify(apiClient, never()).submitIngestFile(eq(bytes), eq("a.txt"), any());
+        verify(apiClient).submitIngestFile(eq(new byte[]{9}), eq("b.txt"), any());
+    }
+
+    @Test
+    void addUrlSkipsIngestWhenUriAlreadyIngested() {
+        when(healthClient.isUp(BASIC_URL)).thenReturn(true);
+        when(apiClient.listDocuments(BASIC_URL)).thenReturn(List.of(withSource("d1", "old", "https://x.com/page")));
+        var result = handle("add-url https://x.com/page");
+        assertThat(result).contains("already ingested", "d1");
+        verify(apiClient, never()).ingestUrl(anyString());
+    }
+
+    @Test
+    void addUrlOverridesAndReingestsWhenConfirmed() {
+        when(healthClient.isUp(BASIC_URL)).thenReturn(true);
+        when(apiClient.listDocuments(BASIC_URL)).thenReturn(List.of(withSource("d1", "old", "https://x.com/page")));
+        when(prompter.confirm(anyString())).thenReturn(true);
+        when(apiClient.ingestUrl("https://x.com/page"))
+                .thenReturn(new IngestResponse().documentId("d2").chunkCount(7));
+        var result = handle("add-url https://x.com/page");
+        assertThat(result).contains("d2", "7");
+        verify(apiClient).deleteDocument(BASIC_URL, "d1");
+        verify(apiClient).ingestUrl("https://x.com/page");
+    }
+
+    @Test
+    void addUrlSkipsWhenOverrideDeclined() {
+        when(healthClient.isUp(BASIC_URL)).thenReturn(true);
+        when(apiClient.listDocuments(BASIC_URL)).thenReturn(List.of(withSource("d1", "old", "https://x.com/page")));
+        when(prompter.confirm(anyString())).thenReturn(false);
+        var result = handle("add-url https://x.com/page");
+        assertThat(result).contains("Skipped");
+        verify(apiClient, never()).ingestUrl(anyString());
+    }
+
+    @Test
+    void addUrlIngestsWhenNoUriDuplicateFound() {
+        when(healthClient.isUp(BASIC_URL)).thenReturn(true);
+        when(apiClient.listDocuments(BASIC_URL)).thenReturn(List.of(withId("d1")));
+        when(apiClient.ingestUrl("https://x.com/page"))
+                .thenReturn(new IngestResponse().documentId("d2").chunkCount(7));
+        var result = handle("add-url https://x.com/page");
+        assertThat(result).contains("d2");
+        verify(prompter, never()).confirm(anyString());
+    }
+
+    @Test
     void ingestsUrlViaActiveModule() {
         when(apiClient.ingestUrl("https://example.com"))
                 .thenReturn(new IngestResponse().documentId("d1").chunkCount(3));
@@ -272,7 +407,7 @@ class CommandDispatcherTest {
                 .state(IngestStatusDTO.StateEnum.COMPLETED).chunkCount(2));
         List<String> tokens = new ArrayList<>();
         var result = sut.handle("add-folder notes", tokens::add);
-        assertThat(result).contains("Submitted 2 files", "notes");
+        assertThat(result).contains("Submitted 2 of 2 files", "notes");
         verify(apiClient).submitIngestFile(eq(bytes), eq("a.txt"), any());
         verify(apiClient).submitIngestFile(eq(bytes), eq("b.txt"), any());
         await(tokens, "complete", 3);

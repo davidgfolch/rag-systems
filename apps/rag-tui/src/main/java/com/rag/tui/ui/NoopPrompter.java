@@ -28,4 +28,10 @@ public class NoopPrompter implements Prompter {
             return null;
         }
     }
+
+    @Override
+    public boolean confirm(String promptText) {
+        String line = prompt(promptText);
+        return line != null && line.trim().equalsIgnoreCase("y");
+    }
 }

@@ -10,8 +10,8 @@ rag-basic and friends expose REST APIs; rag-tui gives you a lightweight, interac
 
 | Feature | Description |
 |---------|-------------|
-| `add-file <path>` | Ingest a local document (PDF, DOCX, TXT, HTML) via Tika |
-| `add-url <url>` | Fetch and ingest a web page (jsoup) |
+| `add-file <path>` | Ingest a local document (PDF, DOCX, TXT, HTML) via Tika; de-duplicated by SHA-256 content hash |
+| `add-url <url>` | Fetch and ingest a web page (jsoup); de-duplicated by domain + URI |
 | `ask <question>` | Retrieval-augmented answer with cited source chunks |
 | `connect` | Provider status; browse model catalog; switch chat/embedding provider+model at runtime (Ollama default, OpenRouter/OpenAI-compatible registerable) |
 | `help` / `quit` | Usage and exit |

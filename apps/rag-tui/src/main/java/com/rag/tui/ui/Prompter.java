@@ -24,4 +24,10 @@ public interface Prompter {
 
     /** Reads a free-text line, returning the trimmed input (possibly empty). */
     String prompt(String promptText);
+
+    /**
+     * Asks a yes/no question, returning the answer; empty input counts as no.
+     * Returns false when no input is available (EOF or non-interactive mode).
+     */
+    boolean confirm(String promptText);
 }
