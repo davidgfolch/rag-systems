@@ -49,7 +49,7 @@
         <jsoup.version>1.18.3</jsoup.version>
 
         <!-- Observability -->
-        <otel.version>1.45.0</otel.version>
+        <otel.version>1.55.0</otel.version>
         <logstash-logback.version>8.0</logstash-logback.version>
 
         <!-- Static analysis -->
