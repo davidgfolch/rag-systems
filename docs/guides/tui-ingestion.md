@@ -20,6 +20,21 @@ Two independent capabilities, both reusing the `rag-common-*` strategy interface
 1. **Ingestion** — turn files/web pages into embedded chunks.
 2. **Chat (RAG QA)** — retrieve the most relevant chunks and generate a grounded answer.
 
+## De-duplication
+
+Re-ingesting the same content is detected before submission, with an `Override? (y/N)` prompt:
+
+- **`add-file` / `add-folder`** — a SHA-256 content hash is computed from the file bytes and sent as
+  `contentHash` metadata. The TUI lists documents on reachable rag-* modules and skips the file when a
+  document already carries the same hash.
+- **`add-url`** — documents match on the `source` metadata by **domain + URI** (host + path;
+  `http`/`https`, `#fragment` and trailing-slash differences don't count as different pages).
+- **Override = delete + re-ingest**: confirming `y` deletes the existing document (removing its chunks
+  from PgVector) before submitting the new content, so no stale chunks remain.
+
+The matching only consults document metadata on reachable modules; a document without `contentHash` or
+`source` metadata simply never matches, so nothing is blocked.
+
 ## Why separate `ui` from `services`?
 
 The `CommandDispatcher` is pure logic: it parses a command string and returns a

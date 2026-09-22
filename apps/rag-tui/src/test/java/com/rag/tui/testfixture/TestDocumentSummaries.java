@@ -4,6 +4,7 @@ import com.rag.contract.model.DocumentSummaryDTO;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 
 public final class TestDocumentSummaries {
 
@@ -21,6 +22,14 @@ public final class TestDocumentSummaries {
 
     public static DocumentSummaryDTO withId(String id) {
         return new DocumentSummaryDTO().documentId(id).title(TITLE).chunkCount(CHUNK_COUNT);
+    }
+
+    public static DocumentSummaryDTO withHash(String id, String title, String contentHash) {
+        return withId(id).title(title).metadata(Map.of("contentHash", contentHash));
+    }
+
+    public static DocumentSummaryDTO withSource(String id, String title, String source) {
+        return withId(id).title(title).metadata(Map.of("source", source));
     }
 
     public static DocumentSummaryDTO withTitle(String title) {

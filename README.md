@@ -5,7 +5,7 @@
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.5-6DB33F?logo=spring)](https://spring.io/projects/spring-boot)
 [![Maven](https://img.shields.io/badge/Maven-3.9-C71A36?logo=apache-maven)](https://maven.apache.org/)
 <!-- COVERAGE_BADGES_START -->
-![rag-common-core](https://img.shields.io/badge/rag--common--core-91%25-brightgreen)  ![rag-common-ingestion](https://img.shields.io/badge/rag--common--ingestion-96%25-brightgreen)  ![rag-common-retrieval](https://img.shields.io/badge/rag--common--retrieval-98%25-brightgreen)  ![rag-common-generation](https://img.shields.io/badge/rag--common--generation-95%25-brightgreen)  ![rag-basic](https://img.shields.io/badge/rag--basic-95%25-brightgreen)  ![rag-memory](https://img.shields.io/badge/rag--memory-99%25-brightgreen)  ![rag-webcrawler](https://img.shields.io/badge/rag--webcrawler-95%25-brightgreen)  ![rag-provider](https://img.shields.io/badge/rag--provider-97%25-brightgreen)  ![rag-tui](https://img.shields.io/badge/rag--tui-91%25-brightgreen)
+![rag-common-core](https://img.shields.io/badge/rag--common--core-91%25-brightgreen)  ![rag-common-ingestion](https://img.shields.io/badge/rag--common--ingestion-96%25-brightgreen)  ![rag-common-retrieval](https://img.shields.io/badge/rag--common--retrieval-98%25-brightgreen)  ![rag-common-generation](https://img.shields.io/badge/rag--common--generation-95%25-brightgreen)  ![rag-basic](https://img.shields.io/badge/rag--basic-95%25-brightgreen)  ![rag-memory](https://img.shields.io/badge/rag--memory-99%25-brightgreen)  ![rag-webcrawler](https://img.shields.io/badge/rag--webcrawler-95%25-brightgreen)  ![rag-provider](https://img.shields.io/badge/rag--provider-97%25-brightgreen)  ![rag-tui](https://img.shields.io/badge/rag--tui-90%25-brightgreen)
 <!-- COVERAGE_BADGES_END -->
 
 <!-- SONARQUBE_RESULTS_START -->
@@ -16,10 +16,10 @@
 | Vulnerabilities | 0 |
 | Security Hotspots | 0 |
 | Code Smells | 0 |
-| Coverage | 93.5% |
+| Coverage | 93.3% |
 | Duplication | 0.0% |
 
-*Last scan: 2026-09-21 15:20 UTC*
+*Last scan: 2026-09-22 08:58 UTC*
 <!-- SONARQUBE_RESULTS_END -->
 
 A monorepo for learning and comparing different RAG (Retrieval-Augmented Generation) implementations using Java Spring Boot and Spring AI. Each module is a decoupled bounded context with interchangeable chunking, embedding, and retrieval strategies — designed to be reusable across knowledge domains and to run comfortably on a regular local machine.

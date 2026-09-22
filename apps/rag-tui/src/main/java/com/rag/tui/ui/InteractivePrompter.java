@@ -87,6 +87,14 @@ public class InteractivePrompter implements Prompter {
         }
     }
 
+    private static final String CONFIRM_YES = "y";
+
+    @Override
+    public boolean confirm(String promptText) {
+        String line = prompt(promptText);
+        return line != null && line.trim().equalsIgnoreCase(CONFIRM_YES);
+    }
+
     @Override
     public String prompt(String promptText) {
         editor.start();

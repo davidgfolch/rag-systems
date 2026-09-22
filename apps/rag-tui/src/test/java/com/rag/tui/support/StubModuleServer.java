@@ -19,6 +19,8 @@ public final class StubModuleServer {
     private final AtomicReference<byte[]> lastIngestBody = new AtomicReference<>();
     private final AtomicReference<String> lastIngestContentType = new AtomicReference<>();
     private final AtomicReference<String> documentsBody = new AtomicReference<>("[]");
+    private final AtomicReference<String> lastDeletedDocumentId = new AtomicReference<>();
+    private final AtomicReference<String> lastIngestUrl = new AtomicReference<>();
 
     public StubModuleServer() throws IOException {
         server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
@@ -28,6 +30,10 @@ public final class StubModuleServer {
         server.createContext("/api/documents/ingest", exchange -> {
             lastIngestBody.set(exchange.getRequestBody().readAllBytes());
             respond(exchange, 200, "{\"documentId\":\"i-1\",\"chunkCount\":2}");
+        });
+        server.createContext("/api/documents/ingest-url", exchange -> {
+            lastIngestUrl.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            respond(exchange, 201, "{\"documentId\":\"i-1\",\"chunkCount\":2}");
         });
         server.createContext("/api/documents/ingest-file", exchange -> {
             lastIngestBody.set(exchange.getRequestBody().readAllBytes());
@@ -46,6 +52,13 @@ public final class StubModuleServer {
             respond(exchange, 200, "[]");
         });
         server.createContext("/api/documents", exchange -> {
+            if ("DELETE".equalsIgnoreCase(exchange.getRequestMethod())) {
+                lastDeletedDocumentId.set(exchange.getRequestURI().getPath()
+                        .replaceFirst("^/api/documents/", ""));
+                exchange.sendResponseHeaders(204, -1);
+                exchange.close();
+                return;
+            }
             respond(exchange, 200, documentsBody.get());
         });
         server.setExecutor(null);
@@ -62,6 +75,14 @@ public final class StubModuleServer {
 
     public byte[] lastIngestBody() {
         return lastIngestBody.get();
+    }
+
+    public String lastDeletedDocumentId() {
+        return lastDeletedDocumentId.get();
+    }
+
+    public String lastIngestUrl() {
+        return lastIngestUrl.get();
     }
 
     public String lastIngestContentType() {

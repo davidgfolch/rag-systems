@@ -6,10 +6,14 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 
+import static com.rag.common.core.domain.MetadataKeys.CONTENT_HASH;
 import static com.rag.common.core.domain.MetadataKeys.FILE_NAME;
 import static com.rag.common.core.domain.MetadataKeys.SOURCE;
 import static com.rag.common.core.domain.MetadataKeys.SOURCE_TYPE;
@@ -22,6 +26,8 @@ import static com.rag.common.core.domain.MetadataKeys.SOURCE_TYPE;
 public class FileDocumentLoader {
 
     private static final Logger log = LoggerFactory.getLogger(FileDocumentLoader.class);
+
+    private static final String SHA_256 = "SHA-256";
 
     public LoadedFile load(String path) {
         return loadFile(Path.of(path), path);
@@ -51,6 +57,10 @@ public class FileDocumentLoader {
         }
     }
 
+    static String contentHash(byte[] bytes) {
+        return sha256Hex(bytes);
+    }
+
     private LoadedFile loadFile(Path file, String source) {
         try {
             var bytes = Files.readAllBytes(file);
@@ -58,9 +68,18 @@ public class FileDocumentLoader {
             return new LoadedFile(bytes, Map.of(
                     SOURCE_TYPE, "file",
                     SOURCE, source,
-                    FILE_NAME, file.getFileName().toString()));
+                    FILE_NAME, file.getFileName().toString(),
+                    CONTENT_HASH, sha256Hex(bytes)));
         } catch (IOException e) {
             throw new DocumentLoadException("Failed to read file: " + source, e);
+        }
+    }
+
+    private static String sha256Hex(byte[] bytes) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance(SHA_256).digest(bytes));
+        } catch (NoSuchAlgorithmException e) {
+            throw new DocumentLoadException("SHA-256 digest not available on this JVM", e);
         }
     }
 

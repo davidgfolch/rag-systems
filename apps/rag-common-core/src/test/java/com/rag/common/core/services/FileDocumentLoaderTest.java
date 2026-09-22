@@ -37,6 +37,38 @@ class FileDocumentLoaderTest {
     }
 
     @Test
+    void loadsSha256ContentHashMetadata(@TempDir Path dir) throws Exception {
+        byte[] bytes = "hello rag".getBytes(StandardCharsets.UTF_8);
+        Path file = dir.resolve("note.txt");
+        Files.write(file, bytes);
+        FileDocumentLoader.LoadedFile loaded = sut.load(file.toString());
+        String expected = java.util.HexFormat.of().formatHex(
+                java.security.MessageDigest.getInstance("SHA-256").digest(bytes));
+        assertThat(loaded.metadata()).containsEntry(MetadataKeys.CONTENT_HASH, expected);
+    }
+
+    @Test
+    void loadsSameContentHashForIdenticalContentInDifferentFiles(@TempDir Path dir) throws IOException {
+        Files.write(dir.resolve("a.txt"), "same".getBytes(StandardCharsets.UTF_8));
+        Files.write(dir.resolve("b.txt"), "same".getBytes(StandardCharsets.UTF_8));
+        var first = sut.load(dir.resolve("a.txt").toString());
+        var second = sut.load(dir.resolve("b.txt").toString());
+        assertThat(first.metadata().get(MetadataKeys.CONTENT_HASH))
+                .isEqualTo(second.metadata().get(MetadataKeys.CONTENT_HASH));
+    }
+
+    @Test
+    void wrapsMissingSha256AlgorithmIntoDocumentLoadException() {
+        try (var messageDigest = org.mockito.Mockito.mockStatic(java.security.MessageDigest.class)) {
+            messageDigest.when(() -> java.security.MessageDigest.getInstance("SHA-256"))
+                    .thenThrow(new java.security.NoSuchAlgorithmException("no sha-256"));
+            assertThatThrownBy(() -> FileDocumentLoader.contentHash(new byte[]{1}))
+                    .isInstanceOf(FileDocumentLoader.DocumentLoadException.class)
+                    .hasMessageContaining("SHA-256");
+        }
+    }
+
+    @Test
     void throwsWhenFileMissing() {
         assertThatThrownBy(() -> sut.load("C:/does/not/exist.txt"))
                 .isInstanceOf(FileDocumentLoader.DocumentLoadException.class);

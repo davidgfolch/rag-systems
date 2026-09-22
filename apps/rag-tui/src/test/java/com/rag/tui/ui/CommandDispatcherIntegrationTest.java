@@ -26,6 +26,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.HexFormat;
+import java.security.MessageDigest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -81,6 +83,29 @@ class CommandDispatcherIntegrationTest {
         assertThat(stub.lastIngestContentType()).startsWith("multipart/form-data");
         String body = new String(stub.lastIngestBody(), StandardCharsets.UTF_8);
         assertThat(body).contains(pdf.getFileName().toString());
+    }
+
+    @Test
+    void addFileDeduplicatesByIdenticalContentOverHttp() throws Exception {
+        Path txt = Files.createTempFile("dup", ".txt");
+        byte[] bytes = "identical rag content".getBytes(StandardCharsets.UTF_8);
+        Files.write(txt, bytes);
+        String hash = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
+        stub.documents("[{\"documentId\":\"existing-1\",\"title\":\"old.txt\",\"chunkCount\":3,"
+                + "\"metadata\":{\"contentHash\":\"" + hash + "\"}}]");
+        List<String> tokens = new ArrayList<>();
+        var result = sut.handle("add-file " + txt, tokens::add);
+        assertThat(result).contains("already ingested", "existing-1");
+        assertThat(stub.lastIngestBody()).isNull();
+    }
+
+    @Test
+    void addUrlDeduplicatesByUriOverHttp() {
+        stub.documents("[{\"documentId\":\"web-1\",\"title\":\"Old page\",\"chunkCount\":5,"
+                + "\"metadata\":{\"source\":\"https://example.com/guide\"}}]");
+        var result = sut.handle("add-url https://example.com/guide", token -> {});
+        assertThat(result).contains("already ingested", "web-1");
+        assertThat(stub.lastIngestUrl()).isNull();
     }
 
     private static void await(List<String> tokens, String needle) {

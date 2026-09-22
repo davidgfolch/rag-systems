@@ -100,5 +100,11 @@ class ConfigureProviderFlowIntegrationTest {
             String answer = answers.poll();
             return answer == null ? "" : answer;
         }
+
+        @Override
+        public boolean confirm(String promptText) {
+            String answer = answers.poll();
+            return answer != null && answer.trim().equalsIgnoreCase("y");
+        }
     }
 }

@@ -5,6 +5,7 @@ public final class MetadataKeys {
     public static final String SOURCE_TYPE = "sourceType";
     public static final String SOURCE = "source";
     public static final String FILE_NAME = "fileName";
+    public static final String CONTENT_HASH = "contentHash";
     public static final String RAW_BYTES = "rawBytes";
     public static final String DOCUMENT_ID = "documentId";
     public static final String CHUNK_INDEX = "chunkIndex";
