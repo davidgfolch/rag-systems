@@ -78,7 +78,7 @@ api/          - REST controllers (only in runnable modules)
 
 ## Key Conventions
 
-1. **File Length**: Maximum 200 lines (warn at 250, fail at 300)
+1. **File Length**: Maximum 200 lines; cross-module gate `FileLengthArchitectureTest` prints WARNING ≥200 / ALERT ≥300 / FAULT ≥400 and fails at ≥300
 2. **Test Location**: Tests in `src/test/java/[module]/[layer]/[Class]Test.java`
 3. **Test Naming**: `[ClassName]Test` for classes, `should[Behavior]When[Condition]` for methods
 4. **DRY**: Extract common logic to the `rag-common-*` modules; no duplicated code
@@ -105,7 +105,7 @@ Always run after significant changes:
 .\scripts\test.bat
 ```
 
-This runs ArchUnit tests enforcing layer dependencies, layer file-length/quality conventions via the `rag-common-core` `ArchitectureTest` (each capability module keeps its own layer/logger rules), and repository hygiene (minimal root, docs/scripts placement, script portability).
+This runs ArchUnit tests enforcing layer dependencies and quality conventions via the `rag-common-core` `ArchitectureTest` (each capability module keeps its own layer/logger rules), the cross-module file-length gate `FileLengthArchitectureTest`, and repository hygiene (minimal root, docs/scripts placement, script portability).
 
 ## Definition of Done
 

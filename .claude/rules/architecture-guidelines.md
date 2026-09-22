@@ -8,7 +8,7 @@ Rules for all code in this repository. These enforce quality, maintainability, a
 
 ## Code Quality Rules
 
-1. **File Length**: Maximum 200 lines per file (warn at 250, fail at 300). If exceeded, refactor via SRP, abstraction, or composition.
+1. **File Length**: Maximum 200 lines per file, enforced cross-module by `FileLengthArchitectureTest`, which prints a unified color-coded report of all violating files — WARNING ≥200 (yellow), ALERT ≥300 (orange), FAULT ≥400 (red) — and fails the test on any ALERT/FAULT (≥300). If exceeded, refactor via SRP, abstraction, or composition.
 2. **Method Length**: Maximum 30 lines per method.
 3. **Parameters**: Maximum 5 parameters per method.
 4. **Nesting**: Maximum 3 levels of nesting.
