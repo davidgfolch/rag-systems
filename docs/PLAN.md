@@ -516,7 +516,7 @@ See [guides/sonarqube.md](guides/sonarqube.md) and [ADR-0004](architecture/decis
 ### Phase 3: Data Store Isolation
 - [x] rag-basic: single `chunks` table in schema `rag_basic` (via `PGVECTOR_SCHEMA`; blank default derives a `rag_<dim>` schema from the active embedding dimension, see `RagBasicConfig`)
 - [x] Per-document query scoping via `documentId` chunk metadata (see ADR-0006)
-- [ ] Apply same pattern to rag-advanced/rag-agentic when implemented
+- [x] rag-advanced applies the same pattern (schema `rag_advanced`); rag-agentic pending
 - [x] `.env`: `RAG_BASIC_URL`, `RAG_ADVANCED_URL`, `RAG_AGENTIC_URL`, `RAG_MEMORY_URL`, `RAG_WEBCRAWLER_URL`
 
 ### Phase 4: Supporting Modules
@@ -531,7 +531,7 @@ See [guides/sonarqube.md](guides/sonarqube.md) and [ADR-0004](architecture/decis
 - [x] Commands: `modules`, `use`, `start`, `stop`, `add-file`, `add-url`, `ask` (WS/cancel), `history`
 
 ### Phase 6: Advanced RAG & Agentic RAG
-- [ ] rag-advanced: reranking, hybrid search, metadata filtering
+- [x] rag-advanced: reranking, hybrid search, metadata filtering
 - [ ] rag-agentic: query planning, tool calling, multi-step retrieval
 
 ### Phase 7: Observability, Evaluation & Docs

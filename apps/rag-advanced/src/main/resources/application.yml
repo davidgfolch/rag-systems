@@ -1,0 +1,46 @@
+# rag-advanced default configuration (providers consumed via the rag-provider service)
+spring:
+  profiles:
+    active: local,observability
+  application:
+    name: rag-advanced
+  datasource:
+    url: jdbc:postgresql://${PGVECTOR_HOST:localhost}:${PGVECTOR_PORT:5432}/${PGVECTOR_DB:rag}
+    username: ${PGVECTOR_USER:rag}
+    password: ${PGVECTOR_PASSWORD:rag}
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+  webcrawler:
+    url: ${RAG_WEBCRAWLER_URL:http://localhost:8085}
+  ai:
+    vectorstore:
+      pgvector:
+        # PGVECTOR_SCHEMA defaults to rag_advanced in .env, pinning one schema
+        # per module; blank -> schema derived from the active embedding dimension
+        schema-name: ${PGVECTOR_SCHEMA:rag_advanced}
+        table-name: chunks
+        schema-validation: true
+        initialize-schema: true
+
+server:
+  port: ${SERVER_PORT:8082}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+
+rag:
+  provider:
+    url: ${RAG_PROVIDER_URL:http://localhost:8086}
+  embedding:
+    batch-size: ${RAG_EMBED_BATCH_SIZE:100}
+  vector-store:
+    type: ${VECTOR_STORE_TYPE:pgvector}
+  chunking:
+    strategy: recursive
+    size: ${CHUNK_SIZE:512}
+    overlap: ${CHUNK_OVERLAP:128}
