@@ -1,7 +1,6 @@
 package com.rag.tui.ui;
 
 import com.rag.contract.model.ConversationDTO;
-import com.rag.contract.model.IngestStatusDTO;
 import com.rag.tui.client.ChatGateway;
 import com.rag.tui.client.MemoryClient;
 import com.rag.tui.client.ModuleHealthClient;
@@ -19,12 +18,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClientException;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-import static com.rag.common.core.domain.MetadataKeys.CONTENT_HASH;
-import static com.rag.common.core.domain.MetadataKeys.FILE_NAME;
 import static com.rag.tui.ui.TerminalStyle.error;
 import static com.rag.tui.ui.TerminalStyle.success;
 
@@ -40,6 +36,7 @@ public class CommandDispatcher {
     private final Prompter prompter;
     private final DocumentLister documentLister;
     private final DuplicateFinder duplicates;
+    private final IngestCommands ingest;
     private final Tracer tracer;
 
     static final String SPAN_COMMAND = "tui.command";
@@ -61,6 +58,7 @@ public class CommandDispatcher {
         this.prompter = prompter;
         this.documentLister = new DocumentLister(registry, clients.apiClient(), clients.healthClient());
         this.duplicates = new DuplicateFinder(registry, clients.apiClient(), clients.healthClient());
+        this.ingest = new IngestCommands(clients, prompter, duplicates, tracer);
         this.tracer = tracer;
     }
 
@@ -116,9 +114,9 @@ public class CommandDispatcher {
             case "stop" -> stop(arg);
             case "documents" -> documents();
             case "delete" -> delete(arg);
-            case "add-file" -> addFile(arg, tokenSink);
-            case "add-folder" -> addFolder(arg, tokenSink);
-            case "add-url" -> addUrl(arg);
+            case "add-file" -> ingest.addFile(arg, tokenSink);
+            case "add-folder" -> ingest.addFolder(arg, tokenSink);
+            case "add-url" -> ingest.addUrl(arg);
             case "ask" -> ask(arg, tokenSink);
             case "history" -> history();
             case "connect" -> new ConnectCommand(clients.providerClient(), prompter).execute(arg);
@@ -204,94 +202,6 @@ public class CommandDispatcher {
         return choices.isEmpty() ? Optional.empty() : prompter.pick("Delete document", choices);
     }
 
-    private String addFile(String path, Consumer<String> tokenSink) {
-        if (path.isEmpty()) {
-            path = orEmpty(prompter.prompt("File path: "));
-            if (path.isEmpty()) return "Usage: add-file <path>";
-        }
-        var file = clients.fileLoader().load(path);
-        var fileName = file.metadata().get(FILE_NAME).toString();
-        var contentHash = contentHashOf(file.metadata());
-        var duplicate = contentHash == null ? Optional.<DuplicateFinder.Match>empty()
-                : duplicates.findByContentHash(contentHash);
-        if (duplicate.isPresent()) {
-            var chosen = promptOverride(duplicate.get(), "file with identical content");
-            if (chosen == null) return skipped(duplicate.get());
-            clients.apiClient().deleteDocument(chosen.baseUrl(), chosen.documentId());
-            log.info("Overriding duplicate document {} on {}", chosen.documentId(), chosen.moduleName());
-        }
-        var job = clients.apiClient().submitIngestFile(file.bytes(), fileName, file.metadata());
-        var documentId = job.getDocumentId();
-        pollIngestUntilDone(documentId, tokenSink);
-        return success(("Ingestion submitted for '%s' -> document %s. You can keep typing; I'll report when it completes.")
-                .formatted(path, documentId));
-    }
-
-    private static String contentHashOf(Map<String, Object> metadata) {
-        Object value = metadata.get(CONTENT_HASH);
-        return value == null ? null : value.toString();
-    }
-
-    private DuplicateFinder.Match promptOverride(DuplicateFinder.Match match, String description) {
-        return prompter.confirm("Duplicate %s already ingested as document %s on %s. Override? (y/N) "
-                .formatted(description, match.documentId(), match.moduleName())) ? match : null;
-    }
-
-    private static String skipped(DuplicateFinder.Match match) {
-        return "Skipped - already ingested as document " + match.documentId()
-                + " on " + match.moduleName() + ".";
-    }
-
-    private String addFolder(String path, Consumer<String> tokenSink) {
-        if (path.isEmpty()) {
-            path = orEmpty(prompter.prompt("Folder path: "));
-            if (path.isEmpty()) return "Usage: add-folder <path>";
-        }
-        var files = clients.fileLoader().loadFolder(path);
-        if (files.isEmpty())
-            return error("No ingestible files found in: " + path);
-        int skippedDuplicates = 0;
-        int submitted = 0;
-        for (var file : files) {
-            var contentHash = contentHashOf(file.metadata());
-            var duplicate = contentHash == null ? Optional.<DuplicateFinder.Match>empty()
-                    : duplicates.findByContentHash(contentHash);
-            if (duplicate.isPresent() && prompter.confirm("Duplicate file with identical content already ingested as document "
-                    + duplicate.get().documentId() + " on " + duplicate.get().moduleName()
-                    + ". Override? (y/N) ")) {
-                var chosen = duplicate.get();
-                clients.apiClient().deleteDocument(chosen.baseUrl(), chosen.documentId());
-                log.info("Overriding duplicate document {} on {}", chosen.documentId(), chosen.moduleName());
-            } else if (duplicate.isPresent()) {
-                skippedDuplicates++;
-                continue;
-            }
-            var fileName = file.metadata().get(FILE_NAME).toString();
-            var job = clients.apiClient().submitIngestFile(file.bytes(), fileName, file.metadata());
-            pollIngestUntilDone(job.getDocumentId(), tokenSink);
-            submitted++;
-        }
-        return success("Submitted %d of %d files from '%s'; I'll report as each completes."
-                .formatted(submitted, files.size(), path)
-                + (skippedDuplicates > 0 ? " (" + skippedDuplicates + " duplicate(s) skipped)" : ""));
-    }
-
-    private String addUrl(String url) {
-        if (url.isEmpty()) {
-            url = orEmpty(prompter.prompt("URL: "));
-            if (url.isEmpty()) return "Usage: add-url <url>";
-        }
-        var duplicate = duplicates.findBySource(url);
-        if (duplicate.isPresent()) {
-            var chosen = promptOverride(duplicate.get(), "web page " + url);
-            if (chosen == null) return skipped(duplicate.get());
-            clients.apiClient().deleteDocument(chosen.baseUrl(), chosen.documentId());
-            log.info("Overriding duplicate document {} for {}", chosen.documentId(), url);
-        }
-        var res = clients.apiClient().ingestUrl(url);
-        return success("Ingested %s -> document %s, %d chunks".formatted(url, res.getDocumentId(), res.getChunkCount()));
-    }
-
     private String ask(String question, Consumer<String> tokenSink) {
         if (question.isEmpty()) {
             question = orEmpty(prompter.prompt("Question: "));
@@ -301,7 +211,7 @@ public class CommandDispatcher {
         return "";
     }
 
-    private static String orEmpty(String value) {
+    static String orEmpty(String value) {
         return value == null ? "" : value;
     }
 
@@ -334,42 +244,6 @@ public class CommandDispatcher {
         return ready ? success("Started %s (ready)".formatted(m.name()))
                 : error(("Started %s but not ready after %ds - module is still booting or unhealthy; check docker/ollama and the module log, then retry.")
                 .formatted(m.name(), settings.startTimeoutMs() / 1000));
-    }
-
-    private static final long POLL_MILLIS = 2_000;
-
-    private void pollIngestUntilDone(String documentId, Consumer<String> tokenSink) {
-        var span = tracer == null ? null : tracer.currentSpan();
-        var poller = new Thread(() -> {
-            try {
-                var label = "document " + documentId;
-                while (true) {
-                    Thread.sleep(POLL_MILLIS);
-                    var status = ingestStatus(documentId, span);
-                    var state = status.getState();
-                    if (IngestStatusDTO.StateEnum.COMPLETED == state) {
-                        tokenSink.accept(success("Ingestion of " + label + " complete: " + status.getChunkCount() + " chunks.\n"));
-                        return;
-                    }
-                    if (IngestStatusDTO.StateEnum.FAILED == state) {
-                        tokenSink.accept(error("Ingestion of " + label + " failed: " + status.getMessage() + "\n"));
-                        return;
-                    }
-                }
-            } catch (InterruptedException _) {
-                Thread.currentThread().interrupt();
-            } catch (RuntimeException e) {
-                tokenSink.accept(error("Ingestion of document " + documentId + " could not be checked: " + e.getMessage() + "\n"));
-            }
-        }, "rag-ingest-poll");
-        poller.setDaemon(true);
-        poller.start();
-    }
-
-    private IngestStatusDTO ingestStatus(String documentId, Span span) {
-        return span == null ? clients.apiClient().ingestStatus(documentId)
-                : TracePropagation.runWithSpan(tracer, span,
-                        () -> clients.apiClient().ingestStatus(documentId));
     }
 
     private String history() {

@@ -11,6 +11,7 @@ import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
+import com.rag.common.core.testfixture.TestRepoPaths;
 import com.tngtech.archunit.library.Architectures;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -188,18 +189,7 @@ class ArchitectureTest {
     }
 
     private static Path repoRoot() {
-        Path dir = Path.of("").toAbsolutePath();
-        while (dir != null && !isRepoRoot(dir)) {
-            dir = dir.getParent();
-        }
-        return dir;
-    }
-
-    private static boolean isRepoRoot(Path dir) {
-        return Files.isDirectory(dir.resolve("scripts"))
-                && Files.isDirectory(dir.resolve("apps"))
-                && Files.isDirectory(dir.resolve("docs"))
-                && Files.isRegularFile(dir.resolve("README.md"));
+        return TestRepoPaths.root();
     }
 
     private static List<String> listRoot() throws IOException {

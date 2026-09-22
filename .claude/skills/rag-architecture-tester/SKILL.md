@@ -17,7 +17,7 @@ Enforce the architecture rules defined in `.claude/rules/architecture-guidelines
 3. **Repository pattern**: No direct DB access from services.
 4. **Naming conventions**: Packages `com.rag.[module].[layer]`, test class/method naming.
 5. **No hardcoded providers**: Type-safe access to configured models (local/cloud), never hardcoded.
-6. **File length**: Files under 200 lines (guideline; warn at 250).
+6. **File length**: Files under 200 lines. The cross-module `FileLengthArchitectureTest` prints one unified color-coded report with three levels — WARNING ≥200 (yellow), ALERT ≥300 (orange), FAULT ≥400 (red) — and fails the test on any ALERT/FAULT (≥300).
 7. **Minimal root**: Root holds only the files needed for the GitHub landing page and the build (enforced by `rag-common-core` `ArchitectureTest.repoRootContainsOnlyAllowedEntries`).
 8. **Docs/scripts placement**: All `.md` in `docs/`, all `.bat`/`.sh`/`.ps1` in `scripts/`; only `README.md` allowed at root (enforced by `.noDocsOrScriptsAtRoot`).
 9. **Portability**: Every operational script has a `.sh` + `.bat`/`.ps1` twin (enforced by `.scriptsArePortable`).
@@ -43,12 +43,13 @@ The class-based modules use `ClassFileImporter` (layer/interface rules). The `ra
 - `repoRootContainsOnlyAllowedEntries` - minimal root (README + badges at a glance)
 - `noDocsOrScriptsAtRoot` - docs live in `docs/`, scripts in `scripts/`
 - `scriptsArePortable` - every script has a Windows (`.bat`/`.ps1`) + Unix (`.sh`) pair
+- `FileLengthArchitectureTest` - cross-module file-length gate: unified color-coded report (WARNING ≥200, ALERT ≥300, FAULT ≥400), fails on any ALERT/FAULT
 
 ## Definition of Done
 
 Refuse to mark a task complete until:
 1. `.\scripts\test.bat` passes (incl. the architecture, root-folder, and portability checks)
 2. `.\scripts\test.bat --coverage` shows ≥ 85% coverage on changed modules
-3. No files exceed 200 lines
+3. No files reach 300 lines (warnings ≥200 are allowed but still to be avoided)
 4. No circular dependencies introduced
 5. Root folder stays minimal; no new `.md`/scripts outside `docs/`/`scripts/`
