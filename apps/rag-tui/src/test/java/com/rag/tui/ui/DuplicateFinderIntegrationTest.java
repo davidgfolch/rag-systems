@@ -82,7 +82,7 @@ class DuplicateFinderIntegrationTest {
     }
 
     @Test
-    void returnsEmptyWhenNoModuleIsReachable() throws IOException {
+    void returnsEmptyWhenNoModuleIsReachable() {
         var dead = new DuplicateFinder(
                 new ModuleRegistry(List.of(TestModules.withUrl("http://localhost:1")), TestModules.BASIC),
                 new RagApiClient(registry, RestClient.builder()),

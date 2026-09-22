@@ -1,8 +1,5 @@
 package com.rag.tui.ui;
 
-import com.rag.common.core.tracing.TracePropagation;
-import com.rag.contract.model.IngestStatusDTO;
-import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,19 +23,28 @@ import static com.rag.tui.ui.TerminalStyle.success;
 public class IngestCommands {
 
     private static final Logger log = LoggerFactory.getLogger(IngestCommands.class);
-    private static final long POLL_MILLIS = 2_000;
 
     private final CommandDispatcher.RagClients clients;
     private final Prompter prompter;
     private final DuplicateFinder duplicates;
-    private final Tracer tracer;
+    private final AsyncIngestPoller poller;
 
     public IngestCommands(CommandDispatcher.RagClients clients, Prompter prompter,
                           DuplicateFinder duplicates, Tracer tracer) {
+        this(clients, prompter, duplicates, new AsyncIngestPoller(clients, tracer));
+    }
+
+    IngestCommands(CommandDispatcher.RagClients clients, Prompter prompter,
+                   DuplicateFinder duplicates, Tracer tracer, long pollMillis) {
+        this(clients, prompter, duplicates, new AsyncIngestPoller(clients, tracer, pollMillis));
+    }
+
+    private IngestCommands(CommandDispatcher.RagClients clients, Prompter prompter,
+                           DuplicateFinder duplicates, AsyncIngestPoller poller) {
         this.clients = clients;
         this.prompter = prompter;
         this.duplicates = duplicates;
-        this.tracer = tracer;
+        this.poller = poller;
     }
 
     public String addFile(String path, Consumer<String> tokenSink) {
@@ -48,6 +54,11 @@ public class IngestCommands {
         }
         var file = clients.fileLoader().load(path);
         var fileName = file.metadata().get(FILE_NAME).toString();
+        var contentHash = contentHashOf(file.metadata());
+        if (poller.isInFlight(contentHash)) {
+            return success("Skipped '%s' - an ingestion with identical content is already in progress.%n"
+                    .formatted(path));
+        }
         var duplicate = findByContentHash(file.metadata());
         if (duplicate.isPresent()) {
             var chosen = promptOverride(duplicate.get(), "file with identical content");
@@ -55,8 +66,12 @@ public class IngestCommands {
             clients.apiClient().deleteDocument(chosen.baseUrl(), chosen.documentId());
             log.info("Overriding duplicate document {} on {}", chosen.documentId(), chosen.moduleName());
         }
+        if (!poller.markInFlight(contentHash)) {
+            return success("Skipped '%s' - an ingestion with identical content is already in progress.%n"
+                    .formatted(path));
+        }
         var job = clients.apiClient().submitIngestFile(file.bytes(), fileName, file.metadata());
-        pollIngestUntilDone(job.getDocumentId(), tokenSink);
+        poller.start(job.getDocumentId(), contentHash, tokenSink);
         return success(("Ingestion submitted for '%s' -> document %s. You can keep typing; I'll report when it completes.")
                 .formatted(path, job.getDocumentId()));
     }
@@ -72,18 +87,15 @@ public class IngestCommands {
         int skippedDuplicates = 0;
         int submitted = 0;
         for (var file : files) {
+            var contentHash = contentHashOf(file.metadata());
             var duplicate = findByContentHash(file.metadata());
-            if (shouldOverride(duplicate)) {
-                var chosen = duplicate.get();
-                clients.apiClient().deleteDocument(chosen.baseUrl(), chosen.documentId());
-                log.info("Overriding duplicate document {} on {}", chosen.documentId(), chosen.moduleName());
-            } else if (duplicate.isPresent()) {
+            if (shouldSkip(duplicate, contentHash) || !poller.markInFlight(contentHash)) {
                 skippedDuplicates++;
                 continue;
             }
             var fileName = file.metadata().get(FILE_NAME).toString();
             var job = clients.apiClient().submitIngestFile(file.bytes(), fileName, file.metadata());
-            pollIngestUntilDone(job.getDocumentId(), tokenSink);
+            poller.start(job.getDocumentId(), contentHash, tokenSink);
             submitted++;
         }
         return success("Submitted %d of %d files from '%s'; I'll report as each completes."
@@ -117,6 +129,18 @@ public class IngestCommands {
         return value == null ? null : value.toString();
     }
 
+    private boolean shouldSkip(Optional<DuplicateFinder.Match> duplicate, String contentHash) {
+        if (poller.isInFlight(contentHash)) return true;
+        if (duplicate.isEmpty()) return false;
+        if (shouldOverride(duplicate)) {
+            var chosen = duplicate.get();
+            clients.apiClient().deleteDocument(chosen.baseUrl(), chosen.documentId());
+            log.info("Overriding duplicate document {} on {}", chosen.documentId(), chosen.moduleName());
+            return false;
+        }
+        return true;
+    }
+
     private boolean shouldOverride(Optional<DuplicateFinder.Match> duplicate) {
         if (duplicate.isEmpty()) return false;
         return prompter.confirm("Duplicate file with identical content already ingested as document "
@@ -132,39 +156,5 @@ public class IngestCommands {
     private static String skipped(DuplicateFinder.Match match) {
         return "Skipped - already ingested as document " + match.documentId()
                 + " on " + match.moduleName() + ".";
-    }
-
-    private void pollIngestUntilDone(String documentId, Consumer<String> tokenSink) {
-        var span = tracer == null ? null : tracer.currentSpan();
-        var poller = new Thread(() -> {
-            try {
-                var label = "document " + documentId;
-                while (true) {
-                    Thread.sleep(POLL_MILLIS);
-                    var status = ingestStatus(documentId, span);
-                    var state = status.getState();
-                    if (IngestStatusDTO.StateEnum.COMPLETED == state) {
-                        tokenSink.accept(success("Ingestion of " + label + " complete: " + status.getChunkCount() + " chunks.\n"));
-                        return;
-                    }
-                    if (IngestStatusDTO.StateEnum.FAILED == state) {
-                        tokenSink.accept(error("Ingestion of " + label + " failed: " + status.getMessage() + "\n"));
-                        return;
-                    }
-                }
-            } catch (InterruptedException _) {
-                Thread.currentThread().interrupt();
-            } catch (RuntimeException e) {
-                tokenSink.accept(error("Ingestion of document " + documentId + " could not be checked: " + e.getMessage() + "\n"));
-            }
-        }, "rag-ingest-poll");
-        poller.setDaemon(true);
-        poller.start();
-    }
-
-    private IngestStatusDTO ingestStatus(String documentId, Span span) {
-        return span == null ? clients.apiClient().ingestStatus(documentId)
-                : TracePropagation.runWithSpan(tracer, span,
-                        () -> clients.apiClient().ingestStatus(documentId));
     }
 }

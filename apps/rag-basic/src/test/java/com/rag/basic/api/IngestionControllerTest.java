@@ -20,7 +20,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.net.URI;
+import java.security.MessageDigest;
 import java.util.Base64;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -30,6 +32,7 @@ import static com.rag.common.ingestion.testfixture.TestIngestionAssertions.asser
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -81,6 +84,36 @@ class IngestionControllerTest {
         ResponseEntity<IngestResponse> response =
                 controller.ingestFile(file, Map.of());
         assertBadRequestAndNotIngested(response, service);
+    }
+
+    @Test
+    void ingestFileStoresContentHashComputedFromRawBytesWhenClientOmitsIt() throws Exception {
+        when(service.ingest(any())).thenReturn(new IngestionService.IngestionResult("d1", 7));
+        byte[] bytes = {0x25, 0x50, 0x44, 0x46};
+        ResponseEntity<IngestResponse> response =
+                controller.ingestFile(new MockMultipartFile("file", "doc.pdf", "application/pdf", bytes), null);
+        assertDocumentCreated(response, "d1", 7);
+        var expected = sha256(bytes);
+        verify(service).ingest(argThat(d -> expected.equals(d.getMetadata().get(MetadataKeys.CONTENT_HASH))));
+    }
+
+    @Test
+    void ingestFileAsyncStoresServerComputedContentHashOverClientValue() throws Exception {
+        when(service.ingest(any())).thenReturn(new IngestionService.IngestionResult("j1", 7));
+        IngestionController asyncController = new IngestionController(service, webCrawlerClient,
+                new AsyncIngestionService(service), null);
+        byte[] bytes = {0x25, 0x50, 0x44, 0x46};
+        MockMultipartFile file = new MockMultipartFile("file", "doc.pdf", "application/pdf", bytes);
+        var response = asyncController.ingestFileAsync(file,
+                Map.of(MetadataKeys.CONTENT_HASH, "0000000000000000000000000000000000000000000000000000000000000000"));
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+        awaitState(asyncController, response.getBody().getDocumentId());
+        var expected = sha256(bytes);
+        verify(service).ingest(argThat(d -> expected.equals(d.getMetadata().get(MetadataKeys.CONTENT_HASH))));
+    }
+
+    private static String sha256(byte[] bytes) throws Exception {
+        return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
     }
 
     @Test

@@ -95,6 +95,49 @@ class IngestCommandsIntegrationTest {
     }
 
     @Test
+    void addFileSkipsSecondSubmissionWhileIdenticalContentIsInFlight() throws IOException {
+        Path txt = Files.createTempFile("in-flight", ".txt");
+        byte[] bytes = "identical in-flight rag content".getBytes(StandardCharsets.UTF_8);
+        Files.write(txt, bytes);
+        var first = sut.addFile(txt.toString(), token -> {});
+        assertThat(first).contains("submitted", "i-1");
+        byte[] firstBody = stub.lastIngestBody();
+        var second = sut.addFile(txt.toString(), token -> {});
+        assertThat(second).contains("already in progress");
+        assertThat(stub.lastIngestBody()).isEqualTo(firstBody);
+    }
+
+    @Test
+    void addFolderSkipsDuplicateFilesWithinSingleBatch() throws Exception {
+        Path folder = Files.createTempDirectory("dup-batch");
+        byte[] bytes = "one identical copy".getBytes(StandardCharsets.UTF_8);
+        Files.write(Files.createTempFile(folder, "a", ".txt"), bytes);
+        Files.write(Files.createTempFile(folder, "b", ".txt"), bytes);
+        var result = sut.addFolder(folder.toString(), token -> {});
+        assertThat(result).contains("Submitted 1 of 2 files", "1 duplicate(s) skipped");
+    }
+
+    @Test
+    void addFileAllowsResubmissionAfterInFlightJobCompletes() throws IOException {
+        Path txt = Files.createTempFile("done", ".txt");
+        Files.write(txt, "done content".getBytes(StandardCharsets.UTF_8));
+        var registry = new ModuleRegistry(List.of(TestModules.withUrl(stub.baseUrl())), TestModules.BASIC);
+        var apiClient = new RagApiClient(registry, RestClient.builder());
+        var healthClient = new ModuleHealthClient(RestClient.builder());
+        var fast = new IngestCommands(
+                new CommandDispatcher.RagClients(apiClient, null, null, new FileDocumentLoader(),
+                        healthClient, null),
+                new NoopPrompter(new StringReader("")),
+                new DuplicateFinder(registry, apiClient, healthClient), null, 30L);
+        List<String> tokens = new ArrayList<>();
+        var first = fast.addFile(txt.toString(), tokens::add);
+        assertThat(first).contains("submitted", "i-1");
+        await(tokens, "complete");
+        var second = fast.addFile(txt.toString(), tokens::add);
+        assertThat(second).contains("submitted", "i-1");
+    }
+
+    @Test
     void addUrlIngestsWhenNoDuplicateFound() {
         var result = sut.addUrl("https://example.com/guide");
         assertThat(result).contains("i-1", "2 chunks");

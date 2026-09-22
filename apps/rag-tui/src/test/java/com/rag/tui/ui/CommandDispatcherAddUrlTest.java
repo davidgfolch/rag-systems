@@ -9,7 +9,6 @@ import static com.rag.tui.testfixture.TestDocumentSummaries.withId;
 import static com.rag.tui.testfixture.TestDocumentSummaries.withSource;
 import static com.rag.tui.testfixture.TestModules.BASIC_URL;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;

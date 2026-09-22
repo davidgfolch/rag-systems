@@ -171,5 +171,6 @@ class CommandDispatcherAddFileTest extends AbstractCommandDispatcherTest {
         List<String> tokens = new ArrayList<>();
         dispatcher.handle("add-file t.txt", tokens::add);
         await(tokens, "complete", 3);
+        assertThat(tokens).anyMatch(t -> t.contains("complete"));
     }
 }

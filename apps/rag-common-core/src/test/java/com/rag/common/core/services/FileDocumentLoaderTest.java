@@ -53,8 +53,8 @@ class FileDocumentLoaderTest {
         Files.write(dir.resolve("b.txt"), "same".getBytes(StandardCharsets.UTF_8));
         var first = sut.load(dir.resolve("a.txt").toString());
         var second = sut.load(dir.resolve("b.txt").toString());
-        assertThat(first.metadata().get(MetadataKeys.CONTENT_HASH))
-                .isEqualTo(second.metadata().get(MetadataKeys.CONTENT_HASH));
+        assertThat(first.metadata())
+                .containsEntry(MetadataKeys.CONTENT_HASH, second.metadata().get(MetadataKeys.CONTENT_HASH));
     }
 
     @Test
