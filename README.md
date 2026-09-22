@@ -144,7 +144,7 @@ graph TB
 
     subgraph Interfaces
         tui[rag-tui<br/>Terminal UI + control plane]
-        cli[rag-cli<br/>Interactive CLI]
+        cli[rag-cli<br/>CLI tool (placeholder)]
     end
 
     subgraph Tooling
@@ -189,7 +189,7 @@ graph TB
 
 **Legend:** solid arrows = Maven compile-time dependency, dashed arrows = runtime HTTP/WebSocket calls.
 
-**Data isolation:** each rag-* implementation stores vectors in its own PostgreSQL schema (`rag_basic`, `rag_advanced`, ...) in a single `chunks` table with a `document_id` column - no cross-module contamination. Conversation state lives separately in `rag_memory`.
+**Data isolation:** each rag-* implementation stores vectors in its own PostgreSQL schema (`rag_basic`, `rag_advanced`, ...) in a single `chunks` table. Per-document query scoping is done through the `documentId` chunk metadata key written by `PgVectorStoreAdapter` (see [ADR-0006](docs/architecture/decision-records/adr-0006-data-store-isolation.md)) - no cross-module contamination. Conversation state lives separately in `rag_memory`.
 
 **Module switching:** use the TUI commands `modules`, `start <module>`, `stop <module>`, and `use <module>`. Chat streams over WebSocket `/ws/chat` so an in-flight answer can be cancelled. `add-url` is module-orchestrated: the active rag-module calls `rag-webcrawler`, chunks with its own strategy, stores, and notifies the TUI.
 

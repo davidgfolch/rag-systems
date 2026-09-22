@@ -115,7 +115,7 @@ This architecture evolves around a **thin TUI + switchable RAG modules**. Each d
 | Area | Strategy | ADR |
 |------|----------|-----|
 | **Contract** | API-first: `rag-contract` OpenAPI spec generates shared DTOs used by all modules | [ADR-0005](architecture/decision-records/adr-0005-api-contract.md) |
-| **Data isolation** | PostgreSQL schema per rag-* module + single `chunks` table with `document_id` column | [ADR-0006](architecture/decision-records/adr-0006-data-store-isolation.md) |
+| **Data isolation** | PostgreSQL schema per rag-* module + single `chunks` table with `documentId` chunk metadata | [ADR-0006](architecture/decision-records/adr-0006-data-store-isolation.md) |
 | **TUI** | Thin interface over a control plane: starts/stops rag-* modules as child processes, routes REST/WebSocket to the active module | [ADR-0007](architecture/decision-records/adr-0007-tui-interface.md) |
 | **Conversation state** | `rag-memory` module owns chat/conversation history (schema `rag_memory`, non-vector) | [ADR-0008](architecture/decision-records/adr-0008-rag-memory.md) |
 | **Web ingestion** | `rag-webcrawler` module: intelligent fetching with LLM-driven link selection | [ADR-0009](architecture/decision-records/adr-0009-rag-webcrawler.md) |
@@ -514,20 +514,21 @@ See [guides/sonarqube.md](guides/sonarqube.md) and [ADR-0004](architecture/decis
 - [x] Split `rag-common` into capability modules (`core`/`ingestion`/`retrieval`/`generation`)
 
 ### Phase 3: Data Store Isolation
-- [ ] rag-basic schema `rag_basic` + `chunks` table with `document_id`
+- [x] rag-basic: single `chunks` table in schema `rag_basic` (via `PGVECTOR_SCHEMA`; blank default derives a `rag_<dim>` schema from the active embedding dimension, see `RagBasicConfig`)
+- [x] Per-document query scoping via `documentId` chunk metadata (see ADR-0006)
 - [ ] Apply same pattern to rag-advanced/rag-agentic when implemented
-- [ ] `.env`: `RAG_BASIC_URL`, `RAG_ADVANCED_URL`, `RAG_AGENTIC_URL`, `RAG_MEMORY_URL`, `RAG_WEBCRAWLER_URL`
+- [x] `.env`: `RAG_BASIC_URL`, `RAG_ADVANCED_URL`, `RAG_AGENTIC_URL`, `RAG_MEMORY_URL`, `RAG_WEBCRAWLER_URL`
 
 ### Phase 4: Supporting Modules
 - [x] `rag-provider` - provider hub: model switching + chat/embed APIs (ADR-0010..0012)
-- [ ] `rag-memory` - conversation persistence (schema `rag_memory`)
-- [ ] `rag-webcrawler` - smart fetch tool + LLM link prioritizer
-- [ ] rag-basic WebSocket `/ws/chat` + module-orchestrated `ingest-url`
+- [x] `rag-memory` - conversation persistence (schema `rag_memory`)
+- [x] `rag-webcrawler` - smart fetch tool + LLM link prioritizer
+- [x] rag-basic WebSocket `/ws/chat` + module-orchestrated `ingest-url`
 
 ### Phase 5: Thin TUI + Control Plane
-- [ ] Strip RAG logic out of TUI (keep UI + clients)
-- [ ] `ModuleRegistry`/`ModuleLifecycleManager` (start/stop child processes)
-- [ ] Commands: `modules`, `use`, `start`, `stop`, `add-file`, `add-url`, `ask` (WS/cancel), `history`
+- [x] Strip RAG logic out of TUI (keep UI + clients)
+- [x] `ModuleRegistry`/`ModuleLifecycleManager` (start/stop child processes)
+- [x] Commands: `modules`, `use`, `start`, `stop`, `add-file`, `add-url`, `ask` (WS/cancel), `history`
 
 ### Phase 6: Advanced RAG & Agentic RAG
 - [ ] rag-advanced: reranking, hybrid search, metadata filtering
