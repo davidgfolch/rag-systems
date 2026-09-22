@@ -19,9 +19,7 @@ import org.awaitility.Awaitility;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 
-import static com.rag.tui.testfixture.TestModules.ADVANCED;
 import static com.rag.tui.testfixture.TestModules.BASIC;
 import static com.rag.tui.testfixture.TestModules.advanced;
 import static com.rag.tui.testfixture.TestModules.basic;
