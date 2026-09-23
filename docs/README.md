@@ -23,10 +23,11 @@ Each module has its own README under `apps/*/README.md` — see the [module tabl
 | [rag-common-ingestion](../apps/rag-common-ingestion/README.md) | Parsers + chunkers + ingestion services |
 | [rag-common-retrieval](../apps/rag-common-retrieval/README.md) | PgVector / in-memory stores |
 | [rag-common-generation](../apps/rag-common-generation/README.md) | Chat/embedding adapters, ChatService |
+| [rag-common-app](../apps/rag-common-app/README.md) | Shared pipeline wiring for the rag-* runtimes |
 | [rag-provider](../apps/rag-provider/README.md) | LLM/embedding provider hub (**8086**) |
 | [rag-basic](../apps/rag-basic/README.md) | Baseline RAG (**8081**) |
 | [rag-advanced](../apps/rag-advanced/README.md) | Reranking, hybrid, metadata filtering (**8082**) |
-| [rag-agentic](../apps/rag-agentic/README.md) | Agentic RAG — *planned* (**8083**) |
+| [rag-agentic](../apps/rag-agentic/README.md) | Query planning, tool calling, multi-step retrieval (**8083**) |
 | [rag-memory](../apps/rag-memory/README.md) | Conversation history (**8084**) |
 | [rag-webcrawler](../apps/rag-webcrawler/README.md) | Web fetching tool (**8085**) |
 | [rag-observability](../apps/rag-observability/README.md) | Tracing, metrics, dashboards |

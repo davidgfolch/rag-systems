@@ -54,6 +54,16 @@
             <artifactId>reactor-core</artifactId>
         </dependency>
 
+        <!-- WebSocket transport for streaming chat (shared handler/interceptor/config) -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-websocket</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
