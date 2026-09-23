@@ -8,7 +8,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-# Bootstrap root .env files from scripts/.env*.example (idempotent)
+# Bootstrap .env.secrets from scripts/.env.secrets.example (idempotent)
 bash scripts/bootstrap-env.sh
 
 # Sync docker postgres password to the generated PGVECTOR_PASSWORD secret (idempotent)

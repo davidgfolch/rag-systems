@@ -8,6 +8,9 @@ scrape_configs:
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets:
-          - 'host.docker.internal:8080'   # rag-basic
-          - 'host.docker.internal:8081'   # rag-advanced
-          - 'host.docker.internal:8082'   # rag-agentic
+          - 'host.docker.internal:8081'   # rag-basic
+          - 'host.docker.internal:8082'   # rag-advanced
+          - 'host.docker.internal:8083'   # rag-agentic (planned)
+          - 'host.docker.internal:8084'   # rag-memory
+          - 'host.docker.internal:8085'   # rag-webcrawler
+          - 'host.docker.internal:8086'   # rag-provider

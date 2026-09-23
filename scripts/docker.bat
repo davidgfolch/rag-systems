@@ -19,7 +19,7 @@ REM (PROMETHEUS_PORT=9090, GRAFANA_PORT=3000) are already taken.
 set "ROOT=%~dp0.."
 cd /d "%ROOT%"
 
-REM Bootstrap root .env files from scripts\.env*.example (idempotent)
+REM Bootstrap .env.secrets from scripts\.env.secrets.example (idempotent)
 call scripts\bootstrap-env.bat
 
 REM Load .env (config) then .env.secrets (secrets override) so docker-compose can interpolate vars

@@ -11,7 +11,7 @@ REM Architecture tests (ArchitectureTest) always run as part of the test suite.
 set "ROOT=%~dp0.."
 cd /d "%ROOT%"
 
-REM Bootstrap root .env files from scripts\.env*.example (idempotent)
+REM Bootstrap .env.secrets from scripts\.env.secrets.example (idempotent)
 call scripts\bootstrap-env.bat
 
 set "COVERAGE_GOAL=verify"

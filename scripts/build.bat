@@ -8,7 +8,7 @@ REM   build.bat rag-basic - Build a specific module
 set "ROOT=%~dp0.."
 cd /d "%ROOT%"
 
-REM Bootstrap root .env files from scripts\.env*.example (idempotent)
+REM Bootstrap .env.secrets from scripts\.env.secrets.example (idempotent)
 call scripts\bootstrap-env.bat
 
 if "%~1"=="" (

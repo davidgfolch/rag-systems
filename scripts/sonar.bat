@@ -11,7 +11,7 @@ REM Token: passed as 2nd arg, set SONAR_TOKEN env var, or loaded from .env.secre
 set "ROOT=%~dp0.."
 cd /d "%ROOT%"
 
-REM Bootstrap root .env files from scripts\.env*.example (idempotent)
+REM Bootstrap .env.secrets from scripts\.env.secrets.example (idempotent)
 call scripts\bootstrap-env.bat
 
 set "CMD=%~1"

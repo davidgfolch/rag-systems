@@ -21,10 +21,8 @@ Thumbs.db
 *.log
 logs/
 
-# Env / secrets (generated at repo root by scripts/bootstrap-env.{bat,sh}; examples live in scripts/)
-/.env
+# Env secrets (generated at repo root by scripts/bootstrap-env.{bat,sh}; examples live in scripts/)
 /.env.secrets
-/.env.local
 
 # Coverage
 coverage/

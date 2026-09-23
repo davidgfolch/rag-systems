@@ -25,7 +25,7 @@ spring:
         initialize-schema: true
 
 server:
-  port: ${SERVER_PORT:8082}
+  port: ${RAG_ADVANCED_PORT:8082}
 
 management:
   endpoints:

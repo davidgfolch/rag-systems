@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# ===== Bootstrap env: copy scripts/.env.*.example -> root + generate passwords (Linux/Mac) =====
-# Idempotent: never overwrites an existing root .env file; only fills blank passwords.
+# ===== Bootstrap env: copy scripts/.env.secrets.example -> root .env.secrets + generate passwords (Linux/Mac) =====
+# Idempotent: never overwrites an existing root .env.secrets file; only fills blank passwords.
 # Called automatically by docker.sh / run.sh / sonar.sh / install.sh / build.sh / test.sh.
 
 set -u
@@ -20,17 +20,11 @@ gen_pw() {
     fi
 }
 
-# Copy each scripts/.env*.example to the matching root file if it does not exist.
-for example in scripts/.env*.example; do
-    [ -e "$example" ] || continue
-    base="${example##*/}"                 # e.g. .env.example  /  .env.secrets.example
-    name="${base%.example}"               # e.g. .env         /  .env.secrets
-    target="$ROOT/$name"
-    if [ ! -f "$target" ]; then
-        cp "$example" "$target"
-        echo "Created $name from scripts/$base"
-    fi
-done
+# Copy scripts/.env.secrets.example to the root .env.secrets if it does not exist.
+if [ -f "$ROOT/scripts/.env.secrets.example" ] && [ ! -f "$ROOT/.env.secrets" ]; then
+    cp "$ROOT/scripts/.env.secrets.example" "$ROOT/.env.secrets"
+    echo "Created .env.secrets from scripts/.env.secrets.example"
+fi
 
 # Fill blank PGVECTOR_PASSWORD in .env.secrets
 if [ -f "$ROOT/.env.secrets" ] && grep -q "^PGVECTOR_PASSWORD=$" "$ROOT/.env.secrets"; then

@@ -18,7 +18,7 @@ spring:
         format_sql: false
 
 server:
-  port: ${SERVER_PORT:8084}
+  port: ${RAG_MEMORY_PORT:8084}
 
 management:
   endpoints:

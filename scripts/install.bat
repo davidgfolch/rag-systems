@@ -8,7 +8,7 @@ REM   install.bat rag-basic - Install specific module
 set "ROOT=%~dp0.."
 cd /d "%ROOT%"
 
-REM Bootstrap root .env files from scripts\.env*.example (idempotent)
+REM Bootstrap .env.secrets from scripts\.env.secrets.example (idempotent)
 call scripts\bootstrap-env.bat
 
 REM Sync docker postgres password to the generated PGVECTOR_PASSWORD secret (idempotent)

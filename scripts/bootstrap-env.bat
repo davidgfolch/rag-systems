@@ -1,22 +1,16 @@
 @echo off
 setlocal enabledelayedexpansion
-REM ===== Bootstrap env: copy scripts\.env.*.example -> root + generate passwords (Windows) =====
-REM Idempotent: never overwrites an existing root .env file; only fills blank passwords.
+REM ===== Bootstrap env: copy scripts\.env.secrets.example -> root .env.secrets + generate passwords (Windows) =====
+REM Idempotent: never overwrites an existing root .env.secrets file; only fills blank passwords.
 REM Called automatically by docker.bat / run.bat / sonar.bat / install.bat / build.bat / test.bat.
 
 set "ROOT=%~dp0.."
 cd /d "%ROOT%"
 
-REM --- Copy each scripts\.env*.example to the matching root file if it does not exist ---
-for %%E in (scripts\.env*.example) do (
-    if exist "%%E" (
-        set "BASE=%%~nxE"
-        set "NAME=!BASE:.example=!"
-        if not exist "!NAME!" (
-            copy "scripts\!BASE!" "!NAME!" >nul
-            echo Created !NAME! from scripts\!BASE!
-        )
-    )
+REM --- Copy scripts\.env.secrets.example to root .env.secrets if it does not exist ---
+if exist "scripts\.env.secrets.example" if not exist ".env.secrets" (
+    copy "scripts\.env.secrets.example" ".env.secrets" >nul
+    echo Created .env.secrets from scripts\.env.secrets.example
 )
 
 REM --- Fill blank PGVECTOR_PASSWORD in .env.secrets ---
