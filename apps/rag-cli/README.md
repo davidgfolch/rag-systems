@@ -1,5 +1,7 @@
 # rag-cli
 
+> **Status: placeholder.** The module is wired into the reactor (pom only) but has **no implementation source yet**. The features below are the intended design.
+
 Interactive command-line tool for querying RAG systems without a web UI.
 
 ## Purpose
@@ -16,6 +18,8 @@ Provide a simple way to test RAG queries interactively or in batches using a ter
 | Profile support | local (Ollama) or cloud (OpenAI) |
 
 ## Running
+
+> Not implemented yet — shown for the intended behavior.
 
 ```bash
 # Windows
@@ -35,7 +39,11 @@ Interactive commands:
 
 ## Why not a web UI?
 
-A terminal interface avoids the overhead of building/maintaining a frontend while keeping the focus on the RAG implementation. For richer exploration, use the Swagger UI exposed by each runnable module (`/swagger-ui.html`).
+A terminal interface avoids the overhead of building/maintaining a frontend while keeping the focus on the RAG implementation. For richer exploration, use the REST API directly (see the runnable module READMEs) — the API contract is defined once in [rag-contract](../rag-contract/README.md).
+
+## Related
+
+- [rag-tui](../rag-tui/README.md) — the interactive terminal UI that already exists today
 
 ## Testing
 

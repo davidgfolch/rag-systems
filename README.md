@@ -1,4 +1,4 @@
-# RAG Systems
+﻿# RAG Systems
 
 [![CI](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml/badge.svg)](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml)
 [![Java](https://img.shields.io/badge/Java-25-007396?logo=openjdk&logoColor=white)](https://adoptium.net/)
@@ -99,24 +99,79 @@ Models default to **Ollama** (phi4 chat, nomic-embed-text embeddings). Switch ch
 
 See the [TUI Guide](docs/guides/tui-ingestion.md) for details on extending sources and how the architecture works.
 
+### Run a RAG module directly (HTTP API)
+
+Prefer the raw REST API over the TUI? Start any runnable module the same way — **rag-provider must be running first**. Each module is an independent Spring Boot app exposing the shared OpenAPI contract on its own port:
+
+```bash
+# Windows
+.\scripts\run.bat rag-basic --profile local        # http://localhost:8081
+.\scripts\run.bat rag-advanced --profile local     # http://localhost:8082
+
+# Linux/Mac
+./scripts/run.sh rag-basic --profile local
+./scripts/run.sh rag-advanced --profile local
+```
+
+Quick smoke test against rag-basic:
+
+```bash
+# Ingest a local file (multipart form field "file")
+curl -F "file=@docs/report.pdf" http://localhost:8081/api/documents/ingest-file
+
+# Ask a grounded question
+curl -H "Content-Type: application/json" \
+  -d '{"question":"What is this document about?","topK":4}' \
+  http://localhost:8081/api/query
+```
+
+The API contract — every endpoint, payload, and WebSocket frame — is defined **once** in [rag-api.yaml](apps/rag-contract/src/main/resources/openapi/rag-api.yaml). There is no per-module Swagger UI; use that YAML (or the Swagger editor linked below) as your API reference. See [Quick access URLs](#quick-access-urls) for every service endpoint.
+
+### Quick access URLs
+
+| Service | URL | Health | Metrics |
+|---------|-----|--------|---------|
+| rag-provider (LLM/embedding hub) | <http://localhost:8086> | `/actuator/health` | `/actuator/prometheus` |
+| rag-basic | <http://localhost:8081> | `/actuator/health` | `/actuator/prometheus` |
+| rag-advanced | <http://localhost:8082> | `/actuator/health` | `/actuator/prometheus` |
+| rag-memory (conversation history) | <http://localhost:8084> | `/actuator/health` | `/actuator/prometheus` |
+| rag-webcrawler (web fetching tool) | <http://localhost:8085> | `/actuator/health` | `/actuator/prometheus` |
+| Grafana dashboards | <http://localhost:3000> (`admin`/`admin`) | - | - |
+| Prometheus metrics | <http://localhost:9090> | - | - |
+| Tempo traces | <http://localhost:3200> | - | - |
+| Loki logs | <http://localhost:3100> | - | - |
+| OpenAPI spec (API reference) | [rag-api.yaml](apps/rag-contract/src/main/resources/openapi/rag-api.yaml) | [View in Swagger editor](https://editor.swagger.io/?url=https://raw.githubusercontent.com/davidgfolch/rag-systems/main/apps/rag-contract/src/main/resources/openapi/rag-api.yaml) | - |
+
+Grafana/Prometheus/Tempo/Loki are only available after `.\scripts\docker.bat up-obs` (see the [Observability guide](docs/guides/observability.md)).
+
+## Comparing the modules
+
+Each `rag-*` implementation answers the same questions over the same corpus, so you can compare retrieval quality and cost side by side:
+
+1. **Ingest the same corpus into both** — run rag-basic and rag-advanced, then `curl -F "file=@..."` the same documents into each (data stays isolated per PgVector schema).
+2. **Drive identical queries** — the same `{"question": ...}` to both `/api/query` endpoints.
+3. **Measure quantitatively** — turn on the `observability` profile and compare Grafana dashboards, Prometheus metrics, and trace timelines (see [rag-observability](apps/rag-observability/README.md)), or run the [rag-evaluation](apps/rag-evaluation/README.md) benchmark harness and the [performance metrics](docs/comparison/performance-metrics.md).
+
 ## Modules & Strategy
 
 The monorepo is organized around a **thin TUI + switchable RAG modules**. Each `rag-*` module is an independent Spring Boot application exposing the [shared OpenAPI contract](apps/rag-contract/src/main/resources/openapi/rag-api.yaml); the TUI starts/stops them and routes work to the active one.
 
-| Module | Role | Data | Port (from `.env`) |
-|--------|------|------|--------------------|
-| **rag-contract** | OpenAPI spec + generated DTOs | - | - |
-| **rag-common-core** | Kernel: domain models, strategy ports, tracing | - | - |
-| **rag-common-ingestion** | Chunking, parsing, ingestion services | - | - |
-| **rag-common-retrieval** | In-memory + PgVector store implementations | - | - |
-| **rag-common-generation** | Chat/embedding adapters, generation service | - | - |
-| **rag-provider** | Centralized LLM/embedding provider service | - | `RAG_PROVIDER_URL` |
-| **rag-basic** | Basic RAG | schema `rag_basic` | `RAG_BASIC_URL` |
-| **rag-advanced** | Advanced RAG (reranking, hybrid) | schema `rag_advanced` | `RAG_ADVANCED_URL` |
-| **rag-agentic** *(planned)* | Agentic RAG (tool calling) | schema `rag_agentic` | `RAG_AGENTIC_URL` |
-| **rag-memory** | Conversation history (non-vector) | schema `rag_memory` | `RAG_MEMORY_URL` |
-| **rag-webcrawler** | Intelligent web fetching tool | - | `RAG_WEBCRAWLER_URL` |
-| **rag-tui** | Thin interface + control plane | - | `RAG_TUI_URL` |
+| Module | Role | Data | Default port | README |
+|--------|------|------|--------------|--------|
+| **rag-contract** | OpenAPI spec + generated DTOs | - | - | [README](apps/rag-contract/README.md) |
+| **rag-common-core** | Kernel: domain models, strategy ports, tracing | - | - | [README](apps/rag-common-core/README.md) |
+| **rag-common-ingestion** | Chunking, parsing, ingestion services | - | - | [README](apps/rag-common-ingestion/README.md) |
+| **rag-common-retrieval** | In-memory + PgVector store implementations | - | - | [README](apps/rag-common-retrieval/README.md) |
+| **rag-common-generation** | Chat/embedding adapters, generation service | - | - | [README](apps/rag-common-generation/README.md) |
+| **rag-provider** | Centralized LLM/embedding provider service | - | 8086 | [README](apps/rag-provider/README.md) |
+| **rag-basic** | Basic RAG | schema `rag_basic` | 8081 | [README](apps/rag-basic/README.md) |
+| **rag-advanced** | Advanced RAG (reranking, hybrid) | schema `rag_advanced` | 8082 | [README](apps/rag-advanced/README.md) |
+| **rag-agentic** *(planned)* | Agentic RAG (tool calling) | schema `rag_agentic` | 8083 | [README](apps/rag-agentic/README.md) |
+| **rag-memory** | Conversation history (non-vector) | schema `rag_memory` | 8084 | [README](apps/rag-memory/README.md) |
+| **rag-webcrawler** | Intelligent web fetching tool | - | 8085 | [README](apps/rag-webcrawler/README.md) |
+| **rag-tui** | Thin interface + control plane | - | *(non-web)* | [README](apps/rag-tui/README.md) |
+
+> Ports are the defaults in each module's `application.yml`, each read from a per-module `RAG_*_PORT` env var (e.g. `RAG_BASIC_PORT`, `RAG_PROVIDER_PORT`) declared in the root `.env`. Keep each `RAG_*_PORT` in sync with the port in the matching `RAG_*_URL`. See the [Quick access URLs](#quick-access-urls) table.
 
 ### Module Dependencies
 
@@ -211,6 +266,7 @@ See the architecture decisions for the full rationale:
 | Performance & Benchmarks | [docs/comparison/](docs/comparison/) |
 | Observability (tracing, metrics, dashboards) | [docs/guides/observability.md](docs/guides/observability.md) |
 | SonarQube Static Analysis | [docs/guides/sonarqube.md](docs/guides/sonarqube.md) |
+| Module readmes | [apps/](apps/) — per-module guides under `apps/*/README.md` |
 | Agentic SDLC (rules, skills, config) | [.claude/](.claude/) |
 
 ## License

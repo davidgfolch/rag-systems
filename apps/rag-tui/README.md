@@ -1,10 +1,21 @@
 # rag-tui
 
-Terminal user interface for **adding documents and web pages** to a RAG system and **chatting** with the ingested content — no web UI required.
+Terminal user interface for **adding documents and web pages** to a RAG system and **chatting** with the ingested content — no web UI required. It is a **non-web app** (`web-application-type: none`): it exposes no HTTP server of its own but orchestrates the other modules over HTTP and WebSocket.
 
 ## Purpose
 
-rag-basic and friends expose REST APIs; rag-tui gives you a lightweight, interactive terminal for the ingestion + question-answering flow. Great for learning, quick experimentation, and scripting against a local RAG corpus without building a frontend.
+rag-basic and friends expose REST APIs; rag-tui gives you a lightweight, interactive terminal for the ingestion + question-answering flow. Great for learning, quick experimentation, and scripting against a local RAG corpus without building a frontend. It is a **control plane**: `start`/`stop`/`use` manage the `rag-*` modules, and it routes chat to the active one over WebSocket (`/ws/chat`).
+
+## Dependencies
+
+rag-tui talks to other services at runtime — they must be reachable:
+
+| Service | Env var / default | Used for |
+|---------|-------------------|----------|
+| rag-provider | `RAG_PROVIDER_URL` (`http://localhost:8086`) | `connect` (model switching), status |
+| rag-basic / rag-advanced / ... | `RAG_BASIC_URL` (`8081`) ... | `add-file`/`add-url`/`ask`/`start`/`use` |
+| rag-memory | `RAG_MEMORY_URL` (`8084`) | conversation history |
+| rag-webcrawler | `RAG_WEBCRAWLER_URL` (`8085`) | `add-url` (module-orchestrated) |
 
 ## Features
 
@@ -45,6 +56,8 @@ The TUI uses the provider abstraction: run with the `local` profile (Ollama) or 
 # Linux/Mac
 ./scripts/run.sh --profile local
 ```
+
+> rag-provider must be running first — start it with `.\scripts\run.bat rag-provider --profile local` (the TUI uses it for chat/embeddings and `connect`). For `add-file`/`ask` against a module, start one too (`start rag-basic` from within the TUI, or `.\scripts\run.bat rag-basic --profile local`).
 
 Example session:
 

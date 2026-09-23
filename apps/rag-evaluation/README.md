@@ -1,5 +1,7 @@
 # rag-evaluation
 
+> **Status: planned.** The module is wired into the reactor (pom + `rag-common-core` dependency) but has **no implementation source yet**. The metrics and usage below are the intended design.
+
 Metrics, benchmarking, and comparison tools for scoring and comparing RAG implementations.
 
 ## Purpose
@@ -29,6 +31,8 @@ com.rag.evaluation
 
 ## Usage
 
+> Planned — the benchmark harness is not implemented yet. The commands below are the intended interface.
+
 ```bash
 # Run benchmark against all configured store/strategy combos
 .\scripts\run.bat rag-evaluation --args "--benchmark"
@@ -48,6 +52,7 @@ com.rag.evaluation
 
 - [performance-metrics.md](../../docs/comparison/performance-metrics.md)
 - [trade-offs.md](../../docs/comparison/trade-offs.md)
+- [rag-observability](../rag-observability/README.md) — the live-metric comparison workflow you can use until this harness lands
 
 ## Testing
 

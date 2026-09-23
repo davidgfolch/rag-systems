@@ -6,6 +6,16 @@ Dedicated Spring Boot service owning all LLM and embedding provider clients (Oll
 
 Port: **8086** (override with `RAG_PROVIDER_PORT`).
 
+## Quick access
+
+| Endpoint | URL |
+|----------|-----|
+| API base | <http://localhost:8086> |
+| Status | <http://localhost:8086/api/provider> |
+| Health | <http://localhost:8086/actuator/health> |
+| Prometheus metrics | <http://localhost:8086/actuator/prometheus> |
+| API reference | [rag-api.yaml](../rag-contract/src/main/resources/openapi/rag-api.yaml) |
+
 ## Why it is a required dependency
 
 All RAG modules (rag-basic, rag-tui, future rag-advanced/rag-agentic) connect to rag-provider for model access. It must be running before any of them:

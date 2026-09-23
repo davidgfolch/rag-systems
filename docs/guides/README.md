@@ -11,3 +11,5 @@ Step-by-step guides for setting up, using, and extending RAG Systems.
 | [TUI Ingestion](tui-ingestion.md) | Terminal UI for ingesting local files and web pages, then asking grounded questions |
 | [SonarQube](sonarqube.md) | Local SonarQube setup, quality gate, scanning the monorepo |
 | [CI Workflow](ci-workflow.md) | GitHub Actions CI pipeline, per-module badges, coverage enforcement |
+
+Per-module setup, endpoints, and configuration: see the [module readmes](../../README.md#modules--strategy) (also listed in [docs/README.md](../README.md#module-readmes)).
