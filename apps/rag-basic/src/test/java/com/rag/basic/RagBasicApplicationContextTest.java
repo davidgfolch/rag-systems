@@ -1,6 +1,6 @@
 package com.rag.basic;
 
-import com.rag.basic.api.IngestionController;
+import com.rag.common.ingestion.web.IngestionController;
 import com.rag.basic.services.RetrievalService;
 import com.rag.common.core.services.EmbeddingModelPort;
 import org.junit.jupiter.api.BeforeEach;

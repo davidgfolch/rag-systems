@@ -24,6 +24,7 @@
         <module>apps/rag-common-ingestion</module>
         <module>apps/rag-common-retrieval</module>
         <module>apps/rag-common-generation</module>
+        <module>apps/rag-common-app</module>
         <module>apps/rag-basic</module>
         <module>apps/rag-provider</module>
         <module>apps/rag-memory</module>
@@ -178,6 +179,11 @@
                 <groupId>com.rag</groupId>
                 <artifactId>rag-common-generation</artifactId>
                 <type>test-jar</type>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.rag</groupId>
+                <artifactId>rag-common-app</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
