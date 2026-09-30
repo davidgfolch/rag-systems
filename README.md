@@ -199,7 +199,7 @@ graph TB
 
     subgraph Interfaces
         tui[rag-tui<br/>Terminal UI + control plane]
-        cli[rag-cli<br/>CLI tool (placeholder)]
+        cli["rag-cli<br/>CLI tool (placeholder)"]
     end
 
     subgraph Tooling
