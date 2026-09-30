@@ -516,7 +516,7 @@ See [guides/sonarqube.md](guides/sonarqube.md) and [ADR-0004](architecture/decis
 ### Phase 3: Data Store Isolation
 - [x] rag-basic: single `chunks` table in schema `rag_basic` (via `PGVECTOR_SCHEMA`; blank default derives a `rag_<dim>` schema from the active embedding dimension, see `RagBasicConfig`)
 - [x] Per-document query scoping via `documentId` chunk metadata (see ADR-0006)
-- [x] rag-advanced applies the same pattern (schema `rag_advanced`); rag-agentic pending
+- [x] rag-advanced applies the same pattern (schema `rag_advanced`); rag-agentic `rag_agentic`
 - [x] `.env`: `RAG_BASIC_URL`, `RAG_ADVANCED_URL`, `RAG_AGENTIC_URL`, `RAG_MEMORY_URL`, `RAG_WEBCRAWLER_URL`
 
 ### Phase 4: Supporting Modules
@@ -532,7 +532,7 @@ See [guides/sonarqube.md](guides/sonarqube.md) and [ADR-0004](architecture/decis
 
 ### Phase 6: Advanced RAG & Agentic RAG
 - [x] rag-advanced: reranking, hybrid search, metadata filtering
-- [ ] rag-agentic: query planning, tool calling, multi-step retrieval
+- [x] rag-agentic: query planning, tool calling, multi-step retrieval (prompt-based JSON tool calls; bounded agent loop with deterministic search fallback and self-reflection)
 
 ### Phase 7: Observability, Evaluation & Docs
 - [ ] OpenTelemetry tracing + Micrometer metrics

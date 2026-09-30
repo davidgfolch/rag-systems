@@ -4,6 +4,7 @@ import com.rag.advanced.retrieval.LexicalScorer;
 import com.rag.advanced.retrieval.MetadataFilter;
 import com.rag.common.core.domain.Chunk;
 import com.rag.common.core.domain.DocumentSummary;
+import com.rag.common.core.repositories.DocumentStorePort;
 import com.rag.common.core.repositories.VectorStorePort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +20,7 @@ import java.util.Map;
  * reciprocal rank fusion. Optional metadata filtering narrows candidates before
  * the re-rank. Document listing and deletion are delegated to the vector store.
  */
-public class AdvancedRetrievalService {
+public class AdvancedRetrievalService implements DocumentStorePort {
 
     private static final Logger log = LoggerFactory.getLogger(AdvancedRetrievalService.class);
     private static final int CANDIDATE_MULTIPLIER = 4;

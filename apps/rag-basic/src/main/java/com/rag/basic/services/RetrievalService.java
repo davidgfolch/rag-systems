@@ -2,6 +2,7 @@ package com.rag.basic.services;
 
 import com.rag.common.core.domain.Chunk;
 import com.rag.common.core.domain.DocumentSummary;
+import com.rag.common.core.repositories.DocumentStorePort;
 import com.rag.common.core.repositories.VectorStorePort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,7 +13,7 @@ import java.util.List;
  * Handles retrieval: delegates the query to the vector store, which embeds
  * it internally (keeping this layer decoupled from the embedding strategy).
  */
-public class RetrievalService {
+public class RetrievalService implements DocumentStorePort {
 
     private static final Logger log = LoggerFactory.getLogger(RetrievalService.class);
 

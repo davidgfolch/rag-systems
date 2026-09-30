@@ -1,11 +1,11 @@
-﻿# RAG Systems
+# RAG Systems
 
 [![CI](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml/badge.svg)](https://github.com/davidgfolch/rag-systems/actions/workflows/ci.yml)
 [![Java](https://img.shields.io/badge/Java-25-007396?logo=openjdk&logoColor=white)](https://adoptium.net/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.5-6DB33F?logo=spring)](https://spring.io/projects/spring-boot)
 [![Maven](https://img.shields.io/badge/Maven-3.9-C71A36?logo=apache-maven)](https://maven.apache.org/)
 <!-- COVERAGE_BADGES_START -->
-![rag-common-core](https://img.shields.io/badge/rag--common--core-91%25-brightgreen)  ![rag-common-ingestion](https://img.shields.io/badge/rag--common--ingestion-96%25-brightgreen)  ![rag-common-retrieval](https://img.shields.io/badge/rag--common--retrieval-98%25-brightgreen)  ![rag-common-generation](https://img.shields.io/badge/rag--common--generation-95%25-brightgreen)  ![rag-basic](https://img.shields.io/badge/rag--basic-95%25-brightgreen)  ![rag-memory](https://img.shields.io/badge/rag--memory-99%25-brightgreen)  ![rag-webcrawler](https://img.shields.io/badge/rag--webcrawler-95%25-brightgreen)  ![rag-provider](https://img.shields.io/badge/rag--provider-97%25-brightgreen)  ![rag-advanced](https://img.shields.io/badge/rag--advanced-96%25-brightgreen)  ![rag-tui](https://img.shields.io/badge/rag--tui-90%25-brightgreen)
+![rag-common-core](https://img.shields.io/badge/rag--common--core-91%25-brightgreen)  ![rag-common-ingestion](https://img.shields.io/badge/rag--common--ingestion-97%25-brightgreen)  ![rag-common-retrieval](https://img.shields.io/badge/rag--common--retrieval-98%25-brightgreen)  ![rag-common-generation](https://img.shields.io/badge/rag--common--generation-94%25-brightgreen)  ![rag-basic](https://img.shields.io/badge/rag--basic-100%25-brightgreen)  ![rag-memory](https://img.shields.io/badge/rag--memory-99%25-brightgreen)  ![rag-webcrawler](https://img.shields.io/badge/rag--webcrawler-95%25-brightgreen)  ![rag-provider](https://img.shields.io/badge/rag--provider-97%25-brightgreen)  ![rag-advanced](https://img.shields.io/badge/rag--advanced-98%25-brightgreen)  ![rag-agentic](https://img.shields.io/badge/rag--agentic-93%25-brightgreen)  ![rag-tui](https://img.shields.io/badge/rag--tui-90%25-brightgreen)
 <!-- COVERAGE_BADGES_END -->
 
 <!-- SONARQUBE_RESULTS_START -->
@@ -16,10 +16,10 @@
 | Vulnerabilities | 0 |
 | Security Hotspots | 0 |
 | Code Smells | 0 |
-| Coverage | 93.1% |
+| Coverage | 93.3% |
 | Duplication | 0.0% |
 
-*Last scan: 2026-09-22 14:59 UTC*
+*Last scan: 2026-09-23 14:47 UTC*
 <!-- SONARQUBE_RESULTS_END -->
 
 A monorepo for learning and comparing different RAG (Retrieval-Augmented Generation) implementations using Java Spring Boot and Spring AI. Each module is a decoupled bounded context with interchangeable chunking, embedding, and retrieval strategies — designed to be reusable across knowledge domains and to run comfortably on a regular local machine.
@@ -163,10 +163,11 @@ The monorepo is organized around a **thin TUI + switchable RAG modules**. Each `
 | **rag-common-ingestion** | Chunking, parsing, ingestion services | - | - | [README](apps/rag-common-ingestion/README.md) |
 | **rag-common-retrieval** | In-memory + PgVector store implementations | - | - | [README](apps/rag-common-retrieval/README.md) |
 | **rag-common-generation** | Chat/embedding adapters, generation service | - | - | [README](apps/rag-common-generation/README.md) |
+| **rag-common-app** | Shared pipeline wiring for the rag-* runtimes | - | - | [README](apps/rag-common-app/README.md) |
 | **rag-provider** | Centralized LLM/embedding provider service | - | 8086 | [README](apps/rag-provider/README.md) |
 | **rag-basic** | Basic RAG | schema `rag_basic` | 8081 | [README](apps/rag-basic/README.md) |
 | **rag-advanced** | Advanced RAG (reranking, hybrid) | schema `rag_advanced` | 8082 | [README](apps/rag-advanced/README.md) |
-| **rag-agentic** *(planned)* | Agentic RAG (tool calling) | schema `rag_agentic` | 8083 | [README](apps/rag-agentic/README.md) |
+| **rag-agentic** | Agentic RAG (tool calling) | schema `rag_agentic` | 8083 | [README](apps/rag-agentic/README.md) |
 | **rag-memory** | Conversation history (non-vector) | schema `rag_memory` | 8084 | [README](apps/rag-memory/README.md) |
 | **rag-webcrawler** | Intelligent web fetching tool | - | 8085 | [README](apps/rag-webcrawler/README.md) |
 | **rag-tui** | Thin interface + control plane | - | *(non-web)* | [README](apps/rag-tui/README.md) |

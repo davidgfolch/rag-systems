@@ -10,6 +10,7 @@ import com.rag.common.ingestion.IngestionService;
 import com.rag.common.ingestion.IngestionService.EmptyExtractionException;
 import com.rag.common.core.services.TextSplitter;
 import com.rag.common.ingestion.chunking.RecursiveCharacterChunker;
+import com.rag.common.ingestion.web.IngestionController;
 import com.rag.common.ingestion.parsing.TikaDocumentParser;
 import com.rag.contract.model.IngestResponse;
 import org.junit.jupiter.api.Test;
@@ -44,7 +45,7 @@ class PdfIngestionIntegrationTest {
             new IngestionService(parser, splitter, stubEmbedding, store);
     private final RetrievalService retrievalService = new RetrievalService(store);
     private final IngestionController controller =
-            new IngestionController(ingestionService, new WebCrawlerClient(null));
+            new IngestionController(ingestionService, new WebCrawlerClient(null)::fetch);
 
     @Test
     void ingestsTextPdfIntoChunksAndRetrievesThem() throws Exception {
