@@ -36,6 +36,11 @@ export_results() {
     bash scripts/sonar-export.sh com.rag:rag-systems http://localhost:9000 "$TOKEN"
 }
 
+reapply_gate() {
+    echo "Re-applying quality gate to the analysed project..."
+    bash scripts/sonar-pw.sh --gate-only || echo "Warning: could not re-apply quality gate."
+}
+
 case "$CMD" in
     up)
         echo "Starting SonarQube..."
@@ -57,6 +62,7 @@ case "$CMD" in
         fi
         echo "Running tests with coverage + SonarQube analysis..."
         mvn verify sonar:sonar -Dsonar.token="$TOKEN" $SCAN_ARGS
+        reapply_gate
         export_results
         ;;
     up-scan)
@@ -79,6 +85,7 @@ case "$CMD" in
         fi
         echo "Running tests with coverage + SonarQube analysis..."
         mvn verify sonar:sonar -Dsonar.token="$TOKEN" $SCAN_ARGS
+        reapply_gate
         export_results
         ;;
     down)

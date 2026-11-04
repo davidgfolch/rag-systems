@@ -18,8 +18,7 @@ if exist ".env.secrets" (
     set "PW_LINE="
     for /f "delims=" %%L in ('findstr /b /c:"PGVECTOR_PASSWORD=" ".env.secrets"') do set "PW_LINE=%%L"
     if "!PW_LINE!"=="PGVECTOR_PASSWORD=" (
-        for /f %%P in ('powershell -NoProfile -Command "$s='abcdef0123456789'; -join (1..32 | ForEach-Object { $s[(Get-Random -Max 16)] })"') do set "PASSWORD=%%P"
-        powershell -NoProfile -Command "(Get-Content '.env.secrets') -replace '^PGVECTOR_PASSWORD=$','PGVECTOR_PASSWORD=!PASSWORD!' | Set-Content '.env.secrets'"
+        powershell -NoProfile -Command "$s='abcdef0123456789';$p=-join (1..32 | ForEach-Object { $s[(Get-Random -Max 16)] });(Get-Content '.env.secrets') | ForEach-Object { if ($_ -match '^PGVECTOR_PASSWORD=$') { 'PGVECTOR_PASSWORD=' + $p } else { $_ } } | Set-Content '.env.secrets'"
         echo Generated PGVECTOR_PASSWORD in .env.secrets
     )
 )
@@ -29,8 +28,8 @@ if exist ".env.secrets" (
     set "SAPW_LINE="
     for /f "delims=" %%L in ('findstr /b /c:"SONAR_ADMIN_PASSWORD=" ".env.secrets"') do set "SAPW_LINE=%%L"
     if "!SAPW_LINE!"=="SONAR_ADMIN_PASSWORD=" (
-        for /f %%P in ('powershell -NoProfile -Command "$u='ABCDEFGHIJKLMNOPQRSTUVWXYZ'; $l='abcdefghijklmnopqrstuvwxyz'; $d='0123456789'; $all=$u+$l+$d; $pw=($u[(Get-Random -Max $u.Length)],$l[(Get-Random -Max $l.Length)],$d[(Get-Random -Max $d.Length)] + -join (1..29 | ForEach-Object { $all[(Get-Random -Max $all.Length)] }) -join ''; $pw"') do set "PASSWORD=%%P"
-        powershell -NoProfile -Command "(Get-Content '.env.secrets') -replace '^SONAR_ADMIN_PASSWORD=$','SONAR_ADMIN_PASSWORD=!PASSWORD!' | Set-Content '.env.secrets'"
+        REM SonarQube 26.8+ requires 12+ chars with upper, lower, digit, and a special char.
+        powershell -NoProfile -Command "$u='ABCDEFGHIJKLMNOPQRSTUVWXYZ';$l='abcdefghijklmnopqrstuvwxyz';$d='0123456789';$x='-_.@';$a=$u+$l+$d+$x;$p=-join @($u[(Get-Random -Max 26)],$l[(Get-Random -Max 26)],$d[(Get-Random -Max 10)],$x[(Get-Random -Max 4)]);$i=0;while($i -lt 28){$p+=$a[(Get-Random -Max $a.Length)];$i++};(Get-Content '.env.secrets') | ForEach-Object { if ($_ -match '^SONAR_ADMIN_PASSWORD=$') { 'SONAR_ADMIN_PASSWORD=' + $p } else { $_ } } | Set-Content '.env.secrets'"
         echo Generated SONAR_ADMIN_PASSWORD in .env.secrets
     )
 )

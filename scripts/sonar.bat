@@ -51,6 +51,7 @@ if "%CMD%"=="up" (
     )
     echo Running tests with coverage + SonarQube analysis...
     call mvnw.cmd verify sonar:sonar -Dsonar.token=%TOKEN% %SCAN_ARGS%
+    if not errorlevel 1 call scripts\sonar-pw.bat --gate-only
     if not errorlevel 1 call :export_results
 ) else if "%CMD%"=="up-scan" (
     echo Starting SonarQube...
@@ -73,6 +74,7 @@ if "%CMD%"=="up" (
     )
     echo Running tests with coverage + SonarQube analysis...
     call mvnw.cmd verify sonar:sonar -Dsonar.token=%TOKEN% %SCAN_ARGS%
+    if not errorlevel 1 call scripts\sonar-pw.bat --gate-only
     if not errorlevel 1 call :export_results
 ) else if "%CMD%"=="down" (
     echo Stopping SonarQube...

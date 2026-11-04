@@ -8,16 +8,19 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 gen_pw() {
-    if command -v openssl >/dev/null 2>&1; then
-        # SonarQube 26.8+ requires 12+ chars with uppercase, lowercase, and digit
-        UPPER=$(openssl rand -hex 1 | tr 'a-f' 'A-F')
-        LOWER=$(openssl rand -hex 1)
-        DIGIT=$(openssl rand -hex 1 | tr 'a-f' '0-7')
-        REST=$(openssl rand -hex 13)
-        echo "${UPPER}${LOWER}${DIGIT}${REST}"
-    else
-        echo "S${RANDOM}a${RANDOM}$(date +%s%N | tail -c 10)"
-    fi
+    # SonarQube 26.8+ requires 12+ chars with uppercase, lowercase, digit, and
+    # a special character. Use only chars that are safe for .env, sed, and batch.
+    local upper='ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    local lower='abcdefghijklmnopqrstuvwxyz'
+    local digit='0123456789'
+    local special='-_.@'
+    local all="${upper}${lower}${digit}${special}"
+    local pw="${upper:RANDOM%${#upper}:1}${lower:RANDOM%${#lower}:1}${digit:RANDOM%${#digit}:1}${special:RANDOM%${#special}:1}"
+    local i
+    for i in $(seq 1 28); do
+        pw+="${all:RANDOM%${#all}:1}"
+    done
+    printf '%s\n' "$pw"
 }
 
 # Copy scripts/.env.secrets.example to the root .env.secrets if it does not exist.
