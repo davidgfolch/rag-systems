@@ -23,6 +23,7 @@ final class AsyncIngestPoller {
 
     private static final String THREAD_NAME = "rag-ingest-poll";
     private static final long DEFAULT_POLL_MILLIS = 2_000;
+    private static final String INGESTION_OF = "Ingestion of ";
 
     private final CommandDispatcher.RagClients clients;
     private final Tracer tracer;
@@ -48,22 +49,25 @@ final class AsyncIngestPoller {
     }
 
     void start(String documentId, String contentHash, Consumer<String> tokenSink) {
+        start(documentId, contentHash, "document " + documentId, tokenSink);
+    }
+
+    void start(String documentId, String contentHash, String label, Consumer<String> tokenSink) {
         var span = tracer == null ? null : tracer.currentSpan();
         var poller = new Thread(() -> {
             try {
-                var label = "document " + documentId;
                 while (true) {
                     Thread.sleep(pollMillis);
                     var status = status(documentId, span);
                     var state = status.getState();
                     if (IngestStatusDTO.StateEnum.COMPLETED == state) {
                         clearInFlight(contentHash);
-                        tokenSink.accept(success("Ingestion of " + label + " complete: " + status.getChunkCount() + " chunks.\n"));
+                        tokenSink.accept(success(INGESTION_OF + label + " complete: " + status.getChunkCount() + " chunks.\n"));
                         return;
                     }
                     if (IngestStatusDTO.StateEnum.FAILED == state) {
                         clearInFlight(contentHash);
-                        tokenSink.accept(error("Ingestion of " + label + " failed: " + status.getMessage() + "\n"));
+                        tokenSink.accept(error(INGESTION_OF + label + " failed: " + status.getMessage() + "\n"));
                         return;
                     }
                 }
@@ -72,7 +76,7 @@ final class AsyncIngestPoller {
                 Thread.currentThread().interrupt();
             } catch (RuntimeException e) {
                 clearInFlight(contentHash);
-                tokenSink.accept(error("Ingestion of document " + documentId + " could not be checked: " + e.getMessage() + "\n"));
+                tokenSink.accept(error(INGESTION_OF + label + " could not be checked: " + e.getMessage() + "\n"));
             }
         }, THREAD_NAME);
         poller.setDaemon(true);

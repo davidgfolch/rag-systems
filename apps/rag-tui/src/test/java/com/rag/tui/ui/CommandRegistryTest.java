@@ -13,11 +13,11 @@ class CommandRegistryTest {
 
     @Test
     void containsAllExpectedCommands() {
-        assertThat(sut.all()).hasSize(14);
+        assertThat(sut.all()).hasSize(15);
         assertThat(sut.all().stream().map(CommandDescriptor::name))
                 .contains("help", "modules", "use", "start", "stop",
-                        "documents", "delete", "add-file", "add-folder", "add-url", "ask", "history",
-                        "connect", "quit");
+                        "documents", "delete", "add-file", "add-folder", "add-url", "add-url-cancel",
+                        "ask", "history", "connect", "quit");
     }
 
     @ParameterizedTest(name = "findByName(\"{0}\") is present")
@@ -33,8 +33,8 @@ class CommandRegistryTest {
 
     @ParameterizedTest(name = "filter(\"{0}\") → size {1}")
     @CsvSource({
-            "a,4",
-            "ADD,3"
+            "a,5",
+            "ADD,4"
     })
     void filterReturnsExpectedCount(String prefix, int expectedSize) {
         assertThat(sut.filter(prefix)).hasSize(expectedSize);
@@ -43,12 +43,12 @@ class CommandRegistryTest {
     @Test
     void filtersCommandsByPrefix() {
         assertThat(sut.filter("a").stream().map(CommandDescriptor::name))
-                .contains("add-file", "add-folder", "add-url", "ask");
+                .contains("add-file", "add-folder", "add-url", "add-url-cancel", "ask");
     }
 
     @Test
     void returnsAllCommandsForEmptyPrefix() {
-        assertThat(sut.filter("")).hasSize(14);
+        assertThat(sut.filter("")).hasSize(15);
     }
 
     @Test
@@ -57,7 +57,8 @@ class CommandRegistryTest {
         assertThat(usage)
                 .contains("Available commands:")
                 .contains("help", "modules", "use", "start", "stop")
-                .contains("documents", "delete", "add-file", "add-folder", "add-url", "ask", "history", "connect", "quit")
+                .contains("documents", "delete", "add-file", "add-folder", "add-url", "add-url-cancel",
+                        "ask", "history", "connect", "quit")
                 .contains("connect catalog [<provider>]", "connect chat <provider> <model>",
                         "connect embedding <provider> <model>", "connect refresh")
                 .doesNotContain("/ to browse commands");

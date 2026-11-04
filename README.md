@@ -5,7 +5,7 @@
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.5-6DB33F?logo=spring)](https://spring.io/projects/spring-boot)
 [![Maven](https://img.shields.io/badge/Maven-3.9-C71A36?logo=apache-maven)](https://maven.apache.org/)
 <!-- COVERAGE_BADGES_START -->
-![rag-common-core](https://img.shields.io/badge/rag--common--core-91%25-brightgreen)  ![rag-common-ingestion](https://img.shields.io/badge/rag--common--ingestion-97%25-brightgreen)  ![rag-common-retrieval](https://img.shields.io/badge/rag--common--retrieval-98%25-brightgreen)  ![rag-common-generation](https://img.shields.io/badge/rag--common--generation-94%25-brightgreen)  ![rag-basic](https://img.shields.io/badge/rag--basic-100%25-brightgreen)  ![rag-memory](https://img.shields.io/badge/rag--memory-99%25-brightgreen)  ![rag-webcrawler](https://img.shields.io/badge/rag--webcrawler-95%25-brightgreen)  ![rag-provider](https://img.shields.io/badge/rag--provider-97%25-brightgreen)  ![rag-advanced](https://img.shields.io/badge/rag--advanced-98%25-brightgreen)  ![rag-agentic](https://img.shields.io/badge/rag--agentic-93%25-brightgreen)  ![rag-tui](https://img.shields.io/badge/rag--tui-90%25-brightgreen)
+![rag-common-core](https://img.shields.io/badge/rag--common--core-91%25-brightgreen)  ![rag-common-ingestion](https://img.shields.io/badge/rag--common--ingestion-95%25-brightgreen)  ![rag-common-retrieval](https://img.shields.io/badge/rag--common--retrieval-98%25-brightgreen)  ![rag-common-generation](https://img.shields.io/badge/rag--common--generation-94%25-brightgreen)  ![rag-basic](https://img.shields.io/badge/rag--basic-100%25-brightgreen)  ![rag-memory](https://img.shields.io/badge/rag--memory-99%25-brightgreen)  ![rag-webcrawler](https://img.shields.io/badge/rag--webcrawler-96%25-brightgreen)  ![rag-provider](https://img.shields.io/badge/rag--provider-93%25-brightgreen)  ![rag-advanced](https://img.shields.io/badge/rag--advanced-98%25-brightgreen)  ![rag-agentic](https://img.shields.io/badge/rag--agentic-94%25-brightgreen)  ![rag-tui](https://img.shields.io/badge/rag--tui-90%25-brightgreen)
 <!-- COVERAGE_BADGES_END -->
 
 <!-- SONARQUBE_RESULTS_START -->
@@ -16,10 +16,10 @@
 | Vulnerabilities | 0 |
 | Security Hotspots | 0 |
 | Code Smells | 0 |
-| Coverage | 93.3% |
-| Duplication | 0.0%
+| Coverage | 92.9% |
+| Duplication | 1.0%
 
-*Last scan: 2026-11-04 06:48 UTC*
+*Last scan: 2026-11-04 10:25 UTC*
 <!-- SONARQUBE_RESULTS_END -->
 
 A monorepo for learning and comparing different RAG (Retrieval-Augmented Generation) implementations using Java Spring Boot and Spring AI. Each module is a decoupled bounded context with interchangeable chunking, embedding, and retrieval strategies — designed to be reusable across knowledge domains and to run comfortably on a regular local machine.
@@ -116,12 +116,15 @@ Once started, use these commands interactively:
 
 ```
 add-file /path/to/document.pdf    # ingest a local file
-add-url https://example.com       # ingest a web page
+add-url https://example.com       # crawl a site from a URL, one question per page
+add-url-cancel                    # stop the crawl currently running
 ask What is this document about?  # ask a question against ingested content
 exit                              # quit
 ```
 
 The pipeline: files and URLs are parsed, split into chunks, embedded, and stored in a vector store. Questions retrieve the most relevant chunks and generate a grounded answer via the configured LLM.
+
+`add-url` is an interactive breadth-first crawl, not a single-page fetch: the active rag-module asks **rag-webcrawler** for the root page and for link rankings, then ingests each page asynchronously while the TUI prompts for a question per page (the question ranks that page's links). The crawl starts with the root plus up to 5 ranked links, asks once whether to keep going after that initial set, and is bounded to 50 pages on the root host by default.
 
 Models default to **Ollama** (phi4 chat, nomic-embed-text embeddings). Switch chat/embedding providers at runtime — no restart — with the TUI `connect` command (e.g. `connect chat openrouter gpt-4o`), or via the rag-provider HTTP API.
 

@@ -37,6 +37,7 @@ public class CommandDispatcher {
     private final DocumentLister documentLister;
     private final DuplicateFinder duplicates;
     private final IngestCommands ingest;
+    private final CrawlCommands crawl;
     private final Tracer tracer;
 
     static final String SPAN_COMMAND = "tui.command";
@@ -59,6 +60,7 @@ public class CommandDispatcher {
         this.documentLister = new DocumentLister(registry, clients.apiClient(), clients.healthClient());
         this.duplicates = new DuplicateFinder(registry, clients.apiClient(), clients.healthClient());
         this.ingest = new IngestCommands(clients, prompter, duplicates, tracer);
+        this.crawl = new CrawlCommands(clients, prompter, duplicates, tracer);
         this.tracer = tracer;
     }
 
@@ -72,22 +74,16 @@ public class CommandDispatcher {
     }
 
     private String dispatch(String input, Consumer<String> tokenSink) {
-        var in = input.trim().toLowerCase();
-        switch (in) {
-            case "" -> {
-                return "";
-            }
+        var in = input.trim();
+        if (in.isEmpty()) return "";
+        var parts = in.split("\\s+", 2);
+        var command = parts[0].toLowerCase();
+        var arg = parts.length > 1 ? parts[1].trim() : "";
+        return switch (command) {
             case "quit", "exit" -> throw new ShellExitException();
-            case "help" -> {
-                return commandRegistry.generateUsage();
-            }
-            default -> {
-                var parts = in.split("\\s+", 2);
-                var command = parts[0];
-                var arg = parts.length > 1 ? parts[1].trim() : "";
-                return dispatchCommand(command, arg, tokenSink);
-            }
-        }
+            case "help" -> commandRegistry.generateUsage();
+            default -> dispatchCommand(command, arg, tokenSink);
+        };
     }
 
     private String dispatchCommand(String command, String arg, Consumer<String> tokenSink) {
@@ -116,7 +112,8 @@ public class CommandDispatcher {
             case "delete" -> delete(arg);
             case "add-file" -> ingest.addFile(arg, tokenSink);
             case "add-folder" -> ingest.addFolder(arg, tokenSink);
-            case "add-url" -> ingest.addUrl(arg);
+            case "add-url" -> crawl.addUrl(arg, tokenSink);
+            case "add-url-cancel" -> crawl.cancelActive();
             case "ask" -> ask(arg, tokenSink);
             case "history" -> history();
             case "connect" -> new ConnectCommand(clients.providerClient(), prompter).execute(arg);

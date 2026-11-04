@@ -8,6 +8,8 @@ import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
@@ -34,5 +36,31 @@ class WebCrawlerClientTest {
         assertThat(page.getTitle()).isEqualTo("Example");
         assertThat(page.getText()).isEqualTo("page text");
         server.verify();
+    }
+
+    @Test
+    void ranksLinksViaWebcrawler() {
+        RestClient.Builder builder = RestClient.builder()
+                .baseUrl("http://localhost:8085")
+                .requestFactory(new JdkClientHttpRequestFactory());
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        WebCrawlerClient sut = new WebCrawlerClient(builder.build());
+        server.expect(requestTo("http://localhost:8085/api/rank-links"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andRespond(withSuccess("""
+                        {"links":["https://example.com/b","https://example.com/a"]}
+                        """, MediaType.APPLICATION_JSON));
+        List<String> ranked = sut.rankLinks(
+                List.of("https://example.com/a", "https://example.com/b"), "question");
+        assertThat(ranked).containsExactly("https://example.com/b", "https://example.com/a");
+        server.verify();
+    }
+
+    @Test
+    void rankLinksSkipsHttpCallWhenThereAreNoLinks() {
+        WebCrawlerClient sut = new WebCrawlerClient(null);
+        assertThat(sut.rankLinks(List.of(), "question")).isEmpty();
+        assertThat(sut.rankLinks(null, "question")).isEmpty();
     }
 }

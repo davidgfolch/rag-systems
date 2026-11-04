@@ -9,7 +9,7 @@ explains the flow, why it is structured this way, and how to extend it.
 ```
 add-file <path>  ─┐
                   ├──► Document ──► parse ──► split ──► embed ──► store
-add-url <url>   ──┘                    │        │        │         │
+add-url <url>   ──┘   (crawl: root + ranked links)   │        │         │
                                  Tika / plain  recursive  adapter  in-memory/PgVector
 
 ask <question> ──► retrieve (vector store, topK) ──► build prompt ──► chat model ──► answer + sources
@@ -20,6 +20,27 @@ Two independent capabilities, both reusing the `rag-common-*` strategy interface
 1. **Ingestion** — turn files/web pages into embedded chunks.
 2. **Chat (RAG QA)** — retrieve the most relevant chunks and generate a grounded answer.
 
+## Crawling a site (`add-url`)
+
+`add-url` does not ingest a single page: it runs an interactive breadth-first crawl that the
+active rag-module orchestrates.
+
+- The module fetches the root page through **rag-webcrawler** and returns its URL and title to the TUI.
+- Before **every** page (including the root), the TUI asks one question. That question is sent
+  with the page and ranks its outbound links; a blank answer uses the deterministic ranker.
+- The initial crawl set is the root plus up to **5** links ranked from the root.
+- After the initial set, the TUI asks **“Go on?” once** if more links are queued. Accepting continues
+  the crawl; declining stops it.
+- Each page is submitted for **asynchronous** ingestion, so the shell stays responsive and reports
+  each page as its job completes.
+- Type `add-url-cancel` (or `cancel`) at any crawl prompt, or run the `add-url-cancel` command, to
+  stop scheduling new pages. Pages already submitted finish ingesting.
+- The frontier is de-duplicated per crawl and skips pages whose `source` is already ingested on the
+  module. Both `maxPages` (default **50**) and `sameHostOnly` (default **true**) can be set on
+  `POST /api/documents/crawl`.
+
+The legacy `POST /api/documents/ingest-url` endpoint remains as a single-page API.
+
 ## De-duplication
 
 Re-ingesting the same content is detected before submission, with an `Override? (y/N)` prompt:
@@ -27,8 +48,10 @@ Re-ingesting the same content is detected before submission, with an `Override? 
 - **`add-file` / `add-folder`** — a SHA-256 content hash is computed from the file bytes and sent as
   `contentHash` metadata. The TUI lists documents on reachable rag-* modules and skips the file when a
   document already carries the same hash.
-- **`add-url`** — documents match on the `source` metadata by **domain + URI** (host + path;
-  `http`/`https`, `#fragment` and trailing-slash differences don't count as different pages).
+- **`add-url`** — the root is checked before the crawl starts, and the module also skips later
+  crawled pages whose `source` is already ingested. Documents match on the `source` metadata by
+  **domain + URI** (host + path; `http`/`https`, `#fragment` and trailing-slash differences don't
+  count as different pages).
 - **Override = delete + re-ingest**: confirming `y` deletes the existing document (removing its chunks
   from PgVector) before submitting the new content, so no stale chunks remain.
 

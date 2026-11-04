@@ -8,6 +8,9 @@ public final class ApiPaths {
     public static final String INGEST_FILE_ASYNC = "/api/documents/ingest-file-async";
     public static final String INGEST_STATUS = "/api/documents/ingest-status/{id}";
     public static final String INGEST_URL = "/api/documents/ingest-url";
+    public static final String CRAWL = "/api/documents/crawl";
+    public static final String CRAWL_BY_ID = "/api/documents/crawl/{sessionId}";
+    public static final String CRAWL_STEP = "/api/documents/crawl/{sessionId}/step";
     public static final String DOCUMENT_BY_ID = "/api/documents/{documentId}";
     public static final String QUERY = "/api/query";
     public static final String PROVIDER = "/api/provider";
@@ -20,6 +23,7 @@ public final class ApiPaths {
     public static final String COMPLETE = "/api/complete";
     public static final String CHAT_STREAM = "/api/chat/stream";
     public static final String FETCH = "/api/fetch";
+    public static final String RANK_LINKS = "/api/rank-links";
     public static final String CONVERSATIONS = "/api/conversations";
     public static final String CONVERSATIONS_MESSAGES = "/api/conversations/{id}/messages";
 

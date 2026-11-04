@@ -137,22 +137,6 @@ class IngestCommandsIntegrationTest {
         assertThat(second).contains("submitted", "i-1");
     }
 
-    @Test
-    void addUrlIngestsWhenNoDuplicateFound() {
-        var result = sut.addUrl("https://example.com/guide");
-        assertThat(result).contains("i-1", "2 chunks");
-        assertThat(stub.lastIngestUrl()).contains("https://example.com/guide");
-    }
-
-    @Test
-    void addUrlSkipsDuplicateByUriOverHttp() {
-        stub.documents("[{\"documentId\":\"web-1\",\"title\":\"Old page\",\"chunkCount\":5,"
-                + "\"metadata\":{\"source\":\"https://example.com/guide\"}}]");
-        var result = sut.addUrl("https://example.com/guide");
-        assertThat(result).contains("already ingested", "web-1");
-        assertThat(stub.lastIngestUrl()).isNull();
-    }
-
     private static void await(List<String> tokens, String needle) {
         Awaitility.await().atMost(Duration.ofSeconds(5))
                 .until(() -> tokens.stream().anyMatch(t -> t.contains(needle)));

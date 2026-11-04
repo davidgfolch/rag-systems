@@ -32,6 +32,7 @@ It is a plain HTTP service (no PostgreSQL, no provider dependency) — see [ADR-
 |--------|------|---------|
 | `POST` | `/api/fetch` | Fetch a single page: `{"url": "https://..."}` → `PageDTO` (title, text, links) |
 | `POST` | `/api/fetch/links` | Fetch the top-K pages most relevant to a question: `{"url": "...", "question": "..."}` → `List<PageDTO>` |
+| `POST` | `/api/rank-links` | Rank candidate links without fetching: `{"links": [...], "question": "..."}` → `{"links": [...]}` |
 
 Example:
 
@@ -55,10 +56,10 @@ com.rag.webcrawler
 │       ├── DeterministicLinkPrioritizer - keyword/position scoring (default)
 │       └── LlmLinkPrioritizer    - LLM-assisted relevance ranking
 ├── config/      - WebcrawlerConfig (wires prioritizer, fetcher)
-└── api/         - FetchController
+└── api/         - FetchController, RankLinksController
 ```
 
-The link prioritizer is swappable via `CRAWLER_PRIORITIZER` (`deterministic` default, `llm` opt-in). `POST /api/fetch/links` uses it to crawl only the links most likely to answer the question — the basis of `add-url … "question"` in the TUI and of web-Q&A retrieval.
+The link prioritizer is swappable via `CRAWLER_PRIORITIZER` (`deterministic` default, `llm` opt-in). `POST /api/fetch/links` uses it to fetch only the pages most likely to answer a question. `POST /api/rank-links` only orders candidate URLs, which the module-orchestrated `add-url` crawl uses to rank each page's outbound links while keeping the crawl frontier in the rag-module.
 
 ## Configuration
 
@@ -78,4 +79,4 @@ The link prioritizer is swappable via `CRAWLER_PRIORITIZER` (`deterministic` def
 
 - [ADR-0009: rag-webcrawler module](../../docs/architecture/decision-records/adr-0009-rag-webcrawler.md)
 - [TUI ingestion guide](../../docs/guides/tui-ingestion.md) — how `add-url` uses this service
-- [rag-contract](../rag-contract/README.md) — `PageDTO`, `FetchRequest`, `FetchLinksRequest` definitions
+- [rag-contract](../rag-contract/README.md) — `PageDTO`, `FetchRequest`, `FetchLinksRequest`, `RankLinksRequest`/`RankLinksResponse` definitions

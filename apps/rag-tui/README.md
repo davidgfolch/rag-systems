@@ -22,7 +22,8 @@ rag-tui talks to other services at runtime — they must be reachable:
 | Feature | Description |
 |---------|-------------|
 | `add-file <path>` | Ingest a local document (PDF, DOCX, TXT, HTML) via Tika; de-duplicated by SHA-256 content hash |
-| `add-url <url>` | Fetch and ingest a web page (jsoup); de-duplicated by domain + URI |
+| `add-url <url>` | Crawl a site from the URL: the active module fetches and ranks pages, the TUI asks one question per page, and results are de-duplicated by domain + URI |
+| `add-url-cancel` | Stop the crawl currently being driven (also accepted at crawl prompts) |
 | `ask <question>` | Retrieval-augmented answer with cited source chunks |
 | `connect` | Provider status; browse model catalog; switch chat/embedding provider+model at runtime (Ollama default, OpenRouter/OpenAI-compatible registerable) |
 | `help` / `quit` | Usage and exit |
@@ -66,7 +67,10 @@ RAG TUI - type 'help' for commands, 'quit' to exit
 > add-file docs/report.pdf
 Ingested document file-<uuid> -> 12 chunks
 > add-url https://spring.io/projects/spring-ai
-Ingested web page https://spring.io/projects/spring-ai -> 8 chunks
+Question for "Spring AI" (blank = none, 'add-url-cancel' to stop):
+Initial pages submitted. Go on and crawl more pages? (y/N) n
+Crawl cancelled: 5 page(s) submitted for async ingestion, 0 page(s) skipped, 12 link(s) skipped. Ingestion continues in the background; I'll report each page as it completes.
+Ingestion of page https://spring.io/projects/spring-ai complete: 8 chunks.
 > ask what is spring ai
 Answer:
 Spring AI is a framework that simplifies building RAG applications...
