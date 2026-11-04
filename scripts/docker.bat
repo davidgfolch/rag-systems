@@ -45,6 +45,12 @@ if not defined OLLAMA_BASE_URL set "OLLAMA_BASE_URL=http://localhost:11434"
 if not defined PROMETHEUS_PORT set "PROMETHEUS_PORT=9090"
 if not defined GRAFANA_PORT set "GRAFANA_PORT=3000"
 
+REM "auto"/"discover" are resolved by rag-provider itself, so docker must start
+REM the local rag-ollama container instead of probing an invalid URL.
+set "OLLAMA_DISCOVERY_SPEC=0"
+if /i "%OLLAMA_BASE_URL%"=="auto" set "OLLAMA_DISCOVERY_SPEC=1"
+if /i "%OLLAMA_BASE_URL%"=="discover" set "OLLAMA_DISCOVERY_SPEC=1"
+
 set "COMPOSE_BASE=-f docker/docker-compose.yml"
 set "COMPOSE_SONAR=-f docker/docker-compose.yml -f docker/docker-compose.sonarqube.yml"
 set "COMPOSE_ALL=-f docker/docker-compose.yml -f docker/docker-compose.observability.yml -f docker/docker-compose.sonarqube.yml -f docker/docker-compose.ollama.yml"
@@ -58,6 +64,8 @@ if "%CMD%"=="up" (
     goto :run
 ) else if "%CMD%"=="up-ollama" (
     if /i "%INFRA_MODE%"=="local" (
+        set "SELECT_OLLAMA=1"
+    ) else if "%OLLAMA_DISCOVERY_SPEC%"=="1" (
         set "SELECT_OLLAMA=1"
     ) else (
         curl -sf --max-time 3 "%OLLAMA_BASE_URL%/api/tags" >nul 2>&1
@@ -77,6 +85,8 @@ if "%CMD%"=="up" (
 ) else if "%CMD%"=="up-all" (
     set "SELECT_OBS=1"
     if /i "%INFRA_MODE%"=="local" (
+        set "SELECT_OLLAMA=1"
+    ) else if "%OLLAMA_DISCOVERY_SPEC%"=="1" (
         set "SELECT_OLLAMA=1"
     ) else (
         curl -sf --max-time 3 "%OLLAMA_BASE_URL%/api/tags" >nul 2>&1

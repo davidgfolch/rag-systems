@@ -60,7 +60,9 @@ Already running Ollama on another machine, or a CI runner? Point every script at
 OLLAMA_BASE_URL=http://my-host:11434
 ```
 
-With `INFRA_MODE=auto` (the default), `.\scripts\docker.bat up-ollama` detects an already-reachable `OLLAMA_BASE_URL` and **reuses it** instead of starting the `rag-ollama` container. Set `INFRA_MODE=local` to always start the container regardless. Pull models as usual against that host (`ollama pull` / `docker exec rag-ollama ollama pull`).
+Or let rag-provider find it on the LAN — set `OLLAMA_BASE_URL=auto` (alias `discover`). It probes the cache, then `127.0.0.1`, then scans the local subnets and verifies candidates with `GET /api/tags`; the first working host is reused and cached in `data/discovery/cache.json`. Explicit URLs are never probed, so offline boots stay fast. Add the host LAN to the scan when rag-provider runs in Docker with `OLLAMA_DISCOVERY_SUBNETS=192.168.1.0/24,10.0.0.0/24` (the container only sees the Docker bridge). `OLLAMA_DISCOVERY_ENABLED=false` makes `auto` fall straight back to `http://127.0.0.1:11434`.
+
+With `INFRA_MODE=auto` (the default), `.\scripts\docker.bat up-ollama` detects an already-reachable `OLLAMA_BASE_URL` and **reuses it** instead of starting the `rag-ollama` container. `auto`/`discover` are not treated as external URLs, so the local container is started. Set `INFRA_MODE=local` to always start the container regardless. Pull models as usual against that host (`ollama pull` / `docker exec rag-ollama ollama pull`).
 
 ### Verify
 

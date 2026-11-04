@@ -49,7 +49,12 @@ PROMETHEUS_PORT="${PROMETHEUS_PORT:-9090}"
 GRAFANA_PORT="${GRAFANA_PORT:-3000}"
 
 # Returns 0 (success) if an external Ollama responds at OLLAMA_BASE_URL.
+# "auto"/"discover" are resolved by rag-provider itself, so docker must start
+# the local rag-ollama container instead of probing an invalid URL.
 is_external_ollama() {
+    case "$(printf '%s' "$OLLAMA_BASE_URL" | tr '[:upper:]' '[:lower:]')" in
+        auto|discover) return 1 ;;
+    esac
     curl -sf --max-time 3 "$OLLAMA_BASE_URL/api/tags" >/dev/null 2>&1
 }
 

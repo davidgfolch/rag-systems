@@ -17,9 +17,9 @@
 | Security Hotspots | 0 |
 | Code Smells | 0 |
 | Coverage | 93.3% |
-| Duplication | 0.0% |
+| Duplication | 0.0%
 
-*Last scan: 2026-09-23 14:47 UTC*
+*Last scan: 2026-11-04 06:48 UTC*
 <!-- SONARQUBE_RESULTS_END -->
 
 A monorepo for learning and comparing different RAG (Retrieval-Augmented Generation) implementations using Java Spring Boot and Spring AI. Each module is a decoupled bounded context with interchangeable chunking, embedding, and retrieval strategies — designed to be reusable across knowledge domains and to run comfortably on a regular local machine.
@@ -51,7 +51,7 @@ ollama pull phi4                # small CPU-friendly LLM
 ./scripts/docker.sh up
 ```
 
-Ollama runs natively, containerized (`.\scripts\docker.bat up-ollama`), or points at an externally running instance via `OLLAMA_BASE_URL` — with `INFRA_MODE=auto` (default), `up-ollama` reuses an already-reachable Ollama instead of starting the `rag-ollama` container. See the [Getting Started guide](docs/guides/getting-started.md).
+Ollama runs natively, containerized (`.\scripts\docker.bat up-ollama`), or points at an externally running instance via `OLLAMA_BASE_URL` — set it to `auto` to let rag-provider find an Ollama server on the LAN. With `INFRA_MODE=auto` (default), `up-ollama` reuses an already-reachable Ollama instead of starting the `rag-ollama` container. See the [Getting Started guide](docs/guides/getting-started.md).
 
 Prefer Ollama for zero-cost, private local development. When you need frontier models without local GPUs, register OpenRouter (or any OpenAI-compatible endpoint) with rag-provider — at runtime via the TUI `connect` command, no restart needed.
 
