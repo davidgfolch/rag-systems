@@ -66,16 +66,44 @@ Prefer Ollama for zero-cost, private local development. When you need frontier m
 
 ## Quick Start
 
-All RAG modules depend on **rag-provider** for LLM and embedding compute. Start it first:
+The `run` scripts launch any single module on both platforms:
 
 ```bash
-# Start rag-provider (Windows)
-.\scripts\run.bat rag-provider --profile local
-# Linux/Mac
-./scripts/run.sh rag-provider --profile local
+# Usage
+.\scripts\run.bat [<module>] [--profile <name>] [--args "<spring args>"] [--force]
+./scripts/run.sh  [<module>] [--profile <name>] [--args "<spring args>"] [--force]
 ```
 
-Then start the TUI (Terminal UI) — it lets you add local files or web pages as sources and then ask grounded questions against them:
+With no module name, `run` starts `rag-tui` (the default); with no `--profile`, it uses `local`.
+
+### 1. Start the required services manually
+
+The TUI's `start <module>` command can only launch modules in its registry — `rag-basic`,
+`rag-advanced`, `rag-agentic`, and `rag-provider`. Everything below must be started manually,
+in particular **rag-webcrawler**, without which `add-url` fails with an HTTP 500:
+
+| Service | Port | Required for | Windows | Linux/macOS |
+|---------|------|--------------|---------|-------------|
+| PostgreSQL + PgVector | 5432 | all RAG modules (default `VECTOR_STORE_TYPE=pgvector`) | `.\scripts\docker.bat up` | `./scripts/docker.sh up` |
+| rag-provider | 8086 | chat + embeddings for rag-basic/advanced/agentic; TUI `connect` | `.\scripts\run.bat rag-provider --profile local` | `./scripts/run.sh rag-provider --profile local` |
+| rag-webcrawler | 8085 | `add-url` on rag-basic/advanced/agentic, and the agentic web-search tool | `.\scripts\run.bat rag-webcrawler --profile local` | `./scripts/run.sh rag-webcrawler --profile local` |
+| rag-memory | 8084 | TUI `history` (conversation list) | `.\scripts\run.bat rag-memory --profile local` | `./scripts/run.sh rag-memory --profile local` |
+| Ollama | 11434 | local models (`nomic-embed-text`, `phi4`) | native `ollama serve` or `.\scripts\docker.bat up-ollama` | native `ollama serve` or `./scripts/docker.sh up-ollama` |
+
+Ingestion is not a separate service: `rag-common-ingestion` is a library compiled into
+`rag-basic`/`rag-advanced`/`rag-agentic`. Their `IngestionController` handles parsing, chunking,
+embedding and storage, and embeddings go through **rag-provider**.
+
+| TUI command | Services that must already be running |
+|-------------|----------------------------------------|
+| `add-file`, `add-folder`, `ask` | PostgreSQL (pgvector) + rag-provider + the active rag module |
+| `add-url` | the above + **rag-webcrawler** (otherwise the module returns HTTP 500) |
+| `history` | rag-memory |
+| `connect` | rag-provider |
+
+### 2. Start the TUI
+
+The TUI (Terminal UI) lets you add local files or web pages as sources and then ask grounded questions against them:
 
 ```bash
 # Start the TUI with local models (Windows; rag-tui is the default)
@@ -101,17 +129,23 @@ See the [TUI Guide](docs/guides/tui-ingestion.md) for details on extending sourc
 
 ### Run a RAG module directly (HTTP API)
 
-Prefer the raw REST API over the TUI? Start any runnable module the same way — **rag-provider must be running first**. Each module is an independent Spring Boot app exposing the shared OpenAPI contract on its own port:
+Prefer the raw REST API over the TUI? Start any runnable module the same way — **rag-provider must be running first**, and **rag-webcrawler** too if you plan to ingest URLs. Each module is an independent Spring Boot app exposing the shared OpenAPI contract on its own port:
 
 ```bash
 # Windows
+.\scripts\run.bat rag-provider --profile local     # http://localhost:8086
+.\scripts\run.bat rag-webcrawler --profile local   # http://localhost:8085 (add-url)
 .\scripts\run.bat rag-basic --profile local        # http://localhost:8081
 .\scripts\run.bat rag-advanced --profile local     # http://localhost:8082
 
 # Linux/Mac
+./scripts/run.sh rag-provider --profile local
+./scripts/run.sh rag-webcrawler --profile local
 ./scripts/run.sh rag-basic --profile local
 ./scripts/run.sh rag-advanced --profile local
 ```
+
+A `500` from `/api/documents/ingest-url` means rag-webcrawler is not reachable; file ingestion (`/api/documents/ingest-file`) does not need it.
 
 Quick smoke test against rag-basic:
 
@@ -247,7 +281,7 @@ graph TB
 
 **Data isolation:** each rag-* implementation stores vectors in its own PostgreSQL schema (`rag_basic`, `rag_advanced`, ...) in a single `chunks` table. Per-document query scoping is done through the `documentId` chunk metadata key written by `PgVectorStoreAdapter` (see [ADR-0006](docs/architecture/decision-records/adr-0006-data-store-isolation.md)) - no cross-module contamination. Conversation state lives separately in `rag_memory`.
 
-**Module switching:** use the TUI commands `modules`, `start <module>`, `stop <module>`, and `use <module>`. Chat streams over WebSocket `/ws/chat` so an in-flight answer can be cancelled. `add-url` is module-orchestrated: the active rag-module calls `rag-webcrawler`, chunks with its own strategy, stores, and notifies the TUI.
+**Module switching:** use the TUI commands `modules`, `start <module>`, `stop <module>`, and `use <module>`. Chat streams over WebSocket `/ws/chat` so an in-flight answer can be cancelled. `add-url` is module-orchestrated: the active rag-module calls `rag-webcrawler`, chunks with its own strategy, stores, and notifies the TUI. `start`/`stop` only manage the registry modules (`rag-basic`, `rag-advanced`, `rag-agentic`, `rag-provider`); `rag-webcrawler` and `rag-memory` are started with the `run` scripts above.
 
 See the architecture decisions for the full rationale:
 - [ADR-0005: API-First Contract](docs/architecture/decision-records/adr-0005-api-contract.md)
