@@ -5,9 +5,10 @@
 # inspects the working tree. Emits an instructive stopReason when JAVA code
 # was modified on a feature branch, reminding the agent to run tests before done.
 #
-# Scope: only .java changes trigger the test reminder. Docs/skills/rules/config
-# changes (no .java, no build/script/pom changes) skip the test gate per
-# docs/process/asdlc.md Rule 1, so they are intentionally silent here.
+# Scope: only .java changes trigger the test reminder. Non-code changes — docs,
+# agent config (`.claude/`, `.opencode/`), scripts, docker/**, CI workflows —
+# skip the test + SonarQube gate per docs/process/asdlc.md Rule 1, so they are
+# intentionally silent here.
 #
 # Returns 0 (continue:true) so normal workflows are never hard-blocked; the
 # hard gate lives in `dev auto-merge` (merges only green PRs) and the rules.
@@ -25,7 +26,7 @@ esac
 MODIFIED_SRC="$(git status --porcelain 2>/dev/null | grep -E '\.java$' | sed 's/^...//' || true)"
 
 if [ "$IS_FEATURE" = "1" ] && [ -n "$MODIFIED_SRC" ]; then
-    echo '{"continue":true,"stopReason":"SDLC gate: Java source files were modified on a feature branch. Before finishing, run the full test suite: scripts/test.sh (Unix) or scripts/test.bat (Windows), then `dev check [module]` (tests + SonarQube). Do not open a PR or merge until the tests pass. (Docs/skills/rules/config-only changes skip this gate per asdlc.md Rule 1.)"}'
+    echo '{"continue":true,"stopReason":"SDLC gate: Java source files were modified on a feature branch. Before finishing, run the full test suite: scripts/test.sh (Unix) or scripts/test.bat (Windows), then `dev check [module]` (tests + SonarQube). Do not open a PR or merge until the tests pass. (Non-code changes — docs, agent config, scripts, docker, CI — skip this gate per asdlc.md Rule 1.)"}'
 else
     echo '{"continue":true}'
 fi

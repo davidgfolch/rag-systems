@@ -109,7 +109,7 @@ This runs ArchUnit tests enforcing layer dependencies and quality conventions vi
 
 ## Definition of Done
 
-Before marking any task complete, verify:
+Before marking any task complete, verify (non-code changes — docs, agent config, scripts, docker, CI — skip items 1-3 per `docs/process/asdlc.md` Rule 1):
 1. **No architecture violations**: Run `scripts\test.bat`
 2. **All tests pass**: Run `scripts\test.bat [module]`
 3. **Coverage ≥ 90%** for changed modules

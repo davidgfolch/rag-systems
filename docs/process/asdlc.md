@@ -71,7 +71,7 @@ the requirement is surfaced.
 
 ### 1. Every change must be verified
 
-After any code modification:
+After any code or build/analysis change:
 
 1. Run the module tests and the full suite:
    `.\scripts\test.bat` (Windows) or `./scripts/test.sh` (Unix).
@@ -84,17 +84,35 @@ Architecture rules are enforced automatically by the `ArchitectureTest` suites
 in every module - they run as part of every test run. Use `.\scripts\test.bat`
 (Windows) or `./scripts/test.sh` (Unix) after significant changes.
 
-**Docs/skills/rules-only changes skip the test gate.** If a change touches only
-non-buildable artifacts — Markdown under `docs/`, files under `.claude/`
-(`rules/`, `skills/`, `settings.json`, `hooks/`), config in `.opencode/`, or
-`*.md` — and contains **no** `.java` source and **no** change to build files
-(`pom.xml`, `scripts/*`, `mvnw*`), then it does not affect compilation or
-tests. In that case the "execute all tests + SonarQube after implementation"
-rule is **explicitly waived**: do not run `scripts/test.bat`/`test.sh` or
-`dev check`/`sonar scan` for the change. (The gate hooks in
-`.claude/hooks/stop-gate.*` and `.opencode/plugin/sdlc-gate.ts` fire only on
-`.java` edits, so they already stay silent; this rule makes the waiver explicit
-for pure docs/rule/config edits.)
+**Non-code changes skip the test + SonarQube gate.** A change is *non-code*
+when it contains **no** `.java` source and **no** change to build/analysis
+inputs (`pom.xml`, `mvnw*`, `sonar-project.properties`, JaCoCo or
+`sonar-maven-plugin` configuration). Such a change cannot affect compilation,
+tests, coverage, or SonarQube's findings, so the "execute all tests + SonarQube
+after implementation" rule is **explicitly waived**: do not run
+`scripts/test.bat`/`test.sh`, `dev check`, or `sonar scan` for it. This covers,
+among others:
+
+- Markdown under `docs/` and any `*.md`;
+- agent assets: `.claude/` (`rules/`, `skills/`, `settings.json`, `hooks/`)
+  and `.opencode/` config/plugins;
+- `scripts/*.sh`, `scripts/*.bat`, `scripts/*.ps1`, including mode-only
+  changes such as `chmod +x`;
+- `docker/**` (compose files, Prometheus/Loki/Grafana configs);
+- `.github/workflows/**`, `.gitignore`, `.gitattributes`.
+
+Verify the touched artifact directly instead of running the full suite:
+
+- shell/PowerShell scripts: `bash -n scripts/<file>.sh` (or run the script's
+  `--help`/dry-run path) and keep the `.sh` + `.bat`/`.ps1` pair in sync;
+- Docker/compose: `docker compose -f <file> config`;
+- docs/config: confirm the file renders/parses and its links resolve.
+
+Java sources, `pom.xml`, `mvnw*`, `sonar-project.properties`, and the
+JaCoCo/Sonar plugin settings are **not** covered by this waiver: they always
+require the full test + SonarQube gate and a green quality gate. The gate hooks
+in `.claude/hooks/stop-gate.*` and `.opencode/plugin/sdlc-gate.ts` fire only on
+`.java` edits, so they stay silent for non-code changes.
 
 ### 2. Keep code simple
 
