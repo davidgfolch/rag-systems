@@ -8,7 +8,10 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -51,5 +54,22 @@ class WebCrawlServiceTest {
         List<PageDTO> result = sut.fetchRelevantLinks(base, null, 1);
         assertThat(result).extracting(PageDTO::getUrl).containsExactly("https://ex.com/a");
         verify(fetcher).fetch(base);
+    }
+
+    @Test
+    void ranksLinksWithoutFetchingThem() {
+        List<String> links = List.of("https://ex.com/a", "https://ex.com/b");
+        when(prioritizer.prioritize(links, "q"))
+                .thenReturn(List.of("https://ex.com/b", "https://ex.com/a"));
+        assertThat(sut.rankLinks(links, "q"))
+                .containsExactly("https://ex.com/b", "https://ex.com/a");
+        verify(fetcher, never()).fetch(anyString());
+    }
+
+    @Test
+    void returnsEmptyWhenThereAreNoLinksToRank() {
+        assertThat(sut.rankLinks(null, "q")).isEmpty();
+        assertThat(sut.rankLinks(List.of(), "q")).isEmpty();
+        verify(prioritizer, never()).prioritize(any(), any());
     }
 }

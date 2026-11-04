@@ -1,5 +1,9 @@
 package com.rag.tui.client;
 
+import com.rag.contract.model.CrawlStartRequest;
+import com.rag.contract.model.CrawlStartResponse;
+import com.rag.contract.model.CrawlStepRequest;
+import com.rag.contract.model.CrawlStepResponse;
 import com.rag.contract.model.IngestRequest;
 import com.rag.contract.model.IngestResponse;
 import com.rag.contract.model.IngestJobResponse;
@@ -25,6 +29,9 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 
+import static com.rag.contract.constants.ApiPaths.CRAWL;
+import static com.rag.contract.constants.ApiPaths.CRAWL_BY_ID;
+import static com.rag.contract.constants.ApiPaths.CRAWL_STEP;
 import static com.rag.contract.constants.ApiPaths.DOCUMENT_BY_ID;
 import static com.rag.contract.constants.ApiPaths.DOCUMENTS;
 import static com.rag.contract.constants.ApiPaths.INGEST;
@@ -102,6 +109,23 @@ public class RagApiClient {
     public IngestResponse ingestUrl(String url) {
         return post(INGEST_URL,
                 new IngestUrlRequest().url(URI.create(url)), IngestResponse.class);
+    }
+
+    /** Starts an interactive crawl session and returns the root page to prompt for. */
+    public CrawlStartResponse startCrawl(String url) {
+        return post(CRAWL, new CrawlStartRequest().url(URI.create(url)), CrawlStartResponse.class);
+    }
+
+    /** Submits the current crawl page and resolves the next one. */
+    public CrawlStepResponse stepCrawl(String sessionId, String question) {
+        return client().post().uri(CRAWL_STEP, sessionId)
+                .body(new CrawlStepRequest().question(question))
+                .retrieve().body(CrawlStepResponse.class);
+    }
+
+    /** Cancels a crawl session; pages already submitted keep ingesting. */
+    public void cancelCrawl(String sessionId) {
+        client().delete().uri(CRAWL_BY_ID, sessionId).retrieve().toBodilessEntity();
     }
 
     /**

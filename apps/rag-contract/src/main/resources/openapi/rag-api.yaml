@@ -150,6 +150,81 @@ paths:
         '400':
           description: Invalid URL
 
+  /api/documents/crawl:
+    post:
+      tags: [documents]
+      operationId: startCrawl
+      summary: >
+        Start an interactive breadth-first URL crawl. The module fetches the root
+        page through rag-webcrawler and returns its title/url; the client then
+        drives the crawl one page at a time via /step, passing the question that
+        ranks that page's outbound links.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrawlStartRequest'
+      responses:
+        '201':
+          description: Crawl session started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CrawlStartResponse'
+        '400':
+          description: Invalid URL
+        '502':
+          description: Root page could not be fetched
+
+  /api/documents/crawl/{sessionId}/step:
+    post:
+      tags: [documents]
+      operationId: stepCrawl
+      summary: >
+        Submit the current crawl page for asynchronous ingestion, rank its links
+        with the supplied question and fetch the next page.
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CrawlStepRequest'
+      responses:
+        '200':
+          description: Current page submitted and next page resolved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CrawlStepResponse'
+        '404':
+          description: Unknown crawl session
+        '409':
+          description: The session has no page left to crawl
+
+  /api/documents/crawl/{sessionId}:
+    delete:
+      tags: [documents]
+      operationId: cancelCrawl
+      summary: Cancel a crawl session (already submitted ingestions keep running)
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Crawl session cancelled
+        '404':
+          description: Unknown crawl session
+
   /api/query:
     post:
       tags: [query]
@@ -210,6 +285,25 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PageDTO'
+
+  /api/rank-links:
+    post:
+      tags: [webcrawler]
+      operationId: rankLinks
+      summary: Rank candidate links for a question without fetching them
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RankLinksRequest'
+      responses:
+        '200':
+          description: Links ranked best-first
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RankLinksResponse'
 
   /api/conversations:
     get:
@@ -356,6 +450,106 @@ components:
         question:
           type: string
           description: Optional context used by rag-webcrawler for intelligent link selection
+
+    CrawlStartRequest:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          format: uri
+        maxInitialLinks:
+          type: integer
+          format: int32
+          default: 5
+          description: Number of root-page links added to the initial crawl set
+        maxPages:
+          type: integer
+          format: int32
+          default: 50
+          description: Safety bound on pages ingested per crawl session
+        sameHostOnly:
+          type: boolean
+          default: true
+          description: Only follow links on the root page's host
+
+    CrawlPageDTO:
+      type: object
+      required: [url, title]
+      properties:
+        url:
+          type: string
+        title:
+          type: string
+
+    CrawlStartResponse:
+      type: object
+      required: [sessionId, page, initialRemaining, hasMore]
+      properties:
+        sessionId:
+          type: string
+        page:
+          $ref: '#/components/schemas/CrawlPageDTO'
+        initialRemaining:
+          type: integer
+          format: int32
+          description: Pages still pending in the initial set (root plus ranked root links)
+        hasMore:
+          type: boolean
+
+    CrawlStepRequest:
+      type: object
+      properties:
+        question:
+          type: string
+          description: Question used to rank this page's outbound links (blank = deterministic)
+
+    CrawlStepResponse:
+      type: object
+      required: [sessionId, pageUrl, ingested, initialRemaining, hasMore, skippedLinks]
+      properties:
+        sessionId:
+          type: string
+        documentId:
+          type: string
+          description: Async ingestion job id; absent when the page was skipped as a duplicate
+        pageUrl:
+          type: string
+        title:
+          type: string
+        ingested:
+          type: boolean
+        initialRemaining:
+          type: integer
+          format: int32
+        hasMore:
+          type: boolean
+        skippedLinks:
+          type: integer
+          format: int32
+          description: Links skipped as duplicates, off-host, unfetchable or already ingested
+        nextPage:
+          $ref: '#/components/schemas/CrawlPageDTO'
+
+    RankLinksRequest:
+      type: object
+      required: [links]
+      properties:
+        links:
+          type: array
+          items:
+            type: string
+        question:
+          type: string
+
+    RankLinksResponse:
+      type: object
+      required: [links]
+      properties:
+        links:
+          type: array
+          items:
+            type: string
 
     QueryRequest:
       type: object

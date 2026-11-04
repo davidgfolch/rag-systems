@@ -6,14 +6,23 @@ import com.sun.net.httpserver.HttpExchange;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Minimal HTTP stub that impersonates a rag-* module for integration tests.
  * Serves the Actuator health endpoint plus the module REST API and records the
- * last ingest request body so tests can assert what the real client sent.
+ * last ingest/crawl request bodies so tests can assert what the real client sent.
  */
 public final class StubModuleServer {
+
+    private static final String DEFAULT_CRAWL_START = "{\"sessionId\":\"c-1\","
+            + "\"page\":{\"url\":\"https://example.com/root\",\"title\":\"Root\"},"
+            + "\"initialRemaining\":0,\"hasMore\":false}";
+    private static final String DEFAULT_CRAWL_STEP = "{\"sessionId\":\"c-1\","
+            + "\"documentId\":\"i-1\",\"pageUrl\":\"https://example.com/root\",\"title\":\"Root\","
+            + "\"ingested\":true,\"initialRemaining\":0,\"hasMore\":false,\"skippedLinks\":0}";
 
     private final HttpServer server;
     private final AtomicReference<byte[]> lastIngestBody = new AtomicReference<>();
@@ -21,6 +30,11 @@ public final class StubModuleServer {
     private final AtomicReference<String> documentsBody = new AtomicReference<>("[]");
     private final AtomicReference<String> lastDeletedDocumentId = new AtomicReference<>();
     private final AtomicReference<String> lastIngestUrl = new AtomicReference<>();
+    private final AtomicReference<String> crawlStartBody = new AtomicReference<>(DEFAULT_CRAWL_START);
+    private final Queue<String> crawlStepBodies = new ConcurrentLinkedQueue<>();
+    private final AtomicReference<String> lastCrawlUrl = new AtomicReference<>();
+    private final AtomicReference<String> lastCrawlStepBody = new AtomicReference<>();
+    private final AtomicReference<String> lastCrawlCancelledSession = new AtomicReference<>();
 
     public StubModuleServer() throws IOException {
         server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
@@ -48,6 +62,7 @@ public final class StubModuleServer {
         server.createContext("/api/documents/ingest-status", exchange -> {
             respond(exchange, 200, "{\"documentId\":\"i-1\",\"state\":\"COMPLETED\",\"chunkCount\":2}");
         });
+        server.createContext("/api/documents/crawl", this::handleCrawl);
         server.createContext("/api/conversations", exchange -> {
             respond(exchange, 200, "[]");
         });
@@ -63,6 +78,28 @@ public final class StubModuleServer {
         });
         server.setExecutor(null);
         server.start();
+    }
+
+    private void handleCrawl(HttpExchange exchange) throws IOException {
+        var path = exchange.getRequestURI().getPath();
+        if ("DELETE".equalsIgnoreCase(exchange.getRequestMethod())) {
+            lastCrawlCancelledSession.set(path.replaceFirst("^/api/documents/crawl/", ""));
+            exchange.sendResponseHeaders(204, -1);
+            exchange.close();
+            return;
+        }
+        if (path.endsWith("/step")) {
+            lastCrawlStepBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            respond(exchange, 200, nextStepBody());
+            return;
+        }
+        lastCrawlUrl.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+        respond(exchange, 201, crawlStartBody.get());
+    }
+
+    private String nextStepBody() {
+        var queued = crawlStepBodies.poll();
+        return queued == null ? DEFAULT_CRAWL_STEP : queued;
     }
 
     public int port() {
@@ -89,8 +126,31 @@ public final class StubModuleServer {
         return lastIngestContentType.get();
     }
 
+    public String lastCrawlUrl() {
+        return lastCrawlUrl.get();
+    }
+
+    public String lastCrawlStepBody() {
+        return lastCrawlStepBody.get();
+    }
+
+    public String lastCrawlCancelledSession() {
+        return lastCrawlCancelledSession.get();
+    }
+
     public void documents(String json) {
         documentsBody.set(json);
+    }
+
+    public void crawlStart(String json) {
+        crawlStartBody.set(json);
+    }
+
+    public void crawlSteps(String... jsonBodies) {
+        crawlStepBodies.clear();
+        for (var body : jsonBodies) {
+            crawlStepBodies.add(body);
+        }
     }
 
     public void stop() {

@@ -4,12 +4,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rag.basic.services.RetrievalService;
 import com.rag.basic.services.WebCrawlerClient;
 import com.rag.common.app.config.RagPipelineConfiguration;
+import com.rag.common.core.repositories.DocumentStorePort;
 import com.rag.common.core.repositories.VectorStorePort;
 import com.rag.common.generation.ChatService;
 import com.rag.common.generation.config.WebSocketConfiguration;
 import com.rag.common.generation.ws.ChatWebSocketHandler;
 import com.rag.common.ingestion.AsyncIngestionService;
 import com.rag.common.ingestion.IngestionService;
+import com.rag.common.ingestion.crawl.CrawlController;
+import com.rag.common.ingestion.crawl.CrawlSessionService;
 import com.rag.common.ingestion.web.IngestionController;
 import io.micrometer.tracing.Tracer;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,7 +45,19 @@ public class RagBasicConfig {
     @Bean
     public IngestionController ingestionController(IngestionService ingestionService, WebCrawlerClient webCrawlerClient,
                                                    AsyncIngestionService asyncIngestionService, RetrievalService retrievalService) {
-        return new IngestionController(ingestionService, webCrawlerClient::fetch, asyncIngestionService, retrievalService);
+        return new IngestionController(ingestionService, webCrawlerClient, asyncIngestionService, retrievalService);
+    }
+
+    @Bean
+    public CrawlSessionService crawlSessionService(WebCrawlerClient webCrawlerClient,
+                                                   AsyncIngestionService asyncIngestionService,
+                                                   DocumentStorePort documentStore) {
+        return new CrawlSessionService(webCrawlerClient, asyncIngestionService, documentStore);
+    }
+
+    @Bean
+    public CrawlController crawlController(CrawlSessionService crawlSessionService) {
+        return new CrawlController(crawlSessionService);
     }
 
     @Bean

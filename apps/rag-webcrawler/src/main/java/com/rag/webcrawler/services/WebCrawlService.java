@@ -35,4 +35,11 @@ public class WebCrawlService {
         List<String> links = linkPrioritizer.prioritize(fetcher.fetch(url).getLinks(), question);
         return links.stream().limit(topK).map(fetcher::fetch).toList();
     }
+
+    public List<String> rankLinks(List<String> links, String question) {
+        if (links == null || links.isEmpty()) return List.of();
+        List<String> ranked = linkPrioritizer.prioritize(links, question);
+        log.info("Ranked {} candidate links (question={})", ranked.size(), question);
+        return ranked;
+    }
 }

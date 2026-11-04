@@ -15,10 +15,10 @@ import static com.rag.tui.ui.TerminalStyle.error;
 import static com.rag.tui.ui.TerminalStyle.success;
 
 /**
- * Handles the {@code add-file}, {@code add-folder} and {@code add-url} commands
- * handed to it by {@link CommandDispatcher}: file/folder/URL ingestion with
- * content-hash and source-URI deduplication plus asynchronous ingestion polling
- * so the shell stays responsive while ingest completes in the background.
+ * Handles the {@code add-file} and {@code add-folder} commands handed to it by
+ * {@link CommandDispatcher}: file/folder ingestion with content-hash
+ * deduplication plus asynchronous ingestion polling so the shell stays
+ * responsive while ingest completes in the background.
  */
 public class IngestCommands {
 
@@ -101,22 +101,6 @@ public class IngestCommands {
         return success("Submitted %d of %d files from '%s'; I'll report as each completes."
                 .formatted(submitted, files.size(), path)
                 + (skippedDuplicates > 0 ? " (" + skippedDuplicates + " duplicate(s) skipped)" : ""));
-    }
-
-    public String addUrl(String url) {
-        if (url.isEmpty()) {
-            url = orEmpty(prompter.prompt("URL: "));
-            if (url.isEmpty()) return "Usage: add-url <url>";
-        }
-        var duplicate = duplicates.findBySource(url);
-        if (duplicate.isPresent()) {
-            var chosen = promptOverride(duplicate.get(), "web page " + url);
-            if (chosen == null) return skipped(duplicate.get());
-            clients.apiClient().deleteDocument(chosen.baseUrl(), chosen.documentId());
-            log.info("Overriding duplicate document {} for {}", chosen.documentId(), url);
-        }
-        var res = clients.apiClient().ingestUrl(url);
-        return success("Ingested %s -> document %s, %d chunks".formatted(url, res.getDocumentId(), res.getChunkCount()));
     }
 
     private Optional<DuplicateFinder.Match> findByContentHash(Map<String, Object> metadata) {
