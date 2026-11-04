@@ -82,6 +82,12 @@ The local SonarQube Community Build server always starts with the default `admin
 SONAR_ADMIN_PASSWORD=your-secure-password
 ```
 
+SonarQube 26.8 requires at least 12 characters including an uppercase letter, a
+lowercase letter, a digit, and a special character. The generated password
+always satisfies this policy; if a fixed `SONAR_ADMIN_PASSWORD` does not,
+`sonar-pw.{bat,sh}` appends the missing character classes, saves the
+strengthened value back to `.env.secrets`, and uses it for the bootstrap.
+
 On first boot the script will fill in `SONAR_TOKEN` automatically — do **not** edit it manually.
 
 ### 2. Start SonarQube (auto-provisions admin password + token)
@@ -160,7 +166,7 @@ If `jq` (Linux/Mac) is missing or the analysis is not yet available on the serve
 
 ## The Quality Gate
 
-During every bootstrap run (`sonar-pw.{sh,bat}`), a custom quality gate **"RAG 90% Coverage"** is created and assigned to the project. The gate setup is idempotent and re-applied on each run, so it also updates already-bootstrapped servers. It enforces the same 90% overall coverage threshold that the JaCoCo build-time check uses, so SonarQube and the Maven build agree on the minimum:
+During every bootstrap run (`sonar-pw.{sh,bat}`), a custom quality gate **"RAG 90% Coverage"** is created. It is re-applied after each `scan`/`up-scan` (because the project only exists after the first analysis) and on every bootstrap, so it also updates already-bootstrapped servers. It enforces the same 90% overall coverage threshold that the JaCoCo build-time check uses, so SonarQube and the Maven build agree on the minimum:
 
 | Condition | Requirement |
 |-----------|-------------|
