@@ -98,7 +98,7 @@ Architecture tests always run as part of every test run (no special flag needed)
 - Ensure scalability and maintainability
 - Prefer modern Java (records, compact constructors) over manual boilerplate constructors; avoid verbose getters/setters
 - Use `var` for local variables when the type is obvious from the initializer
-- After any code modification, run the tests and SonarQube and fix all findings before committing (see `docs/process/asdlc.md`)
+- After any code modification, run the tests and SonarQube and fix all findings before committing (see `docs/process/asdlc.md`); non-code changes (docs, agent config, scripts, docker, CI) are exempt from that gate per Rule 1.
 
 ## Dev Workflow
 
@@ -108,7 +108,7 @@ After deciding on a feature to build, auto-execute:
 
 1. `dev new <feature>` — clones origin to `../rag-systems-<feature>` (sibling of the project root), creates branch `feat/<feature>`, and propagates the SonarQube token into the clone's `.env.secrets`.
 2. Implement changes inside that clone. Because the agent session working directory is fixed, run all commands against the clone via the `workdir` parameter (bash) and absolute paths (read/edit/write/glob/grep). The scripts self-resolve their root from their own location, so they operate on whichever clone they live in.
-3. **Always execute all tests after implementation.** Run the full gate in the clone: `dev check [module]` (tests, then SonarQube if they pass) or `dev test` / `dev sonar scan` individually. The gate hooks — `.claude/hooks/stop-gate.*` (Claude Code Stop) and `.opencode/plugin/sdlc-gate.ts` (opencode) — remind the agent to run the test suite before finishing; do not open a PR or merge until tests pass.
+3. **Always execute all tests after implementation.** Run the full gate in the clone: `dev check [module]` (tests, then SonarQube if they pass) or `dev test` / `dev sonar scan` individually. Changes with no Java source and no build inputs (docs, agent config, scripts, docker, CI) skip that gate per `docs/process/asdlc.md` Rule 1. The gate hooks — `.claude/hooks/stop-gate.*` (Claude Code Stop) and `.opencode/plugin/sdlc-gate.ts` (opencode) — remind the agent to run the test suite before finishing; do not open a PR or merge until tests pass.
 4. `dev commit "message"` — stage all and commit on the feature branch.
 5. `dev push` — push the feature branch to origin.
 6. `dev pr [title]` — open a PR targeting `main` via `gh`.
