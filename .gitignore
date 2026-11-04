@@ -42,6 +42,9 @@ data/chunks/
 .grafana/
 prometheus-data/
 
+# Discovery cache (LAN host hints, generated at runtime)
+**/data/discovery/
+
 # SonarQube
 .sonarqube/
 

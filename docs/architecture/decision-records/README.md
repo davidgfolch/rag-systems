@@ -14,6 +14,7 @@ This directory records significant architecture decisions for the RAG Systems pr
 | [ADR-0011](adr-0011-model-catalog.md) | Accepted | Refreshable model catalog (Models.dev) |
 | [ADR-0012](adr-0012-tui-connect.md) | Accepted | TUI `connect` command |
 | [ADR-0013](adr-0013-rag-common-split.md) | Accepted | Split rag-common into capability modules |
+| [ADR-0014](adr-0014-ollama-lan-discovery.md) | Accepted | Ollama LAN discovery |
 
 ## How to add an ADR
 

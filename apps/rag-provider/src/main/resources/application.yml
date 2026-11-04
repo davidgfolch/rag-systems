@@ -17,6 +17,16 @@ rag:
       base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
       chat-model: ${OLLAMA_CHAT_MODEL:phi4}
       embedding-model: ${OLLAMA_EMBEDDING_MODEL:nomic-embed-text}
+      discovery:
+        enabled: ${OLLAMA_DISCOVERY_ENABLED:true}
+        port: ${OLLAMA_DISCOVERY_PORT:11434}
+        connect-timeout-ms: ${OLLAMA_DISCOVERY_CONNECT_TIMEOUT_MS:500}
+        probe-timeout-ms: ${OLLAMA_DISCOVERY_PROBE_TIMEOUT_MS:3000}
+        max-hosts: ${OLLAMA_DISCOVERY_MAX_HOSTS:1024}
+        subnets: ${OLLAMA_DISCOVERY_SUBNETS:}
+        cache-file: ${OLLAMA_DISCOVERY_CACHE:data/discovery/cache.json}
+        positive-ttl-seconds: ${OLLAMA_DISCOVERY_CACHE_SECONDS:3600}
+        negative-ttl-seconds: ${OLLAMA_DISCOVERY_NEGATIVE_CACHE_SECONDS:60}
     openai:
       api-key: ${OPENAI_API_KEY:}
       base-url: ${OPENAI_BASE_URL:}

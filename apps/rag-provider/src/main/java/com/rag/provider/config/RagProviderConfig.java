@@ -13,6 +13,7 @@ import com.rag.provider.services.ChatService;
 import com.rag.provider.services.EmbeddingService;
 import com.rag.provider.services.ModelCatalogService;
 import com.rag.provider.services.ModelRouter;
+import com.rag.provider.services.OllamaEndpointResolver;
 import com.rag.provider.services.ProviderRegistry;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -47,9 +48,11 @@ public class RagProviderConfig {
             ProviderProfileStore store,
             @Value("${rag.provider.ollama.base-url:http://localhost:11434}") String ollamaBaseUrl,
             @Value("${rag.provider.openai.base-url:}") String openAiBaseUrl,
-            @Value("${rag.provider.openai.api-key:}") String openAiApiKey) {
+            @Value("${rag.provider.openai.api-key:}") String openAiApiKey,
+            OllamaEndpointResolver ollamaEndpointResolver) {
         return new ProviderRegistry(List.of(
-                new ProviderProfile("ollama", ProviderType.OLLAMA, "Ollama", ollamaBaseUrl, ""),
+                new ProviderProfile("ollama", ProviderType.OLLAMA, "Ollama",
+                        ollamaEndpointResolver.resolve(ollamaBaseUrl), ""),
                 new ProviderProfile("openai", ProviderType.OPENAI, "OpenAI", openAiBaseUrl, openAiApiKey)),
                 store);
     }

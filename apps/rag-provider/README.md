@@ -2,7 +2,7 @@
 
 Dedicated Spring Boot service owning all LLM and embedding provider clients (Ollama, OpenAI, OpenAI-compatible). It is the **provider hub** of the monorepo: every other RAG module gets its chat and embedding compute from here over HTTP, so downstream modules keep no provider dependencies of their own.
 
-**Ollama is the preferred default** (`local` profile): native, containerized (`rag-ollama` via `docker.bat up-ollama`), or externally via `OLLAMA_BASE_URL`. With `INFRA_MODE=auto` the docker script reuses an already-reachable external Ollama instead of starting the container. OpenRouter and any OpenAI-compatible endpoint are drop-in alternatives registered at runtime (see below).
+**Ollama is the preferred default** (`local` profile): native, containerized (`rag-ollama` via `docker.bat up-ollama`), externally via `OLLAMA_BASE_URL`, or auto-discovered on the LAN with `OLLAMA_BASE_URL=auto`. With `INFRA_MODE=auto` the docker script reuses an already-reachable external Ollama instead of starting the container. OpenRouter and any OpenAI-compatible endpoint are drop-in alternatives registered at runtime (see below).
 
 Port: **8086** (override with `RAG_PROVIDER_PORT`).
 
@@ -60,7 +60,16 @@ All properties are overridable via environment variables.
 | Property | Env var | Default | Description |
 |----------|---------|---------|-------------|
 | `server.port` | `RAG_PROVIDER_PORT` | `8086` | HTTP port |
-| `rag.provider.ollama.base-url` | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server URL |
+| `rag.provider.ollama.base-url` | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server URL, or `auto`/`discover` for LAN discovery |
+| `rag.provider.ollama.discovery.enabled` | `OLLAMA_DISCOVERY_ENABLED` | `true` | Allow `auto`/`discover` to probe and scan |
+| `rag.provider.ollama.discovery.port` | `OLLAMA_DISCOVERY_PORT` | `11434` | Port probed by discovery (separate from docker's `OLLAMA_PORT`) |
+| `rag.provider.ollama.discovery.connect-timeout-ms` | `OLLAMA_DISCOVERY_CONNECT_TIMEOUT_MS` | `500` | Per-host TCP connect timeout |
+| `rag.provider.ollama.discovery.probe-timeout-ms` | `OLLAMA_DISCOVERY_PROBE_TIMEOUT_MS` | `3000` | `GET /api/tags` verification timeout |
+| `rag.provider.ollama.discovery.max-hosts` | `OLLAMA_DISCOVERY_MAX_HOSTS` | `1024` | Total host budget per scan (`0` = safety cap) |
+| `rag.provider.ollama.discovery.subnets` | `OLLAMA_DISCOVERY_SUBNETS` | *(none)* | Extra comma-separated CIDRs to scan |
+| `rag.provider.ollama.discovery.cache-file` | `OLLAMA_DISCOVERY_CACHE` | `data/discovery/cache.json` | Discovery cache location |
+| `rag.provider.ollama.discovery.positive-ttl-seconds` | `OLLAMA_DISCOVERY_CACHE_SECONDS` | `3600` | Fresh positive entry lifetime |
+| `rag.provider.ollama.discovery.negative-ttl-seconds` | `OLLAMA_DISCOVERY_NEGATIVE_CACHE_SECONDS` | `60` | Fresh negative entry lifetime |
 | `rag.provider.ollama.chat-model` | `OLLAMA_CHAT_MODEL` | `phi4` | Default Ollama chat model |
 | `rag.provider.ollama.embedding-model` | `OLLAMA_EMBEDDING_MODEL` | `nomic-embed-text` | Default Ollama embedding model |
 | `rag.provider.openai.api-key` | `OPENAI_API_KEY` | *(empty)* | OpenAI API key |
@@ -75,6 +84,32 @@ All properties are overridable via environment variables.
 | `rag.provider.catalog.enabled` | `MODEL_CATALOG_ENABLED` | `true` | Enable catalog fetching |
 
 > `OLLAMA_BASE_URL` (default `http://localhost:11434`) can point at a remote or containerized Ollama. The `docker` script's `INFRA_MODE=auto` reuses an already-reachable Ollama at that URL instead of starting the `rag-ollama` container; `INFRA_MODE=local` always starts it.
+
+### Ollama LAN discovery
+
+Set `OLLAMA_BASE_URL=auto` (alias `discover`) to let rag-provider find an Ollama server on the local network at boot:
+
+```bash
+OLLAMA_BASE_URL=auto ./scripts/run.sh rag-provider --profile local
+```
+
+Resolution is cheapest-first:
+
+1. a fresh positive cache entry that still answers `GET /api/tags`;
+2. `127.0.0.1`;
+3. one LAN scan of the machine's `/24`, the adjacent `/24`s and the common `192.168.0/24` + `192.168.1.0/24` (plus `OLLAMA_DISCOVERY_SUBNETS`), with every open port verified through `GET /api/tags`;
+4. fallback to `http://127.0.0.1:11434` with a warning.
+
+Notes:
+
+- Explicit URLs (`http://host:11434`, `http://host`) are **used as-is** and never probed or scanned, so booting stays offline. `local`/`localhost`/`127.0.0.1` mean loopback with no scan.
+- `OLLAMA_DISCOVERY_ENABLED=false` makes `auto` fall straight back to loopback.
+- `OLLAMA_DISCOVERY_PORT` is the port discovery probes; it is deliberately independent of docker's `OLLAMA_PORT` (the container's published port).
+- Discovered hosts are cached in `data/discovery/cache.json` (positive TTL 1 h, negative TTL 60 s). Nothing is written back to `.env` or `data/provider-profiles.json`.
+- In Docker the scan only sees the Docker bridge. Add the host LAN explicitly, e.g. `OLLAMA_DISCOVERY_SUBNETS=192.168.1.0/24,10.0.0.0/24`.
+- Discovery is silent: there is no REST endpoint or TUI command. Change `OLLAMA_BASE_URL` and restart to switch modes.
+
+See [ADR-0014](../../docs/architecture/decision-records/adr-0014-ollama-lan-discovery.md) for the design rationale.
 
 ## HTTP API
 
@@ -182,20 +217,27 @@ The catalog is fetched lazily from `https://models.dev/api.json` (filters by ena
 domain/                    interfaces + records (ProviderProfile, ModelSpec, ModelCatalogPort)
   ├── ProviderType         OLLAMA | OPENAI | OPENAI_COMPATIBLE
   ├── ProviderProfileStore persists provider profiles (API keys included, best-effort)
-  └── ModelCatalogPort     catalog source abstraction
+  ├── ModelCatalogPort     catalog source abstraction
+  └── discovery records    OllamaDiscoverySettings, DiscoveryCacheSettings, DiscoveryCacheEntry, Ipv4Networks
 services/
   ├── ProviderRegistry     seeded from env + restored from file; runtime upsert via /api/provider/configure
   ├── ModelRouter          active chat/embedding specs + live clients, lazy dimension detection
-  └── ModelCatalogService  caching facade over ModelCatalogPort
+  ├── ModelCatalogService  caching facade over ModelCatalogPort
+  ├── OllamaDiscoveryService  cache -> loopback -> LAN scan, verified by GET /api/tags
+  └── OllamaEndpointResolver  resolves auto/discover/local/explicit OLLAMA_BASE_URL specs
 adapter/
   ├── ProviderClientFactory builds Spring AI clients per ProviderType (Ollama/OpenAI APIs)
   ├── ProviderProfileFileStore JSON file persistence
-  └── ModelsDevCatalogClient models.dev api.json fetcher (defensive parsing)
+  ├── ModelsDevCatalogClient models.dev api.json fetcher (defensive parsing)
+  ├── LanScanner           subnet detection + parallel TCP port scan (virtual threads)
+  ├── OllamaProbe          GET /api/tags liveness check
+  └── DiscoveryCacheStore  JSON cache with positive/negative TTL and atomic writes
 api/                       ProviderController, ComputeController, CatalogController, ApiExceptionHandler
-config/                    RagProviderConfig wires everything; Spring AI auto-config excluded (clients built explicitly)
+config/                    RagProviderConfig + OllamaDiscoveryConfig wire everything; Spring AI auto-config excluded (clients built explicitly)
 ```
 
 See also:
 - [ADR-0010: Dedicated rag-provider Service for Model Switching](../../docs/architecture/decision-records/adr-0010-rag-provider.md)
 - [ADR-0011: Refreshable Model Catalog (Models.dev)](../../docs/architecture/decision-records/adr-0011-model-catalog.md)
 - [ADR-0012: TUI connect Command](../../docs/architecture/decision-records/adr-0012-tui-connect.md)
+- [ADR-0014: Ollama LAN Discovery](../../docs/architecture/decision-records/adr-0014-ollama-lan-discovery.md)
