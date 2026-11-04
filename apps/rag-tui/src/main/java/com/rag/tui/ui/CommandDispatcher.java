@@ -22,6 +22,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 
 import static com.rag.tui.ui.TerminalStyle.error;
+import static com.rag.tui.ui.TerminalStyle.info;
 import static com.rag.tui.ui.TerminalStyle.success;
 
 public class CommandDispatcher {
@@ -142,8 +143,15 @@ public class CommandDispatcher {
 
     private List<Prompter.Choice> moduleChoices() {
         return ModuleBootstrap.selectable(registry).stream()
-                .map(m -> new Prompter.Choice(m.name(), m.name()))
+                .map(m -> new Prompter.Choice(m.name(), m.name(), moduleState(m)))
                 .toList();
+    }
+
+    /** Whether the module is a live child process or answers its health probe. */
+    private String moduleState(Module module) {
+        return lifecycle.isRunning(module.name()) || clients.healthClient().isUp(module.baseUrl())
+                ? "running"
+                : "stopped";
     }
 
     private String use(String name) {
@@ -151,9 +159,14 @@ public class CommandDispatcher {
             name = prompter.pick("Switch active module", moduleChoices()).orElse("");
             if (name.isEmpty()) return "";
         }
-        return registry.activate(name)
-                ? success("Active module: " + name)
-                : error("Unknown module: " + name);
+        if (!registry.activate(name)) return error("Unknown module: " + name);
+        return withProviderSummary(success("Active module: " + name));
+    }
+
+    /** Mirrors the startup banner, so a module switch also shows chat/embedding models. */
+    private String withProviderSummary(String heading) {
+        String summary = providerSummary();
+        return summary.isEmpty() ? heading : heading + "\n" + info("Providers:\n" + summary);
     }
 
     private String start(String name, Consumer<String> tokenSink) {
