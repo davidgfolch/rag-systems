@@ -49,6 +49,31 @@ class InteractivePrompterIntegrationTest {
     }
 
     @Test
+    void drawsTheListBeforeWaitingForTheFirstKey() {
+        var frames = new java.util.ArrayList<String>();
+        var sut = new InteractivePrompter(keys(key(ENTER)), frames::add, 8);
+        assertThat(sut.pick("Provider", CHOICES)).hasValue("openai");
+        assertThat(frames.get(0)).contains("[filter: ]", "> OpenAI", "OpenRouter", "Anthropic");
+    }
+
+    @Test
+    void repaintsTheFrameInPlaceSoTheListDoesNotScrollAway() {
+        var sink = new StringBuilder();
+        var sut = new InteractivePrompter(keys(typeChar('o'), key(ESC)), sink::append, 8);
+        sut.pick("Provider", CHOICES);
+        // First frame: title, hint and three choices.
+        assertThat(sink.toString()).contains("\r\u001B[5A\u001B[J");
+    }
+
+    @Test
+    void explainsWhenTheFilterMatchesNothing() {
+        var sink = new StringBuilder();
+        var sut = new InteractivePrompter(keys(typeChar('z')), sink::append, 8);
+        assertThat(sut.pick("Provider", CHOICES)).isEmpty();
+        assertThat(sink.toString()).contains("no matches for 'z'");
+    }
+
+    @Test
     void escapeCancelsSelection() {
         var sut = new InteractivePrompter(keys(key(ESC)), s -> { }, 8);
         var result = sut.pick("Provider", CHOICES);

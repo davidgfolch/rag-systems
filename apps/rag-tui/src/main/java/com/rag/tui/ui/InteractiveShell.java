@@ -18,6 +18,7 @@ public class InteractiveShell {
     public void run() {
         try {
             write(TerminalStyle.welcome("RAG TUI - type 'help' for commands, 'quit' to exit"));
+            writeModuleStatus();
             writeProviderStatus();
             promptLoop();
         } catch (IOException e) {
@@ -30,6 +31,13 @@ public class InteractiveShell {
         while ((line = prompter.prompt("> ")) != null) {
             if (line.isEmpty()) continue;
             if (runCommand(line)) return;
+        }
+    }
+
+    private void writeModuleStatus() throws IOException {
+        String status = dispatcher.bootstrapModule();
+        if (status != null && !status.isEmpty()) {
+            write(status);
         }
     }
 

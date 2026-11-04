@@ -38,6 +38,7 @@ public class CommandDispatcher {
     private final DuplicateFinder duplicates;
     private final IngestCommands ingest;
     private final CrawlCommands crawl;
+    private final ModuleBootstrap bootstrap;
     private final Tracer tracer;
 
     static final String SPAN_COMMAND = "tui.command";
@@ -61,6 +62,7 @@ public class CommandDispatcher {
         this.duplicates = new DuplicateFinder(registry, clients.apiClient(), clients.healthClient());
         this.ingest = new IngestCommands(clients, prompter, duplicates, tracer);
         this.crawl = new CrawlCommands(clients, prompter, duplicates, tracer);
+        this.bootstrap = new ModuleBootstrap(registry, lifecycle, clients.healthClient(), prompter);
         this.tracer = tracer;
     }
 
@@ -134,8 +136,12 @@ public class CommandDispatcher {
         }
     }
 
+    public String bootstrapModule() {
+        return bootstrap.resolve();
+    }
+
     private List<Prompter.Choice> moduleChoices() {
-        return registry.modules().stream()
+        return ModuleBootstrap.selectable(registry).stream()
                 .map(m -> new Prompter.Choice(m.name(), m.name()))
                 .toList();
     }
