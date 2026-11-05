@@ -2,6 +2,7 @@ package com.rag.common.app.pipeline;
 
 import com.rag.common.core.repositories.VectorStorePort;
 import com.rag.common.ingestion.chunking.RecursiveCharacterChunker;
+import com.rag.common.ingestion.chunking.SemanticChunker;
 import com.rag.common.ingestion.chunking.TokenChunker;
 import com.rag.contract.pipeline.PipelineVariantDTO;
 import org.junit.jupiter.api.BeforeEach;
@@ -73,6 +74,9 @@ class VariantStoreTest {
         var recursive = sut.add(variant("RECURSIVE", 512, 128));
         sut.activate(recursive.variantId());
         assertThat(sut.splitter()).isInstanceOf(RecursiveCharacterChunker.class);
+        var semantic = sut.add(variant("SEMANTIC", 512, 128));
+        sut.activate(semantic.variantId());
+        assertThat(sut.splitter()).isInstanceOf(SemanticChunker.class);
     }
 
     @Test

@@ -19,6 +19,7 @@ import com.rag.common.generation.StreamingChatModelPort;
 import com.rag.common.generation.adapter.ProviderHttpClient;
 import com.rag.common.generation.adapter.RemoteChatModelPort;
 import com.rag.common.generation.adapter.RemoteEmbeddingModel;
+import com.rag.common.generation.adapter.SpringAiEmbeddingModel;
 import com.rag.common.generation.ws.TraceHandshakeInterceptor;
 import com.rag.common.ingestion.AsyncIngestionService;
 import com.rag.common.ingestion.IngestionService;
@@ -98,10 +99,13 @@ public class RagPipelineConfiguration {
             @Value("${rag.chunking.size:512}") int size,
             @Value("${rag.chunking.overlap:128}") int overlap,
             @Value("${rag.provider.embedding.default-dimension:768}") int dimension,
+            EmbeddingModel springAiEmbeddingModel,
             VariantStoreFactory storeFactory,
             @Qualifier(BOOT_STORE_BEAN) VectorStorePort bootStore) {
         var bootStrategy = ChunkingStrategy.from(strategy).orElse(ChunkingStrategy.RECURSIVE);
-        var store = new VariantStore(module, Chunkers.of(bootStrategy, size, overlap),
+        var store = new VariantStore(module,
+                Chunkers.of(bootStrategy, size, overlap,
+                        () -> new SpringAiEmbeddingModel(springAiEmbeddingModel)),
                 storeFactory, bootStore, storeFactory.repository());
         store.seed(BOOT_VARIANT_ID, new PipelineVariantDTO(BOOT_VARIANT_ID, module, bootStrategy.name(),
                 BOOT_MODEL_LABEL, dimension, size, overlap));

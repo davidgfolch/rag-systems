@@ -4,8 +4,8 @@ import java.util.Locale;
 import java.util.Optional;
 
 /**
- * Chunking strategy a pipeline variant runs. {@code SEMANTIC} currently falls
- * back to recursive boundaries because no semantic chunker exists yet.
+ * Chunking strategy a pipeline variant runs. {@code SEMANTIC} cuts at topic
+ * boundaries detected from the embeddings of neighbouring sentences.
  */
 public enum ChunkingStrategy {
     RECURSIVE,

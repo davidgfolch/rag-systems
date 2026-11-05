@@ -464,8 +464,10 @@ User Query → Query Embedding → Vector Search → Context Assembly → LLM Ge
 |----------|----------|------|------|
 | Fixed-size | Homogeneous text | Fast, simple | Poor semantic coherence |
 | Recursive | Most cases | Good balance | May split mid-sentence |
-| Semantic | High-value docs | Best precision | Expensive (8x cost) |
+| Semantic | High-value docs | Best precision | Expensive (~4.5x embedding calls) |
 | Agentic | Complex documents | Adaptive | Complex implementation |
+
+**Status**: fixed-size, recursive, token, and semantic chunking all exist (`rag-common-ingestion` `chunking/`). The semantic **cost** is measured in this repo on the `docs/` corpus ([Phase 8](#phase-8-semantic-chunking-adr-0015-semantic-variant)); the precision figures above remain literature references, because nothing here scores retrieval precision yet.
 
 ## Test Strategy
 
@@ -539,6 +541,17 @@ See [guides/sonarqube.md](guides/sonarqube.md) and [ADR-0004](architecture/decis
 - [ ] Grafana dashboards + Prometheus
 - [ ] Evaluation/benchmarking; comparison reports
 - [ ] README + docs updated (ADR-0005..0009)
+
+### Phase 8: Semantic Chunking (ADR-0015 `SEMANTIC` variant)
+
+`SEMANTIC` used to fall back to the recursive chunker, which made a `semantic` variant chunk byte-identically to a `recursive` one with the same window. The chunker and its wiring now exist ([ADR-0015](architecture/decision-records/adr-0015-pipeline-variants.md)); the cost is measured below, retrieval precision still needs an evaluation harness.
+
+- [x] `SemanticChunker` in `rag-common-ingestion` `chunking/`: sentence split → embed → cut where cosine distance reaches the document's percentile threshold → `size`/`overlap` as an upper-bound safety net; writes `metadata.strategy = "semantic"`
+- [x] Widen `Chunkers.of(strategy, size, overlap, embeddings)` to take the variant's embedding source; `VariantStore.chunkerFor` and the boot variant both pass the variant's Spring AI model, so chunks are cut with the same model they are embedded by
+- [x] Flip `ChunkersTest` so `SEMANTIC` asserts `SemanticChunker`
+- [x] Add `SemanticChunkerTest`: topic-shift boundaries, size cap, overlap, oversized sentence, blank document
+- [x] Measure the real cost: on this repo's `docs/` corpus (33 docs, 512/64) semantic issues 1,820 embedding calls against 401 for recursive — 4.5x, from 1,197 sentence embeddings plus 623 chunk embeddings (vs 401 chunks) — and chunks into 18.9 vs 12.2 chunks/doc; with a local stand-in model the split itself costs 38 ms vs 28 ms for the whole corpus, so provider latency, not chunking, dominates. Pinned by `ChunkingCostComparisonTest`
+- [x] Correct the unverified semantic claims: `guides/chunking-strategies.md` §3, `comparison/trade-offs.md`, `comparison/performance-metrics.md`, and the comparison table above now describe the implemented chunker, state the measured 4.5x cost instead of the quoted 8x, and mark the ~71/82/91% precision figures as literature references
 
 ## Success Criteria
 

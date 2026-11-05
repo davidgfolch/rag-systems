@@ -17,10 +17,10 @@ A naive split can break semantics: `"Configure the datasource URL in application
 |----------|----------|---------------------|------|-----------|
 | Fixed-size sliding window | Homogeneous text (reviews, logs) | ~71% | Low | Low |
 | Recursive character | Most production workloads | ~82% | Low | Low |
-| Semantic | High-value documents | ~91% | High (8x) | Medium |
+| Semantic | High-value documents | ~91% (literature) | High (~4.5x recursive embedding calls) | Medium |
 | Agentic | Complex/varied documents | Best potential | High | High |
 
-*Precision figures from a benchmark on a 500-document technical corpus (see comparison docs).*
+*Precision figures are literature references — this repository has no retrieval-precision benchmark yet. The semantic **cost** is measured here: 4.5x the recursive strategy's embedding calls on this repo's `docs/` corpus (see [performance metrics](../comparison/performance-metrics.md)).*
 
 ## Strategy Details
 
@@ -47,10 +47,10 @@ Tries paragraph → sentence → word boundaries in order, only splitting finer 
 
 ### 3. Semantic Chunking
 
-Uses embeddings to detect topic shifts - breaks text into chunks were semantic similarity drops. Includes contextual/summarization variants.
+Implemented as `SemanticChunker` in `rag-common-ingestion`. It splits the document into sentences, embeds them with the variant's own model, and starts a new chunk wherever the cosine distance to the next sentence reaches the 95th percentile of that document's distances — a topic shift. `chunkSize`/`chunkOverlap` remain an upper bound: a group of sentences that would outgrow the window is cut anyway and a single oversized sentence is hard-split, so a `semantic` variant never exceeds the configured window.
 
 **Best for**: High-value, complex documents (legal, research, manuals) where precision outweighs ingestion cost.
-**Pros**: Best precision. **Cons**: ~8x ingestion cost (per-sentence embedding calls).
+**Pros**: Boundaries follow the text instead of a fixed separator, so concepts are less likely to be cut in half. **Cons**: every sentence is embedded before the chunks are, so ingestion costs ~4.5x the recursive strategy's embedding calls on this repo's docs corpus, and `IngestionService` is synchronous — large documents belong on `AsyncIngestionService`.
 
 ### 4. Agentic Chunking
 

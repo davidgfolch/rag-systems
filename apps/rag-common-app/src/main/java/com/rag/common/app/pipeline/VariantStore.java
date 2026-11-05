@@ -2,6 +2,7 @@ package com.rag.common.app.pipeline;
 
 import com.rag.common.core.repositories.VectorStorePort;
 import com.rag.common.core.services.TextSplitter;
+import com.rag.common.generation.adapter.SpringAiEmbeddingModel;
 import com.rag.contract.pipeline.ChunkingStrategy;
 import com.rag.contract.pipeline.PipelineVariantDTO;
 import org.slf4j.Logger;
@@ -184,7 +185,7 @@ public class VariantStore {
      */
     public EmbeddingModel embeddingModel() {
         return active()
-                .map(variant -> embeddings.computeIfAbsent(variant.variantId(), _ -> storage.embedding(variant)))
+                .map(this::embeddingModelOf)
                 .orElseThrow(() -> new IllegalStateException("No active pipeline variant on " + module));
     }
 
@@ -197,9 +198,15 @@ public class VariantStore {
         return stores.computeIfAbsent(variant.variantId(), _ -> storage.create(variant));
     }
 
+    /** The semantic chunker cuts with the variant's own model, so boundaries and vectors agree. */
     private TextSplitter chunkerFor(PipelineVariantDTO variant) {
         var strategy = ChunkingStrategy.from(variant.strategy()).orElse(ChunkingStrategy.RECURSIVE);
-        return Chunkers.of(strategy, variant.chunkSize(), variant.chunkOverlap());
+        return Chunkers.of(strategy, variant.chunkSize(), variant.chunkOverlap(),
+                () -> new SpringAiEmbeddingModel(embeddingModelOf(variant)));
+    }
+
+    private EmbeddingModel embeddingModelOf(PipelineVariantDTO variant) {
+        return embeddings.computeIfAbsent(variant.variantId(), _ -> storage.embedding(variant));
     }
 
     private PipelineVariantDTO withIdentity(String variantId, PipelineVariantDTO request) {
