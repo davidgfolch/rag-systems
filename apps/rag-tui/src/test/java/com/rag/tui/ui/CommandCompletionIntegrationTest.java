@@ -1,6 +1,7 @@
 package com.rag.tui.ui;
 
 import com.rag.tui.client.ProviderClient;
+import com.rag.tui.client.RagApiClient;
 import com.rag.tui.launcher.Module;
 import com.rag.tui.launcher.ModuleRegistry;
 import com.rag.tui.support.StubProviderServer;
@@ -27,9 +28,10 @@ class CommandCompletionIntegrationTest {
     @BeforeEach
     void setUp() throws IOException {
         server = new StubProviderServer();
-        sut = new CommandCompletion(new CommandRegistry(),
-                new ModuleRegistry(List.of(new Module("rag-basic", "http://localhost:8081")), "rag-basic"),
-                new ProviderClient(server.baseUrl(), RestClient.builder()));
+        var registry = new ModuleRegistry(List.of(new Module("rag-basic", "http://localhost:8081")), "rag-basic");
+        sut = new CommandCompletion(new CommandRegistry(), registry,
+                new ProviderClient(server.baseUrl(), RestClient.builder()),
+                new RagApiClient(registry, RestClient.builder()));
     }
 
     @AfterEach
@@ -47,5 +49,17 @@ class CommandCompletionIntegrationTest {
     void showsModelsForSelectedProvider() {
         var result = sut.candidates("connect chat ollama p", 21);
         assertThat(result).contains("phi4");
+    }
+
+    @Test
+    void offersAddAndKnownVariantsAsTheFirstVariantArgument() {
+        var result = sut.candidates("variant ", 8);
+        assertThat(result).contains("add");
+    }
+
+    @Test
+    void completesChunkingStrategiesAfterVariantAdd() {
+        var result = sut.candidates("variant add T", 13);
+        assertThat(result).containsExactly("TOKEN");
     }
 }

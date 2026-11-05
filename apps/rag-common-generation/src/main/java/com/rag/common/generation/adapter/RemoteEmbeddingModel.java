@@ -19,8 +19,10 @@ import static com.rag.contract.constants.ApiPaths.PROVIDER;
 
 /**
  * Spring AI {@link EmbeddingModel} backed by the rag-provider service's
- * {@code /api/embed} endpoint. The vector dimension is fetched once from
- * {@code /api/provider} and cached.
+ * {@code /api/embed} endpoint. Without a model id it uses the provider's active
+ * embedding model and caches its dimension from {@code /api/provider}; with a
+ * model id it asks the provider for that specific model, which is how a
+ * pipeline variant embeds with its own model while the global one stays put.
  */
 public class RemoteEmbeddingModel implements EmbeddingModel {
 
@@ -28,39 +30,61 @@ public class RemoteEmbeddingModel implements EmbeddingModel {
 
     private final ProviderHttpClient httpClient;
     private final int fallbackDimension;
+    private final String modelId;
     private volatile int cachedDimension = -1;
 
     public RemoteEmbeddingModel(ProviderHttpClient httpClient) {
-        this(httpClient, 768);
+        this(httpClient, 768, null);
     }
 
     public RemoteEmbeddingModel(ProviderHttpClient httpClient, int fallbackDimension) {
+        this(httpClient, fallbackDimension, null);
+    }
+
+    public RemoteEmbeddingModel(ProviderHttpClient httpClient, int fallbackDimension, String modelId) {
         this.httpClient = httpClient;
         this.fallbackDimension = fallbackDimension;
+        this.modelId = modelId;
     }
 
     @Override
     public EmbeddingResponse call(EmbeddingRequest request) {
         var response = httpClient.postJson(EMBED,
-                new EmbedRequest(request.getInstructions()), EmbedResponse.class);
-        cacheDimension();
+                new EmbedRequest(modelId, request.getInstructions()), EmbedResponse.class);
         var results = new java.util.ArrayList<Embedding>(response.embeddings().size());
         for (int i = 0; i < response.embeddings().size(); i++) {
-            results.add(new Embedding(FloatConversions.toFloatArray(response.embeddings().get(i)), i));
+            var vector = FloatConversions.toFloatArray(response.embeddings().get(i));
+            results.add(new Embedding(vector, i));
+            cacheDimension(vector.length);
+            cacheProviderDimension();
         }
-        log.debug("Embedded {} texts via remote provider", results.size());
+        log.debug("Embedded {} texts via remote provider (model {})", results.size(),
+                modelId == null || modelId.isBlank() ? "(active)" : modelId);
         return new EmbeddingResponse(results);
     }
 
     @Override
     public float[] embed(Document document) {
         var response = httpClient.postJson(EMBED,
-                new EmbedRequest(List.of(document.getText())), EmbedResponse.class);
-        return FloatConversions.toFloatArray(response.embeddings().get(0));
+                new EmbedRequest(modelId, List.of(document.getText())), EmbedResponse.class);
+        var vector = FloatConversions.toFloatArray(response.embeddings().get(0));
+        cacheDimension(vector.length);
+        cacheProviderDimension();
+        return vector;
     }
 
     @Override
     public int dimensions() {
+        if (modelId == null || modelId.isBlank()) {
+            return activeProviderDimension();
+        }
+        if (cachedDimension < 0) {
+            call(new EmbeddingRequest(List.of("dimension-probe"), null));
+        }
+        return cachedDimension;
+    }
+
+    private int activeProviderDimension() {
         if (cachedDimension < 0) {
             try {
                 var status = httpClient.get(PROVIDER, ProviderStatusDTO.class);
@@ -79,11 +103,19 @@ public class RemoteEmbeddingModel implements EmbeddingModel {
         return cachedDimension;
     }
 
-    private void cacheDimension() {
-        if (cachedDimension < 0) {
+    /** A variant model's dimension comes from its own vectors. */
+    private void cacheDimension(int dimension) {
+        if (modelId != null && !modelId.isBlank() && cachedDimension < 0 && dimension > 0) {
+            cachedDimension = dimension;
+        }
+    }
+
+    /** The active model's dimension is authoritative on the provider status. */
+    private void cacheProviderDimension() {
+        if (modelId == null || modelId.isBlank()) {
             try {
                 dimensions();
-            } catch (Exception e) {
+            } catch (RuntimeException e) {
                 log.debug("Embedding dimension fetch deferred: {}", e.getMessage());
             }
         }

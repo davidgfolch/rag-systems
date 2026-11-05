@@ -53,7 +53,7 @@ class ComputeControllerTest {
 
     @Test
     void shouldEmbedTexts() throws Exception {
-        when(embeddingService.embed(List.of("a", "b"))).thenReturn(
+        when(embeddingService.embed(List.of("a", "b"), null)).thenReturn(
                 List.of(List.of(0.1f), List.of(0.2f)));
         mockMvc.perform(post(EMBED)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -78,8 +78,19 @@ class ComputeControllerTest {
     }
 
     @Test
+    void shouldForwardTheRequestedVariantModel() throws Exception {
+        when(embeddingService.embed(List.of("a"), "mxbai-embed-large"))
+                .thenReturn(List.of(List.of(0.3f)));
+        mockMvc.perform(post(EMBED)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"model\":\"mxbai-embed-large\",\"texts\":[\"a\"]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.embeddings[0][0]").value(0.3));
+    }
+
+    @Test
     void shouldEmbedEmptyTextList() throws Exception {
-        when(embeddingService.embed(List.of())).thenReturn(List.of());
+        when(embeddingService.embed(List.of(), null)).thenReturn(List.of());
         mockMvc.perform(post(EMBED)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"texts\":[]}"))

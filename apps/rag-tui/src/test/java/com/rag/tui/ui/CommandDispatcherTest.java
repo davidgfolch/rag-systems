@@ -1,12 +1,18 @@
 package com.rag.tui.ui;
 
+import com.rag.tui.launcher.ModuleRegistry;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.web.client.RestClientException;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import com.rag.tui.testfixture.TestModules;
+
 import static com.rag.tui.testfixture.TestDocumentSummaries.withId;
+import static com.rag.tui.testfixture.TestModules.AGENTIC;
 import static com.rag.tui.testfixture.TestModules.ADVANCED;
 import static com.rag.tui.testfixture.TestModules.ADVANCED_URL;
 import static com.rag.tui.testfixture.TestModules.BASIC;
@@ -24,8 +30,35 @@ import static org.mockito.Mockito.when;
 class CommandDispatcherTest extends AbstractCommandDispatcherTest {
 
     @Test
-    void listsModulesWithActiveAndState() {
-        when(lifecycle.isRunning(BASIC)).thenReturn(true);
+    void bootstrapResolvesTheActiveModuleAtStartup() {
+        when(lifecycle.isRunning(ADVANCED)).thenReturn(true);
+        var result = sut.bootstrapModule();
+        assertThat(result).contains("Active module: " + ADVANCED, "only running module");
+        assertThat(registry.active().name()).isEqualTo(ADVANCED);
+    }
+
+    @Test
+    void usePromptDoesNotOfferTheProviderCompanion() {
+        var all = new ModuleRegistry(TestModules.all(), BASIC);
+        when(prompter.pick(eq("Switch active module"), anyList())).thenReturn(Optional.empty());
+        @SuppressWarnings("unchecked")
+        var captor = ArgumentCaptor.forClass(List.class);
+        dispatcherFor(all).handle("use", token -> { });
+        verify(prompter).pick(eq("Switch active module"), captor.capture());
+        assertThat((List<Prompter.Choice>) captor.getValue())
+                .extracting(Prompter.Choice::label)
+                .containsExactly(BASIC, ADVANCED, AGENTIC);
+    }
+
+    private CommandDispatcher dispatcherFor(ModuleRegistry modules) {
+        return new CommandDispatcher(modules, lifecycle,
+                new CommandDispatcher.RagClients(apiClient, chatGateway, memoryClient, fileLoader, healthClient,
+                        providerClient),
+                new CommandDispatcher.Settings(10_000, 4, 60), commandRegistry, prompter);
+    }
+
+    @Test
+    void listsModulesWithActiveAndState() {        when(lifecycle.isRunning(BASIC)).thenReturn(true);
         var result = handle("modules");
         assertThat(result)
                 .contains(BASIC, "running", "(active)")
@@ -70,6 +103,38 @@ class CommandDispatcherTest extends AbstractCommandDispatcherTest {
     void rejectsUnknownModule() {
         var result = handle("use nope");
         assertThat(result).contains("Unknown module");
+    }
+
+    @Test
+    void usePromptShowsWhetherEachModuleIsRunning() {
+        var all = new ModuleRegistry(TestModules.all(), BASIC);
+        when(lifecycle.isRunning(BASIC)).thenReturn(true);
+        when(healthClient.isUp(ADVANCED_URL)).thenReturn(true);
+        when(prompter.pick(eq("Switch active module"), anyList())).thenReturn(Optional.empty());
+        @SuppressWarnings("unchecked")
+        var captor = ArgumentCaptor.forClass(List.class);
+        dispatcherFor(all).handle("use", token -> { });
+        verify(prompter).pick(eq("Switch active module"), captor.capture());
+        assertThat((List<Prompter.Choice>) captor.getValue())
+                .extracting(Prompter.Choice::detail)
+                .containsExactly("running", "running", "stopped");
+    }
+
+    @Test
+    void switchingModuleShowsTheActiveModelsAndDimension() {
+        mockStatus();
+        var result = handle("use " + ADVANCED);
+        assertThat(result)
+                .contains("Active module: " + ADVANCED)
+                .contains("Chat model: ollama/phi4")
+                .contains("Embedding model: ollama/nomic-embed-text (dimension 768)");
+    }
+
+    @Test
+    void switchingModuleConfirmsEvenWhenProviderIsUnreachable() {
+        when(providerClient.status()).thenThrow(new RestClientException("Connection refused"));
+        var result = handle("use " + ADVANCED);
+        assertThat(result).contains("Active module: " + ADVANCED).doesNotContain("Providers:");
     }
 
     @Test

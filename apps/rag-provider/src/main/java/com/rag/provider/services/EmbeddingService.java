@@ -31,18 +31,29 @@ public class EmbeddingService {
     }
 
     public List<List<Float>> embed(List<String> texts) {
+        return embed(texts, null);
+    }
+
+    /**
+     * Embeds with the provider's active model when {@code model} is blank, or
+     * with that specific model so a module can embed one pipeline variant
+     * differently without switching the global active model.
+     */
+    public List<List<Float>> embed(List<String> texts, String model) {
         var vectors = new ArrayList<List<Float>>();
         for (int from = 0; from < texts.size(); from += maxEmbeddingBatchSize) {
             var window = texts.subList(from, Math.min(texts.size(), from + maxEmbeddingBatchSize));
-            vectors.addAll(embedWindow(window));
+            vectors.addAll(embedWindow(window, model));
         }
-        log.info("Embedded {} texts at dimension {}", texts.size(), router.embeddingDimension());
+        log.info("Embedded {} texts with model {} at dimension {}", texts.size(),
+                model == null || model.isBlank() ? "(active)" : model,
+                vectors.isEmpty() ? 0 : vectors.getFirst().size());
         return vectors;
     }
 
-    private List<List<Float>> embedWindow(List<String> texts) {
+    private List<List<Float>> embedWindow(List<String> texts, String model) {
         log.debug("Embedding window of {} texts", texts.size());
-        var response = router.embeddingModel().call(new EmbeddingRequest(texts, null));
+        var response = router.embeddingModelFor(model).call(new EmbeddingRequest(texts, null));
         return response.getResults().stream().map(Embedding::getOutput)
                 .map(FloatConversions::toFloatList).toList();
     }

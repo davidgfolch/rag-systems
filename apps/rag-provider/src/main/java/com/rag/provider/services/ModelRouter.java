@@ -11,6 +11,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.embedding.EmbeddingModel;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  * Holds the active chat/embedding model specs and their live clients. All
  * reads and writes are synchronized, so switching only replaces the references
@@ -29,6 +32,7 @@ public class ModelRouter {
     private ChatModel chatModel;
     private EmbeddingModel embeddingModel;
     private int embeddingDimension = -1;
+    private final Map<String, EmbeddingModel> variantEmbeddingModels = new HashMap<>();
 
     public ModelRouter(ProviderRegistry registry, ProviderClientFactory factory,
                        ModelSpec initialChat, ModelSpec initialEmbedding) {
@@ -54,6 +58,7 @@ public class ModelRouter {
         this.embeddingModel = factory.embeddingModel(profile, spec.model());
         this.activeEmbedding = spec;
         this.embeddingDimension = -1;
+        this.variantEmbeddingModels.clear();
         log.info("Active embedding model switched to {} (dimension resolved on demand)", spec);
     }
 
@@ -93,6 +98,25 @@ public class ModelRouter {
 
     public synchronized EmbeddingModel embeddingModel() {
         return embeddingModel;
+    }
+
+    /**
+     * Embedding client for a pipeline variant's model. A blank model, or the
+     * active one, reuses the global client; any other model is built on the
+     * active embedding provider and cached, so switching variants never has to
+     * change the global active model.
+     */
+    public synchronized EmbeddingModel embeddingModelFor(String model) {
+        if (model == null || model.isBlank() || model.equals(activeEmbedding.model())) {
+            return embeddingModel;
+        }
+        return variantEmbeddingModels.computeIfAbsent(model, this::buildEmbeddingModel);
+    }
+
+    private EmbeddingModel buildEmbeddingModel(String model) {
+        var profile = requireProfile(activeEmbedding.providerId());
+        log.info("Using embedding model {} on provider {}", model, profile.id());
+        return factory.embeddingModel(profile, model);
     }
 
     public synchronized int embeddingDimension() {

@@ -49,7 +49,7 @@ public class ComputeController {
 
     @PostMapping(EMBED)
     public EmbedResponse embed(@RequestBody EmbedRequest request) {
-        var vectors = embeddingService.embed(request.texts());
+        var vectors = embeddingService.embed(request.texts(), request.model());
         log.info("Embedding served: texts={}, dimension={}",
                 vectors.size(), vectors.isEmpty() ? 0 : vectors.get(0).size());
         return new EmbedResponse(vectors);

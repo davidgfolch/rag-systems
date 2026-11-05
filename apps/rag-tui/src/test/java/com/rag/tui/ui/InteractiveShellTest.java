@@ -1,5 +1,6 @@
 package com.rag.tui.ui;
 
+import com.rag.tui.testfixture.TestModules;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -66,6 +67,16 @@ class InteractiveShellTest {
         var sut = new InteractiveShell(dispatcher, new NoopPrompter(new StringReader("ask a\n")), out);
         sut.run();
         assertThat(out.toString()).contains("Hel").contains("lo");
+    }
+
+    @Test
+    void printsModuleBootstrapStatusAtStartup() {
+        when(dispatcher.bootstrapModule()).thenReturn("Active module: " + TestModules.BASIC);
+        when(dispatcher.handle(eq("quit"), any())).thenThrow(new ShellExitException());
+        var out = new StringWriter();
+        var sut = new InteractiveShell(dispatcher, new NoopPrompter(new StringReader("quit\n")), out);
+        sut.run();
+        assertThat(out.toString()).contains("Active module: " + TestModules.BASIC);
     }
 
     @Test

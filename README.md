@@ -189,6 +189,30 @@ Each `rag-*` implementation answers the same questions over the same corpus, so 
 2. **Drive identical queries** — the same `{"question": ...}` to both `/api/query` endpoints.
 3. **Measure quantitatively** — turn on the `observability` profile and compare Grafana dashboards, Prometheus metrics, and trace timelines (see [rag-observability](apps/rag-observability/README.md)), or run the [rag-evaluation](apps/rag-evaluation/README.md) benchmark harness and the [performance metrics](docs/comparison/performance-metrics.md).
 
+## Pipeline variants
+
+Each runnable module can hold several **pipeline variants** — a chunking strategy + window plus its own embedding model and vector table — and serves exactly one at a time. Switching never restarts the module.
+
+```text
+> variant                       # pick one of the active module's variants
+> variant add TOKEN 256 64      # create one; prompts for anything you omit
+> variant v2                    # activate: applies to the next ingest and query
+```
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/api/modules/{module}/variants` | list variants |
+| `GET` | `/api/modules/{module}/variants/active` | active variant (`204` when none) |
+| `POST` | `/api/modules/{module}/variants` | register a variant |
+| `POST` | `/api/modules/{module}/variants/{id}/activate` | switch without a restart |
+| `PUT` / `DELETE` | `/api/modules/{module}/variants/{id}` | update / delete |
+
+- **Storage** — the seeded `boot` variant keeps the module's `chunks` table; every other variant owns `variant_<id>` in the same schema, dropped on delete. The registry and active variant persist in `pipeline_variants`, so they survive a restart.
+- **Embedding** — each variant embeds with its own `embeddingModel` through rag-provider; `connect embedding` remains the fallback for `boot`.
+- **Strategies** — `RECURSIVE`, `FIXED`, `TOKEN` (`SEMANTIC` currently falls back to recursive).
+
+See [ADR-0015](docs/architecture/decision-records/adr-0015-pipeline-variants.md) for the rationale.
+
 ## Modules & Strategy
 
 The monorepo is organized around a **thin TUI + switchable RAG modules**. Each `rag-*` module is an independent Spring Boot application exposing the [shared OpenAPI contract](apps/rag-contract/src/main/resources/openapi/rag-api.yaml); the TUI starts/stops them and routes work to the active one.

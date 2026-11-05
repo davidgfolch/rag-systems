@@ -3,6 +3,7 @@ package com.rag.tui.ui;
 import org.jline.terminal.Terminal;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -20,20 +21,30 @@ public class InteractivePrompter implements Prompter {
 
     private static final String CSI = "\u001B[";
     private static final String CLEAR_LINE = "\u001B[J\r\n";
+    private static final String CLEAR_EOL = "\u001B[K";
+    private static final String HINT = "enter=select esc=cancel up/down/j/k=move type=filter";
     private static final int MAX_IDLE_PICKS = 3;
     private static final int MAX_ROWS = 10;
+    /** Title plus hint lines sit above the options, so they are not option rows. */
+    private static final int FRAME_CHROME_ROWS = 2;
 
     private final PickSource pickSource;
     private final PickSource promptSource;
     private final Consumer<String> renderSink;
     private final int rows;
     private final LineEditor editor = new LineEditor();
+    /** Lines painted by the last pick frame, used to repaint over them in place. */
+    private int frameRows;
 
     public InteractivePrompter(Terminal terminal, CompletionCandidates completion) {
         this(new TerminalPickSource(terminal, true), new TerminalPickSource(terminal, false), text -> {
             terminal.writer().write(text);
             terminal.flush();
-        }, Math.max(1, terminal.getHeight() - 1), completion);
+        }, Math.max(1, terminal.getHeight() - 1 - FRAME_CHROME_ROWS), completion);
+        // Without raw mode a Unix tty stays canonical and echoey, so arrow keys
+        // only reach us after Enter and keys are printed twice (Windows consoles
+        // deliver key events either way, which is why this only broke on Linux).
+        terminal.enterRawMode();
     }
 
     InteractivePrompter(PickSource pickSource, Consumer<String> renderSink, int rows) {
@@ -58,6 +69,8 @@ public class InteractivePrompter implements Prompter {
     public Optional<String> pick(String title, List<Choice> choices) {
         if (choices.isEmpty()) return Optional.empty();
         var engine = new PickEngine(choices);
+        frameRows = 0;
+        render(title, engine);
         int idle = 0;
         while (true) {
             Key key = read();
@@ -161,10 +174,9 @@ public class InteractivePrompter implements Prompter {
     }
 
     private void render(String title, PickEngine engine) {
-        var sb = new StringBuilder();
-        sb.append("\r\u001B[2K").append(TerminalStyle.prompt(title))
-                .append(" [filter: ").append(engine.filter()).append("]\n")
-                .append(TerminalStyle.info("enter=select esc=cancel up/down/j/k=move type=filter"));
+        var lines = new ArrayList<String>();
+        lines.add(TerminalStyle.prompt(title) + " [filter: " + engine.filter() + "]");
+        lines.add(TerminalStyle.info(HINT));
         var list = engine.visible();
         int start = Math.max(0, engine.cursor() - rows + 1);
         int end = Math.min(list.size(), start + rows);
@@ -172,9 +184,20 @@ public class InteractivePrompter implements Prompter {
             var c = list.get(i);
             String prefix = (i == engine.cursor()) ? "> " : "  ";
             String line = prefix + c.label() + (c.detail().isEmpty() ? "" : " - " + c.detail());
-            sb.append("\n").append(i == engine.cursor() ? TerminalStyle.command(line) : line);
+            lines.add(i == engine.cursor() ? TerminalStyle.command(line) : line);
         }
-        sb.append("\n");
+        if (list.isEmpty()) {
+            lines.add(TerminalStyle.error("  no matches for '" + engine.filter() + "' - backspace to widen"));
+        }
+        var sb = new StringBuilder("\r");
+        if (frameRows > 0) sb.append(CSI).append(frameRows).append('A');
+        sb.append(CSI).append('J');
+        for (int i = 0; i < lines.size(); i++) {
+            if (i > 0) sb.append("\r\n");
+            sb.append(lines.get(i)).append(CLEAR_EOL);
+        }
+        sb.append("\r\n");
+        frameRows = lines.size();
         renderSink.accept(sb.toString());
     }
 

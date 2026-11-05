@@ -33,6 +33,8 @@ class RemoteEmbeddingModelTest {
     private HttpServer server;
     private RemoteEmbeddingModel model;
     private final AtomicInteger providerStatusCalls = new AtomicInteger();
+    private final java.util.concurrent.atomic.AtomicReference<String> lastEmbedBody =
+            new java.util.concurrent.atomic.AtomicReference<>();
 
     @BeforeEach
     void setUp() throws IOException {
@@ -82,6 +84,31 @@ class RemoteEmbeddingModelTest {
         model.dimensions();
         assertThat(model.dimensions()).isEqualTo(768);
         assertThat(providerStatusCalls.get()).isEqualTo(1);
+    }
+
+    @Test
+    void shouldSendTheVariantModelAndProbeItsDimension() throws IOException {
+        server.createContext(ApiPaths.EMBED, exchange -> {
+            lastEmbedBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            respond(exchange, 200, "application/json", "{\"embeddings\":[[1.0,2.0,3.0]]}");
+        });
+        var client = new ProviderHttpClient("http://localhost:" + server.getAddress().getPort(),
+                new ObjectMapper());
+        var sut = new RemoteEmbeddingModel(client, 0, "mxbai-embed-large");
+        assertThat(sut.embed(new Document("text"))).containsExactly(1.0f, 2.0f, 3.0f);
+        assertThat(lastEmbedBody.get()).contains("\"model\":\"mxbai-embed-large\"");
+        assertThat(sut.dimensions()).isEqualTo(3);
+        assertThat(providerStatusCalls.get()).isZero();
+    }
+
+    @Test
+    void shouldNotSendAModelForTheActiveModel() throws IOException {
+        server.createContext(ApiPaths.EMBED, exchange -> {
+            lastEmbedBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            respond(exchange, 200, "application/json", "{\"embeddings\":[[1.0]]}");
+        });
+        model.embed(new Document("text"));
+        assertThat(lastEmbedBody.get()).doesNotContain("\"model\":\"");
     }
 
     @Test

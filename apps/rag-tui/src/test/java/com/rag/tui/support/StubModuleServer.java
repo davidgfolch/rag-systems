@@ -35,6 +35,12 @@ public final class StubModuleServer {
     private final AtomicReference<String> lastCrawlUrl = new AtomicReference<>();
     private final AtomicReference<String> lastCrawlStepBody = new AtomicReference<>();
     private final AtomicReference<String> lastCrawlCancelledSession = new AtomicReference<>();
+    private final AtomicReference<String> variantsBody = new AtomicReference<>("[]");
+    private final AtomicReference<String> activationBody = new AtomicReference<>("{}");
+    private final AtomicReference<String> lastActivatedVariant = new AtomicReference<>();
+    private final AtomicReference<String> activeVariantBody = new AtomicReference<>("{}");
+    private final AtomicReference<String> createdVariantBody = new AtomicReference<>("{}");
+    private final AtomicReference<String> lastCreatedVariantBody = new AtomicReference<>();
 
     public StubModuleServer() throws IOException {
         server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
@@ -66,6 +72,7 @@ public final class StubModuleServer {
         server.createContext("/api/conversations", exchange -> {
             respond(exchange, 200, "[]");
         });
+        server.createContext("/api/modules", this::handleVariants);
         server.createContext("/api/documents", exchange -> {
             if ("DELETE".equalsIgnoreCase(exchange.getRequestMethod())) {
                 lastDeletedDocumentId.set(exchange.getRequestURI().getPath()
@@ -95,6 +102,26 @@ public final class StubModuleServer {
         }
         lastCrawlUrl.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
         respond(exchange, 201, crawlStartBody.get());
+    }
+
+    private void handleVariants(HttpExchange exchange) throws IOException {
+        var path = exchange.getRequestURI().getPath();
+        var post = "POST".equalsIgnoreCase(exchange.getRequestMethod());
+        if (post && path.endsWith("/activate")) {
+            lastActivatedVariant.set(path.replaceAll("^.*/variants/([^/]+)/activate$", "$1"));
+            respond(exchange, 200, activationBody.get());
+            return;
+        }
+        if (post) {
+            lastCreatedVariantBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            respond(exchange, 201, createdVariantBody.get());
+            return;
+        }
+        if (path.endsWith("/active")) {
+            respond(exchange, 200, activeVariantBody.get());
+            return;
+        }
+        respond(exchange, 200, variantsBody.get());
     }
 
     private String nextStepBody() {
@@ -140,6 +167,30 @@ public final class StubModuleServer {
 
     public void documents(String json) {
         documentsBody.set(json);
+    }
+
+    public void variants(String json) {
+        variantsBody.set(json);
+    }
+
+    public void activationResponse(String json) {
+        activationBody.set(json);
+    }
+
+    public String lastActivatedVariant() {
+        return lastActivatedVariant.get();
+    }
+
+    public void activeVariant(String json) {
+        activeVariantBody.set(json);
+    }
+
+    public void createdVariant(String json) {
+        createdVariantBody.set(json);
+    }
+
+    public String lastCreatedVariantBody() {
+        return lastCreatedVariantBody.get();
     }
 
     public void crawlStart(String json) {

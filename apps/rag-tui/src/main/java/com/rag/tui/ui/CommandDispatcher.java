@@ -22,6 +22,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 
 import static com.rag.tui.ui.TerminalStyle.error;
+import static com.rag.tui.ui.TerminalStyle.info;
 import static com.rag.tui.ui.TerminalStyle.success;
 
 public class CommandDispatcher {
@@ -38,15 +39,11 @@ public class CommandDispatcher {
     private final DuplicateFinder duplicates;
     private final IngestCommands ingest;
     private final CrawlCommands crawl;
+    private final ModuleBootstrap bootstrap;
+    private final VariantCommands variants;
     private final Tracer tracer;
 
     static final String SPAN_COMMAND = "tui.command";
-
-    public CommandDispatcher(ModuleRegistry registry, ModuleLifecycleManager lifecycle,
-                             RagClients clients, Settings settings, CommandRegistry commandRegistry,
-                             Prompter prompter) {
-        this(registry, lifecycle, clients, settings, commandRegistry, prompter, null);
-    }
 
     public CommandDispatcher(ModuleRegistry registry, ModuleLifecycleManager lifecycle,
                              RagClients clients, Settings settings, CommandRegistry commandRegistry,
@@ -61,7 +58,15 @@ public class CommandDispatcher {
         this.duplicates = new DuplicateFinder(registry, clients.apiClient(), clients.healthClient());
         this.ingest = new IngestCommands(clients, prompter, duplicates, tracer);
         this.crawl = new CrawlCommands(clients, prompter, duplicates, tracer);
+        this.bootstrap = new ModuleBootstrap(registry, lifecycle, clients.healthClient(), prompter);
+        this.variants = new VariantCommands(registry, clients.apiClient(), prompter, clients.providerClient());
         this.tracer = tracer;
+    }
+
+    public CommandDispatcher(ModuleRegistry registry, ModuleLifecycleManager lifecycle,
+                             RagClients clients, Settings settings, CommandRegistry commandRegistry,
+                             Prompter prompter) {
+        this(registry, lifecycle, clients, settings, commandRegistry, prompter, null);
     }
 
     public String handle(String input, Consumer<String> tokenSink) {
@@ -117,6 +122,7 @@ public class CommandDispatcher {
             case "ask" -> ask(arg, tokenSink);
             case "history" -> history();
             case "connect" -> new ConnectCommand(clients.providerClient(), prompter).execute(arg);
+            case "variant" -> variants.switchVariant(arg);
             default -> error("Unknown command. Type 'help' for usage.");
         };
     }
@@ -134,10 +140,21 @@ public class CommandDispatcher {
         }
     }
 
+    public String bootstrapModule() {
+        return bootstrap.resolve();
+    }
+
     private List<Prompter.Choice> moduleChoices() {
-        return registry.modules().stream()
-                .map(m -> new Prompter.Choice(m.name(), m.name()))
+        return ModuleBootstrap.selectable(registry).stream()
+                .map(m -> new Prompter.Choice(m.name(), m.name(), moduleState(m)))
                 .toList();
+    }
+
+    /** Whether the module is a live child process or answers its health probe. */
+    private String moduleState(Module module) {
+        return lifecycle.isRunning(module.name()) || clients.healthClient().isUp(module.baseUrl())
+                ? "running"
+                : "stopped";
     }
 
     private String use(String name) {
@@ -145,9 +162,14 @@ public class CommandDispatcher {
             name = prompter.pick("Switch active module", moduleChoices()).orElse("");
             if (name.isEmpty()) return "";
         }
-        return registry.activate(name)
-                ? success("Active module: " + name)
-                : error("Unknown module: " + name);
+        if (!registry.activate(name)) return error("Unknown module: " + name);
+        return withProviderSummary(success("Active module: " + name));
+    }
+
+    /** Mirrors the startup banner, so a module switch also shows chat/embedding models. */
+    private String withProviderSummary(String heading) {
+        String summary = providerSummary();
+        return summary.isEmpty() ? heading : heading + "\n" + info("Providers:\n" + summary);
     }
 
     private String start(String name, Consumer<String> tokenSink) {

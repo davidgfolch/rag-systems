@@ -23,6 +23,7 @@ import static com.rag.tui.ui.Key.KeyType.WORD_BACKSPACE;
 import static com.rag.tui.ui.Key.KeyType.WORD_LEFT;
 import static com.rag.tui.ui.Key.KeyType.WORD_RIGHT;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verify;
 
 class TerminalPickSourceTest {
 
@@ -182,6 +183,13 @@ class TerminalPickSourceTest {
 
     private static int[] promptBytes(String line) {
         return IntStream.concat(line.chars(), IntStream.of(13)).toArray();
+    }
+
+    @Test
+    void entersRawModeSoKeysArriveWithoutWaitingForEnter() {
+        Terminal terminal = TestTerminal.withInput(EOF);
+        new InteractivePrompter(terminal, (line, cursor) -> List.of());
+        verify(terminal).enterRawMode();
     }
 
     @Test

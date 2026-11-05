@@ -108,9 +108,31 @@ class ArchitectureTest {
     void repoRootContainsOnlyAllowedEntries() throws IOException {
         List<String> unexpected = listRoot().stream()
                 .filter(name -> !ALLOWED_ROOT_ENTRIES.contains(name))
+                .filter(name -> !isGitIgnored(name))
                 .toList();
         assertTrue(unexpected.isEmpty(),
                 "Keep the repo root minimal (README + badges show on the GitHub landing page): " + unexpected);
+    }
+
+    /**
+     * A git-ignored entry never reaches GitHub, so local tool/IDE state such as
+     * {@code .freebuff} or {@code *.iml} cannot affect the landing page this
+     * rule protects.
+     */
+    private static boolean isGitIgnored(String name) {
+        try {
+            var process = new ProcessBuilder("git", "check-ignore", "--quiet", name)
+                    .directory(repoRoot().toFile())
+                    .redirectErrorStream(true)
+                    .start();
+            process.getInputStream().readAllBytes();
+            return process.waitFor() == 0;
+        } catch (InterruptedException _) {
+            Thread.currentThread().interrupt();
+            return false;
+        } catch (IOException _) {
+            return false;
+        }
     }
 
     @Test
