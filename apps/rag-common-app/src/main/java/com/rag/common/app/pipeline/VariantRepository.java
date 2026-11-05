@@ -23,13 +23,21 @@ public class VariantRepository {
     static final String TABLE = "pipeline_variants";
 
     private final JdbcTemplate jdbc;
+    private final String schemaName;
     private final String schema;
     private final String table;
+    private volatile boolean ready;
 
     public VariantRepository(JdbcTemplate jdbc, String schema) {
         this.jdbc = jdbc;
+        this.schemaName = schema;
         this.schema = PgVectorSchemas.quote(schema);
         this.table = PgVectorSchemas.qualified(schema, TABLE);
+    }
+
+    /** Schema this module keeps its registry and vector tables in. */
+    public String schemaName() {
+        return schemaName;
     }
 
     /** One persisted row plus the flags that describe its role on restart. */
@@ -37,6 +45,9 @@ public class VariantRepository {
     }
 
     public void ensureTable() {
+        if (ready) {
+            return;
+        }
         jdbc.execute("CREATE SCHEMA IF NOT EXISTS " + schema);
         jdbc.execute("CREATE TABLE IF NOT EXISTS " + table + " ("
                 + "variant_id varchar(64) PRIMARY KEY, "
@@ -47,6 +58,7 @@ public class VariantRepository {
                 + "chunk_overlap integer NOT NULL, "
                 + "is_boot boolean NOT NULL DEFAULT false, "
                 + "is_active boolean NOT NULL DEFAULT false)");
+        ready = true;
         log.debug("Variant registry table ready at {}", table);
     }
 
@@ -61,6 +73,8 @@ public class VariantRepository {
     }
 
     public void replaceAll(List<PipelineVariantDTO> variants, String activeId, String bootId) {
+        // The boot variant is seeded before restore() runs, so the first write has to create the table itself.
+        ensureTable();
         jdbc.update("DELETE FROM " + table);
         for (var variant : variants) {
             jdbc.update("INSERT INTO " + table + " (variant_id, strategy, embedding_model, "

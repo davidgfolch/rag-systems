@@ -20,10 +20,14 @@ This document captures the key architectural trade-offs across the RAG implement
 
 | Strategy | Precision | Cost | When to use |
 |----------|-----------|------|-------------|
-| Fixed-size | Low (~71%) | Lowest | Homogeneous, low-stakes |
-| Recursive | Good (~82%) | Low | Default for most |
-| Semantic | Best (~91%) | 8x | High-value documents |
+| Fixed-size | Low (~71%)† | Lowest | Homogeneous, low-stakes |
+| Recursive | Good (~82%)† | Low | Default for most |
+| Semantic | Best (~91%)† | ~4.5x recursive embedding calls‡ | High-value documents |
 | Agentic | Best potential | High | Complex/varied docs |
+
+† **Precision figures are literature references.** Nothing in this repository measures retrieval precision yet (`rag-evaluation` is planned), so ~71/82/91% come from published chunking comparisons.
+
+‡ **The semantic cost is measured here.** Over the 33 markdown files in `docs/` at a 512/64 window, a semantic ingestion needs 1,820 embedding calls (1,197 sentence + 623 chunk embeddings) against 401 for recursive — 4.5x — because it embeds every sentence *and* yields more, smaller chunks (18.9 vs 12.2 per document). The timing used a local stand-in model, not a provider; see [Performance Metrics](performance-metrics.md) and `ChunkingCostComparisonTest` ([ADR-0015](../architecture/decision-records/adr-0015-pipeline-variants.md)).
 
 ## Vector Store Trade-offs
 
