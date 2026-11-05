@@ -226,12 +226,27 @@ if "%PRNUM%"=="" (
     exit /b 1
 )
 echo Resolving PR #%PRNUM% state...
+echo Waiting for PR checks to appear...
+set "CHECKS=0"
+call :wait_for_checks
+if "%CHECKS%"=="0" (
+    echo No checks reported for PR #%PRNUM%. Clone kept for inspection.
+    exit /b 1
+)
 echo Waiting for PR checks to be green...
 gh pr checks "%PRNUM%" --watch
 if errorlevel 1 (
     echo PR checks did not all pass. Clone kept for inspection.
     exit /b 1
 )
+gh pr view "%PRNUM%" --json statusCheckRollup > "%TEMP%\rag-pr-checks.json"
+findstr /C:"\"conclusion\":\"FAILURE\"" /C:"\"conclusion\":\"CANCELLED\"" /C:"\"conclusion\":\"TIMED_OUT\"" /C:"\"conclusion\":\"ACTION_REQUIRED\"" /C:"\"state\":\"ERROR\"" "%TEMP%\rag-pr-checks.json" >nul 2>nul
+if not errorlevel 1 (
+    del "%TEMP%\rag-pr-checks.json" >nul 2>nul
+    echo PR has failing or cancelled checks. Clone kept for inspection.
+    exit /b 1
+)
+del "%TEMP%\rag-pr-checks.json" >nul 2>nul
 for /f "delims=" %%M in ('gh pr view "%PRNUM%" --json mergeable --jq ".mergeable"') do set "MERGEABLE=%%M"
 if not "%MERGEABLE%"=="MERGEABLE" (
     echo PR is not mergeable yet; attempting to auto-resolve conflicts...
@@ -250,23 +265,57 @@ if not "%MERGEABLE%"=="MERGEABLE" (
         exit /b 1
     )
 )
-echo Merging PR #%PRNUM%...
-gh pr merge "%PRNUM%" --squash --delete-branch
-if not errorlevel 1 (
-    echo PR merged.
-    if /I "%KEEP%"=="-k" (
-        echo Keeping clone.
-    ) else (
-        set "SUFFIX=%CURBRANCH:feat/=%"
-        set "TARGET=%ROOT%\..\rag-systems-%SUFFIX%"
-        if exist "%TARGET%" (
-            call :delete_clone "%TARGET%"
-        )
-    )
-) else (
+echo Merging PR #%PRNUM% (auto-merge once required checks pass)...
+gh pr merge "%PRNUM%" --auto --squash --delete-branch
+if errorlevel 1 (
     echo PR merge failed. Clone kept for inspection.
+    exit /b 1
 )
-exit /b %errorlevel%
+echo Auto-merge enabled; waiting for the merge...
+call :wait_for_merge
+if "%STATE%"=="CLOSED" (
+    echo PR closed without merging. Clone kept for inspection.
+    exit /b 1
+)
+if not "%STATE%"=="MERGED" (
+    echo Timed out waiting for the merge. Clone kept for inspection.
+    exit /b 1
+)
+echo PR merged.
+if /I "%KEEP%"=="-k" (
+    echo Keeping clone.
+) else (
+    call :delete_merged_clone
+)
+exit /b 0
+
+:wait_for_checks
+set /a CTRIES=0
+:wait_for_checks_loop
+for /f "delims=" %%C in ('gh pr view "%PRNUM%" --json statusCheckRollup --jq ".statusCheckRollup | length"') do set "CHECKS=%%C"
+if not "%CHECKS%"=="0" exit /b 0
+set /a CTRIES+=1
+if %CTRIES% GEQ 30 exit /b 0
+timeout /t 10 /nobreak >nul
+goto :wait_for_checks_loop
+
+:wait_for_merge
+set "STATE="
+set /a MTRIES=0
+:wait_for_merge_loop
+for /f "delims=" %%S in ('gh pr view "%PRNUM%" --json state --jq ".state"') do set "STATE=%%S"
+if "%STATE%"=="MERGED" exit /b 0
+if "%STATE%"=="CLOSED" exit /b 0
+set /a MTRIES+=1
+if %MTRIES% GEQ 90 exit /b 0
+timeout /t 10 /nobreak >nul
+goto :wait_for_merge_loop
+
+:delete_merged_clone
+set "SUFFIX=%CURBRANCH:feat/=%"
+set "TARGET=%ROOT%\..\rag-systems-%SUFFIX%"
+if exist "%TARGET%" call :delete_clone "%TARGET%"
+exit /b 0
 
 :cleanup
 set "NAME=%~2"

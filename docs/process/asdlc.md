@@ -21,8 +21,15 @@ parallel, using `scripts\dev.bat` (Windows) / `scripts/dev.sh` (Linux/Mac):
 `dev new` copies the auto-generated SonarQube token into the clone's
 `.env.secrets` so SonarQube always works there. Each clone is independent; run
 the commands from inside the clone you are working on. `dev auto-merge` (and
-its alias `dev merge`) merges the green PR (deleting the remote branch) then
-deletes its own clone on success; add `-k` to keep it.
+its alias `dev merge`) waits for the required `CI gate` check, merges the green
+PR (deleting the remote branch) then deletes its own clone on success; add `-k`
+to keep it. It refuses to merge when any check is failing or cancelled.
+
+One-time repository setup (after the CI workflow defining `CI gate` is on
+`main`): `./scripts/protect-main.sh` (or `.\scripts\protect-main.ps1`) applies
+the `main` ruleset — pull request required, `CI gate` required, no force-push
+or branch deletion — and enables repository auto-merge. Never commit or push
+directly to `main`; direct pushes are blocked by that ruleset.
 
 ## Plan Approval
 
@@ -100,6 +107,11 @@ among others:
   changes such as `chmod +x`;
 - `docker/**` (compose files, Prometheus/Loki/Grafana configs);
 - `.github/workflows/**`, `.gitignore`, `.gitattributes`.
+
+GitHub Actions mirrors this waiver: the `Detect changes` job marks such a
+change as non-code and skips `build`, `architecture-tests`, `tests` and
+`coverage-badges`, running only `CI gate` (see
+[CI Workflow](../guides/ci-workflow.md)).
 
 Verify the touched artifact directly instead of running the full suite:
 

@@ -148,9 +148,27 @@ case "$CMD" in
         if [ -z "$PRNUM" ]; then echo "Error: no open PR found for branch $BR."; exit 1; fi
 
         echo "Resolving PR #$PRNUM state..."
+        echo "Waiting for PR checks to appear..."
+        CHECKS=0
+        for _ in $(seq 1 30); do
+            CHECKS="$(gh pr view "$PRNUM" --json statusCheckRollup --jq '.statusCheckRollup | length' 2>/dev/null || echo 0)"
+            [ "${CHECKS:-0}" -gt 0 ] && break
+            sleep 10
+        done
+        if [ "${CHECKS:-0}" -eq 0 ]; then
+            echo "No checks reported for PR #$PRNUM. Clone kept for inspection."
+            exit 1
+        fi
+
         echo "Waiting for PR checks to be green..."
         if ! timeout 900 gh pr checks "$PRNUM" --watch; then
             echo "PR checks did not all pass within timeout. Clone kept for inspection."
+            exit 1
+        fi
+
+        BAD_CHECKS="$(gh pr view "$PRNUM" --json statusCheckRollup --jq '[.statusCheckRollup[]? | select(.conclusion == "FAILURE" or .conclusion == "CANCELLED" or .conclusion == "TIMED_OUT" or .conclusion == "ACTION_REQUIRED" or .state == "ERROR") | .name] | join(", ")')"
+        if [ -n "$BAD_CHECKS" ]; then
+            echo "PR has failing or cancelled checks: $BAD_CHECKS. Clone kept for inspection."
             exit 1
         fi
 
@@ -167,8 +185,23 @@ case "$CMD" in
             fi
         fi
 
-        echo "Merging PR #$PRNUM..."
-        if gh pr merge "$PRNUM" --squash --delete-branch; then
+        echo "Merging PR #$PRNUM (auto-merge once required checks pass)..."
+        if gh pr merge "$PRNUM" --auto --squash --delete-branch; then
+            echo "Auto-merge enabled; waiting for the merge..."
+            STATE=""
+            for _ in $(seq 1 90); do
+                STATE="$(gh pr view "$PRNUM" --json state --jq '.state')"
+                [ "$STATE" = "MERGED" ] && break
+                if [ "$STATE" = "CLOSED" ]; then
+                    echo "PR closed without merging. Clone kept for inspection."
+                    exit 1
+                fi
+                sleep 10
+            done
+            if [ "$STATE" != "MERGED" ]; then
+                echo "Timed out waiting for the merge. Clone kept for inspection."
+                exit 1
+            fi
             echo "PR merged."
             if [ "$KEEP" = "-k" ]; then
                 echo "Keeping clone."
