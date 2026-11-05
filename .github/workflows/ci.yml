@@ -154,8 +154,13 @@ jobs:
           path: ~/.m2/repository/com/rag
           key: rag-artifacts-${{ github.sha }}
 
-      - name: Run tests with coverage
-        run: ./mvnw -B -pl apps/${{ matrix.module }} ${{ steps.rag-artifacts.outputs.cache-hit == 'true' && '' || '-am' }} verify
+      - name: Run tests with coverage (prebuilt dependencies)
+        if: steps.rag-artifacts.outputs.cache-hit == 'true'
+        run: ./mvnw -B -pl apps/${{ matrix.module }} verify
+
+      - name: Run tests with coverage (build upstream dependencies)
+        if: steps.rag-artifacts.outputs.cache-hit != 'true'
+        run: ./mvnw -B -pl apps/${{ matrix.module }} -am verify
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v7
