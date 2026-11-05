@@ -47,10 +47,10 @@ Tries paragraph → sentence → word boundaries in order, only splitting finer 
 
 ### 3. Semantic Chunking
 
-Implemented as `SemanticChunker` in `rag-common-ingestion`. It splits the document into sentences, embeds them with the variant's own model, and starts a new chunk wherever the cosine distance to the next sentence reaches the 95th percentile of that document's distances — a topic shift. `chunkSize`/`chunkOverlap` remain an upper bound: a group of sentences that would outgrow the window is cut anyway and a single oversized sentence is hard-split, so a `semantic` variant never exceeds the configured window.
+Implemented as `SemanticChunker` in `rag-common-ingestion`. It splits the document into sentences, embeds them with the variant's own model, and starts a new chunk wherever the cosine distance to the next sentence reaches the 95th percentile of that document's distances — a topic shift. `chunkSize` caps the sentence grouping: a group that would outgrow the window is cut anyway and a single oversized sentence is hard-split. With `overlap > 0` the previous chunk's tail is then prepended to the next chunk, so a chunk can exceed `chunkSize` by up to `chunkOverlap` characters — the window bounds the grouping, not the final chunk text.
 
 **Best for**: High-value, complex documents (legal, research, manuals) where precision outweighs ingestion cost.
-**Pros**: Boundaries follow the text instead of a fixed separator, so concepts are less likely to be cut in half. **Cons**: every sentence is embedded before the chunks are, so ingestion costs ~4.5x the recursive strategy's embedding calls on this repo's docs corpus, and `IngestionService` is synchronous — large documents belong on `AsyncIngestionService`.
+**Pros**: Boundaries follow the text instead of a fixed separator, so concepts are less likely to be cut in half. **Cons**: every sentence is embedded before the chunks are, so ingestion costs ~4.5x the recursive strategy's embedding calls on this repo's docs corpus (≈1,850 against ≈410; the count moves as the docs corpus changes), and `IngestionService` is synchronous — large documents belong on `AsyncIngestionService`.
 
 ### 4. Agentic Chunking
 
