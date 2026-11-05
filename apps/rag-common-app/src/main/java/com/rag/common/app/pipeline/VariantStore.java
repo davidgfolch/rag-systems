@@ -128,7 +128,8 @@ public class VariantStore {
             ids.set(maxNumericId(persisted));
             activateIfNone();
             sync();
-            log.info("Restored {} pipeline variant(s) on {}", variants.size(), module);
+            log.info("Restored {} pipeline variant(s) on {} (schema {})",
+                    variants.size(), module, repository.schemaName());
         } catch (RuntimeException e) {
             log.warn("Pipeline variants stay in memory on {}: {}", module, e.getMessage());
         }
