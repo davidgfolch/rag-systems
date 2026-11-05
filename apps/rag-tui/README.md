@@ -27,7 +27,7 @@ rag-tui talks to other services at runtime — they must be reachable:
 | `ask <question>` | Retrieval-augmented answer with cited source chunks |
 | `connect` | Provider status; browse model catalog; switch chat/embedding provider+model at runtime (Ollama default, OpenRouter/OpenAI-compatible registerable) |
 | `variant` | List, create and switch the active module's pipeline variants; each variant owns its `variant_<id>` table in the module schema |
-| `help` / `quit` | Usage and exit |
+| `help [<command>]` / `quit` | Grouped usage, per-command detail (arguments, recommended values) and exit |
 
 ## Architecture
 

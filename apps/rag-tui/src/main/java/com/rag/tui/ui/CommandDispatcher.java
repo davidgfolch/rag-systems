@@ -86,7 +86,7 @@ public class CommandDispatcher {
         var arg = parts.length > 1 ? parts[1].trim() : "";
         return switch (command) {
             case "quit", "exit" -> throw new ShellExitException();
-            case "help" -> commandRegistry.generateUsage();
+            case "help" -> commandRegistry.generateCommandUsage(arg);
             default -> dispatchCommand(command, arg, tokenSink);
         };
     }

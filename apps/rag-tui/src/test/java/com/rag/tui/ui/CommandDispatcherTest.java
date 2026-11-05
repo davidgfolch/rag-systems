@@ -30,6 +30,18 @@ import static org.mockito.Mockito.when;
 class CommandDispatcherTest extends AbstractCommandDispatcherTest {
 
     @Test
+    void bareHelpListsEveryCommand() {
+        assertThat(handle("help")).contains("Available commands:", "Pipeline variants");
+    }
+
+    @Test
+    void helpWithCommandNameShowsDetailedHelp() {
+        assertThat(handle("help variant"))
+                .contains("variant add", "Recommended values")
+                .contains("RECURSIVE 512/128");
+    }
+
+    @Test
     void bootstrapResolvesTheActiveModuleAtStartup() {
         when(lifecycle.isRunning(ADVANCED)).thenReturn(true);
         var result = sut.bootstrapModule();

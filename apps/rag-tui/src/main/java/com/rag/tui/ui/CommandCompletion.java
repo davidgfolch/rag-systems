@@ -65,6 +65,7 @@ public class CommandCompletion implements CompletionCandidates {
         return switch (command) {
             case "use", "start", "stop" -> prefixFilter(moduleNames(), token);
             case "connect" -> connectCandidates(tokens, token, pos);
+            case "help" -> prefixFilter(commandNames(), token);
             case "variant" -> variantCandidates(tokens, token, pos);
             default -> pos == 1 ? prefixFilter(commandNames(), token) : List.of();
         };

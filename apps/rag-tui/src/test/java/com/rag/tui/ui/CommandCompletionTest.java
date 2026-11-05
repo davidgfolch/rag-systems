@@ -89,6 +89,18 @@ class CommandCompletionTest {
     }
 
     @Test
+    void showsCommandNamesForEmptyHelpArgument() {
+        var result = sut.candidates("help ", 5);
+        assertThat(result).contains("variant", "add-folder", "connect", "quit");
+    }
+
+    @Test
+    void filtersCommandNamesAfterHelpPrefix() {
+        assertThat(sut.candidates("help var", 8)).containsExactly("variant");
+        assertThat(sut.candidates("help zzz", 8)).isEmpty();
+    }
+
+    @Test
     void showsModuleNamesForUseCommand() {
         catalog();
         var result = sut.candidates("use ", 4);

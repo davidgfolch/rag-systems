@@ -20,6 +20,46 @@ Two independent capabilities, both reusing the `rag-common-*` strategy interface
 1. **Ingestion** — turn files/web pages into embedded chunks.
 2. **Chat (RAG QA)** — retrieve the most relevant chunks and generate a grounded answer.
 
+## Getting help (`help [<command>]`)
+
+`help` prints every command grouped by concept. Pass a command name to get its
+arguments, defaults and behaviour notes:
+
+```
+> help
+Available commands:
+
+Modules
+  modules                list rag-* modules and their state
+  use <module>           switch the active module
+  ...
+
+> help variant
+variant - list, create or activate pipeline variants
+
+Usage:
+  variant                        list variants and pick one to activate
+  variant <variant-id>           activate a variant by id
+  variant add <strategy> [<size>] [<overlap>]
+                                 create one; missing values are prompted
+
+Recommended values:
+  RECURSIVE 512/128   prose and mixed docs - start here
+  TOKEN     256/64    strict token windows (size/4 must exceed overlap/4)
+  ...
+
+> help connect chat
+connect - browse models or switch chat/embedding
+...
+```
+
+`help variant` is the reference for chunking: it explains what `<size>` and
+`<overlap>` mean per strategy, the `0 <= overlap < size` rule (plus
+`size/4 > overlap/4` for `TOKEN`), and recommended values by content type. A
+connect subcommand such as `help connect chat` resolves to the `connect` page.
+Tab completion covers command names after `help `, as well as module names,
+providers, models and `variant add` strategies.
+
 ## Crawling a site (`add-url`)
 
 `add-url` does not ingest a single page: it runs an interactive breadth-first crawl that the

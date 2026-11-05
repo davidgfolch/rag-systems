@@ -65,6 +65,49 @@ class CommandRegistryTest {
     }
 
     @Test
+    void detailedHelpDocumentsVariantArgumentsAndRecommendedValues() {
+        assertThat(sut.generateCommandUsage("variant"))
+                .contains("variant - list, create or activate pipeline variants")
+                .contains("variant add <strategy> [<size>] [<overlap>]")
+                .contains("Recommended values:")
+                .contains("RECURSIVE 512/128", "256/64")
+                .contains("0 <= overlap < size");
+    }
+
+    @Test
+    void detailedHelpIsAvailableForEveryCommand() {
+        for (CommandDescriptor command : sut.all()) {
+            assertThat(sut.generateCommandUsage(command.name()))
+                    .as(command.name())
+                    .contains("Usage:");
+        }
+    }
+
+    @Test
+    void detailedHelpResolvesConnectSubcommandsToConnect() {
+        assertThat(sut.generateCommandUsage("connect chat"))
+                .contains("connect - browse models or switch chat/embedding")
+                .contains("connect catalog [<provider>]");
+    }
+
+    @Test
+    void detailedHelpIsCaseAndWhitespaceInsensitive() {
+        assertThat(sut.generateCommandUsage("  VARIANT  "))
+                .contains("variant - list, create or activate pipeline variants");
+    }
+
+    @Test
+    void blankArgumentStillShowsTheCommandOverview() {
+        assertThat(sut.generateCommandUsage("  ")).contains("Available commands:");
+    }
+
+    @Test
+    void unknownCommandGetsAnActionableMessage() {
+        assertThat(sut.generateCommandUsage("frobnicate"))
+                .contains("No help for 'frobnicate'", "Type 'help'");
+    }
+
+    @Test
     void groupsHelpByConcept() {
         var usage = sut.generateUsage();
         assertThat(usage).contains("Modules", "Documents", "Chat", "Providers", "Pipeline variants", "Session");
