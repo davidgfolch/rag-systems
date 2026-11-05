@@ -41,6 +41,29 @@ com.rag.common.ingestion
 
 All chunkers implement the `TextSplitter` port from rag-common-core, so modules pick one via config (`RagBasicConfig`/`RagAdvancedConfig`) with no code change. Defaults: `CHUNK_SIZE=512`, `CHUNK_OVERLAP=128`.
 
+## Semantic chunking cost (measured)
+
+`ChunkingCostComparisonTest` measures how many texts each chunker sends to the embedding port over this repository's own `docs/` corpus (33 markdown files, ~150 KB, window 512/64), with a local hashing model standing in for a provider. Measured on `main` at `71773ee`:
+
+| Strategy | Chunks | Chunks/doc | Texts embedded | vs recursive |
+|----------|--------|------------|----------------|--------------|
+| Fixed-size | 348 | 10.5 | 348 | 0.8x |
+| Recursive | 412 | 12.5 | 412 | 1.0x |
+| Token | 191 | 5.8 | 191 | 0.5x |
+| Semantic | 632 | 19.2 | 1,855 (1,223 sentences + 632 chunks) | 4.5x |
+
+`IngestionService` embeds every chunk once, so a strategy's ingestion cost is its chunk count — except `SEMANTIC`, which also embeds every sentence of a document to find its topic shifts (`sentences + chunks`). Semantic additionally yields more, smaller chunks than recursive (19.2 vs 12.5 per document), so the measured premium is **~4.5x**, not the 8x older docs quoted. The ratio is the same at the default 512/128 window, because overlap changes chunk text, not sentence grouping.
+
+Reproduce with `mvn -pl apps/rag-common-ingestion -am test -Dtest=ChunkingCostComparisonTest`.
+
+### Reading those numbers correctly
+
+- **The counts move with `docs/`.** The corpus is the documentation tree itself, so any edit under `docs/` changes the chunk counts — a docs table measured against an earlier tree will not reproduce (this README is not in the corpus, so editing it does not). The test asserts only that semantic costs more than 2x recursive, not the exact figures above: re-run it and update the table after doc changes instead of trusting it.
+- **They are texts, not HTTP requests.** `RemoteEmbeddingModel` folds a whole list into one `POST /api/embed`, and `IngestionService` sends at most `rag.embedding.batch-size` (default 100) chunks per request. Semantic therefore pays one extra request per document — for its sentences — not one per sentence; and that sentence batch is *not* capped by the batch-size setting, unlike chunk embedding.
+- **`size` bounds the sentence grouping, not the final chunk.** With `overlap > 0` the previous chunk's tail is prepended after grouping, so a chunk can exceed `size` by up to `overlap` characters (612 measured with the default 512/128 window).
+- **Split times are not portable.** They are local CPU/JIT measurements (single-digit to ~40 ms for the whole corpus) with no provider latency, so they support one conclusion: provider calls dominate ingestion cost, not chunking.
+- **Retrieval precision is not measured here.** The ~71/82/91% figures in the docs are literature references; `rag-evaluation` has no precision harness yet.
+
 ## Async ingestion
 
 `AsyncIngestionService` submits a document and returns a `documentId` immediately (HTTP 202). Poll the job state — `PENDING`, `RUNNING`, `COMPLETED` (with chunk count), `FAILED` — while embedding runs in the background. Used by `POST /api/documents/ingest-file-async` (see the runnable module READMEs).
