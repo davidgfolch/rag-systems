@@ -14,6 +14,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -31,6 +32,21 @@ class VariantRepositoryTest {
         sut.ensureTable();
         verify(jdbc).execute(contains("CREATE SCHEMA IF NOT EXISTS \"rag_basic\""));
         verify(jdbc).execute(contains("CREATE TABLE IF NOT EXISTS \"rag_basic\".\"pipeline_variants\""));
+    }
+
+    @Test
+    void createsTheTableOnTheFirstWriteBecauseTheBootVariantIsSeededBeforeRestore() {
+        sut.replaceAll(List.of(variant("boot", 256, 32)), "boot", "boot");
+        verify(jdbc).execute(contains("CREATE TABLE IF NOT EXISTS \"rag_basic\".\"pipeline_variants\""));
+        verify(jdbc).update("DELETE FROM \"rag_basic\".\"pipeline_variants\"");
+    }
+
+    @Test
+    void runsTheDdlOnlyOnce() {
+        sut.ensureTable();
+        sut.ensureTable();
+        sut.replaceAll(List.of(variant("boot", 256, 32)), "boot", "boot");
+        verify(jdbc, times(1)).execute(contains("CREATE TABLE IF NOT EXISTS"));
     }
 
     @Test

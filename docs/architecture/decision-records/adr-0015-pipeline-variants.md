@@ -19,7 +19,7 @@ Comparing RAG approaches inside one module (recursive vs fixed vs token chunking
 - The TUI exposes `variant [<variant-id> | add [<strategy>] [<size>] [<overlap>]]`.
 - Validation is server-side: `size > 0`, `0 <= overlap < size`, and for `TOKEN` `size / 4 > overlap / 4` (a zero-advance window would loop forever).
 - **A variant embeds with its own model.** The module sends the variant's `embeddingModel` on `/api/embed`; `rag-provider` builds and caches a client for that model on the active embedding provider, so two variants can use different dimensions at once. The globally switched model (`connect embedding`) stays the fallback for the sealed `boot` variant and for requests without a model.
-- `SEMANTIC` resolves to the recursive chunker until a semantic chunker exists.
+- `SEMANTIC` cuts on topic boundaries: the document's sentences are embedded with the variant's model and a new chunk starts where the cosine distance to the next sentence reaches the 95th percentile of that document's distances. `chunkSize`/`chunkOverlap` remain an upper bound, so an oversized sentence is still split.
 
 ## Consequences
 
@@ -34,4 +34,4 @@ Comparing RAG approaches inside one module (recursive vs fixed vs token chunking
 - Each variant adds a pgvector table. Deleting a variant drops it, so orphan tables only remain if the drop fails (logged) or the variant predates this behaviour.
 - A variant's model has to exist on the active embedding provider: the provider resolves the model id against the active provider profile, so a model from another provider fails at embed time instead of silently falling back.
 - Variants survive a restart through the module's `pipeline_variants` table, but activation still cannot cross modules, and a module without PostgreSQL loses non-boot variants on restart.
-- `SEMANTIC` behaves like `RECURSIVE`, which can mislead a comparison unless read alongside this ADR.
+- A `SEMANTIC` ingestion embeds every sentence before embedding the chunks, so it costs roughly one extra embedding per sentence and is the slowest strategy: large documents are better ingested through `AsyncIngestionService`.

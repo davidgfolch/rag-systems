@@ -9,7 +9,7 @@ Implement the parse → split → embed → store flow **once** so every `rag-*`
 ```
 Document (content or raw bytes)
   → DocumentParser (Tika / plain text)     → plain text
-  → TextSplitter (fixed / recursive / token) → List<Chunk>
+  → TextSplitter (fixed / recursive / token / semantic) → List<Chunk>
   → EmbeddingModelPort (via rag-provider)  → chunk embeddings
   → VectorStorePort (PgVector / in-memory) → stored
 ```
@@ -26,7 +26,8 @@ com.rag.common.ingestion
 └── chunking/
     ├── FixedSizeChunker        - fixed-size sliding window
     ├── RecursiveCharacterChunker - recursive splitting on separators (default)
-    └── TokenChunker            - splits to match embedding model token windows
+    ├── TokenChunker            - splits to match embedding model token windows
+    └── SemanticChunker         - cuts where sentence embeddings show a topic shift
 ```
 
 ## Chunking strategies
@@ -36,6 +37,7 @@ com.rag.common.ingestion
 | Fixed-size sliding window | Homogeneous text, baseline comparisons |
 | Recursive character | Most cases — the default (`rag.chunking.strategy=recursive`) |
 | Token-based | Match the embedding model's token window |
+| Semantic | High-value documents where topic shifts matter; needs an embedding model at split time |
 
 All chunkers implement the `TextSplitter` port from rag-common-core, so modules pick one via config (`RagBasicConfig`/`RagAdvancedConfig`) with no code change. Defaults: `CHUNK_SIZE=512`, `CHUNK_OVERLAP=128`.
 

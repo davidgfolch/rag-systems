@@ -72,13 +72,32 @@ Use `rag-evaluation` to benchmark strategies. Track:
 
 See [Observability](../guides/observability.md) for metric collection.
 
-## Chunking Strategy Benchmark (500-doc technical corpus)
+## Chunking Strategy Benchmark
 
-| Strategy | Precision | Ingestion Cost | Notes |
-|----------|-----------|----------------|-------|
-| Fixed-size | ~71% | Low | Fast, cheap |
-| Recursive | ~82% | Low | Best default |
-| Semantic | ~91% | 8x | High precision, expensive |
+### Measured here: ingestion embedding cost
+
+Measured by `ChunkingCostComparisonTest` over this repository's own `docs/` corpus (33 markdown files, ~150 KB, window 512/64; the token chunker runs 128/16 tokens) with a local hashing embedding model standing in for a provider. The call counts are real; the timings are chunking on CPU and contain no network latency.
+
+| Strategy | Chunks | Chunks/doc | Embedding calls | vs recursive | Split time (33 docs) |
+|----------|--------|------------|-----------------|--------------|----------------------|
+| Fixed-size | 340 | 10.3 | 340 | 0.8x | 7 ms |
+| Recursive | 401 | 12.2 | 401 | 1.0x | 28 ms |
+| Token | 185 | 5.6 | 185 | 0.5x | 19 ms |
+| Semantic | 623 | 18.9 | 1,820 | 4.5x | 38 ms |
+
+`IngestionService` embeds each chunk once, so a strategy's ingestion cost is `chunks` — except semantic, which also embeds every sentence to find its boundaries (`sentences + chunks`; 1,197 + 623 here). Semantic additionally produces more, smaller chunks than recursive (18.9 vs 12.2 per document), so the measured premium is **4.5x, not the often-quoted 8x**. Ingestion is synchronous: for large documents use `AsyncIngestionService`.
+
+> Reproduce with `mvn -pl apps/rag-common-ingestion -am test -Dtest=ChunkingCostComparisonTest`; the test prints the table above.
+
+### Precision (literature, not measured here)
+
+| Strategy | Precision | Source |
+|----------|-----------|--------|
+| Fixed-size | ~71% | published chunking comparisons |
+| Recursive | ~82% | published chunking comparisons |
+| Semantic | ~91% | published chunking comparisons |
+
+> **No retrieval-precision run exists in this repository**: `rag-evaluation` is still planned, so these three figures are literature references, not measurements from here. Only the cost table above is measured ([PLAN.md Phase 8](../PLAN.md#phase-8-semantic-chunking-adr-0015-semantic-variant)).
 
 ## Cost & Privacy Trade-off
 
