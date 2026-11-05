@@ -114,4 +114,4 @@ After deciding on a feature to build, auto-execute:
 6. `dev pr [title]` — open a PR targeting `main` via `gh`.
 7. `dev auto-merge` (alias `dev merge`) — waits for PR checks to be green, then squash-merges automatically; if the PR is not mergeable it attempts to auto-resolve conflicts by rebasing onto `origin/main`; on success it deletes the clone (`../rag-systems-<feature>`) automatically. Use `dev auto-merge -k` to keep it.
 
-Each feature is developed in its own clone so several can proceed in parallel. Only delete a clone via `dev auto-merge`/`dev merge` or `dev cleanup <name>` after the work is safely merged.
+Each feature is developed in its own clone so several can proceed in parallel. Only delete a clone via `dev auto-merge`/`dev merge` or `dev cleanup <name|path>` after the work is safely merged. `dev cleanup` accepts a bare name, a prefixed name, or a relative/absolute sibling path. Module-taking scripts validate the module and print the valid list on error (`--list` prints it on demand).

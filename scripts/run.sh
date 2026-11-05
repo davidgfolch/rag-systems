@@ -1,14 +1,52 @@
 #!/usr/bin/env bash
 # ===== RAG Systems Run Script (Linux/Mac) =====
-# Usage: ./run.sh [<module>] [--profile <name>] [--args <spring args>] [--force]
+# Usage: ./run.sh [<module>] [--profile <name>] [--args <spring args>] [--force] [--list]
 #   ./run.sh                           - Run the TUI (default) with local profile
 #   ./run.sh --profile cloud           - Run the TUI with cloud profile
 #   ./run.sh rag-basic --profile cloud - Run another module
 #   ./run.sh --force                   - Force full rebuild before running
+#   ./run.sh --list                    - List runnable modules and exit
+# <module> accepts a bare name (rag-basic) or a path form (apps/rag-basic).
 
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+
+MODULE=""
+PROFILES="local"
+EXTRA_ARGS=""
+FORCE=false
+LIST_ONLY=false
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --profile) [ $# -ge 2 ] || { echo "Missing value for --profile" >&2; exit 2; }; PROFILES="$2"; shift 2 ;;
+        --args) [ $# -ge 2 ] || { echo "Missing value for --args" >&2; exit 2; }; EXTRA_ARGS="$2"; shift 2 ;;
+        --force) FORCE=true; shift ;;
+        --list) LIST_ONLY=true; shift ;;
+        --*) echo "Unknown option: $1" >&2; exit 2 ;;
+        *) MODULE="$1"; shift ;;
+    esac
+done
+
+if [ "$LIST_ONLY" = true ]; then
+    echo "Runnable modules (Spring Boot apps):"
+    bash "$ROOT/scripts/modules.sh" list --runnable
+    exit 0
+fi
+
+if [ -z "$MODULE" ]; then
+    MODULE="rag-tui"
+fi
+MODULE="${MODULE#apps/}"
+MODULE="${MODULE%/}"
+if ! bash "$ROOT/scripts/modules.sh" check --runnable "$MODULE"; then
+    echo "Unknown runnable module: $MODULE" >&2
+    echo "Valid runnable modules:" >&2
+    bash "$ROOT/scripts/modules.sh" list --runnable | sed 's/^/  /' >&2
+    echo "Hint: ./run.sh --list lists them, or omit the module to start rag-tui." >&2
+    exit 1
+fi
 
 # Bootstrap .env.secrets from scripts/.env.secrets.example (idempotent)
 bash scripts/bootstrap-env.sh
@@ -25,24 +63,6 @@ if [ -f .env.secrets ]; then
     # shellcheck disable=SC1091
     source .env.secrets
     set +a
-fi
-
-MODULE=""
-PROFILES="local"
-EXTRA_ARGS=""
-FORCE=false
-
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --profile) PROFILES="$2"; shift 2 ;;
-        --args) EXTRA_ARGS="$2"; shift 2 ;;
-        --force) FORCE=true; shift ;;
-        *) MODULE="$1"; shift ;;
-    esac
-done
-
-if [ -z "$MODULE" ]; then
-    MODULE="rag-tui"
 fi
 
 NEED_BUILD=true

@@ -1,5 +1,5 @@
 @echo off
-setlocal
+setlocal enabledelayedexpansion
 REM ===== RAG Systems Parallel Development Workflow (Windows) =====
 REM Usage: dev.bat <command> [args]
 REM   dev.bat new <name>       - Clone to ..\rag-systems-<name>, branch feat/<name>, copy Sonar token
@@ -12,10 +12,12 @@ REM   dev.bat push             - git push -u origin <branch>
 REM   dev.bat pr [title]       - Create PR against main
 REM   dev.bat auto-merge [-k]  - Wait for green checks, auto-merge, auto-resolve conflicts, delete remote branch + clone (keep clone with -k)
 REM   dev.bat merge [-k]       - Alias of auto-merge
-REM   dev.bat cleanup <name>   - Delete ..\rag-systems-<name>
+REM   dev.bat cleanup <name^|path> - Delete a sibling clone by name, prefixed name, or path
 REM   dev.bat status           - Branch, dirty state, ahead/behind
 
 set "ROOT=%~dp0.."
+for %%I in ("%ROOT%") do set "ROOT=%%~fI"
+for %%I in ("%ROOT%\..") do set "PARENT=%%~fI"
 set "CMD=%~1"
 
 if "%CMD%"=="new"      goto :new
@@ -35,7 +37,8 @@ goto :usage
 :new
 set "NAME=%~2"
 if "%NAME%"=="" goto :usage
-set "PARENT=%ROOT%\.."
+for %%I in ("%NAME%") do set "NAME=%%~nxI"
+if /I "!NAME:~0,11!"=="rag-systems-" set "NAME=!NAME:~11!"
 set "CLONE=%PARENT%\rag-systems-%NAME%"
 set "BRANCH=feat/%NAME%"
 for /f "delims=" %%U in ('git remote get-url origin') do set "ORIGIN_URL=%%U"
@@ -127,6 +130,50 @@ if exist "%DC_TARGET%" (
     exit /b 1
 )
 echo Clone deleted.
+exit /b 0
+
+:resolve_clone
+REM Resolve %~1 (bare name, prefixed name, relative path, or absolute path) to
+REM RESOLVED_CLONE. Returns 1 when it is not an existing sibling clone.
+set "RESOLVED_CLONE="
+set "RC_ARG=%~1"
+if "%RC_ARG%"=="" exit /b 1
+set "RC_PATHLIKE="
+set "RC_SLASH=!RC_ARG:\=!"
+if not "!RC_SLASH!"=="!RC_ARG!" set "RC_PATHLIKE=1"
+set "RC_FWD=!RC_ARG:/=!"
+if not "!RC_FWD!"=="!RC_ARG!" set "RC_PATHLIKE=1"
+if "!RC_ARG:~1,1!"==":" set "RC_PATHLIKE=1"
+if defined RC_PATHLIKE (
+    if exist "%RC_ARG%\" (
+        for %%I in ("%RC_ARG%") do set "RESOLVED_CLONE=%%~fI"
+    ) else if exist "%ROOT%\%RC_ARG%\" (
+        for %%I in ("%ROOT%\%RC_ARG%") do set "RESOLVED_CLONE=%%~fI"
+    ) else (
+        exit /b 1
+    )
+) else (
+    set "RC_NAME=!RC_ARG!"
+    if /I "!RC_NAME:~0,11!"=="rag-systems-" set "RC_NAME=!RC_NAME:~11!"
+    if "!RC_NAME!"=="" exit /b 1
+    for %%I in ("%PARENT%\rag-systems-!RC_NAME!") do set "RESOLVED_CLONE=%%~fI"
+    if not exist "!RESOLVED_CLONE!\" exit /b 1
+)
+call :validate_clone "!RESOLVED_CLONE!"
+if errorlevel 1 exit /b 1
+exit /b 0
+
+:validate_clone
+REM Ensure %~1 is a rag-systems-* directory directly under %PARENT% (not ROOT).
+set "VC_TARGET=%~1"
+if not exist "%VC_TARGET%\" exit /b 1
+if /I "%VC_TARGET%"=="%ROOT%" exit /b 1
+for %%I in ("%VC_TARGET%") do (
+    set "VC_NAME=%%~nxI"
+    set "VC_PARENT=%%~dpI"
+)
+if /I not "%VC_NAME:~0,11%"=="rag-systems-" exit /b 1
+if /I not "%VC_PARENT%"=="%PARENT%\" exit /b 1
 exit /b 0
 
 :checkout
@@ -313,19 +360,28 @@ goto :wait_for_merge_loop
 
 :delete_merged_clone
 set "SUFFIX=%CURBRANCH:feat/=%"
-set "TARGET=%ROOT%\..\rag-systems-%SUFFIX%"
-if exist "%TARGET%" call :delete_clone "%TARGET%"
+call :resolve_clone "%SUFFIX%"
+if not errorlevel 1 call :delete_clone "!RESOLVED_CLONE!"
 exit /b 0
 
 :cleanup
 set "NAME=%~2"
 if "%NAME%"=="" goto :usage
-set "TARGET=%ROOT%\..\rag-systems-%NAME%"
-if exist "%TARGET%" (
-    call :delete_clone "%TARGET%"
-) else (
-    echo Not found: %TARGET%
+call :resolve_clone "%NAME%"
+if errorlevel 1 (
+    echo Nothing to clean: "%NAME%" does not resolve to an existing clone under %PARENT%.
+    echo Already deleted? Discovered clones:
+    set "FOUND="
+    for /d %%D in ("%PARENT%\rag-systems-*") do (
+        if /I not "%%~fD"=="%ROOT%" (
+            echo   %%~nxD
+            set "FOUND=1"
+        )
+    )
+    if not defined FOUND echo   ^(none^)
+    exit /b 0
 )
+call :delete_clone "!RESOLVED_CLONE!"
 exit /b 0
 
 :status
@@ -341,5 +397,5 @@ exit /b 0
 echo Usage: dev.bat ^<command^> [args]
 echo   new ^<name^>  checkout ^<br^>  test [module]  sonar [token]
 echo   check [module]  commit "msg"  push  pr [title]
-echo   auto-merge [-k]  merge [-k]  cleanup ^<name^>  status
+echo   auto-merge [-k]  merge [-k]  cleanup ^<name^|path^>  status
 exit /b 1

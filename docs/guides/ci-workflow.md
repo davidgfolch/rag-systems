@@ -136,10 +136,16 @@ propagate the auto-generated SonarQube token, and drive the full lifecycle:
 | `dev commit` / `dev push` | Stage all, commit, push branch | — |
 | `dev pr [title]` | Open PR vs `main` | — |
 | `dev merge` | Enable auto-merge, wait for `CI gate`, delete clone | `ci-ok` |
+| `dev cleanup <name\|path>` | Delete a sibling clone by name or path | — |
 
 `dev merge` refuses to merge when any check on the pull request is failing or
 cancelled, and uses `gh pr merge --auto` so GitHub itself waits for the
 required `CI gate` check.
+
+Module-taking scripts (`dev test`/`dev check`, `test`, `run`, `build`, `install`)
+validate the module name and print the valid list on error; pass `--list` to
+print it on demand (`dev test --list`, `run --list`). `run --list` shows only
+runnable Spring Boot modules.
 
 Each feature lives in its own clone so several can run in parallel. The
 SonarQube token is copied from the original workspace into each clone on
