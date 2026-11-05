@@ -1,12 +1,41 @@
 @echo off
-setlocal
+setlocal enabledelayedexpansion
 REM ===== RAG Systems Install Script (Windows) =====
-REM Usage: install.bat [module]
+REM Usage: install.bat [module] [--list]
 REM   install.bat          - Install all modules
 REM   install.bat rag-basic - Install specific module
+REM   install.bat --list   - List valid modules and exit
+REM <module> accepts a bare name (rag-basic) or a path form (apps\rag-basic).
 
 set "ROOT=%~dp0.."
 cd /d "%ROOT%"
+
+set "MODULE=%~1"
+if /I "%MODULE%"=="--list" (
+    echo Valid modules:
+    call scripts\modules.bat list
+    endlocal
+    exit /b 0
+)
+if defined MODULE (
+    if "!MODULE:~0,1!"=="-" (
+        echo Unknown option: !MODULE!
+        endlocal
+        exit /b 2
+    )
+    if /I "!MODULE:~0,5!"=="apps\" set "MODULE=!MODULE:~5!"
+    if "!MODULE:~-1!"=="\" set "MODULE=!MODULE:~0,-1!"
+    if "!MODULE:~-1!"=="/" set "MODULE=!MODULE:~0,-1!"
+    call scripts\modules.bat check "!MODULE!"
+    if errorlevel 1 (
+        echo Unknown module: !MODULE!
+        echo Valid modules:
+        call scripts\modules.bat list
+        echo Hint: install.bat --list lists them.
+        endlocal
+        exit /b 1
+    )
+)
 
 REM Bootstrap .env.secrets from scripts\.env.secrets.example (idempotent)
 call scripts\bootstrap-env.bat
@@ -14,12 +43,12 @@ call scripts\bootstrap-env.bat
 REM Sync docker postgres password to the generated PGVECTOR_PASSWORD secret (idempotent)
 call scripts\pg-pw.bat
 
-if "%~1"=="" (
+if "!MODULE!"=="" (
     echo Installing all RAG modules...
     call mvnw.cmd clean install -DskipTests -Djacoco.skip=true
 ) else (
-    echo Installing module: %~1
-    call mvnw.cmd clean install -pl "apps/%~1" -am -DskipTests -Djacoco.skip=true
+    echo Installing module: !MODULE!
+    call mvnw.cmd clean install -pl "apps/!MODULE!" -am -DskipTests -Djacoco.skip=true
 )
 if not errorlevel 1 call :codegraph
 

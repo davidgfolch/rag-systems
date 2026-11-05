@@ -25,6 +25,13 @@ its alias `dev merge`) waits for the required `CI gate` check, merges the green
 PR (deleting the remote branch) then deletes its own clone on success; add `-k`
 to keep it. It refuses to merge when any check is failing or cancelled.
 
+`dev cleanup` accepts a bare name (`my-feature`), a prefixed name
+(`rag-systems-my-feature`), or a relative/absolute clone path
+(`../rag-systems-my-feature`). Module-taking scripts (`dev test`/`dev check`,
+`test`, `run`, `build`, `install`) validate the module, print the valid list on
+error, and accept `--list` to print it on demand; `run --list` lists only
+runnable Spring Boot apps (`apps/*/pom.xml` declaring `spring-boot-maven-plugin`).
+
 One-time repository setup (after the CI workflow defining `CI gate` is on
 `main`): `./scripts/protect-main.sh` (or `.\scripts\protect-main.ps1`) applies
 the `main` ruleset — pull request required, `CI gate` required, no force-push

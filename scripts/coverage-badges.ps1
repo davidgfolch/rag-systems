@@ -6,8 +6,9 @@ $ErrorActionPreference = 'Stop'
 $readme = Join-Path $Root 'README.md'
 $startMarker = '<!-- COVERAGE_BADGES_START -->'
 $endMarker = '<!-- COVERAGE_BADGES_END -->'
-# rag-contract is intentionally absent: it is excluded from coverage in SonarQube too (see sonar.coverage.exclusions).
-$moduleList = @('rag-common-core','rag-common-ingestion','rag-common-retrieval','rag-common-generation','rag-basic','rag-memory','rag-webcrawler','rag-provider','rag-advanced','rag-agentic','rag-evaluation','rag-observability','rag-cli','rag-tui')
+# Discover modules from apps\*\pom.xml so the badge list never drifts.
+# rag-contract is intentionally excluded: it is excluded from coverage in SonarQube too (see sonar.coverage.exclusions).
+$moduleList = & (Join-Path $PSScriptRoot 'modules.bat') list | Where-Object { $_ -ne 'rag-contract' }
 
 Write-Host "Generating per-module coverage badges..."
 

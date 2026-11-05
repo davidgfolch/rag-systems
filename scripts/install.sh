@@ -1,12 +1,36 @@
 #!/usr/bin/env bash
 # ===== RAG Systems Install Script (Linux/Mac) =====
-# Usage: ./install.sh [module]
+# Usage: ./install.sh [module] [--list]
 #   ./install.sh          - Install all modules
 #   ./install.sh rag-basic - Install specific module
+#   ./install.sh --list   - List valid modules and exit
+# <module> accepts a bare name (rag-basic) or a path form (apps/rag-basic).
 
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+
+MODULE=""
+if [ "${1:-}" = "--list" ]; then
+    echo "Valid modules:"
+    bash "$ROOT/scripts/modules.sh" list
+    exit 0
+fi
+case "${1:-}" in
+    -*) echo "Unknown option: $1" >&2; exit 2 ;;
+    *) MODULE="${1:-}" ;;
+esac
+if [ -n "$MODULE" ]; then
+    MODULE="${MODULE#apps/}"
+    MODULE="${MODULE%/}"
+    if ! bash "$ROOT/scripts/modules.sh" check "$MODULE"; then
+        echo "Unknown module: $MODULE" >&2
+        echo "Valid modules:" >&2
+        bash "$ROOT/scripts/modules.sh" list | sed 's/^/  /' >&2
+        echo "Hint: ./install.sh --list lists them." >&2
+        exit 1
+    fi
+fi
 
 # Bootstrap .env.secrets from scripts/.env.secrets.example (idempotent)
 bash scripts/bootstrap-env.sh
@@ -36,12 +60,12 @@ codegraph_setup() {
   codegraph init || echo "Warning: CodeGraph init failed."
 }
 
-if [ -z "${1:-}" ]; then
+if [ -z "$MODULE" ]; then
     echo "Installing all RAG modules..."
     mvn clean install -DskipTests -Djacoco.skip=true
 else
-    echo "Installing module: $1"
-    mvn clean install -pl "apps/$1" -am -DskipTests -Djacoco.skip=true
+    echo "Installing module: $MODULE"
+    mvn clean install -pl "apps/$MODULE" -am -DskipTests -Djacoco.skip=true
 fi
 codegraph_setup
 

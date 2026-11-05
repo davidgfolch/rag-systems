@@ -11,14 +11,67 @@
 #   ./dev.sh pr [title]       - Create PR against main
 #   ./dev.sh auto-merge [-k]  - Wait for green checks, auto-merge, auto-resolve conflicts, delete remote branch + clone (keep clone with -k)
 #   ./dev.sh merge [-k]       - Alias of auto-merge
-#   ./dev.sh cleanup <name>   - Delete ../rag-systems-<name>
+#   ./dev.sh cleanup <name|path> - Delete a sibling clone by name, prefixed name, or path
 #   ./dev.sh status           - Branch, dirty state, ahead/behind
 
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PARENT="$(cd "$ROOT/.." && pwd -P)"
 CMD="${1:-}"
 
 curbranch() { git rev-parse --abbrev-ref HEAD; }
+
+validate_clone() {
+    local target="$1" base
+    [ -d "$target" ] || return 1
+    [ "$target" != "$ROOT" ] || return 1
+    base="$(basename "$target")"
+    case "$base" in rag-systems-*) ;; *) return 1 ;; esac
+    [ "$(dirname "$target")" = "$PARENT" ] || return 1
+}
+
+resolve_clone() {
+    local arg="$1" name candidate
+    case "$arg" in
+        "~") arg="$HOME" ;;
+        "~/"*) arg="$HOME/${arg#\~/}" ;;
+    esac
+    case "$arg" in
+        /*)
+            [ -d "$arg" ] || return 1
+            candidate="$(cd "$arg" && pwd -P)"
+            ;;
+        */*)
+            if [ -d "$arg" ]; then
+                candidate="$(cd "$arg" && pwd -P)"
+            elif [ -d "$ROOT/$arg" ]; then
+                candidate="$(cd "$ROOT/$arg" && pwd -P)"
+            else
+                return 1
+            fi
+            ;;
+        *)
+            name="${arg#rag-systems-}"
+            [ -n "$name" ] || return 1
+            [ -d "$PARENT/rag-systems-$name" ] || return 1
+            candidate="$(cd "$PARENT/rag-systems-$name" && pwd -P)"
+            ;;
+    esac
+    validate_clone "$candidate" || return 1
+    printf '%s\n' "$candidate"
+}
+
+list_clones() {
+    local dir found=false
+    for dir in "$PARENT"/rag-systems-*/; do
+        [ -d "$dir" ] || continue
+        dir="$(cd "$dir" && pwd -P)"
+        if [ "$dir" = "$ROOT" ]; then continue; fi
+        echo "  $(basename "$dir")"
+        found=true
+    done
+    [ "$found" = true ] || echo "  (none)"
+}
 
 stop_codegraph_daemon() {
     local pf="$1" pid
@@ -65,7 +118,8 @@ case "$CMD" in
     new)
         NAME="${2:-}"
         [ -n "$NAME" ] || { echo "Usage: ./dev.sh new <name>"; exit 1; }
-        PARENT="$(cd "$ROOT/.." && pwd)"
+        NAME="$(basename "$NAME")"
+        NAME="${NAME#rag-systems-}"
         CLONE="$PARENT/rag-systems-$NAME"
         BRANCH="feat/$NAME"
         if [ -d "$CLONE" ]; then
@@ -207,8 +261,7 @@ case "$CMD" in
                 echo "Keeping clone."
             else
                 SUFFIX="${BR#feat/}"
-                TARGET="$ROOT/../rag-systems-$SUFFIX"
-                if [ -d "$TARGET" ]; then
+                if TARGET="$(resolve_clone "$SUFFIX")"; then
                     delete_clone "$TARGET"
                 fi
             fi
@@ -218,12 +271,13 @@ case "$CMD" in
         ;;
     cleanup)
         NAME="${2:-}"
-        [ -n "$NAME" ] || { echo "Usage: ./dev.sh cleanup <name>"; exit 1; }
-        TARGET="$ROOT/../rag-systems-$NAME"
-        if [ -d "$TARGET" ]; then
+        [ -n "$NAME" ] || { echo "Usage: ./dev.sh cleanup <name|path>"; exit 1; }
+        if TARGET="$(resolve_clone "$NAME")"; then
             delete_clone "$TARGET"
         else
-            echo "Not found: $TARGET"
+            echo "Nothing to clean: '$NAME' does not resolve to an existing clone under $PARENT."
+            echo "Already deleted? Discovered clones:"
+            list_clones
         fi
         ;;
     status)
@@ -237,7 +291,7 @@ case "$CMD" in
         echo "Usage: ./dev.sh <command> [args]"
         echo "  new <name>  checkout <br>  test [module]  sonar [token]"
         echo "  check [module]  commit \"msg\"  push  pr [title]"
-        echo "  auto-merge [-k]  merge [-k]  cleanup <name>  status"
+        echo "  auto-merge [-k]  merge [-k]  cleanup <name|path>  status"
         exit 1
         ;;
 esac

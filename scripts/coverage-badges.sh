@@ -19,25 +19,14 @@ declare -a MODULES=()
 declare -a COVERAGES=()
 declare -a COLORS=()
 
-# Map of module directories we expect in the monorepo.
-# Note: rag-contract is intentionally NOT listed - excluded from coverage in SonarQube too
-# (see sonar.coverage.exclusions in pom.xml / sonar-project.properties).
-EXPECTED_MODULES=(
-    "rag-common-core"
-    "rag-common-ingestion"
-    "rag-common-retrieval"
-    "rag-common-generation"
-    "rag-basic"
-    "rag-memory"
-    "rag-webcrawler"
-    "rag-provider"
-    "rag-advanced"
-    "rag-agentic"
-    "rag-evaluation"
-    "rag-observability"
-    "rag-cli"
-    "rag-tui"
-)
+# Discover modules from apps/*/pom.xml so the badge list never drifts.
+# Note: rag-contract is intentionally excluded - it is excluded from coverage in
+# SonarQube too (see sonar.coverage.exclusions in pom.xml / sonar-project.properties).
+EXPECTED_MODULES=()
+while IFS= read -r MODULE; do
+    if [ "$MODULE" = "rag-contract" ]; then continue; fi
+    EXPECTED_MODULES+=("$MODULE")
+done < <(bash "$ROOT/scripts/modules.sh" list)
 
 for MODULE in "${EXPECTED_MODULES[@]}"; do
     CSV="$ROOT/apps/$MODULE/target/site/jacoco/jacoco.csv"
