@@ -8,16 +8,64 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
 
 env:
   JAVA_VERSION: '25'
 
 jobs:
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Decide whether code jobs must run
+        id: filter
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=""
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual run: running every code job."
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch --depth=1 origin "${{ github.base_ref }}"
+            files=$(git diff --name-only "origin/${{ github.base_ref }}" HEAD)
+          else
+            before="${{ github.event.before }}"
+            after="${{ github.event.after }}"
+            if [ -z "$before" ] || [ "$before" = "0000000000000000000000000000000000000000" ]; then
+              files=$(git diff --name-only "${after}^" "$after")
+            else
+              files=$(git diff --name-only "$before" "$after")
+            fi
+          fi
+          printf 'Changed files:\n%s\n' "${files:-<none>}"
+          # Mirrors docs/process/asdlc.md Rule 1: only these can affect build, tests or coverage.
+          if printf '%s\n' "$files" | grep -Eq '(\.java$|(^|/)pom\.xml$|(^|/)mvnw(\.cmd)?$|(^|/)sonar-project\.properties$|^\.mvn/)'; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "code=false" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
     name: Build modules
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
 
@@ -31,12 +79,22 @@ jobs:
           distribution: temurin
           cache: maven
 
-      - name: Build all modules (skip tests)
-        run: ./mvnw clean package -DskipTests -B
+      - name: Build and install all modules (skip tests)
+        run: ./mvnw -B -DskipTests install
+
+      - name: Cache installed project artifacts for the test matrix
+        uses: actions/cache/save@v4
+        continue-on-error: true
+        with:
+          path: ~/.m2/repository/com/rag
+          key: rag-artifacts-${{ github.sha }}
 
   architecture-tests:
     name: Architecture tests
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
 
@@ -51,11 +109,14 @@ jobs:
           cache: maven
 
       - name: Run architecture tests
-        run: ./mvnw test -Dtest=ArchitectureTest -Dsurefire.failIfNoSpecifiedTests=false -B
+        run: ./mvnw -B test -Dtest='*ArchitectureTest' -Dsurefire.failIfNoSpecifiedTests=false
 
   tests:
     name: Tests (${{ matrix.module }})
+    needs: [changes, build]
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -86,11 +147,15 @@ jobs:
           distribution: temurin
           cache: maven
 
-      - name: Install dependencies
-        run: ./mvnw clean install -DskipTests -B
+      - name: Restore project artifacts from the build job
+        id: rag-artifacts
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.m2/repository/com/rag
+          key: rag-artifacts-${{ github.sha }}
 
       - name: Run tests with coverage
-        run: ./mvnw -pl apps/${{ matrix.module }} -am verify -B
+        run: ./mvnw -B -pl apps/${{ matrix.module }} ${{ steps.rag-artifacts.outputs.cache-hit == 'true' && '' || '-am' }} verify
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v7
@@ -101,9 +166,10 @@ jobs:
 
   coverage-badges:
     name: Coverage Badges
+    needs: [changes, tests]
+    if: needs.changes.outputs.code == 'true' && github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
-    needs: tests
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    timeout-minutes: 10
     permissions:
       contents: write
     steps:
@@ -148,4 +214,20 @@ jobs:
             git push
           else
             echo "No changes to coverage badges"
+          fi
+
+  ci-ok:
+    name: CI gate
+    if: always()
+    needs: [changes, build, architecture-tests, tests]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fail when any CI job failed or was cancelled
+        run: |
+          results="${{ needs.changes.result }} ${{ needs.build.result }} ${{ needs.architecture-tests.result }} ${{ needs.tests.result }}"
+          echo "Job results: $results"
+          if printf '%s' "$results" | grep -Eq 'failure|cancelled'; then
+            echo "::error::CI failed or was cancelled"
+            exit 1
           fi
