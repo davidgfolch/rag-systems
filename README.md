@@ -19,7 +19,7 @@
 | Coverage | 92.9% |
 | Duplication | 1.0%
 
-*Last scan: 2026-11-04 10:25 UTC*
+*Last scan: 2026-11-05 11:02 UTC*
 <!-- SONARQUBE_RESULTS_END -->
 
 A monorepo for learning and comparing different RAG (Retrieval-Augmented Generation) implementations using Java Spring Boot and Spring AI. Each module is a decoupled bounded context with interchangeable chunking, embedding, and retrieval strategies — designed to be reusable across knowledge domains and to run comfortably on a regular local machine.
