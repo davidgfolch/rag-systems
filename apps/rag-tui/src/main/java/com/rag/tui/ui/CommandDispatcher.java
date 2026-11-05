@@ -40,15 +40,10 @@ public class CommandDispatcher {
     private final IngestCommands ingest;
     private final CrawlCommands crawl;
     private final ModuleBootstrap bootstrap;
+    private final VariantCommands variants;
     private final Tracer tracer;
 
     static final String SPAN_COMMAND = "tui.command";
-
-    public CommandDispatcher(ModuleRegistry registry, ModuleLifecycleManager lifecycle,
-                             RagClients clients, Settings settings, CommandRegistry commandRegistry,
-                             Prompter prompter) {
-        this(registry, lifecycle, clients, settings, commandRegistry, prompter, null);
-    }
 
     public CommandDispatcher(ModuleRegistry registry, ModuleLifecycleManager lifecycle,
                              RagClients clients, Settings settings, CommandRegistry commandRegistry,
@@ -64,7 +59,14 @@ public class CommandDispatcher {
         this.ingest = new IngestCommands(clients, prompter, duplicates, tracer);
         this.crawl = new CrawlCommands(clients, prompter, duplicates, tracer);
         this.bootstrap = new ModuleBootstrap(registry, lifecycle, clients.healthClient(), prompter);
+        this.variants = new VariantCommands(registry, clients.apiClient(), prompter, clients.providerClient());
         this.tracer = tracer;
+    }
+
+    public CommandDispatcher(ModuleRegistry registry, ModuleLifecycleManager lifecycle,
+                             RagClients clients, Settings settings, CommandRegistry commandRegistry,
+                             Prompter prompter) {
+        this(registry, lifecycle, clients, settings, commandRegistry, prompter, null);
     }
 
     public String handle(String input, Consumer<String> tokenSink) {
@@ -120,6 +122,7 @@ public class CommandDispatcher {
             case "ask" -> ask(arg, tokenSink);
             case "history" -> history();
             case "connect" -> new ConnectCommand(clients.providerClient(), prompter).execute(arg);
+            case "variant" -> variants.switchVariant(arg);
             default -> error("Unknown command. Type 'help' for usage.");
         };
     }

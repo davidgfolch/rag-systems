@@ -26,6 +26,21 @@ public final class ApiPaths {
     public static final String RANK_LINKS = "/api/rank-links";
     public static final String CONVERSATIONS = "/api/conversations";
     public static final String CONVERSATIONS_MESSAGES = "/api/conversations/{id}/messages";
+    public static final String MODULE_VARIANTS = "/api/modules/{module}/variants";
+    public static final String MODULE_VARIANTS_ACTIVE = MODULE_VARIANTS + "/active";
+    public static final String VARIANT_BY_ID = MODULE_VARIANTS + "/{variantId}";
+    public static final String VARIANT_ACTIVATE = VARIANT_BY_ID + "/activate";
+
+    private static final String MODULES_PREFIX = "/api/modules/";
 
     private ApiPaths() {}
+
+    /** Concrete variants path for one module, e.g. {@code /api/modules/rag-basic/variants}. */
+    public static String moduleVariants(String module) {
+        return MODULES_PREFIX + module + "/variants";
+    }
+
+    public static String variantActivate(String module, String variantId) {
+        return moduleVariants(module) + "/" + variantId + "/activate";
+    }
 }

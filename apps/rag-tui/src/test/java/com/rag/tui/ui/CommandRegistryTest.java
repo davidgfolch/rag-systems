@@ -13,11 +13,11 @@ class CommandRegistryTest {
 
     @Test
     void containsAllExpectedCommands() {
-        assertThat(sut.all()).hasSize(15);
+        assertThat(sut.all()).hasSize(16);
         assertThat(sut.all().stream().map(CommandDescriptor::name))
                 .contains("help", "modules", "use", "start", "stop",
                         "documents", "delete", "add-file", "add-folder", "add-url", "add-url-cancel",
-                        "ask", "history", "connect", "quit");
+                        "ask", "history", "connect", "quit", "variant");
     }
 
     @ParameterizedTest(name = "findByName(\"{0}\") is present")
@@ -48,7 +48,7 @@ class CommandRegistryTest {
 
     @Test
     void returnsAllCommandsForEmptyPrefix() {
-        assertThat(sut.filter("")).hasSize(15);
+        assertThat(sut.filter("")).hasSize(16);
     }
 
     @Test
@@ -62,6 +62,12 @@ class CommandRegistryTest {
                 .contains("connect catalog [<provider>]", "connect chat <provider> <model>",
                         "connect embedding <provider> <model>", "connect refresh")
                 .doesNotContain("/ to browse commands");
+    }
+
+    @Test
+    void groupsHelpByConcept() {
+        var usage = sut.generateUsage();
+        assertThat(usage).contains("Modules", "Documents", "Chat", "Providers", "Pipeline variants", "Session");
     }
 
     @Test

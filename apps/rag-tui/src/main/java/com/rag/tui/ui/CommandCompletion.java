@@ -1,11 +1,15 @@
 package com.rag.tui.ui;
 
+import com.rag.contract.pipeline.ChunkingStrategy;
+import com.rag.contract.pipeline.PipelineVariantDTO;
 import com.rag.contract.provider.ModelCatalogDTO;
+import com.rag.tui.client.RagApiClient;
 import com.rag.tui.launcher.Module;
 import com.rag.tui.launcher.ModuleRegistry;
 import com.rag.tui.client.ProviderClient;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
@@ -17,6 +21,7 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class CommandCompletion implements CompletionCandidates {
 
+    private static final String ADD = "add";
     private static final String CATALOG = "catalog";
     private static final String CHAT = "chat";
     private static final String EMBEDDING = "embedding";
@@ -27,14 +32,21 @@ public class CommandCompletion implements CompletionCandidates {
     private final CommandRegistry commandRegistry;
     private final ModuleRegistry moduleRegistry;
     private final ProviderClient providerClient;
+    private final RagApiClient apiClient;
     private final AtomicReference<ModelCatalogDTO> cachedCatalog = new AtomicReference<>();
     private volatile long cachedAtMs;
 
     public CommandCompletion(CommandRegistry commandRegistry, ModuleRegistry moduleRegistry,
                              ProviderClient providerClient) {
+        this(commandRegistry, moduleRegistry, providerClient, null);
+    }
+
+    public CommandCompletion(CommandRegistry commandRegistry, ModuleRegistry moduleRegistry,
+                             ProviderClient providerClient, RagApiClient apiClient) {
         this.commandRegistry = commandRegistry;
         this.moduleRegistry = moduleRegistry;
         this.providerClient = providerClient;
+        this.apiClient = apiClient;
     }
 
     /** Pre-fetches the catalog off the prompt loop so the first keystroke is instant. */
@@ -53,6 +65,7 @@ public class CommandCompletion implements CompletionCandidates {
         return switch (command) {
             case "use", "start", "stop" -> prefixFilter(moduleNames(), token);
             case "connect" -> connectCandidates(tokens, token, pos);
+            case "variant" -> variantCandidates(tokens, token, pos);
             default -> pos == 1 ? prefixFilter(commandNames(), token) : List.of();
         };
     }
@@ -89,6 +102,40 @@ public class CommandCompletion implements CompletionCandidates {
         var combined = new ArrayList<>(CONNECT_SUBS);
         combined.addAll(providerIds());
         return combined;
+    }
+
+    /** Completes {@code variant <id>} from the active module and {@code variant add <strategy>}. */
+    private List<String> variantCandidates(List<String> tokens, String token, int pos) {
+        if (pos == 1) {
+            return prefixFilter(commandNames(), token);
+        }
+        if (pos == 2) {
+            var candidates = new ArrayList<String>();
+            candidates.add(ADD);
+            candidates.addAll(variantIds());
+            return prefixFilter(candidates, token);
+        }
+        if (pos == 3 && ADD.equals(tokens.get(1).toLowerCase())) {
+            return prefixFilter(strategyNames(), token);
+        }
+        return List.of();
+    }
+
+    private List<String> variantIds() {
+        if (apiClient == null) {
+            return List.of();
+        }
+        try {
+            return apiClient.variants(moduleRegistry.active().name()).stream()
+                    .map(PipelineVariantDTO::variantId)
+                    .toList();
+        } catch (RuntimeException _) {
+            return List.of();
+        }
+    }
+
+    private static List<String> strategyNames() {
+        return Arrays.stream(ChunkingStrategy.values()).map(Enum::name).toList();
     }
 
     /** Splits the typed prefix into a List; empty tokens are dropped. */

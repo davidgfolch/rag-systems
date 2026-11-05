@@ -1,37 +1,54 @@
 package com.rag.tui.ui;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 
 public class CommandRegistry {
 
     private static final String MODULE_ARG = "<module>";
     private static final List<CommandDescriptor> CONNECT_HELP = List.of(
-            new CommandDescriptor("connect catalog", "browse the model catalog via rag-provider", "[<provider>]"),
-            new CommandDescriptor("connect chat", "switch the chat model via rag-provider", "<provider> <model>"),
-            new CommandDescriptor("connect embedding", "switch the embedding model via rag-provider", "<provider> <model>"),
+            new CommandDescriptor("connect catalog", "browse the model catalog", "[<provider>]"),
+            new CommandDescriptor("connect chat", "switch the chat model", "<provider> <model>"),
+            new CommandDescriptor("connect embedding", "switch the embedding model", "<provider> <model>"),
             new CommandDescriptor("connect refresh", "re-fetch the model catalog", "")
     );
     private static final List<CommandDescriptor> COMMANDS = List.of(
-            new CommandDescriptor("help", "show this help", ""),
-            new CommandDescriptor("modules", "list known rag-* modules", ""),
+            new CommandDescriptor("help", "show grouped command help", ""),
+            new CommandDescriptor("modules", "list rag-* modules and their state", ""),
             new CommandDescriptor("use", "switch the active module", MODULE_ARG),
             new CommandDescriptor("start", "start a module as a child process", MODULE_ARG),
             new CommandDescriptor("stop", "stop a running module", MODULE_ARG),
             new CommandDescriptor("documents", "list ingested documents", ""),
-            new CommandDescriptor("delete", "delete an ingested document", "<document-id>"),
-            new CommandDescriptor("add-file", "ingest a local document", "<path>"),
-            new CommandDescriptor("add-folder", "ingest all files in a directory (recursive)", "<path>"),
-            new CommandDescriptor("add-url", "crawl a site starting from a URL, asking a question per page", "<url>"),
-            new CommandDescriptor("add-url-cancel", "cancel the URL crawl currently running", ""),
-            new CommandDescriptor("ask", "stream a chat answer", "<question>"),
-            new CommandDescriptor("history", "show conversation history", ""),
-            new CommandDescriptor("connect", "browse the model catalog and switch chat/embedding models via rag-provider",
+            new CommandDescriptor("delete", "delete a document by id", "<document-id>"),
+            new CommandDescriptor("add-file", "ingest a local file", "<path>"),
+            new CommandDescriptor("add-folder", "ingest a directory recursively", "<path>"),
+            new CommandDescriptor("add-url", "crawl a site from a URL (asks per page)", "<url>"),
+            new CommandDescriptor("add-url-cancel", "stop the running crawl", ""),
+            new CommandDescriptor("ask", "ask a question and stream the answer", "<question>"),
+            new CommandDescriptor("history", "list past conversations", ""),
+            new CommandDescriptor("connect", "browse models or switch chat/embedding",
                     "[catalog [<provider>] | chat <provider> <model> | embedding <provider> <model> | refresh]"),
-            new CommandDescriptor("quit", "exit the terminal", "")
+            new CommandDescriptor("quit", "exit the terminal", ""),
+            new CommandDescriptor("variant", "list, create or activate pipeline variants",
+                    "[<variant-id> | add [<strategy>] [<size>] [<overlap>]]")
     );
+    private static final Map<String, List<String>> GROUPS = groups();
+
+    private static Map<String, List<String>> groups() {
+        var groups = new LinkedHashMap<String, List<String>>();
+        groups.put("Modules", List.of("modules", "use", "start", "stop"));
+        groups.put("Documents", List.of("add-file", "add-folder", "add-url", "add-url-cancel",
+                "documents", "delete"));
+        groups.put("Chat", List.of("ask", "history"));
+        groups.put("Providers", List.of("connect"));
+        groups.put("Pipeline variants", List.of("variant"));
+        groups.put("Session", List.of("help", "quit"));
+        return groups;
+    }
 
     public List<CommandDescriptor> all() {
         return COMMANDS;
@@ -51,30 +68,41 @@ public class CommandRegistry {
     }
 
     public String generateUsage() {
-        List<String[]> rows = new ArrayList<>();
-        for (CommandDescriptor cmd : COMMANDS) {
-            if (cmd.name().equals("connect")) {
-                for (CommandDescriptor sub : CONNECT_HELP) {
-                    rows.add(new String[]{sub.name() + argsOf(sub.usage()), sub.description()});
-                }
-            } else {
-                rows.add(new String[]{cmd.name() + argsOf(cmd.usage()), cmd.description()});
-            }
-        }
-        int width = rows.stream().mapToInt(r -> r[0].length()).max().orElse(0);
+        var rows = helpRows();
+        int width = rows.stream().mapToInt(row -> row.label().length()).max().orElse(0);
         var sb = new StringBuilder("Available commands:").append(System.lineSeparator());
-        for (String[] row : rows) {
-            sb.append("  ")
-                    .append(row[0])
-                    .append(" ".repeat(width - row[0].length()))
-                    .append("  ")
-                    .append(row[1])
-                    .append(System.lineSeparator());
+        String currentGroup = null;
+        for (HelpRow row : rows) {
+            if (!row.group().equals(currentGroup)) {
+                currentGroup = row.group();
+                sb.append(System.lineSeparator()).append(row.group()).append(System.lineSeparator());
+            }
+            sb.append("  ").append(row.label()).append(" ".repeat(width - row.label().length()))
+                    .append("  ").append(row.description()).append(System.lineSeparator());
         }
         return sb.toString();
     }
 
-    private static String argsOf(String usage) {
-        return usage.isEmpty() ? "" : " " + usage;
+    private static List<HelpRow> helpRows() {
+        var rows = new ArrayList<HelpRow>();
+        for (var group : GROUPS.entrySet()) {
+            for (String name : group.getValue()) {
+                var command = COMMANDS.stream().filter(c -> c.name().equals(name)).findFirst().orElseThrow();
+                if ("connect".equals(name)) {
+                    CONNECT_HELP.forEach(sub ->
+                            rows.add(new HelpRow(group.getKey(), label(sub), sub.description())));
+                } else {
+                    rows.add(new HelpRow(group.getKey(), label(command), command.description()));
+                }
+            }
+        }
+        return rows;
+    }
+
+    private static String label(CommandDescriptor command) {
+        return command.usage().isEmpty() ? command.name() : command.name() + " " + command.usage();
+    }
+
+    private record HelpRow(String group, String label, String description) {
     }
 }

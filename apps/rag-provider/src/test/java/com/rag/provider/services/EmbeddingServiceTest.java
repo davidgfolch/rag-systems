@@ -27,17 +27,16 @@ class EmbeddingServiceTest {
 
     @Test
     void shouldEmbedTextsAndBoxVectors() {
-        when(router.embeddingModel()).thenReturn(embeddingModel);
+        when(router.embeddingModelFor(null)).thenReturn(embeddingModel);
         when(embeddingModel.call(any(EmbeddingRequest.class))).thenReturn(
                 new EmbeddingResponse(List.of(new Embedding(new float[]{1f, 2f}, 0))));
-        when(router.embeddingDimension()).thenReturn(2);
         var vectors = new EmbeddingService(router).embed(List.of("a", "b"));
         assertThat(vectors).containsExactly(List.of(1f, 2f));
     }
 
     @Test
     void shouldWindowOversizedBatches() {
-        when(router.embeddingModel()).thenReturn(embeddingModel);
+        when(router.embeddingModelFor(null)).thenReturn(embeddingModel);
         when(embeddingModel.call(any(EmbeddingRequest.class))).thenAnswer(invocation -> {
             var req = invocation.getArgument(0, EmbeddingRequest.class);
             var embeddings = new ArrayList<Embedding>();
@@ -46,7 +45,6 @@ class EmbeddingServiceTest {
             }
             return new EmbeddingResponse(embeddings);
         });
-        when(router.embeddingDimension()).thenReturn(2);
         var vectors = new EmbeddingService(router, 2).embed(List.of("a", "b", "c"));
         verify(embeddingModel, times(2)).call(any(EmbeddingRequest.class));
         assertThat(vectors).containsExactly(

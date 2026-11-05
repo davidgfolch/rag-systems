@@ -12,6 +12,7 @@ import com.rag.contract.model.IngestUrlRequest;
 import com.rag.contract.model.QueryRequest;
 import com.rag.contract.model.QueryResponse;
 import com.rag.contract.model.DocumentSummaryDTO;
+import com.rag.contract.pipeline.PipelineVariantDTO;
 import com.rag.tui.launcher.ModuleRegistry;
 import jakarta.annotation.Nonnull;
 import org.slf4j.Logger;
@@ -28,6 +29,7 @@ import org.springframework.web.client.RestClient;
 import java.net.URI;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static com.rag.contract.constants.ApiPaths.CRAWL;
 import static com.rag.contract.constants.ApiPaths.CRAWL_BY_ID;
@@ -39,7 +41,10 @@ import static com.rag.contract.constants.ApiPaths.INGEST_FILE;
 import static com.rag.contract.constants.ApiPaths.INGEST_FILE_ASYNC;
 import static com.rag.contract.constants.ApiPaths.INGEST_STATUS;
 import static com.rag.contract.constants.ApiPaths.INGEST_URL;
+import static com.rag.contract.constants.ApiPaths.MODULE_VARIANTS_ACTIVE;
 import static com.rag.contract.constants.ApiPaths.QUERY;
+import static com.rag.contract.constants.ApiPaths.moduleVariants;
+import static com.rag.contract.constants.ApiPaths.variantActivate;
 
 /**
  * REST client for the active rag-* module: ingestion and query endpoints,
@@ -164,6 +169,31 @@ public class RagApiClient {
         } catch (HttpClientErrorException.NotFound _) {
             return List.of();
         }
+    }
+
+    /** Lists the pipeline variants registered on a module. */
+    public List<PipelineVariantDTO> variants(String module) {
+        var variants = client().get().uri(moduleVariants(module))
+                .retrieve().body(PipelineVariantDTO[].class);
+        return variants == null ? List.of() : List.of(variants);
+    }
+
+    /** Activates one pipeline variant on a module; its store is used from the next request on. */
+    public PipelineVariantDTO activateVariant(String module, String variantId) {
+        return client().post().uri(variantActivate(module, variantId))
+                .retrieve().body(PipelineVariantDTO.class);
+    }
+
+    /** The variant a module currently serves, empty when none is active. */
+    public Optional<PipelineVariantDTO> activeVariant(String module) {
+        return Optional.ofNullable(client().get().uri(MODULE_VARIANTS_ACTIVE, module)
+                .retrieve().body(PipelineVariantDTO.class));
+    }
+
+    /** Registers a new pipeline variant on a module and returns it with its generated id. */
+    public PipelineVariantDTO createVariant(String module, PipelineVariantDTO request) {
+        return client().post().uri(moduleVariants(module)).body(request)
+                .retrieve().body(PipelineVariantDTO.class);
     }
 
     private <T> T post(String path, Object body, Class<T> responseType) {

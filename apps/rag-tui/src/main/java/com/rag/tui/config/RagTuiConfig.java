@@ -28,6 +28,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 
 import java.io.OutputStreamWriter;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -110,8 +111,8 @@ public class RagTuiConfig {
 
     @Bean
     public CommandCompletion commandCompletion(CommandRegistry commandRegistry, ModuleRegistry moduleRegistry,
-                                               ProviderClient providerClient) {
-        var completion = new CommandCompletion(commandRegistry, moduleRegistry, providerClient);
+                                               ProviderClient providerClient, RagApiClient apiClient) {
+        var completion = new CommandCompletion(commandRegistry, moduleRegistry, providerClient, apiClient);
         completion.warmup();
         return completion;
     }

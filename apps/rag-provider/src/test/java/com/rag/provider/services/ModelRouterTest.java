@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -28,6 +29,7 @@ class ModelRouterTest {
     @Mock private ProviderClientFactory factory;
     @Mock private ChatModel chatModel;
     @Mock private EmbeddingModel embeddingModel;
+    @Mock private EmbeddingModel variantEmbeddingModel;
 
     private static final ModelSpec CHAT_SPEC = new ModelSpec("ollama", "phi4");
     private static final ModelSpec EMBED_SPEC = new ModelSpec("ollama", "nomic-embed-text");
@@ -84,6 +86,28 @@ class ModelRouterTest {
         var router = newRouter();
         router.switchEmbedding(EMBED_SPEC);
         assertThat(router.embeddingDimension()).isEqualTo(-1);
+    }
+
+    @Test
+    void shouldReuseTheActiveModelWhenNoVariantModelIsRequested() {
+        when(factory.embeddingModel(any(), anyString())).thenReturn(embeddingModel);
+        var router = newRouter();
+        router.switchEmbedding(EMBED_SPEC);
+        assertThat(router.embeddingModelFor(null)).isSameAs(embeddingModel);
+        assertThat(router.embeddingModelFor(" ")).isSameAs(embeddingModel);
+        assertThat(router.embeddingModelFor("nomic-embed-text")).isSameAs(embeddingModel);
+    }
+
+    @Test
+    void shouldBuildAndCacheAClientForAVariantModel() {
+        when(factory.embeddingModel(any(), anyString())).thenReturn(embeddingModel);
+        when(factory.embeddingModel(any(), eq("mxbai-embed-large"))).thenReturn(variantEmbeddingModel);
+        var router = newRouter();
+        router.switchEmbedding(EMBED_SPEC);
+        assertThat(router.embeddingModelFor("mxbai-embed-large")).isSameAs(variantEmbeddingModel);
+        assertThat(router.embeddingModelFor("mxbai-embed-large")).isSameAs(variantEmbeddingModel);
+        assertThat(router.embeddingModel()).isSameAs(embeddingModel);
+        verify(factory).embeddingModel(any(), eq("mxbai-embed-large"));
     }
 
     @Test

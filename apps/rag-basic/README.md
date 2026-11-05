@@ -25,6 +25,20 @@ The heavy lifting (parsing, chunking, stores, adapters) comes from the `rag-comm
 | Recursive character | Most cases, default |
 | Token-based | Match embedding model windows |
 
+## Pipeline variants
+
+A **variant** bundles a chunking strategy + window with the embedding model label and its own vector table, so pipelines can be compared on one corpus without re-ingesting into the same table. rag-basic seeds a `boot` variant from `rag.chunking.*` that keeps the module's `chunks` table; variants registered at runtime own `variant_<id>` inside `rag_basic`.
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/api/modules/rag-basic/variants` | List variants |
+| `GET` | `/api/modules/rag-basic/variants/active` | Active variant (`204` when none) |
+| `POST` | `/api/modules/rag-basic/variants` | Register a variant (strategy + window) |
+| `POST` | `/api/modules/rag-basic/variants/{id}/activate` | Switch without restarting the module |
+| `PUT` / `DELETE` | `/api/modules/rag-basic/variants/{id}` | Update / remove |
+
+A switch applies to the **next** ingestion and query. Each variant embeds with its own `embeddingModel` via rag-provider, so variants can use different dimensions side by side; `connect embedding` remains the fallback for the `boot` variant. Registry and active variant persist in `pipeline_variants`. See [ADR-0015](../../docs/architecture/decision-records/adr-0015-pipeline-variants.md).
+
 ## How to run
 
 **rag-provider must be running first** (it supplies chat + embeddings). Then start rag-basic:

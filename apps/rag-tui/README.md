@@ -26,6 +26,7 @@ rag-tui talks to other services at runtime — they must be reachable:
 | `add-url-cancel` | Stop the crawl currently being driven (also accepted at crawl prompts) |
 | `ask <question>` | Retrieval-augmented answer with cited source chunks |
 | `connect` | Provider status; browse model catalog; switch chat/embedding provider+model at runtime (Ollama default, OpenRouter/OpenAI-compatible registerable) |
+| `variant` | List, create and switch the active module's pipeline variants; each variant owns its `variant_<id>` table in the module schema |
 | `help` / `quit` | Usage and exit |
 
 ## Architecture
@@ -79,6 +80,19 @@ Sources:
  - Spring AI simplifies building retrieval-augmented generation apps.
  - The framework handles embeddings, vector search and chat orchestration.
 ```
+
+## Pipeline variants
+
+`variant` lists the active module's variants and activates the one you pick. `variant add <strategy> [<size>] [<overlap>]` registers a new one, prompting for anything you omit and defaulting the window to the active variant's:
+
+```
+> variant add TOKEN 256 64
+Variant created on rag-basic: v2 (TOKEN 256/64). Activate it with: variant v2
+> variant v2
+Variant active on rag-basic: TOKEN 256/64, nomic-embed-text 768d
+```
+
+The seeded `boot` variant keeps the module's `chunks` table; every other variant writes to `variant_<id>` in the module schema. `variant add` inherits the embedding model rag-provider is currently using, so each variant embeds with its own model and `connect embedding` only drives the `boot` variant. See [ADR-0015](../../docs/architecture/decision-records/adr-0015-pipeline-variants.md).
 
 ## Configuration
 
