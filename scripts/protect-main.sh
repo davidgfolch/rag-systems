@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # ===== RAG Systems main-branch protection (Linux/Mac) =====
 # Applies a repository ruleset to main: PR required, the "CI gate" check
-# required, no force-push and no branch deletion. The GitHub Actions
-# integration may bypass it so the coverage-badge commit can still land.
+# required, no force-push and no branch deletion.
 #
 # Usage: ./scripts/protect-main.sh
 
@@ -32,13 +31,6 @@ read -r -d '' PAYLOAD <<JSON || true
       "exclude": []
     }
   },
-  "bypass_actors": [
-    {
-      "actor_id": 15368,
-      "actor_type": "integration",
-      "bypass_mode": "always"
-    }
-  ],
   "rules": [
     {
       "type": "pull_request",
@@ -56,7 +48,8 @@ read -r -d '' PAYLOAD <<JSON || true
         "strict_required_status_checks_policy": false,
         "required_status_checks": [
           {
-            "context": "$REQUIRED_CHECK"
+            "context": "$REQUIRED_CHECK",
+            "integration_id": 15368
           }
         ]
       }

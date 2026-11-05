@@ -164,58 +164,6 @@ jobs:
           path: apps/${{ matrix.module }}/target/site/jacoco/
           if-no-files-found: ignore
 
-  coverage-badges:
-    name: Coverage Badges
-    needs: [changes, tests]
-    if: needs.changes.outputs.code == 'true' && github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Make mvnw executable
-        run: chmod +x ./mvnw
-
-      - name: Set up JDK
-        uses: actions/setup-java@v5
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: temurin
-          cache: maven
-
-      - name: Download all coverage artifacts
-        uses: actions/download-artifact@v8
-        with:
-          pattern: coverage-*
-          path: coverage-artifacts
-
-      - name: Reconstruct per-module JaCoCo CSVs
-        run: |
-          for csv in coverage-artifacts/*/jacoco.csv; do
-            module=$(basename $(dirname "$csv"))
-            mkdir -p "apps/$module/target/site/jacoco"
-            cp "$csv" "apps/$module/target/site/jacoco/jacoco.csv"
-          done
-
-      - name: Generate coverage badges
-        run: bash scripts/coverage-badges.sh
-
-      - name: Commit and push if changed
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          if ! git diff --quiet README.md; then
-            git add README.md
-            git commit -m "chore: update coverage badges [skip ci]"
-            git push
-          else
-            echo "No changes to coverage badges"
-          fi
-
   ci-ok:
     name: CI gate
     if: always()
