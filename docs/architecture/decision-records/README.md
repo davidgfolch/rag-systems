@@ -16,6 +16,7 @@ This directory records significant architecture decisions for the RAG Systems pr
 | [ADR-0013](adr-0013-rag-common-split.md) | Accepted | Split rag-common into capability modules |
 | [ADR-0014](adr-0014-ollama-lan-discovery.md) | Accepted | Ollama LAN discovery |
 | [ADR-0015](adr-0015-pipeline-variants.md) | Accepted | Pipeline variants with per-variant pgvector tables |
+| [ADR-0016](adr-0016-format-aware-chunking.md) | Accepted | Format-aware parsing and structure-aware chunking |
 
 ## How to add an ADR
 

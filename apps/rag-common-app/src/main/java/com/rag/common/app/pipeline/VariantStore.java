@@ -1,6 +1,7 @@
 package com.rag.common.app.pipeline;
 
 import com.rag.common.core.repositories.VectorStorePort;
+import com.rag.common.core.services.DocumentChunker;
 import com.rag.common.core.services.TextSplitter;
 import com.rag.common.generation.adapter.SpringAiEmbeddingModel;
 import com.rag.contract.pipeline.ChunkingStrategy;
@@ -15,7 +16,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.regex.Pattern;
 
 /**
  * Per-module registry of runnable pipeline variants and the one currently
@@ -34,15 +34,16 @@ public class VariantStore {
     private static final Logger log = LoggerFactory.getLogger(VariantStore.class);
 
     private static final String ID_PREFIX = "v";
-    private static final Pattern VARIANT_ID = Pattern.compile("[A-Za-z0-9_]{1,60}");
 
     private final String module;
     private final TextSplitter defaultSplitter;
+    private final DocumentChunker defaultChunker;
     private final VariantStores storage;
     private final VectorStorePort defaultStore;
     private final VariantRepository repository;
     private final Map<String, PipelineVariantDTO> variants = new ConcurrentHashMap<>();
     private final Map<String, TextSplitter> splitters = new ConcurrentHashMap<>();
+    private final Map<String, DocumentChunker> chunkers = new ConcurrentHashMap<>();
     private final Map<String, VectorStorePort> stores = new ConcurrentHashMap<>();
     private final Map<String, EmbeddingModel> embeddings = new ConcurrentHashMap<>();
     private final AtomicLong ids = new AtomicLong();
@@ -52,13 +53,19 @@ public class VariantStore {
 
     public VariantStore(String module, TextSplitter defaultSplitter, VariantStores storage,
                         VectorStorePort defaultStore) {
-        this(module, defaultSplitter, storage, defaultStore, null);
+        this(module, defaultSplitter, null, storage, defaultStore, null);
     }
 
     public VariantStore(String module, TextSplitter defaultSplitter, VariantStores storage,
                         VectorStorePort defaultStore, VariantRepository repository) {
+        this(module, defaultSplitter, null, storage, defaultStore, repository);
+    }
+
+    public VariantStore(String module, TextSplitter defaultSplitter, DocumentChunker defaultChunker,
+                        VariantStores storage, VectorStorePort defaultStore, VariantRepository repository) {
         this.module = module;
         this.defaultSplitter = defaultSplitter;
+        this.defaultChunker = defaultChunker;
         this.storage = storage;
         this.defaultStore = defaultStore;
         this.repository = repository;
@@ -87,8 +94,8 @@ public class VariantStore {
     }
 
     public PipelineVariantDTO add(String variantId, PipelineVariantDTO request) {
-        requireValidId(variantId);
-        requireValidWindow(request);
+        VariantValidation.requireValidId(variantId);
+        VariantValidation.requireValidWindow(request);
         var variant = withIdentity(variantId, request);
         variants.put(variantId, variant);
         activateIfNone();
@@ -137,10 +144,11 @@ public class VariantStore {
 
     public PipelineVariantDTO update(String variantId, PipelineVariantDTO request) {
         var previous = requireExisting(variantId);
-        requireValidWindow(request);
+        VariantValidation.requireValidWindow(request);
         var variant = withIdentity(variantId, request);
         variants.put(variantId, variant);
         splitters.remove(variantId);
+        chunkers.remove(variantId);
         embeddings.remove(variantId);
         if (previous.embeddingDimension() != variant.embeddingDimension()
                 || !previous.embeddingModel().equals(variant.embeddingModel())) {
@@ -156,6 +164,7 @@ public class VariantStore {
             return false;
         }
         splitters.remove(variantId);
+        chunkers.remove(variantId);
         stores.remove(variantId);
         embeddings.remove(variantId);
         if (variantId.equals(activeId)) {
@@ -176,8 +185,15 @@ public class VariantStore {
 
     public TextSplitter splitter() {
         return active()
-                .map(variant -> splitters.computeIfAbsent(variant.variantId(), _ -> chunkerFor(variant)))
+                .map(variant -> splitters.computeIfAbsent(variant.variantId(), _ -> splitterFor(variant)))
                 .orElse(defaultSplitter);
+    }
+
+    /** Format-aware chunker of the active variant, falling back to the module default. */
+    public DocumentChunker chunker() {
+        return active()
+                .map(variant -> chunkers.computeIfAbsent(variant.variantId(), _ -> chunkerFor(variant)))
+                .orElse(defaultChunker);
     }
 
     /**
@@ -200,10 +216,14 @@ public class VariantStore {
     }
 
     /** The semantic chunker cuts with the variant's own model, so boundaries and vectors agree. */
-    private TextSplitter chunkerFor(PipelineVariantDTO variant) {
+    private TextSplitter splitterFor(PipelineVariantDTO variant) {
         var strategy = ChunkingStrategy.from(variant.strategy()).orElse(ChunkingStrategy.RECURSIVE);
         return Chunkers.of(strategy, variant.chunkSize(), variant.chunkOverlap(),
                 () -> new SpringAiEmbeddingModel(embeddingModelOf(variant)));
+    }
+
+    private DocumentChunker chunkerFor(PipelineVariantDTO variant) {
+        return Chunkers.chunker(splitterFor(variant), variant.chunkSize());
     }
 
     private EmbeddingModel embeddingModelOf(PipelineVariantDTO variant) {
@@ -251,28 +271,6 @@ public class VariantStore {
                 .mapToLong(Long::parseLong)
                 .max()
                 .orElse(0);
-    }
-
-    private static void requireValidId(String variantId) {
-        if (variantId == null || !VARIANT_ID.matcher(variantId).matches()) {
-            throw new IllegalArgumentException("Invalid variant id: " + variantId);
-        }
-    }
-
-    private static void requireValidWindow(PipelineVariantDTO request) {
-        var strategy = ChunkingStrategy.from(request.strategy());
-        if (strategy.isEmpty()) {
-            throw new IllegalArgumentException("Unknown chunking strategy: " + request.strategy());
-        }
-        if (request.chunkSize() <= 0 || request.chunkOverlap() < 0
-                || request.chunkOverlap() >= request.chunkSize()) {
-            throw new IllegalArgumentException("Chunk window must satisfy size > 0 and 0 <= overlap < size");
-        }
-        if (strategy.get() == ChunkingStrategy.TOKEN
-                && request.chunkSize() / Chunkers.CHARS_PER_TOKEN
-                <= request.chunkOverlap() / Chunkers.CHARS_PER_TOKEN) {
-            throw new IllegalArgumentException("Token variants need size / 4 > overlap / 4");
-        }
     }
 
     private void activateIfNone() {

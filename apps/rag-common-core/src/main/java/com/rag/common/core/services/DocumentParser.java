@@ -1,18 +1,28 @@
 package com.rag.common.core.services;
 
 import com.rag.common.core.domain.Document;
+import com.rag.common.core.domain.ParsedDocument;
 
 /**
- * Strategy interface for parsing documents of various formats
- * (PDF, DOCX, HTML, plain text) into plain readable text.
+ * Strategy interface for parsing documents into a structured, format-neutral
+ * representation. Implementations keep the document hierarchy (sections,
+ * tables, code, JSON records) instead of flattening it to text.
  */
 public interface DocumentParser {
 
     /**
-     * Parses a document and returns its textual content.
-     *
-     * @param document the source document
-     * @return the extracted plain-text content
+     * Whether this parser understands the given document. The default keeps
+     * plain parsers usable as fallbacks.
      */
-    String parse(Document document);
+    default boolean supports(Document document) {
+        return true;
+    }
+
+    /**
+     * Parses a document, preserving its structure and provenance.
+     *
+     * @param document the source document (content and/or raw bytes)
+     * @return the normalized parsed document
+     */
+    ParsedDocument parse(Document document);
 }

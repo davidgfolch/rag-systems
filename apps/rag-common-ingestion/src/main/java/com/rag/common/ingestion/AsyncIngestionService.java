@@ -1,6 +1,7 @@
 package com.rag.common.ingestion;
 
 import com.rag.common.core.domain.Document;
+import com.rag.common.core.domain.ParsedDocument;
 import com.rag.common.core.repositories.VectorStorePort;
 import com.rag.common.core.tracing.TracePropagation;
 import io.micrometer.tracing.Span;
@@ -12,6 +13,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * Runs {@link IngestionService#ingest} on a background thread so the calling
@@ -60,13 +63,22 @@ public class AsyncIngestionService {
      * starts as PENDING and becomes RUNNING once the worker thread picks it up.
      */
     public String submit(Document document) {
-        Job job = new Job(document.getId());
-        jobs.put(document.getId(), job);
+        return submit(document.getId(), job -> run(job, () -> delegate.ingest(document)));
+    }
+
+    /** Submits an already-parsed document, preserving its structure end to end. */
+    public String submitParsed(ParsedDocument document) {
+        return submit(document.documentId(), job -> run(job, () -> delegate.ingestParsed(document)));
+    }
+
+    private String submit(String documentId, Consumer<Job> task) {
+        Job job = new Job(documentId);
+        jobs.put(documentId, job);
         job.state = STATE_PENDING;
-        log.info("Async ingestion submitted: document {}", document.getId());
+        log.info("Async ingestion submitted: document {}", documentId);
         Span span = tracer != null ? tracer.currentSpan() : null;
-        executor.submit(() -> TracePropagation.runWithSpan(tracer, span, () -> run(job, document)));
-        return document.getId();
+        executor.submit(() -> TracePropagation.runWithSpan(tracer, span, () -> task.accept(job)));
+        return documentId;
     }
 
     public JobStatus status(String documentId) {
@@ -77,20 +89,20 @@ public class AsyncIngestionService {
         return new JobStatus(job.documentId, job.state, job.chunkCount, job.message);
     }
 
-    private void run(Job job, Document document) {
+    private void run(Job job, Supplier<IngestionService.IngestionResult> ingestion) {
         job.state = STATE_RUNNING;
         try {
             if (preflight != null) {
-                log.info("Async ingestion preflight: vector store availability check for document {}", document.getId());
+                log.info("Async ingestion preflight: vector store availability check for document {}", job.documentId);
                 preflight.checkAvailable();
             }
-            IngestionService.IngestionResult result = delegate.ingest(document);
+            var result = ingestion.get();
             job.state = STATE_COMPLETED;
             job.chunkCount = result.chunkCount();
         } catch (Exception e) {
             job.state = STATE_FAILED;
             job.message = messageFor(e);
-            log.error("Async ingestion failed for document {}", document.getId(), e);
+            log.error("Async ingestion failed for document {}", job.documentId, e);
         }
     }
 

@@ -38,7 +38,6 @@ import static com.rag.common.core.domain.MetadataKeys.CONTENT_HASH;
 import static com.rag.common.core.domain.MetadataKeys.FILE_NAME;
 import static com.rag.common.core.domain.MetadataKeys.RAW;
 import static com.rag.common.core.domain.MetadataKeys.RAW_BYTES;
-import static com.rag.common.core.domain.MetadataKeys.SOURCE;
 import static com.rag.common.core.domain.MetadataKeys.SOURCE_TYPE;
 import static com.rag.common.core.domain.MetadataKeys.TITLE;
 import static com.rag.common.core.util.Hashes.sha256Hex;
@@ -201,9 +200,8 @@ public class IngestionController {
             return ResponseEntity.badRequest().build();
         }
         var page = webPageFetcher.fetch(request.getUrl().toString());
-        var document = new Document(UUID.randomUUID().toString(), page.getText(),
-                Map.of(SOURCE_TYPE, "web", SOURCE, page.getUrl(), TITLE, page.getTitle()));
-        return created(ingestionService.ingest(document));
+        var documentId = UUID.randomUUID().toString();
+        return created(ingestionService.ingestParsed(PageDocumentMapper.toParsedDocument(documentId, page)));
     }
 
     private ResponseEntity<IngestResponse> created(IngestionService.IngestionResult result) {

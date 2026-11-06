@@ -127,7 +127,7 @@ class IngestionControllerTest {
     void ingestsUrlViaWebCrawler() {
         PageDTO page = new PageDTO().url("https://example.com").title("Example").text("page text");
         when(webPageFetcher.fetch("https://example.com")).thenReturn(page);
-        when(service.ingest(any())).thenReturn(new IngestionService.IngestionResult("d2", 3));
+        when(service.ingestParsed(any())).thenReturn(new IngestionService.IngestionResult("d2", 3));
         ResponseEntity<IngestResponse> response =
                 controller.ingestUrl(new IngestUrlRequest().url(URI.create("https://example.com")));
         assertDocumentCreated(response, "d2", 3);
@@ -138,7 +138,7 @@ class IngestionControllerTest {
         ResponseEntity<IngestResponse> response =
                 controller.ingestUrl(new IngestUrlRequest().url(URI.create("")));
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        verify(service, never()).ingest(any());
+        verify(service, never()).ingestParsed(any());
     }
 
     @Test

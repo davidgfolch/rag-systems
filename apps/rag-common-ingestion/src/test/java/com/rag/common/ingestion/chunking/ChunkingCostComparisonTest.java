@@ -1,6 +1,5 @@
 package com.rag.common.ingestion.chunking;
 
-import com.rag.common.core.domain.Chunk;
 import com.rag.common.core.domain.Document;
 import com.rag.common.core.services.EmbeddingModelPort;
 import com.rag.common.core.services.TextSplitter;

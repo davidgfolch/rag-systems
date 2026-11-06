@@ -25,14 +25,14 @@ public class VariantRepository {
     private final JdbcTemplate jdbc;
     private final String schemaName;
     private final String schema;
-    private final String table;
+    private final String qualifiedTable;
     private volatile boolean ready;
 
     public VariantRepository(JdbcTemplate jdbc, String schema) {
         this.jdbc = jdbc;
         this.schemaName = schema;
         this.schema = PgVectorSchemas.quote(schema);
-        this.table = PgVectorSchemas.qualified(schema, TABLE);
+        this.qualifiedTable = PgVectorSchemas.qualified(schema, TABLE);
     }
 
     /** Schema this module keeps its registry and vector tables in. */
@@ -44,12 +44,13 @@ public class VariantRepository {
     public record PersistedVariant(PipelineVariantDTO variant, boolean boot, boolean active) {
     }
 
+    @SuppressWarnings("java:S2077")
     public void ensureTable() {
         if (ready) {
             return;
         }
         jdbc.execute("CREATE SCHEMA IF NOT EXISTS " + schema);
-        jdbc.execute("CREATE TABLE IF NOT EXISTS " + table + " ("
+        jdbc.execute("CREATE TABLE IF NOT EXISTS " + qualifiedTable + " ("
                 + "variant_id varchar(64) PRIMARY KEY, "
                 + "strategy varchar(16) NOT NULL, "
                 + "embedding_model varchar(200) NOT NULL DEFAULT '', "
@@ -59,12 +60,13 @@ public class VariantRepository {
                 + "is_boot boolean NOT NULL DEFAULT false, "
                 + "is_active boolean NOT NULL DEFAULT false)");
         ready = true;
-        log.debug("Variant registry table ready at {}", table);
+        log.debug("Variant registry table ready at {}", qualifiedTable);
     }
 
+    @SuppressWarnings("java:S2077")
     public List<PersistedVariant> load() {
         return jdbc.query("SELECT variant_id, strategy, embedding_model, embedding_dimension, "
-                        + "chunk_size, chunk_overlap, is_boot, is_active FROM " + table,
+                        + "chunk_size, chunk_overlap, is_boot, is_active FROM " + qualifiedTable,
                 (rs, _) -> new PersistedVariant(
                         new PipelineVariantDTO(rs.getString("variant_id"), null, rs.getString("strategy"),
                                 rs.getString("embedding_model"), rs.getInt("embedding_dimension"),
@@ -72,12 +74,13 @@ public class VariantRepository {
                         rs.getBoolean("is_boot"), rs.getBoolean("is_active")));
     }
 
+    @SuppressWarnings("java:S2077")
     public void replaceAll(List<PipelineVariantDTO> variants, String activeId, String bootId) {
         // The boot variant is seeded before restore() runs, so the first write has to create the table itself.
         ensureTable();
-        jdbc.update("DELETE FROM " + table);
+        jdbc.update("DELETE FROM " + qualifiedTable);
         for (var variant : variants) {
-            jdbc.update("INSERT INTO " + table + " (variant_id, strategy, embedding_model, "
+            jdbc.update("INSERT INTO " + qualifiedTable + " (variant_id, strategy, embedding_model, "
                             + "embedding_dimension, chunk_size, chunk_overlap, is_boot, is_active) "
                             + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                     variant.variantId(), variant.strategy(), variant.embeddingModel(),

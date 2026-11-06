@@ -30,6 +30,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static com.rag.common.ingestion.testfixture.TestParsedDocuments.text;
 
 class AsyncIngestionServiceTest {
 
@@ -45,7 +46,7 @@ class AsyncIngestionServiceTest {
     @Test
     void submitsAndTransitionsToCompletedWithChunkCount() {
         var delegate = ingestionService();
-        when(parser.parse(any())).thenReturn("hello world");
+        when(parser.parse(any())).thenReturn(text("d1", "hello world"));
         var chunk = new Chunk("c1", "d1", "hello world", 0, Map.of());
         when(splitter.split(any())).thenReturn(List.of(chunk));
         when(embeddingModel.embed(List.of("hello world")))
@@ -174,7 +175,7 @@ class AsyncIngestionServiceTest {
     void propagatesSubmitSpanOntoWorkerThread() {
         SimpleTracer tracer = new SimpleTracer();
         var delegate = ingestionService();
-        when(parser.parse(any())).thenReturn("hello world");
+        when(parser.parse(any())).thenReturn(text("d1", "hello world"));
         when(splitter.split(any())).thenReturn(List.of(new Chunk("c1", "d1", "hello world", 0, Map.of())));
         AtomicReference<String> workerTraceId = new AtomicReference<>();
         when(embeddingModel.embed(anyList())).thenAnswer(invocation -> {

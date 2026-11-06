@@ -54,6 +54,7 @@ public class AgenticQueryController {
 
     private ChunkResult chunkResult(Chunk chunk) {
         return new ChunkResult().id(chunk.getId()).documentId(chunk.getDocumentId())
-                .content(chunk.getContent()).index(chunk.getIndex());
+                .content(chunk.getContent()).index(chunk.getIndex())
+                .metadata(chunk.getMetadata());
     }
 }

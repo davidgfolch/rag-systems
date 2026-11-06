@@ -2,7 +2,10 @@ package com.rag.common.ingestion;
 
 import com.rag.common.core.domain.Chunk;
 import com.rag.common.core.domain.Document;
+import com.rag.common.core.domain.ParsedDocument;
 import com.rag.common.core.repositories.VectorStorePort;
+import com.rag.common.core.services.ChunkingConfig;
+import com.rag.common.core.services.DocumentChunker;
 import com.rag.common.core.services.DocumentParser;
 import com.rag.common.core.services.EmbeddingModelPort;
 import com.rag.common.core.services.TextSplitter;
@@ -10,10 +13,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.IntStream;
 
 /**
- * Orchestrates the ingestion pipeline: parse → split → embed → store.
+ * Orchestrates the ingestion pipeline: parse → chunk → embed → store.
  *
  * <p>Depends only on the strategy interfaces (DIP, SoC), keeping provider
  * specifics isolated in the adapter layer.
@@ -26,44 +30,81 @@ public class IngestionService {
 
     private final DocumentParser parser;
     private final TextSplitter splitter;
+    private final DocumentChunker documentChunker;
     private final EmbeddingModelPort embeddingModel;
     private final VectorStorePort vectorStore;
     private final int maxEmbeddingBatchSize;
 
     public IngestionService(DocumentParser parser, TextSplitter splitter,
                             EmbeddingModelPort embeddingModel, VectorStorePort vectorStore) {
-        this(parser, splitter, embeddingModel, vectorStore, DEFAULT_EMBED_BATCH_SIZE);
+        this(parser, splitter, null, embeddingModel, vectorStore, DEFAULT_EMBED_BATCH_SIZE);
     }
 
     public IngestionService(DocumentParser parser, TextSplitter splitter,
                             EmbeddingModelPort embeddingModel, VectorStorePort vectorStore,
                             int maxEmbeddingBatchSize) {
-        this.parser = parser;
+        this(parser, splitter, null, embeddingModel, vectorStore, maxEmbeddingBatchSize);
+    }
+
+    public IngestionService(DocumentParser parser, DocumentChunker documentChunker,
+                            EmbeddingModelPort embeddingModel, VectorStorePort vectorStore) {
+        this(parser, null, documentChunker, embeddingModel, vectorStore, DEFAULT_EMBED_BATCH_SIZE);
+    }
+
+    public IngestionService(DocumentParser parser, DocumentChunker documentChunker,
+                            EmbeddingModelPort embeddingModel, VectorStorePort vectorStore,
+                            int maxEmbeddingBatchSize) {
+        this(parser, null, documentChunker, embeddingModel, vectorStore, maxEmbeddingBatchSize);
+    }
+
+    private IngestionService(DocumentParser parser, TextSplitter splitter,
+                             DocumentChunker documentChunker, EmbeddingModelPort embeddingModel,
+                             VectorStorePort vectorStore, int maxEmbeddingBatchSize) {
+        if (splitter == null && documentChunker == null) {
+            throw new IllegalArgumentException("a splitter or document chunker is required");
+        }
+        this.parser = Objects.requireNonNull(parser, "parser must not be null");
         this.splitter = splitter;
-        this.embeddingModel = embeddingModel;
-        this.vectorStore = vectorStore;
+        this.documentChunker = documentChunker;
+        this.embeddingModel = Objects.requireNonNull(embeddingModel, "embeddingModel must not be null");
+        this.vectorStore = Objects.requireNonNull(vectorStore, "vectorStore must not be null");
         this.maxEmbeddingBatchSize = requirePositive(maxEmbeddingBatchSize);
     }
 
     public IngestionResult ingest(Document doc) {
         log.info("Ingestion start: document {} (content chars={}, metadata keys={})",
                 doc.getId(), doc.getContent().length(), doc.getMetadata().keySet());
-        var chunks = getChunks(doc);
-        vectorStore.add(chunks);
-        log.info("Ingested document {} -> {} chunks", doc.getId(), chunks.size());
-        return new IngestionResult(doc.getId(), chunks.size());
+        return process(parser.parse(doc), doc);
     }
 
-    private List<Chunk> getChunks(Document doc) {
-        String parsed = parser.parse(doc);
-        log.info("Ingestion {} parsed: {} characters extracted", doc.getId(), parsed.length());
-        validateParseOrThrow(doc, parsed);
-        var cleanDoc = parsed.equals(doc.getContent()) ? doc : new Document(doc.getId(), parsed, doc.getMetadata());
-        var chunks = splitter.split(cleanDoc);
-        log.info("Ingestion {} split: {} chunks", doc.getId(), chunks.size());
+    /** Ingests an already-parsed document, preserving its structure end to end. */
+    public IngestionResult ingestParsed(ParsedDocument doc) {
+        log.info("Ingestion start: document {} (format={}, blocks={})",
+                doc.documentId(), doc.sourceType(), doc.blocks().size());
+        return process(doc, null);
+    }
+
+    private IngestionResult process(ParsedDocument doc, Document source) {
+        var text = doc.text();
+        log.info("Ingestion {} parsed: {} characters extracted", doc.documentId(), text.length());
+        validateParseOrThrow(doc.documentId(), text);
+        var chunks = chunk(doc, source);
+        log.info("Ingestion {} split: {} chunks", doc.documentId(), chunks.size());
         embedChunks(chunks);
-        log.info("Ingestion {} embedded: {} chunks", doc.getId(), chunks.size());
-        return chunks;
+        log.info("Ingestion {} embedded: {} chunks", doc.documentId(), chunks.size());
+        vectorStore.add(chunks);
+        log.info("Ingested document {} -> {} chunks", doc.documentId(), chunks.size());
+        return new IngestionResult(doc.documentId(), chunks.size());
+    }
+
+    private List<Chunk> chunk(ParsedDocument doc, Document source) {
+        if (documentChunker != null) {
+            return documentChunker.chunk(doc, ChunkingConfig.DEFAULT);
+        }
+        var text = doc.text();
+        var clean = source != null && text.equals(source.getContent())
+                ? source : new Document(doc.documentId(), text, doc.metadata());
+        return splitter.split(clean);
     }
 
     private void embedChunks(List<Chunk> chunks) {
@@ -90,17 +131,20 @@ public class IngestionService {
 
     public record IngestionResult(String documentId, int chunkCount) {}
 
-    private void validateParseOrThrow(Document doc, String parsed) {
+    private void validateParseOrThrow(String documentId, String parsed) {
         if (parsed.isBlank()) {
-            log.warn("Ingestion {} aborted: extracted text is empty or blank", doc.getId());
-            throw new EmptyExtractionException(doc);
+            log.warn("Ingestion {} aborted: extracted text is empty or blank", documentId);
+            throw new EmptyExtractionException(documentId);
         }
     }
 
     public static class EmptyExtractionException extends RuntimeException {
         public static final String MSG = "No text could be extracted from document ";
         public EmptyExtractionException(Document doc) {
-            super(MSG + doc.getId());
+            this(doc.getId());
+        }
+        public EmptyExtractionException(String documentId) {
+            super(MSG + documentId);
         }
     }
 }
