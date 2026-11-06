@@ -58,7 +58,7 @@ Each variant embeds with its own `embeddingModel` via rag-provider, so variants 
 
 ## Configuration
 
-- Schema `rag_agentic` (via `PGVECTOR_SCHEMA`; blank default derives `rag_<dim>` from the active embedding dimension)
+- Schema `rag_agentic` (pinned by `PGVECTOR_AGENTIC_SCHEMA`; each module owns its own schema, see [ADR-0006](../../docs/architecture/decision-records/adr-0006-data-store-isolation.md))
 - `rag.agent.max-steps` (default `3`) — upper bound on tool calls / steps
 - `rag.agent.tool-top-k` (default `4`) — default search widening per tool call
 - Providers (chat/embedding) consumed remotely from rag-provider (`rag.provider.url`, default `http://localhost:8086`)

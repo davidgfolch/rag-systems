@@ -88,7 +88,7 @@ curl -H "Content-Type: application/json" \
 | `rag.chunking.strategy` | - | `recursive` | `fixed`/`recursive`/`token` |
 | `rag.chunking.size` | `CHUNK_SIZE` | `512` | Max chunk size |
 | `rag.chunking.overlap` | `CHUNK_OVERLAP` | `128` | Chunk overlap |
-| `spring.ai.vectorstore.pgvector.schema-name` | `PGVECTOR_SCHEMA` | `rag_advanced` | PgVector schema (isolated from rag-basic) |
+| `spring.ai.vectorstore.pgvector.schema-name` | `PGVECTOR_ADVANCED_SCHEMA` | `rag_advanced` | PgVector schema (isolated from rag-basic) |
 
 ## How to compare it with rag-basic (the "why")
 
