@@ -69,6 +69,7 @@ public class RagPipelineConfiguration {
     private static final String BOOT_VARIANT_ID = "boot";
     private static final String BOOT_MODEL_LABEL = "rag-provider";
     private static final String BOOT_STORE_BEAN = "bootVectorStore";
+    private static final String DEFAULT_VECTOR_TABLE = "chunks";
 
     @Bean(BOOT_STORE_BEAN)
     @Lazy
@@ -79,7 +80,7 @@ public class RagPipelineConfiguration {
             ObjectProvider<PgVectorStore> pgVectorStore,
             ObjectProvider<DataSource> dataSource,
             @Value("${spring.ai.vectorstore.pgvector.schema-name:}") String schemaOverride,
-            @Value("${spring.ai.vectorstore.pgvector.table-name:vector_store}") String tableName) {
+            @Value("${spring.ai.vectorstore.pgvector.table-name:" + DEFAULT_VECTOR_TABLE + "}") String tableName) {
         if ("simple".equalsIgnoreCase(type)) {
             return new InMemoryVectorStore(embeddingModel);
         }
@@ -193,7 +194,7 @@ public class RagPipelineConfiguration {
             JdbcTemplate jdbcTemplate,
             EmbeddingModel springAiEmbeddingModel,
             @Value("${spring.ai.vectorstore.pgvector.schema-name:}") String schemaOverride,
-            @Value("${spring.ai.vectorstore.pgvector.table-name:vector_store}") String tableName,
+            @Value("${spring.ai.vectorstore.pgvector.table-name:" + DEFAULT_VECTOR_TABLE + "}") String tableName,
             @Value("${spring.ai.vectorstore.pgvector.initialize-schema:true}") boolean initializeSchema) {
         var schema = PgVectorSchemas.resolve(schemaOverride, springAiEmbeddingModel);
         return PgVectorStore.builder(jdbcTemplate, springAiEmbeddingModel)
