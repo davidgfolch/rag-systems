@@ -1,6 +1,7 @@
 package com.rag.common.app.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rag.common.app.pipeline.ActiveDocumentChunker;
 import com.rag.common.app.pipeline.ActiveEmbeddingModelPort;
 import com.rag.common.app.pipeline.ActiveTextSplitter;
 import com.rag.common.app.pipeline.ActiveVectorStore;
@@ -11,9 +12,11 @@ import com.rag.common.app.pipeline.VariantStore;
 import com.rag.common.app.pipeline.VariantStoreFactory;
 import com.rag.common.core.repositories.VectorStorePort;
 import com.rag.common.core.services.ChatModelPort;
+import com.rag.common.core.services.DocumentChunker;
 import com.rag.common.core.services.DocumentParser;
 import com.rag.common.core.services.EmbeddingModelPort;
 import com.rag.common.core.services.TextSplitter;
+import com.rag.common.core.domain.SourceType;
 import com.rag.common.generation.ChatService;
 import com.rag.common.generation.StreamingChatModelPort;
 import com.rag.common.generation.adapter.ProviderHttpClient;
@@ -23,8 +26,14 @@ import com.rag.common.generation.adapter.SpringAiEmbeddingModel;
 import com.rag.common.generation.ws.TraceHandshakeInterceptor;
 import com.rag.common.ingestion.AsyncIngestionService;
 import com.rag.common.ingestion.IngestionService;
+import com.rag.common.ingestion.parsing.FormatAwareDocumentParser;
+import com.rag.common.ingestion.parsing.HtmlDocumentParser;
+import com.rag.common.ingestion.parsing.JsonDocumentParser;
+import com.rag.common.ingestion.parsing.MarkdownDocumentParser;
 import com.rag.common.ingestion.parsing.PlainTextParser;
 import com.rag.common.ingestion.parsing.TikaDocumentParser;
+import com.rag.common.ingestion.parsing.TikaXhtmlDocumentParser;
+import com.rag.common.ingestion.parsing.TikaXhtmlExtractor;
 import com.rag.common.retrieval.store.InMemoryVectorStore;
 import com.rag.common.retrieval.store.PgVectorStoreAdapter;
 import com.rag.contract.pipeline.ChunkingStrategy;
@@ -42,6 +51,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import javax.sql.DataSource;
+import java.util.EnumMap;
 
 /**
  * Shared wiring for every runnable RAG module. Owns the strategy beans that are
@@ -104,9 +114,9 @@ public class RagPipelineConfiguration {
             VariantStoreFactory storeFactory,
             @Qualifier(BOOT_STORE_BEAN) VectorStorePort bootStore) {
         var bootStrategy = ChunkingStrategy.from(strategy).orElse(ChunkingStrategy.RECURSIVE);
-        var store = new VariantStore(module,
-                Chunkers.of(bootStrategy, size, overlap,
-                        () -> new SpringAiEmbeddingModel(springAiEmbeddingModel)),
+        var splitter = Chunkers.of(bootStrategy, size, overlap,
+                () -> new SpringAiEmbeddingModel(springAiEmbeddingModel));
+        var store = new VariantStore(module, splitter, Chunkers.chunker(splitter, size),
                 storeFactory, bootStore, storeFactory.repository());
         store.seed(BOOT_VARIANT_ID, new PipelineVariantDTO(BOOT_VARIANT_ID, module, bootStrategy.name(),
                 BOOT_MODEL_LABEL, dimension, size, overlap));
@@ -125,14 +135,37 @@ public class RagPipelineConfiguration {
     }
 
     @Bean
+    public DocumentChunker documentChunker(VariantStore variantStore) {
+        return new ActiveDocumentChunker(variantStore);
+    }
+
+    @Bean
     @Primary
     public VectorStorePort vectorStore(VariantStore variantStore) {
         return new ActiveVectorStore(variantStore);
     }
 
     @Bean
-    public DocumentParser documentParser(@Value("${rag.parsing.mode:tika}") String mode) {
-        return "tika".equalsIgnoreCase(mode) ? new TikaDocumentParser() : new PlainTextParser();
+    public DocumentParser documentParser(@Value("${rag.parsing.mode:auto}") String mode) {
+        if ("tika".equalsIgnoreCase(mode)) {
+            return new TikaDocumentParser();
+        }
+        if ("plain".equalsIgnoreCase(mode)) {
+            return new PlainTextParser();
+        }
+        return formatAwareParser();
+    }
+
+    private static DocumentParser formatAwareParser() {
+        var extractor = new TikaXhtmlExtractor();
+        var parsers = new EnumMap<SourceType, DocumentParser>(SourceType.class);
+        parsers.put(SourceType.PDF, new TikaXhtmlDocumentParser(SourceType.PDF, extractor, true));
+        parsers.put(SourceType.DOCX, new TikaXhtmlDocumentParser(SourceType.DOCX, extractor, false));
+        parsers.put(SourceType.HTML, new HtmlDocumentParser());
+        parsers.put(SourceType.MARKDOWN, new MarkdownDocumentParser());
+        parsers.put(SourceType.JSON, new JsonDocumentParser());
+        parsers.put(SourceType.TEXT, new PlainTextParser());
+        return new FormatAwareDocumentParser(parsers, new PlainTextParser());
     }
 
     @Bean
@@ -172,10 +205,10 @@ public class RagPipelineConfiguration {
     }
 
     @Bean
-    public IngestionService ingestionService(DocumentParser parser, TextSplitter splitter,
+    public IngestionService ingestionService(DocumentParser parser, DocumentChunker documentChunker,
                                              EmbeddingModelPort embeddingModel, VectorStorePort vectorStore,
                                              @Value("${rag.embedding.batch-size:100}") int maxEmbeddingBatchSize) {
-        return new IngestionService(parser, splitter, embeddingModel, vectorStore, maxEmbeddingBatchSize);
+        return new IngestionService(parser, documentChunker, embeddingModel, vectorStore, maxEmbeddingBatchSize);
     }
 
     @Bean

@@ -71,7 +71,9 @@ Model switching and embedding dimensions are managed by rag-provider's `ModelRou
 
 ### Strategy Pattern
 Pluggable strategies via interfaces:
-- `TextSplitter` - chunking strategies
+- `DocumentParser` - structured, format-aware parsing (PDF, DOCX, HTML, Markdown, JSON, text)
+- `DocumentChunker` - format-aware chunking that respects document structure
+- `TextSplitter` - low-level splitting strategies used inside structural groups
 - `EmbeddingModelPort` - embedding providers
 - `Retriever` - retrieval strategies
 - `VectorStorePort` - storage backends
@@ -88,8 +90,12 @@ The `VectorStorePort` interface abstracts storage so PgVector, in-memory stores 
 
 ### Ingestion Pipeline
 ```
-Document → Parser → TextSplitter → EmbeddingModelPort → VectorStorePort
+Document → DocumentParser → ParsedDocument → DocumentChunker → EmbeddingModelPort → VectorStorePort
 ```
+
+Parsing keeps the source's structure (pages, sections, tables, code, JSON records) as `DocumentBlock`s;
+chunking groups those blocks and reuses the variant's `TextSplitter` inside each group, so chunks carry
+their provenance (`page`, `sectionPath`, `domPath`, `jsonPath`) into the vector store and query results.
 
 ### Retrieval Pipeline
 ```

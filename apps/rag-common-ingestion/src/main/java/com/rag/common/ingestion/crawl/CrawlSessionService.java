@@ -1,9 +1,9 @@
 package com.rag.common.ingestion.crawl;
 
-import com.rag.common.core.domain.Document;
 import com.rag.common.core.repositories.DocumentStorePort;
 import com.rag.common.core.util.WebUrls;
 import com.rag.common.ingestion.AsyncIngestionService;
+import com.rag.common.ingestion.web.PageDocumentMapper;
 import com.rag.common.ingestion.web.WebPageFetcher;
 import com.rag.contract.model.PageDTO;
 import org.slf4j.Logger;
@@ -22,8 +22,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import static com.rag.common.core.domain.MetadataKeys.SOURCE;
-import static com.rag.common.core.domain.MetadataKeys.SOURCE_TYPE;
-import static com.rag.common.core.domain.MetadataKeys.TITLE;
 
 /**
  * Server-side state for an interactive breadth-first crawl. The TUI drives one
@@ -39,7 +37,6 @@ public class CrawlSessionService {
 
     private static final Logger log = LoggerFactory.getLogger(CrawlSessionService.class);
     private static final Duration SESSION_TTL = Duration.ofMinutes(30);
-    private static final String WEB = "web";
 
     private final WebPageFetcher fetcher;
     private final AsyncIngestionService asyncIngestion;
@@ -100,11 +97,11 @@ public class CrawlSessionService {
             log.info("Crawl {} skipping already ingested page {}", session.id, page.getUrl());
             return null;
         }
-        var metadata = Map.<String, Object>of(SOURCE_TYPE, WEB, SOURCE, page.getUrl(),
-                TITLE, Objects.toString(page.getTitle(), page.getUrl()));
-        var documentId = asyncIngestion.submit(new Document(UUID.randomUUID().toString(), page.getText(), metadata));
+        var documentId = UUID.randomUUID().toString();
+        var parsed = PageDocumentMapper.toParsedDocument(documentId, page);
+        var submitted = asyncIngestion.submitParsed(parsed);
         session.known.add(WebUrls.key(page.getUrl()));
-        return documentId;
+        return submitted;
     }
 
     private void enqueue(Session session, PageDTO page, String question) {

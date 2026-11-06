@@ -87,7 +87,7 @@ class RemoteEmbeddingModelTest {
     }
 
     @Test
-    void shouldSendTheVariantModelAndProbeItsDimension() throws IOException {
+    void shouldSendTheVariantModelAndProbeItsDimension() {
         server.createContext(ApiPaths.EMBED, exchange -> {
             lastEmbedBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
             respond(exchange, 200, "application/json", "{\"embeddings\":[[1.0,2.0,3.0]]}");
@@ -102,7 +102,7 @@ class RemoteEmbeddingModelTest {
     }
 
     @Test
-    void shouldNotSendAModelForTheActiveModel() throws IOException {
+    void shouldNotSendAModelForTheActiveModel() {
         server.createContext(ApiPaths.EMBED, exchange -> {
             lastEmbedBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
             respond(exchange, 200, "application/json", "{\"embeddings\":[[1.0]]}");

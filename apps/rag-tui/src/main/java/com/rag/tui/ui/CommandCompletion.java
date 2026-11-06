@@ -116,7 +116,7 @@ public class CommandCompletion implements CompletionCandidates {
             candidates.addAll(variantIds());
             return prefixFilter(candidates, token);
         }
-        if (pos == 3 && ADD.equals(tokens.get(1).toLowerCase())) {
+        if (pos == 3 && ADD.equalsIgnoreCase(tokens.get(1))) {
             return prefixFilter(strategyNames(), token);
         }
         return List.of();

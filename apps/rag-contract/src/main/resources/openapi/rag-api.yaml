@@ -588,6 +588,10 @@ components:
         index:
           type: integer
           format: int32
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Flat provenance metadata (format, page, sectionPath, ...)
 
     FetchRequest:
       type: object
@@ -622,6 +626,29 @@ components:
           items:
             type: string
           description: Candidate outbound links found on the page
+        blocks:
+          type: array
+          items:
+            $ref: '#/components/schemas/PageBlockDTO'
+          description: Ordered structural blocks extracted from the page
+
+    PageBlockDTO:
+      type: object
+      required: [type, text]
+      properties:
+        type:
+          type: string
+          description: Block type (TITLE, HEADING, PARAGRAPH, LIST, TABLE, CODE, QUOTE)
+        text:
+          type: string
+        sectionPath:
+          type: array
+          items:
+            type: string
+          description: Heading hierarchy enclosing the block
+        domPath:
+          type: string
+          description: CSS selector locating the block in the source document
 
     ConversationDTO:
       type: object

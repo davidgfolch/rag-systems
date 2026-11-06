@@ -41,8 +41,8 @@ class SemanticChunkerTest {
         var chunker = chunker(Map.of(), 40, 0);
         var chunks = chunker.split(new Document("d1", """
                 One is short. Two is short. Three is short. Four is short.""", Map.of()));
-        assertThat(chunks).hasSizeGreaterThan(1);
-        assertThat(chunks).allSatisfy(chunk -> assertThat(chunk.getContent().length()).isLessThanOrEqualTo(40));
+        assertThat(chunks).hasSizeGreaterThan(1)
+                .allSatisfy(chunk -> assertThat(chunk.getContent().length()).isLessThanOrEqualTo(40));
         assertThat(chunks.get(0).getContent()).startsWith("One is short.");
     }
 

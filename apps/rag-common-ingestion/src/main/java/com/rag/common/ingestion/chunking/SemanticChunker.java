@@ -116,7 +116,7 @@ public class SemanticChunker implements TextSplitter {
                 hardSplit(sentence, groups);
                 continue;
             }
-            if (current.length() > 0
+            if (!current.isEmpty()
                     && (breakpoints.contains(i) || current.length() + 1 + sentence.length() > maxChunkSize)) {
                 flush(current, groups);
             }
@@ -204,7 +204,7 @@ public class SemanticChunker implements TextSplitter {
         var sorted = values.clone();
         Arrays.sort(sorted);
         var rank = (int) Math.ceil(percentile / PERCENT_SCALE * sorted.length);
-        return sorted[Math.max(0, Math.min(sorted.length - 1, rank - 1))];
+        return sorted[Math.clamp((long) rank - 1, 0, sorted.length - 1)];
     }
 
     private static float cosine(List<Float> a, List<Float> b) {

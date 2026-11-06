@@ -72,7 +72,8 @@ class VariantStoreFactoryTest {
 
         assertThat(withoutPostgres.repository()).isNull();
         assertThatCode(() -> withoutPostgres.drop(variant())).doesNotThrowAnyException();
-        assertThatThrownBy(() -> withoutPostgres.create(variant()))
+        var variant = variant();
+        assertThatThrownBy(() -> withoutPostgres.create(variant))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("PostgreSQL");
     }

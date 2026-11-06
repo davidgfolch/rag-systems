@@ -14,6 +14,7 @@ import java.util.Optional;
 public class CommandRegistry {
 
     private static final String MODULE_ARG = "<module>";
+    private static final String CONNECT = "connect";
     private static final List<CommandDescriptor> CONNECT_HELP = List.of(
             new CommandDescriptor("connect catalog", "browse the model catalog", "[<provider>]"),
             new CommandDescriptor("connect chat", "switch the chat model", "<provider> <model>"),
@@ -34,7 +35,7 @@ public class CommandRegistry {
             new CommandDescriptor("add-url-cancel", "stop the running crawl", ""),
             new CommandDescriptor("ask", "ask a question and stream the answer", "<question>"),
             new CommandDescriptor("history", "list past conversations", ""),
-            new CommandDescriptor("connect", "browse models or switch chat/embedding",
+            new CommandDescriptor(CONNECT, "browse models or switch chat/embedding",
                     "[catalog [<provider>] | chat <provider> <model> | embedding <provider> <model> | refresh]"),
             new CommandDescriptor("quit", "exit the terminal", ""),
             new CommandDescriptor("variant", "list, create or activate pipeline variants",
@@ -49,7 +50,7 @@ public class CommandRegistry {
         groups.put("Documents", List.of("add-file", "add-folder", "add-url", "add-url-cancel",
                 "documents", "delete"));
         groups.put("Chat", List.of("ask", "history"));
-        groups.put("Providers", List.of("connect"));
+        groups.put("Providers", List.of(CONNECT));
         groups.put("Pipeline variants", List.of("variant"));
         groups.put("Session", List.of("help", "quit"));
         return groups;
@@ -126,7 +127,7 @@ public class CommandRegistry {
         for (var group : GROUPS.entrySet()) {
             for (String name : group.getValue()) {
                 var command = COMMANDS.stream().filter(c -> c.name().equals(name)).findFirst().orElseThrow();
-                if ("connect".equals(name)) {
+                if (CONNECT.equals(name)) {
                     CONNECT_HELP.forEach(sub ->
                             rows.add(new HelpRow(group.getKey(), label(sub), sub.description())));
                 } else {

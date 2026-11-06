@@ -17,14 +17,14 @@ class TikaDocumentParserTest {
     @Test
     void fallsBackToContentWhenNoRawBytes() {
         Document doc = new Document("d1", "no raw data", Map.of());
-        assertThat(parser.parse(doc)).isEqualTo("no raw data");
+        assertThat(parser.parse(doc).text()).isEqualTo("no raw data");
     }
 
     @Test
     void extractsTextFromHtml() {
         String html = "<html><body><h1>Title</h1><p>Some <b>content</b> here.</p></body></html>";
         Document doc = new Document("d1", "", Map.of(MetadataKeys.RAW_BYTES, html.getBytes(StandardCharsets.UTF_8)));
-        String result = parser.parse(doc);
+        String result = parser.parse(doc).text();
         assertThat(result)
                 .containsIgnoringCase("Title")
                 .containsIgnoringCase("Some content here");
@@ -34,13 +34,13 @@ class TikaDocumentParserTest {
     void extractsTextFromBase64RawForBackwardCompatibility() {
         String html = "<html><body><p>legacy base64</p></body></html>";
         Document doc = new Document("d1", "", Map.of(MetadataKeys.RAW, base64(html)));
-        assertThat(parser.parse(doc)).containsIgnoringCase("legacy base64");
+        assertThat(parser.parse(doc).text()).containsIgnoringCase("legacy base64");
     }
 
     @Test
     void throwsWhenRawIsNotString() {
         Document doc = new Document("d1", "", Map.of(MetadataKeys.RAW, 123));
-        assertThat(parser.parse(doc)).isEmpty();
+        assertThat(parser.parse(doc).text()).isEmpty();
     }
 
     @Test

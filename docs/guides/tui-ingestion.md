@@ -8,9 +8,9 @@ explains the flow, why it is structured this way, and how to extend it.
 
 ```
 add-file <path>  ─┐
-                  ├──► Document ──► parse ──► split ──► embed ──► store
-add-url <url>   ──┘   (crawl: root + ranked links)   │        │         │
-                                 Tika / plain  recursive  adapter  in-memory/PgVector
+                  ├──► Document ──► parse ──► group ──► split ──► embed ──► store
+add-url <url>   ──┘   (crawl: root + ranked links)   │        │        │         │
+                          format-aware parser   sections  strategy  adapter  in-memory/PgVector
 
 ask <question> ──► retrieve (vector store, topK) ──► build prompt ──► chat model ──► answer + sources
 ```

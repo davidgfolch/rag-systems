@@ -126,22 +126,27 @@ class VariantStoreTest {
 
     @Test
     void rejectsUnknownStrategiesAndVariants() {
-        assertThatThrownBy(() -> sut.add(variant("nope", 512, 128)))
+        var unknownStrategy = variant("nope", 512, 128);
+        assertThatThrownBy(() -> sut.add(unknownStrategy))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> sut.activate("missing"))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> sut.add("bad id", variant("RECURSIVE", 512, 128)))
+        var validVariant = variant("RECURSIVE", 512, 128);
+        assertThatThrownBy(() -> sut.add("bad id", validVariant))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThat(sut.remove("missing")).isFalse();
     }
 
     @Test
     void rejectsChunkWindowsThatCannotAdvance() {
-        assertThatThrownBy(() -> sut.add(variant("FIXED", 512, 512)))
+        var fullOverlap = variant("FIXED", 512, 512);
+        assertThatThrownBy(() -> sut.add(fullOverlap))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> sut.add(variant("TOKEN", 7, 6)))
+        var overlapAboveWindow = variant("TOKEN", 7, 6);
+        assertThatThrownBy(() -> sut.add(overlapAboveWindow))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> sut.add(variant("RECURSIVE", 0, 0)))
+        var zeroWindow = variant("RECURSIVE", 0, 0);
+        assertThatThrownBy(() -> sut.add(zeroWindow))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

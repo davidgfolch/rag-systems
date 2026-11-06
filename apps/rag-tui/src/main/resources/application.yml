@@ -11,7 +11,7 @@ rag:
   vector-store:
     type: ${VECTOR_STORE_TYPE:in-memory}
   parsing:
-    mode: ${PARSING_MODE:tika}
+    mode: ${PARSING_MODE:auto}
   chunking:
     size: ${CHUNK_SIZE:512}
     overlap: ${CHUNK_OVERLAP:64}

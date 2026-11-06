@@ -73,6 +73,7 @@ public class VariantStoreFactory implements VariantStores {
      * where nothing was persisted in the first place.
      */
     @Override
+    @SuppressWarnings("java:S2077")
     public void drop(PipelineVariantDTO variant) {
         var jdbc = jdbcTemplate.getIfAvailable();
         if (jdbc == null) {

@@ -22,6 +22,7 @@ public class ModuleBootstrap {
     /** Companion service for the model catalog; never a RAG chat module. */
     private static final String PROVIDER_MODULE = "rag-provider";
     private static final String CHOOSE_ACTIVE = "Choose the active module";
+    private static final String ACTIVE_MODULE = "Active module: ";
 
     private final ModuleRegistry registry;
     private final ModuleLifecycleManager lifecycle;
@@ -56,10 +57,10 @@ public class ModuleBootstrap {
         if (running.size() == 1) {
             var only = running.get(0);
             registry.activate(only.name());
-            return success("Active module: " + only.name() + " (only running module)");
+            return success(ACTIVE_MODULE + only.name() + " (only running module)");
         }
         if (running.stream().anyMatch(m -> m.name().equals(active.name()))) {
-            return success("Active module: " + active.name());
+            return success(ACTIVE_MODULE + active.name());
         }
         var choices = running.stream().map(m -> new Prompter.Choice(m.name(), m.name())).toList();
         String picked = prompter.pick(CHOOSE_ACTIVE, choices).orElse("");
@@ -67,7 +68,7 @@ public class ModuleBootstrap {
             return noModuleSelected(running, active.name());
         }
         registry.activate(picked);
-        return success("Active module: " + picked);
+        return success(ACTIVE_MODULE + picked);
     }
 
     private static String noModuleSelected(List<Module> running, String activeName) {

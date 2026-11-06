@@ -69,21 +69,29 @@ An AI agent evaluates the document and user intent to decide how to chunk - may 
 
 Smaller chunks (256-384) are better for code; larger (512) for prose. Match your chunk size to your embedding model's window.
 
-## Implementation (Spring AI)
+## Format-Aware Chunking
 
-Spring AI provides `TextSplitter` implementations that are swappable via the Strategy pattern. The `TextSplitter` interface in `rag-common-core` lets modules swap strategies via configuration.
+Parsing preserves structure, and chunking consumes it. `DocumentParser.parse(Document)` returns a `ParsedDocument` whose ordered `DocumentBlock`s retain their type (heading, paragraph, table, code, list, quote, JSON record), section path, and provenance (page, DOM path, JSON path, offsets). Chunking then runs in two stages:
+
+1. **Group blocks** — `SectionAwareBlockGrouper` flushes a group when the section, page, or character window changes; tables and code form their own protected groups. `JsonBlockGrouper` groups sibling JSON records up to `maxRecordsPerChunk`.
+2. **Split each group** — `StructuralDocumentChunker` hands the group to the variant's existing `TextSplitter`, so the established algorithms still decide the final character/token windows.
+
+`FormatAwareChunkerDispatcher` routes a `ParsedDocument` to the chunker registered for its `SourceType`. The resulting chunk metadata carries `format`, `contentType`, `sectionPath`, `page`, `domPath`, `jsonPath`, `startOffset`, `endOffset`, `codeLanguage`, and `tableHeader`, which is what the query APIs expose for citations.
+
+Parsing is selected with `rag.parsing.mode`: `auto` (structured, the default), `tika` (legacy flat extraction), or `plain` (passthrough). No parser silently falls back on a broken document; only an unregistered format goes to plain text.
+
+## Implementation
+
+The chunking interfaces live in `rag-common-core` and are swappable via configuration:
 
 ```java
-// Inject via interface
-@Service
-public class IngestionService {
-    private final TextSplitter textSplitter; // Swappable via config
-
-    public List<Chunk> ingest(Document doc) {
-        return textSplitter.split(doc);
-    }
+public interface DocumentChunker {
+    boolean supports(ParsedDocument document);
+    List<Chunk> chunk(ParsedDocument document, ChunkingConfig config);
 }
 ```
+
+`IngestionService` injects a `DocumentChunker` (the module-wide `ActiveDocumentChunker` resolves the active variant per call), so a variant switch changes the structural chunking of the next ingestion without a restart. `TextSplitter` remains the low-level splitting port used inside each structural group and for the legacy code path.
 
 ## Choosing a Strategy
 

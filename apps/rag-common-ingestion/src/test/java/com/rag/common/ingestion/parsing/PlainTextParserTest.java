@@ -14,6 +14,6 @@ class PlainTextParserTest {
     @Test
     void returnsContentAsIs() {
         Document doc = new Document("d1", "Hello plain text", Map.of());
-        assertThat(parser.parse(doc)).isEqualTo("Hello plain text");
+        assertThat(parser.parse(doc).text()).isEqualTo("Hello plain text");
     }
 }

@@ -57,7 +57,7 @@ class CrawlSessionServiceTest {
     void stepSubmitsPageAndAddsRankedRootLinksToInitialSet() {
         pages.put(ROOT, page(ROOT, ROOT + "/a", ROOT + "/b", "https://other.com/c"));
         pages.put(ROOT + "/a", page(ROOT + "/a"));
-        when(async.submit(any())).thenReturn("d1");
+        when(async.submitParsed(any())).thenReturn("d1");
         var start = sut.start(ROOT, 2, 50, true);
         var result = sut.step(start.sessionId(), "q");
         assertThat(result.ingested()).isTrue();
@@ -66,7 +66,7 @@ class CrawlSessionServiceTest {
         assertThat(result.hasMore()).isTrue();
         assertThat(result.nextPage().url()).isEqualTo(ROOT + "/a");
         assertThat(result.skippedLinks()).isEqualTo(1);
-        verify(async).submit(argThat(document -> ROOT.equals(document.getMetadata().get(SOURCE))));
+        verify(async).submitParsed(argThat(document -> ROOT.equals(document.metadata().get(SOURCE))));
     }
 
     @Test
@@ -78,14 +78,14 @@ class CrawlSessionServiceTest {
         var result = sut.step(start.sessionId(), null);
         assertThat(result.ingested()).isFalse();
         assertThat(result.documentId()).isNull();
-        verify(async, never()).submit(any());
+        verify(async, never()).submitParsed(any());
     }
 
     @Test
     void stepSkipsDuplicateAndOffHostLinks() {
         pages.put(ROOT, page(ROOT, ROOT + "/a", ROOT + "/a", "https://other.com/x"));
         pages.put(ROOT + "/a", page(ROOT + "/a"));
-        when(async.submit(any())).thenReturn("d1");
+        when(async.submitParsed(any())).thenReturn("d1");
         var start = sut.start(ROOT, 5, 50, true);
         var result = sut.step(start.sessionId(), null);
         assertThat(result.skippedLinks()).isEqualTo(2);
@@ -96,7 +96,7 @@ class CrawlSessionServiceTest {
     void initialSetIsCappedByMaxPages() {
         pages.put(ROOT, page(ROOT, ROOT + "/a", ROOT + "/b", ROOT + "/c"));
         pages.put(ROOT + "/a", page(ROOT + "/a"));
-        when(async.submit(any())).thenReturn("d1");
+        when(async.submitParsed(any())).thenReturn("d1");
         var start = sut.start(ROOT, 5, 2, true);
         var rootStep = sut.step(start.sessionId(), null);
         assertThat(rootStep.initialRemaining()).isEqualTo(1);
@@ -110,7 +110,7 @@ class CrawlSessionServiceTest {
         pages.put(ROOT, page(ROOT, ROOT + "/a"));
         pages.put(ROOT + "/a", page(ROOT + "/a", ROOT + "/a/x"));
         pages.put(ROOT + "/a/x", page(ROOT + "/a/x"));
-        when(async.submit(any())).thenReturn("d1");
+        when(async.submitParsed(any())).thenReturn("d1");
         var start = sut.start(ROOT, 5, 50, true);
         assertThat(sut.step(start.sessionId(), null).initialRemaining()).isEqualTo(1);
         var childStep = sut.step(start.sessionId(), null);
@@ -122,7 +122,7 @@ class CrawlSessionServiceTest {
     void fetchFailureIsSkippedAndFrontierContinues() {
         pages.put(ROOT, page(ROOT, ROOT + "/bad", ROOT + "/good"));
         pages.put(ROOT + "/good", page(ROOT + "/good"));
-        when(async.submit(any())).thenReturn("d1");
+        when(async.submitParsed(any())).thenReturn("d1");
         var start = sut.start(ROOT, 5, 50, true);
         var result = sut.step(start.sessionId(), null);
         assertThat(result.nextPage().url()).isEqualTo(ROOT + "/good");
@@ -132,7 +132,7 @@ class CrawlSessionServiceTest {
     @Test
     void stepWithoutPageLeftThrowsNoPage() {
         pages.put(ROOT, page(ROOT));
-        when(async.submit(any())).thenReturn("d1");
+        when(async.submitParsed(any())).thenReturn("d1");
         var start = sut.start(ROOT, 5, 1, true);
         assertThat(sut.step(start.sessionId(), null).hasMore()).isFalse();
         assertThatThrownBy(() -> sut.step(start.sessionId(), null))
@@ -158,7 +158,7 @@ class CrawlSessionServiceTest {
     @Test
     void worksWithoutDocumentStore() {
         pages.put(ROOT, page(ROOT));
-        when(async.submit(any())).thenReturn("d1");
+        when(async.submitParsed(any())).thenReturn("d1");
         var service = new CrawlSessionService(fetcher, async, null);
         var start = service.start(ROOT, 5, 50, true);
         assertThat(service.step(start.sessionId(), null).ingested()).isTrue();

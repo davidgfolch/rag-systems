@@ -19,6 +19,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static com.rag.common.ingestion.testfixture.TestParsedDocuments.text;
 
 class IngestionServiceTest {
 
@@ -33,7 +34,7 @@ class IngestionServiceTest {
     @Test
     void ingestsDocumentEndToEnd() {
         var doc = new Document("d1", "content", Map.of());
-        when(parser.parse(doc)).thenReturn("content");
+        when(parser.parse(doc)).thenReturn(text("d1", "content"));
         var chunk = new Chunk("c1", "d1", "content", 0, Map.of());
         when(splitter.split(doc)).thenReturn(List.of(chunk));
         when(embeddingModel.embed(List.of("content"))).thenReturn(List.of(List.of(1.0f, 0.0f)));
@@ -46,7 +47,7 @@ class IngestionServiceTest {
     @Test
     void embedsAllChunksInSingleCallWhenBelowBatchSize() {
         var doc = new Document("d1", "content", Map.of());
-        when(parser.parse(doc)).thenReturn("content");
+        when(parser.parse(doc)).thenReturn(text("d1", "content"));
         var c1 = new Chunk("c1", "d1", "part one", 0, Map.of());
         var c2 = new Chunk("c2", "d1", "part two", 1, Map.of());
         when(splitter.split(doc)).thenReturn(List.of(c1, c2));
@@ -62,7 +63,7 @@ class IngestionServiceTest {
     void embedsChunksInBoundedWindowsWhenAboveBatchSize() {
         var batchService = new IngestionService(parser, splitter, embeddingModel, vectorStore, 2);
         var doc = new Document("d1", "content", Map.of());
-        when(parser.parse(doc)).thenReturn("content");
+        when(parser.parse(doc)).thenReturn(text("d1", "content"));
         var c1 = new Chunk("c1", "d1", "part one", 0, Map.of());
         var c2 = new Chunk("c2", "d1", "part two", 1, Map.of());
         var c3 = new Chunk("c3", "d1", "part three", 2, Map.of());
@@ -89,7 +90,7 @@ class IngestionServiceTest {
     @Test
     void rejectsAnyDocumentThatYieldsNoText() {
         var doc = new Document("d1", "", Map.of());
-        when(parser.parse(doc)).thenReturn("");
+        when(parser.parse(doc)).thenReturn(text("d1", ""));
         assertThatThrownBy(() -> service.ingest(doc))
                 .isInstanceOf(EmptyExtractionException.class)
                 .hasMessageContaining(EmptyExtractionException.MSG);
@@ -98,7 +99,7 @@ class IngestionServiceTest {
     @Test
     void rejectsBinaryDocumentThatYieldsNoText() {
         var doc = new Document("d1", "", Map.of(MetadataKeys.RAW_BYTES, new byte[]{0x25, 0x50, 0x44, 0x46}));
-        when(parser.parse(doc)).thenReturn("");
+        when(parser.parse(doc)).thenReturn(text("d1", ""));
         assertThatThrownBy(() -> service.ingest(doc))
                 .isInstanceOf(EmptyExtractionException.class)
                 .hasMessageContaining(EmptyExtractionException.MSG);
