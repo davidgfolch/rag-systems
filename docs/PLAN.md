@@ -516,7 +516,7 @@ See [guides/sonarqube.md](guides/sonarqube.md) and [ADR-0004](architecture/decis
 - [x] Split `rag-common` into capability modules (`core`/`ingestion`/`retrieval`/`generation`)
 
 ### Phase 3: Data Store Isolation
-- [x] rag-basic: single `chunks` table in schema `rag_basic` (via `PGVECTOR_SCHEMA`; blank default derives a `rag_<dim>` schema from the active embedding dimension, see `RagBasicConfig`)
+- [x] rag-basic: single `chunks` table in schema `rag_basic` (pinned by `PGVECTOR_BASIC_SCHEMA`, default `rag_basic`; schema resolution in `RagPipelineConfiguration` + `PgVectorSchemas`)
 - [x] Per-document query scoping via `documentId` chunk metadata (see ADR-0006)
 - [x] rag-advanced applies the same pattern (schema `rag_advanced`); rag-agentic `rag_agentic`
 - [x] `.env`: `RAG_BASIC_URL`, `RAG_ADVANCED_URL`, `RAG_AGENTIC_URL`, `RAG_MEMORY_URL`, `RAG_WEBCRAWLER_URL`

@@ -17,9 +17,9 @@ spring:
   ai:
     vectorstore:
       pgvector:
-        # PGVECTOR_SCHEMA defaults to rag_agentic in .env, pinning one schema
-        # per module; blank -> schema derived from the active embedding dimension
-        schema-name: ${PGVECTOR_SCHEMA:rag_agentic}
+        # PGVECTOR_AGENTIC_SCHEMA pins this module's schema (rag_agentic by
+        # default); never share it with another module
+        schema-name: ${PGVECTOR_AGENTIC_SCHEMA:rag_agentic}
         table-name: chunks
         schema-validation: true
         initialize-schema: true

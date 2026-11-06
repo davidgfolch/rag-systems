@@ -116,7 +116,7 @@ Runtime knobs (all settable via env vars in `.env` / `.env.secrets`):
 | `rag.chunking.size` | `CHUNK_SIZE` | `512` | Max chunk size (chars) |
 | `rag.chunking.overlap` | `CHUNK_OVERLAP` | `128` | Chunk overlap |
 | `rag.embedding.batch-size` | `RAG_EMBED_BATCH_SIZE` | `100` | Embedding batch size |
-| `spring.ai.vectorstore.pgvector.schema-name` | `PGVECTOR_SCHEMA` | `rag_basic` | PgVector schema |
+| `spring.ai.vectorstore.pgvector.schema-name` | `PGVECTOR_BASIC_SCHEMA` | `rag_basic` | PgVector schema (never shared with other modules) |
 | `SPRING_PROFILES_ACTIVE` | - | `local` | `local` (Ollama) or `cloud` (OpenAI) |
 
 ## Performance Notes

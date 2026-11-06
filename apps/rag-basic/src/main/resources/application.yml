@@ -17,9 +17,9 @@ spring:
   ai:
     vectorstore:
       pgvector:
-        # PGVECTOR_SCHEMA (default rag_basic in .env) pins one schema per module;
-        # blank -> schema derived from the active embedding dimension (rag_<dim>)
-        schema-name: ${PGVECTOR_SCHEMA:}
+        # PGVECTOR_BASIC_SCHEMA pins this module's schema (rag_basic by default);
+        # never share it with another module or retrievals cross-contaminate
+        schema-name: ${PGVECTOR_BASIC_SCHEMA:rag_basic}
         table-name: chunks
         schema-validation: true
         initialize-schema: true

@@ -36,7 +36,7 @@ public class PgVectorStoreAdapter implements VectorStorePort {
     private static final ObjectMapper om = new ObjectMapper();
 
     static final String DEFAULT_SCHEMA = "public";
-    static final String DEFAULT_TABLE = "vector_store";
+    static final String DEFAULT_TABLE = "chunks";
 
     private final VectorStore delegate;
     private final DataSource dataSource;

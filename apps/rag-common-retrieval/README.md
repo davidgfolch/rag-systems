@@ -19,7 +19,7 @@ com.rag.common.retrieval
 
 The production backend. Key behaviors:
 
-- **Per-module schema isolation** — each `rag-*` module pins its own PostgreSQL schema (`rag_basic`, `rag_advanced`, ...) so corpora never contaminate each other. The schema name comes from `PGVECTOR_SCHEMA`; when blank it is derived from the active embedding dimension (`rag_<dim>`).
+- **Per-module schema isolation** — each `rag-*` module pins its own PostgreSQL schema (`rag_basic`, `rag_advanced`, `rag_agentic`) so corpora never contaminate each other. The schema comes from a module-specific variable (`PGVECTOR_BASIC_SCHEMA`, `PGVECTOR_ADVANCED_SCHEMA`, `PGVECTOR_AGENTIC_SCHEMA`); a single shared variable would let one module write into another module's schema.
 - **Per-document query scoping** — each chunk stores a `documentId` metadata key, so a query can be scoped to one ingested document. (See [ADR-0006](../../docs/architecture/decision-records/adr-0006-data-store-isolation.md).)
 - **Schema auto-init** — on startup it validates/creates the `chunks` table (`schema-validation: true`, `initialize-schema: true`).
 
@@ -28,7 +28,7 @@ The production backend. Key behaviors:
 | Property | Env var | Default | Description |
 |----------|---------|---------|-------------|
 | `rag.vector-store.type` | `VECTOR_STORE_TYPE` | `pgvector` | `pgvector` or `simple` |
-| `spring.ai.vectorstore.pgvector.schema-name` | `PGVECTOR_SCHEMA` | `rag_basic` in `.env` | Per-module schema (blank → `rag_<dimension>`) |
+| `spring.ai.vectorstore.pgvector.schema-name` | `PGVECTOR_<MODULE>_SCHEMA` | module's `rag_*` schema | Per-module schema (`rag_basic` / `rag_advanced` / `rag_agentic`) |
 | `spring.ai.vectorstore.pgvector.table-name` | - | `chunks` | Storage table |
 | `spring.datasource.*` | `PGVECTOR_HOST/PORT/DB/USER/PASSWORD` | `localhost:5432/rag` | Postgres connection |
 
