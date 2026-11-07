@@ -121,6 +121,13 @@ public class RagApiClient {
         return post(CRAWL, new CrawlStartRequest().url(URI.create(url)), CrawlStartResponse.class);
     }
 
+    /** Starts a crawl with an optional page cap and discovery toggle. */
+    public CrawlStartResponse startCrawl(String url, Integer maxPages, boolean discover) {
+        var request = new CrawlStartRequest().url(URI.create(url)).discover(discover);
+        if (maxPages != null) request.maxPages(maxPages);
+        return post(CRAWL, request, CrawlStartResponse.class);
+    }
+
     /** Submits the current crawl page and resolves the next one. */
     public CrawlStepResponse stepCrawl(String sessionId, String question) {
         return client().post().uri(CRAWL_STEP, sessionId)

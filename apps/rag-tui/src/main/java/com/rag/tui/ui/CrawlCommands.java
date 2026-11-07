@@ -6,6 +6,7 @@ import io.micrometer.tracing.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
 import java.util.function.Consumer;
 
 import static com.rag.tui.ui.CommandDispatcher.orEmpty;
@@ -27,7 +28,12 @@ public class CrawlCommands {
     private static final String GO_ON_PROMPT =
             "Initial pages submitted. Go on and crawl more pages? (y/N) ";
     private static final String NO_ACTIVE_CRAWL = "No URL crawl is active.";
-    private static final String USAGE = "Usage: add-url <url>";
+    private static final String USAGE =
+            "Usage: add-url <url> [--max-pages N] [--all] [--no-discover]";
+    private static final String MAX_PAGES_FLAG = "--max-pages";
+    private static final String ALL_FLAG = "--all";
+    private static final String NO_DISCOVER_FLAG = "--no-discover";
+    private static final int ALL_PAGES = Integer.MAX_VALUE;
 
     private static final Logger log = LoggerFactory.getLogger(CrawlCommands.class);
 
@@ -51,7 +57,9 @@ public class CrawlCommands {
     }
 
     public String addUrl(String arg, Consumer<String> tokenSink) {
-        var url = arg == null ? "" : arg.trim();
+        var options = CrawlOptions.parse(arg);
+        if (!options.valid()) return USAGE;
+        var url = options.url();
         if (url.isEmpty()) {
             url = orEmpty(prompter.prompt("URL: "));
             if (url.isEmpty()) return USAGE;
@@ -67,7 +75,10 @@ public class CrawlCommands {
             clients.apiClient().deleteDocument(match.baseUrl(), match.documentId());
             log.info("Overriding duplicate document {} for {}", match.documentId(), url);
         }
-        return run(clients.apiClient().startCrawl(url), tokenSink);
+        var start = options.hasOptions()
+                ? clients.apiClient().startCrawl(url, options.maxPages(), options.discover())
+                : clients.apiClient().startCrawl(url);
+        return run(start, tokenSink);
     }
 
     /** Cancels the crawl currently being driven, if any. */
@@ -81,6 +92,7 @@ public class CrawlCommands {
 
     private String run(CrawlStartResponse start, Consumer<String> tokenSink) {
         activeSessionId = start.getSessionId();
+        int discovered = intOrZero(start.getDiscoveredPages());
         int ingested = 0;
         int skippedPages = 0;
         int skippedLinks = 0;
@@ -90,7 +102,7 @@ public class CrawlCommands {
             while (page != null) {
                 var question = askQuestion(page);
                 if (isCancel(question)) {
-                    return cancelSummary(start.getSessionId(), ingested, skippedPages, skippedLinks);
+                    return cancelSummary(start.getSessionId(), ingested, skippedPages, skippedLinks, discovered);
                 }
                 var step = clients.apiClient().stepCrawl(start.getSessionId(), question);
                 if (Boolean.TRUE.equals(step.getIngested()) && step.getDocumentId() != null) {
@@ -104,12 +116,12 @@ public class CrawlCommands {
                 if (page != null && intOrZero(step.getInitialRemaining()) == 0 && !goOnAsked) {
                     goOnAsked = true;
                     if (!prompter.confirm(GO_ON_PROMPT)) {
-                        return cancelSummary(start.getSessionId(), ingested, skippedPages, skippedLinks);
+                        return cancelSummary(start.getSessionId(), ingested, skippedPages, skippedLinks, discovered);
                     }
                 }
             }
             cancel(start.getSessionId());
-            return success(summary("Crawl finished", ingested, skippedPages, skippedLinks));
+            return success(summary("Crawl finished", ingested, skippedPages, skippedLinks, discovered));
         } finally {
             activeSessionId = null;
         }
@@ -125,9 +137,10 @@ public class CrawlCommands {
         return CANCEL_COMMAND.equalsIgnoreCase(answer) || CANCEL_ALIAS.equalsIgnoreCase(answer);
     }
 
-    private String cancelSummary(String sessionId, int ingested, int skippedPages, int skippedLinks) {
+    private String cancelSummary(String sessionId, int ingested, int skippedPages, int skippedLinks,
+                                 int discovered) {
         cancel(sessionId);
-        return success(summary("Crawl cancelled", ingested, skippedPages, skippedLinks));
+        return success(summary("Crawl cancelled", ingested, skippedPages, skippedLinks, discovered));
     }
 
     private void cancel(String sessionId) {
@@ -138,13 +151,47 @@ public class CrawlCommands {
         }
     }
 
-    private static String summary(String prefix, int ingested, int skippedPages, int skippedLinks) {
+    private static String summary(String prefix, int ingested, int skippedPages, int skippedLinks,
+                                  int discovered) {
         return ("%s: %d page(s) submitted for async ingestion, %d page(s) skipped, %d link(s) skipped. "
-                + "Ingestion continues in the background; I'll report each page as it completes.")
-                .formatted(prefix, ingested, skippedPages, skippedLinks);
+                + "Discovery queued %d page(s). Ingestion continues in the background; "
+                + "I'll report each page as it completes.")
+                .formatted(prefix, ingested, skippedPages, skippedLinks, discovered);
     }
 
     private static int intOrZero(Integer value) {
         return value == null ? 0 : value;
+    }
+
+    record CrawlOptions(String url, Integer maxPages, boolean discover, boolean hasOptions, boolean valid) {
+
+        static CrawlOptions parse(String arg) {
+            var tokens = List.of(arg == null ? new String[0] : arg.trim().split("\\s+"));
+            var url = "";
+            Integer maxPages = null;
+            boolean all = false;
+            boolean discover = true;
+            try {
+                var iterator = tokens.iterator();
+                while (iterator.hasNext()) {
+                    var token = iterator.next();
+                    if (MAX_PAGES_FLAG.equals(token)) {
+                        maxPages = Integer.parseInt(iterator.next());
+                    } else if (ALL_FLAG.equals(token)) {
+                        all = true;
+                    } else if (NO_DISCOVER_FLAG.equals(token)) {
+                        discover = false;
+                    } else if (!token.isEmpty()) {
+                        url = url.isEmpty() ? token : url + " " + token;
+                    }
+                }
+            } catch (RuntimeException _) {
+                return new CrawlOptions("", null, true, false, false);
+            }
+            if (maxPages != null && maxPages < 1) return new CrawlOptions("", null, true, false, false);
+            if (all) maxPages = ALL_PAGES;
+            var hasOptions = all || maxPages != null || !discover;
+            return new CrawlOptions(url, maxPages, discover, hasOptions, true);
+        }
     }
 }

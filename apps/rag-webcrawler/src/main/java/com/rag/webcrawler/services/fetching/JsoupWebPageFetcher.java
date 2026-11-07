@@ -22,6 +22,7 @@ public class JsoupWebPageFetcher implements WebPageFetcher {
 
     private final Connection connection;
     private final PageBlockExtractor blockExtractor = new PageBlockExtractor();
+    private final NavLinkExtractor navLinkExtractor = new NavLinkExtractor();
 
     public JsoupWebPageFetcher() {
         this.connection = null;
@@ -40,8 +41,10 @@ public class JsoupWebPageFetcher implements WebPageFetcher {
             doc.select("a[href]").forEach(a -> links.add(a.absUrl("href")));
             String title = doc.title();
             var blocks = blockExtractor.extract(doc);
-            log.info("Fetched {} (title='{}', links={}, blocks={})", url, title, links.size(), blocks.size());
-            return new PageDTO(url, title, doc.text()).links(links).blocks(blocks);
+            var navLinks = navLinkExtractor.extract(doc);
+            log.info("Fetched {} (title='{}', links={}, navLinks={}, blocks={})",
+                    url, title, links.size(), navLinks.size(), blocks.size());
+            return new PageDTO(url, title, doc.text()).links(links).navLinks(navLinks).blocks(blocks);
         } catch (IOException e) {
             throw new WebFetchException("Failed to fetch URL: " + url, e);
         }

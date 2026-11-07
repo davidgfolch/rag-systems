@@ -305,6 +305,33 @@ paths:
               schema:
                 $ref: '#/components/schemas/RankLinksResponse'
 
+  /api/discover:
+    post:
+      tags: [webcrawler]
+      operationId: discoverUrls
+      summary: Discover crawlable URLs via robots/sitemap and navigation links
+      description: >
+        Site-agnostic discovery. Follows the Sitemap directives advertised in
+        robots.txt, probes the usual sitemap locations (including sitemap
+        indexes), unions them with the navigation links of the start page,
+        removes versions/locales of the same page, and returns a
+        section-balanced order so a capped crawl still covers every chapter.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiscoverRequest'
+      responses:
+        '200':
+          description: Discovered URLs in crawl order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiscoverResponse'
+        '400':
+          description: Invalid or unfetchable URL
+
   /api/conversations:
     get:
       tags: [memory]
@@ -472,6 +499,10 @@ components:
           type: boolean
           default: true
           description: Only follow links on the root page's host
+        discover:
+          type: boolean
+          default: true
+          description: Seed the frontier from sitemap/navigation discovery instead of only the root page links
 
     CrawlPageDTO:
       type: object
@@ -494,6 +525,10 @@ components:
           type: integer
           format: int32
           description: Pages still pending in the initial set (root plus ranked root links)
+        discoveredPages:
+          type: integer
+          format: int32
+          description: URLs queued by discovery, before applying maxPages
         hasMore:
           type: boolean
 
@@ -550,6 +585,28 @@ components:
           type: array
           items:
             type: string
+
+    DiscoverRequest:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          format: uri
+        maxUrls:
+          type: integer
+          format: int32
+          description: Upper bound on discovered URLs (defaults to the server limit)
+
+    DiscoverResponse:
+      type: object
+      required: [urls]
+      properties:
+        urls:
+          type: array
+          items:
+            type: string
+          description: Discovered URLs in section-balanced crawl order
 
     QueryRequest:
       type: object
@@ -626,6 +683,11 @@ components:
           items:
             type: string
           description: Candidate outbound links found on the page
+        navLinks:
+          type: array
+          items:
+            type: string
+          description: Links found inside navigation/sidebar containers on the page
         blocks:
           type: array
           items:

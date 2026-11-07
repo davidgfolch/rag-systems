@@ -1,5 +1,6 @@
 package com.rag.agentic.services;
 
+import com.rag.common.ingestion.web.WebCrawlerDiscovery;
 import com.rag.common.ingestion.web.WebPageFetcher;
 import com.rag.contract.model.FetchRequest;
 import com.rag.contract.model.PageDTO;
@@ -53,5 +54,10 @@ public class WebCrawlerClient implements WebPageFetcher {
                 .retrieve()
                 .body(RankLinksResponse.class);
         return Optional.ofNullable(response).map(RankLinksResponse::getLinks).orElseGet(List::of);
+    }
+
+    @Override
+    public List<String> discover(String url) {
+        return WebCrawlerDiscovery.discover(restClient, url);
     }
 }

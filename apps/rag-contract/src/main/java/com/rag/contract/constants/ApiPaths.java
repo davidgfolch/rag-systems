@@ -24,6 +24,7 @@ public final class ApiPaths {
     public static final String CHAT_STREAM = "/api/chat/stream";
     public static final String FETCH = "/api/fetch";
     public static final String RANK_LINKS = "/api/rank-links";
+    public static final String DISCOVER = "/api/discover";
     public static final String CONVERSATIONS = "/api/conversations";
     public static final String CONVERSATIONS_MESSAGES = "/api/conversations/{id}/messages";
     public static final String MODULE_VARIANTS = "/api/modules/{module}/variants";

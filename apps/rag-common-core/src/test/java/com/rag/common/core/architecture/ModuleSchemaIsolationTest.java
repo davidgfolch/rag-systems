@@ -64,8 +64,9 @@ class ModuleSchemaIsolationTest {
     @Test
     void shouldDefineOneDistinctSchemaPerModuleInEnv() throws IOException {
         var env = envValues();
-        assertThat(MODULE_SCHEMAS).allSatisfy((module, schema) ->
-                assertThat(env).containsEntry(MODULE_VARIABLES.get(module), schema));
+        MODULE_SCHEMAS.forEach((module, schema) ->
+                assertThat(env).as("%s must define its schema in .env", module)
+                        .containsEntry(MODULE_VARIABLES.get(module), schema));
         assertThat(MODULE_SCHEMAS.values()).as("every module needs a distinct schema").doesNotHaveDuplicates();
         assertThat(env).doesNotContainKey(LEGACY_SHARED_KEY);
     }

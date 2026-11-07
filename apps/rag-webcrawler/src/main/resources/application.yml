@@ -16,3 +16,5 @@ management:
 rag:
   crawler:
     prioritizer: ${CRAWLER_PRIORITIZER:deterministic}
+    discovery:
+      max-urls: ${CRAWLER_MAX_URLS:2000}

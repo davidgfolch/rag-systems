@@ -24,21 +24,22 @@ class CrawlControllerTest {
 
     @Test
     void startsCrawlWithDefaults() {
-        when(service.start(URL, 5, 50, true)).thenReturn(startResult());
+        when(service.start(URL, 5, 50, true, true)).thenReturn(startResult());
         var response = sut.start(new CrawlStartRequest().url(URI.create(URL)));
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody().getSessionId()).isEqualTo(SESSION);
         assertThat(response.getBody().getPage().getUrl()).isEqualTo(URL);
         assertThat(response.getBody().getInitialRemaining()).isEqualTo(1);
+        assertThat(response.getBody().getDiscoveredPages()).isEqualTo(4);
         assertThat(response.getBody().getHasMore()).isTrue();
     }
 
     @Test
     void usesExplicitCrawlOptions() {
-        when(service.start(URL, 2, 3, false)).thenReturn(startResult());
+        when(service.start(URL, 2, 3, false, false)).thenReturn(startResult());
         sut.start(new CrawlStartRequest().url(URI.create(URL))
-                .maxInitialLinks(2).maxPages(3).sameHostOnly(false));
-        verify(service).start(URL, 2, 3, false);
+                .maxInitialLinks(2).maxPages(3).sameHostOnly(false).discover(false));
+        verify(service).start(URL, 2, 3, false, false);
     }
 
     @Test
@@ -99,7 +100,7 @@ class CrawlControllerTest {
 
     private static CrawlSessionService.StartResult startResult() {
         return new CrawlSessionService.StartResult(SESSION,
-                new CrawlSessionService.PageInfo(URL, "Root"), 1, true);
+                new CrawlSessionService.PageInfo(URL, "Root"), 1, true, 4);
     }
 
     private static CrawlSessionService.StepResult stepResult() {

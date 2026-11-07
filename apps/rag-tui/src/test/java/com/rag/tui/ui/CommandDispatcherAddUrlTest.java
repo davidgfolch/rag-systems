@@ -119,10 +119,37 @@ class CommandDispatcherAddUrlTest extends AbstractCommandDispatcherTest {
     }
 
     @Test
+    void addUrlPassesMaxPagesAndDiscoveryFlags() {
+        when(apiClient.startCrawl(URL, 7, false)).thenReturn(start(1));
+        when(apiClient.stepCrawl(SESSION, "")).thenReturn(step("d1", 0, null));
+        when(prompter.prompt(anyString())).thenReturn("");
+        var result = handle("add-url " + URL + " --max-pages 7 --no-discover");
+        assertThat(result).contains("Crawl finished");
+        verify(apiClient).startCrawl(URL, 7, false);
+    }
+
+    @Test
+    void addUrlAllFlagRemovesThePageCap() {
+        when(apiClient.startCrawl(URL, Integer.MAX_VALUE, true)).thenReturn(start(1));
+        when(apiClient.stepCrawl(SESSION, "")).thenReturn(step("d1", 0, null));
+        when(prompter.prompt(anyString())).thenReturn("");
+        var result = handle("add-url " + URL + " --all");
+        assertThat(result).contains("Crawl finished");
+        verify(apiClient).startCrawl(URL, Integer.MAX_VALUE, true);
+    }
+
+    @Test
+    void addUrlRejectsInvalidMaxPages() {
+        var result = handle("add-url " + URL + " --max-pages nope");
+        assertThat(result).isEqualTo("Usage: add-url <url> [--max-pages N] [--all] [--no-discover]");
+        verify(apiClient, never()).startCrawl(anyString());
+    }
+
+    @Test
     void addUrlCancelledPromptShowsUsage() {
         when(prompter.prompt("URL: ")).thenReturn(null);
         var result = handle("add-url");
-        assertThat(result).isEqualTo("Usage: add-url <url>");
+        assertThat(result).isEqualTo("Usage: add-url <url> [--max-pages N] [--all] [--no-discover]");
         verify(apiClient, never()).startCrawl(anyString());
     }
 

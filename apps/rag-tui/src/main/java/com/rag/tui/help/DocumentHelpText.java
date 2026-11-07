@@ -63,14 +63,26 @@ public final class DocumentHelpText {
                 """);
         details.put("add-url", """
                 Usage:
-                  add-url           prompt for the URL
-                  add-url <url>     start an interactive breadth-first crawl
+                  add-url                          prompt for the URL
+                  add-url <url>                    start an interactive breadth-first crawl
+                  add-url <url> --max-pages <n>    cap the crawl at <n> pages
+                  add-url <url> --all              crawl every discovered page
+                  add-url <url> --no-discover      follow only the root page's links
 
                 Arguments:
                   <url>   http(s) URL of the first page
 
+                Options:
+                  --max-pages <n>   maximum pages fetched (default 50)
+                  --all             no practical page cap (uses the server discovery limit)
+                  --no-discover     skip sitemap/navigation discovery; crawl the root
+                                    page's outbound links in ranked order
+
                 Notes:
-                  The active module fetches and ranks pages; the TUI asks one question
+                  By default the module discovers the site's pages (robots.txt sitemap,
+                  conventional sitemap locations and the root page navigation), removes
+                  duplicate versions/locales and visits the tree section by section, so
+                  a capped crawl still covers every chapter. The TUI asks one question
                   per page to steer link ranking (blank = no guidance). After the
                   initial pages one "Go on?" question decides whether to crawl more.
                   Answer 'add-url-cancel' or 'cancel' at any prompt to stop. Pages are

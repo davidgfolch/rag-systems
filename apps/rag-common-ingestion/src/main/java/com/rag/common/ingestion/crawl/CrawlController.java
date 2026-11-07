@@ -47,11 +47,13 @@ public class CrawlController {
         var result = crawlSessionService.start(request.getUrl().toString(),
                 intOr(request.getMaxInitialLinks(), CrawlSessionService.DEFAULT_MAX_INITIAL_LINKS),
                 intOr(request.getMaxPages(), CrawlSessionService.DEFAULT_MAX_PAGES),
-                request.getSameHostOnly() == null || request.getSameHostOnly());
+                request.getSameHostOnly() == null || request.getSameHostOnly(),
+                request.getDiscover() == null || request.getDiscover());
         return ResponseEntity.status(HttpStatus.CREATED).body(new CrawlStartResponse()
                 .sessionId(result.sessionId())
                 .page(pageDto(result.page()))
                 .initialRemaining(result.initialRemaining())
+                .discoveredPages(result.discoveredPages())
                 .hasMore(result.hasMore()));
     }
 
