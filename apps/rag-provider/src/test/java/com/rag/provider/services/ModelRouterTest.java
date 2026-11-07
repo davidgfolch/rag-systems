@@ -13,7 +13,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.embedding.EmbeddingModel;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -129,6 +134,37 @@ class ModelRouterTest {
         verify(factory).chatModel(any(), anyString());
         verify(factory).embeddingModel(any(), anyString());
         assertThat(router.currentChat()).isEqualTo(CHAT_SPEC);
+    }
+
+    @Test
+    void shouldProbeDimensionOnceForConcurrentCallers() throws Exception {
+        when(factory.embeddingModel(any(), anyString())).thenReturn(embeddingModel);
+        var probes = new AtomicInteger();
+        var started = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        when(embeddingModel.dimensions()).thenAnswer(inv -> {
+            probes.incrementAndGet();
+            started.countDown();
+            release.await(5, TimeUnit.SECONDS);
+            return 768;
+        });
+        var router = newRouter();
+        router.switchEmbedding(EMBED_SPEC);
+        var executor = Executors.newFixedThreadPool(4);
+        try {
+            var futures = new ArrayList<java.util.concurrent.Future<Integer>>();
+            for (int i = 0; i < 4; i++) {
+                futures.add(executor.submit(router::embeddingDimension));
+            }
+            assertThat(started.await(5, TimeUnit.SECONDS)).isTrue();
+            release.countDown();
+            for (var future : futures) {
+                assertThat(future.get(5, TimeUnit.SECONDS)).isEqualTo(768);
+            }
+        } finally {
+            executor.shutdownNow();
+        }
+        assertThat(probes).hasValue(1);
     }
 
     @Test

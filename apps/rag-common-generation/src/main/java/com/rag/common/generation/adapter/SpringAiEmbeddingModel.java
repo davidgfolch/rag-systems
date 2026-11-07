@@ -1,6 +1,5 @@
 package com.rag.common.generation.adapter;
 
-import com.rag.common.core.domain.FloatConversions;
 import com.rag.common.core.services.EmbeddingModelPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,18 +25,18 @@ public class SpringAiEmbeddingModel implements EmbeddingModelPort {
     }
 
     @Override
-    public List<Float> embed(String text) {
+    public float[] embed(String text) {
         var res = delegate.call(new EmbeddingRequest(List.of(text), null));
         var output = res.getResult().getOutput();
         log.debug("Embedded text ({} chars) -> {} dimensions", text.length(), output.length);
-        return FloatConversions.toFloatList(output);
+        return output;
     }
 
     @Override
-    public List<List<Float>> embed(List<String> texts) {
+    public List<float[]> embed(List<String> texts) {
         var response = delegate.call(new EmbeddingRequest(texts, null));
         var vectors = response.getResults().stream()
-                .map(e -> FloatConversions.toFloatList(e.getOutput()))
+                .map(e -> e.getOutput())
                 .toList();
         log.debug("Batch embedded {} texts -> {} vectors", texts.size(), vectors.size());
         return vectors;

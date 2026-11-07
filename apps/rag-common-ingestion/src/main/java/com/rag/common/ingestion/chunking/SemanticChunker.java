@@ -47,6 +47,7 @@ public class SemanticChunker implements TextSplitter {
     private static final Pattern SENTENCE_BOUNDARY = Pattern.compile("(?<=[.!?])\\s+|\\n\\s*\\n");
     private static final double PERCENT_SCALE = 100.0;
     private static final float IDENTICAL_DISTANCES_EPSILON = 1e-6f;
+    static final int EMBED_BATCH_SIZE = 256;
 
     private final EmbeddingModelPort embeddings;
     private final int maxChunkSize;
@@ -131,7 +132,7 @@ public class SemanticChunker implements TextSplitter {
 
     /** Sentence indices that start a new chunk, i.e. one past each topic shift. */
     private Set<Integer> breakpoints(List<String> sentences) {
-        var vectors = embeddings.embed(sentences);
+        var vectors = embedAll(sentences);
         var distances = new float[vectors.size() - 1];
         for (int i = 1; i < vectors.size(); i++) {
             distances[i - 1] = 1f - cosine(vectors.get(i - 1), vectors.get(i));
@@ -148,6 +149,18 @@ public class SemanticChunker implements TextSplitter {
             }
         }
         return result;
+    }
+
+    private List<float[]> embedAll(List<String> sentences) {
+        if (sentences.size() <= EMBED_BATCH_SIZE) {
+            return embeddings.embed(sentences);
+        }
+        var vectors = new ArrayList<float[]>(sentences.size());
+        for (int from = 0; from < sentences.size(); from += EMBED_BATCH_SIZE) {
+            var to = Math.min(sentences.size(), from + EMBED_BATCH_SIZE);
+            vectors.addAll(embeddings.embed(sentences.subList(from, to)));
+        }
+        return vectors;
     }
 
     private List<String> withOverlap(List<String> groups) {
@@ -207,14 +220,14 @@ public class SemanticChunker implements TextSplitter {
         return sorted[Math.clamp((long) rank - 1, 0, sorted.length - 1)];
     }
 
-    private static float cosine(List<Float> a, List<Float> b) {
+    private static float cosine(float[] a, float[] b) {
         var dot = 0.0;
         var normA = 0.0;
         var normB = 0.0;
-        for (int i = 0; i < Math.min(a.size(), b.size()); i++) {
-            dot += a.get(i) * b.get(i);
-            normA += a.get(i) * a.get(i);
-            normB += b.get(i) * b.get(i);
+        for (int i = 0; i < Math.min(a.length, b.length); i++) {
+            dot += a[i] * b[i];
+            normA += a[i] * a[i];
+            normB += b[i] * b[i];
         }
         if (normA == 0.0 || normB == 0.0) {
             return 0f;

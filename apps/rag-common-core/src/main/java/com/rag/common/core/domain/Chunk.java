@@ -1,6 +1,5 @@
 package com.rag.common.core.domain;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -13,7 +12,7 @@ public final class Chunk {
     private final String content;
     private final int index;
     private final Map<String, Object> metadata;
-    private List<Float> embedding;
+    private float[] embedding;
 
     public Chunk(String id, String documentId, String content, int index, Map<String, Object> metadata) {
         this.id = id;
@@ -43,11 +42,11 @@ public final class Chunk {
         return metadata;
     }
 
-    public List<Float> getEmbedding() {
+    public float[] getEmbedding() {
         return embedding;
     }
 
-    public void setEmbedding(List<Float> embedding) {
+    public void setEmbedding(float[] embedding) {
         this.embedding = embedding;
     }
 }

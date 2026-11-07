@@ -30,6 +30,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static com.rag.contract.constants.ApiPaths.CRAWL;
 import static com.rag.contract.constants.ApiPaths.CRAWL_BY_ID;
@@ -54,8 +55,11 @@ public class RagApiClient {
 
     private static final Logger log = LoggerFactory.getLogger(RagApiClient.class);
 
+    private static final int MAX_CACHED_CLIENTS = 16;
+
     private final ModuleRegistry registry;
     private final RestClient.Builder builder;
+    private final Map<String, RestClient> clients = new ConcurrentHashMap<>();
 
     public RagApiClient(ModuleRegistry registry, RestClient.Builder builder) {
         this.registry = registry;
@@ -213,6 +217,10 @@ public class RagApiClient {
     }
 
     private RestClient client() {
-        return builder.clone().baseUrl(registry.active().baseUrl()).build();
+        var baseUrl = registry.active().baseUrl();
+        if (clients.size() >= MAX_CACHED_CLIENTS) {
+            clients.clear();
+        }
+        return clients.computeIfAbsent(baseUrl, url -> builder.clone().baseUrl(url).build());
     }
 }

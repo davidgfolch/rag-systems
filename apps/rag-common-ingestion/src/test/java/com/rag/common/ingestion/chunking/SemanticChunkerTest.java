@@ -5,7 +5,6 @@ import com.rag.common.core.domain.MetadataKeys;
 import com.rag.common.core.services.EmbeddingModelPort;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -14,8 +13,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class SemanticChunkerTest {
 
-    private static final List<Float> TOPIC_ALPHA = List.of(1f, 0f);
-    private static final List<Float> TOPIC_BETA = List.of(0f, 1f);
+    private static final float[] TOPIC_ALPHA = {1f, 0f};
+    private static final float[] TOPIC_BETA = {0f, 1f};
 
     private final AtomicInteger embeddingCalls = new AtomicInteger();
 
@@ -96,7 +95,7 @@ class SemanticChunkerTest {
                 .isInstanceOf(NullPointerException.class);
     }
 
-    private SemanticChunker chunker(Map<String, List<Float>> vectors, int maxChunkSize, int overlap) {
+    private SemanticChunker chunker(Map<String, float[]> vectors, int maxChunkSize, int overlap) {
         EmbeddingModelPort embeddings = text -> {
             embeddingCalls.incrementAndGet();
             return vectors.getOrDefault(text, TOPIC_ALPHA);

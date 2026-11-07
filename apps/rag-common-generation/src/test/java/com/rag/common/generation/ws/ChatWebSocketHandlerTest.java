@@ -118,6 +118,18 @@ class ChatWebSocketHandlerTest {
     }
 
     @Test
+    void sendsThroughTheDecoratedSessionAndForgetsItAfterClose() throws Exception {
+        when(answerStreamer.askStream("hello", 5)).thenReturn(Flux.just("tok"));
+        handler.afterConnectionEstablished(session);
+        send("{\"type\":\"ask\",\"question\":\"hello\",\"conversationId\":\"c1\"}");
+        verify(session, times(2)).sendMessage(any(TextMessage.class));
+        handler.afterConnectionClosed(session, CloseStatus.NORMAL);
+        when(answerStreamer.askStream("again", 5)).thenReturn(Flux.just("tok2"));
+        send("{\"type\":\"ask\",\"question\":\"again\",\"conversationId\":\"c2\"}");
+        verify(session, times(4)).sendMessage(any(TextMessage.class));
+    }
+
+    @Test
     void cleansUpOnDisconnect() throws Exception {
         when(answerStreamer.askStream("hello", 5)).thenReturn(Flux.never());
         send("{\"type\":\"ask\",\"question\":\"hello\",\"conversationId\":\"c1\"}");

@@ -17,6 +17,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
+import java.time.Duration;
+
 @Configuration
 public class WebcrawlerConfig {
 
@@ -56,8 +58,9 @@ public class WebcrawlerConfig {
     @Bean
     public SitemapUrlDiscovery sitemapUrlDiscovery(
             UrlContentLoader loader,
-            @Value("${rag.crawler.discovery.max-urls:2000}") int maxUrls) {
-        return new SitemapUrlDiscovery(loader, maxUrls);
+            @Value("${rag.crawler.discovery.max-urls:2000}") int maxUrls,
+            @Value("${rag.crawler.discovery.timeout-seconds:20}") long timeoutSeconds) {
+        return new SitemapUrlDiscovery(loader, maxUrls, Duration.ofSeconds(timeoutSeconds));
     }
 
     @Bean

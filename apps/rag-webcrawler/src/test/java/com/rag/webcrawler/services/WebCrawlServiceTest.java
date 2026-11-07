@@ -3,11 +3,15 @@ package com.rag.webcrawler.services;
 import com.rag.contract.model.PageDTO;
 import com.rag.webcrawler.services.fetching.WebPageFetcher;
 import com.rag.webcrawler.services.ranking.LinkPrioritizer;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -54,6 +58,43 @@ class WebCrawlServiceTest {
         List<PageDTO> result = sut.fetchRelevantLinks(base, null, 1);
         assertThat(result).extracting(PageDTO::getUrl).containsExactly("https://ex.com/a");
         verify(fetcher).fetch(base);
+    }
+
+    @AfterEach
+    void shutdownExecutor() {
+        sut.close();
+    }
+
+    @Test
+    void fetchesRelevantLinksConcurrently() {
+        var base = "https://ex.com/page";
+        var links = List.of("https://ex.com/a", "https://ex.com/b");
+        var barrier = new CyclicBarrier(2);
+        when(fetcher.fetch(base)).thenReturn(new PageDTO(base, "Title", "text").links(links));
+        when(prioritizer.prioritize(links, "q")).thenReturn(links);
+        for (var link : links) {
+            when(fetcher.fetch(link)).thenAnswer(inv -> {
+                try {
+                    barrier.await(5, TimeUnit.SECONDS);
+                } catch (Exception e) {
+                    throw new IllegalStateException("fetches were not concurrent", e);
+                }
+                return new PageDTO(inv.getArgument(0), "T", "t");
+            });
+        }
+        assertThat(sut.fetchRelevantLinks(base, "q", 2)).hasSize(2);
+    }
+
+    @Test
+    void unwrapsFetchFailuresFromTheWorkerThread() {
+        var base = "https://ex.com/page";
+        var links = List.of("https://ex.com/a");
+        when(fetcher.fetch(base)).thenReturn(new PageDTO(base, "Title", "text").links(links));
+        when(prioritizer.prioritize(links, "q")).thenReturn(links);
+        when(fetcher.fetch("https://ex.com/a")).thenThrow(new IllegalStateException("boom"));
+        assertThatThrownBy(() -> sut.fetchRelevantLinks(base, "q", 1))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("boom");
     }
 
     @Test

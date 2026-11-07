@@ -8,6 +8,10 @@ import java.util.List;
  * <p>Implementations wrap different providers (Ollama, OpenAI, HuggingFace),
  * selected via configuration profiles. Business logic depends on this
  * interface only (DIP, OCP), never on a concrete provider.
+ *
+ * <p>Vectors are primitive {@code float[]} rather than boxed {@code List<Float>}:
+ * a 768-dimension embedding costs ~3 KB instead of ~12 KB and avoids the
+ * per-element unboxing on every similarity computation.
  */
 public interface EmbeddingModelPort {
 
@@ -17,7 +21,7 @@ public interface EmbeddingModelPort {
      * @param text the input text
      * @return the embedding vector
      */
-    List<Float> embed(String text);
+    float[] embed(String text);
 
     /**
      * Generates embedding vectors for a batch of texts in a single provider
@@ -27,7 +31,7 @@ public interface EmbeddingModelPort {
      * @param texts the input texts
      * @return one embedding vector per input text, in the same order
      */
-    default List<List<Float>> embed(List<String> texts) {
+    default List<float[]> embed(List<String> texts) {
         return texts.stream().map(this::embed).toList();
     }
 }

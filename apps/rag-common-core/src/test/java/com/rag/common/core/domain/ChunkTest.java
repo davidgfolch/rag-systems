@@ -2,7 +2,6 @@ package com.rag.common.core.domain;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -12,9 +11,9 @@ class ChunkTest {
     @Test
     void shouldStoreEmbeddingOnceAssigned() {
         Chunk sut = new Chunk("chunk-1", "doc-1", "text", 0, Map.of("k", "v"));
-        List<Float> embedding = List.of(0.1f, 0.2f, 0.3f);
+        var embedding = new float[]{0.1f, 0.2f, 0.3f};
         sut.setEmbedding(embedding);
-        assertThat(sut.getEmbedding()).isEqualTo(embedding);
+        assertThat(sut.getEmbedding()).containsExactly(0.1f, 0.2f, 0.3f);
         assertThat(sut.getDocumentId()).isEqualTo("doc-1");
         assertThat(sut.getIndex()).isZero();
         assertThat(sut.getMetadata()).containsEntry("k", "v");

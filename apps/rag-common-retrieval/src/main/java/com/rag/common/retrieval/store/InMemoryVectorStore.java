@@ -46,15 +46,12 @@ public class InMemoryVectorStore implements VectorStorePort {
 
     @Override
     public List<Chunk> similaritySearch(String query, int topK) {
-        return search(embeddingModel.embed(query), topK);
+        return search(embeddingModel.embed(query), topK, null);
     }
 
     @Override
     public List<Chunk> similaritySearch(String query, int topK, String documentId) {
-        var queryEmbedding = embeddingModel.embed(query);
-        return search(queryEmbedding, topK).stream()
-                .filter(chunk -> chunk.getDocumentId().equals(documentId))
-                .toList();
+        return search(embeddingModel.embed(query), topK, documentId);
     }
 
     public int size() {
@@ -84,27 +81,38 @@ public class InMemoryVectorStore implements VectorStorePort {
         return first == null ? Map.of() : first.getMetadata();
     }
 
-    private List<Chunk> search(List<Float> queryEmbedding, int topK) {
-        var hits = chunksById.values().stream()
-                .map(chunk -> new Scored(chunk, cosine(queryEmbedding, chunk.getEmbedding())))
+    private List<Chunk> search(float[] queryEmbedding, int topK, String documentId) {
+        if (topK <= 0) {
+            return List.of();
+        }
+        var best = new java.util.PriorityQueue<Scored>(Math.min(topK, 64),
+                Comparator.comparingDouble(Scored::score));
+        for (var chunk : chunksById.values()) {
+            if (documentId != null && !documentId.equals(chunk.getDocumentId())) {
+                continue;
+            }
+            best.offer(new Scored(chunk, cosine(queryEmbedding, chunk.getEmbedding())));
+            if (best.size() > topK) {
+                best.poll();
+            }
+        }
+        var hits = best.stream()
                 .sorted(Comparator.comparingDouble(Scored::score).reversed())
-                .limit(topK)
                 .map(Scored::chunk)
                 .toList();
         log.debug("In-memory search returned {} hits", hits.size());
         return hits;
     }
 
-    private static double cosine(List<Float> a, List<Float> b) {
-        int n = Math.min(a.size(), b.size());
+    private static double cosine(float[] a, float[] b) {
+        int n = Math.min(a.length, b.length);
         double dot = 0;
         double normA = 0;
-        double normB = 0;        for (int i = 0; i < n; i++) {
-            double av = a.get(i);
-            double bv = b.get(i);
-            dot += av * bv;
-            normA += av * av;
-            normB += bv * bv;
+        double normB = 0;
+        for (int i = 0; i < n; i++) {
+            dot += a[i] * b[i];
+            normA += a[i] * a[i];
+            normB += b[i] * b[i];
         }
         if (normA == 0 || normB == 0) return 0;
         return dot / (Math.sqrt(normA) * Math.sqrt(normB));

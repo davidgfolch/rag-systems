@@ -3,7 +3,7 @@ package com.rag.agentic.tools;
 import com.rag.agentic.domain.AgenticConstants;
 import com.rag.agentic.domain.ToolCall;
 import com.rag.agentic.domain.ToolResult;
-import com.rag.agentic.services.WebCrawlerClient;
+import com.rag.common.ingestion.web.WebCrawlerClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

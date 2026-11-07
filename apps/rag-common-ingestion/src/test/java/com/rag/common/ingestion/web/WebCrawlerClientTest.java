@@ -1,12 +1,12 @@
-package com.rag.basic.services;
+package com.rag.common.ingestion.web;
 
 import com.rag.contract.model.PageDTO;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
-import org.springframework.web.client.RestClient;
 import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.web.client.RestClient;
 
 import java.util.List;
 
@@ -18,14 +18,14 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 class WebCrawlerClientTest {
 
+    private static final String BASE_URL = "http://localhost:8085";
+
     @Test
     void fetchesPageAndMapsDto() {
-        RestClient.Builder builder = RestClient.builder()
-                .baseUrl("http://localhost:8085")
-                .requestFactory(new JdkClientHttpRequestFactory());
-        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-        WebCrawlerClient sut = new WebCrawlerClient(builder.build());
-        server.expect(requestTo("http://localhost:8085/api/fetch"))
+        var builder = restClientBuilder();
+        var server = MockRestServiceServer.bindTo(builder).build();
+        var sut = new WebCrawlerClient(builder.build());
+        server.expect(requestTo(BASE_URL + "/api/fetch"))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andRespond(withSuccess("""
@@ -40,12 +40,10 @@ class WebCrawlerClientTest {
 
     @Test
     void ranksLinksViaWebcrawler() {
-        RestClient.Builder builder = RestClient.builder()
-                .baseUrl("http://localhost:8085")
-                .requestFactory(new JdkClientHttpRequestFactory());
-        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-        WebCrawlerClient sut = new WebCrawlerClient(builder.build());
-        server.expect(requestTo("http://localhost:8085/api/rank-links"))
+        var builder = restClientBuilder();
+        var server = MockRestServiceServer.bindTo(builder).build();
+        var sut = new WebCrawlerClient(builder.build());
+        server.expect(requestTo(BASE_URL + "/api/rank-links"))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andRespond(withSuccess("""
@@ -59,19 +57,17 @@ class WebCrawlerClientTest {
 
     @Test
     void rankLinksSkipsHttpCallWhenThereAreNoLinks() {
-        WebCrawlerClient sut = new WebCrawlerClient(null);
+        var sut = new WebCrawlerClient(null);
         assertThat(sut.rankLinks(List.of(), "question")).isEmpty();
         assertThat(sut.rankLinks(null, "question")).isEmpty();
     }
 
     @Test
     void discoversUrlsViaWebcrawler() {
-        RestClient.Builder builder = RestClient.builder()
-                .baseUrl("http://localhost:8085")
-                .requestFactory(new JdkClientHttpRequestFactory());
-        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-        WebCrawlerClient sut = new WebCrawlerClient(builder.build());
-        server.expect(requestTo("http://localhost:8085/api/discover"))
+        var builder = restClientBuilder();
+        var server = MockRestServiceServer.bindTo(builder).build();
+        var sut = new WebCrawlerClient(builder.build());
+        server.expect(requestTo(BASE_URL + "/api/discover"))
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andRespond(withSuccess("""
@@ -80,5 +76,11 @@ class WebCrawlerClientTest {
         List<String> urls = sut.discover("https://example.com/docs/");
         assertThat(urls).containsExactly("https://example.com/docs/a", "https://example.com/docs/b");
         server.verify();
+    }
+
+    private static RestClient.Builder restClientBuilder() {
+        return RestClient.builder()
+                .baseUrl(BASE_URL)
+                .requestFactory(new JdkClientHttpRequestFactory());
     }
 }

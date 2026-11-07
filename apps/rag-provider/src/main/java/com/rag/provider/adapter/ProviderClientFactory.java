@@ -18,27 +18,63 @@ import org.springframework.ai.openai.OpenAiEmbeddingModel;
 import org.springframework.ai.openai.OpenAiEmbeddingOptions;
 import org.springframework.ai.openai.api.OpenAiApi;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
+
 /**
  * Builds Spring AI chat/embedding clients from a {@link ProviderProfile} and a
  * model name. OpenAI-compatible providers are supported with zero new adapters
  * by pointing the OpenAI client at an arbitrary base URL.
+ *
+ * <p>Clients are cached per profile+model: each build creates a new HTTP client
+ * (and therefore a new connection pool), so rebuilding on every request or
+ * model switch would leak sockets. The cache is cleared when it grows past a
+ * small bound, which hands in-flight requests to their existing instances and
+ * lets the old ones be collected.
  */
 public class ProviderClientFactory {
 
     private static final Logger log = LoggerFactory.getLogger(ProviderClientFactory.class);
 
+    private static final int MAX_CACHED_CLIENTS = 64;
+
+    private final Map<ClientKey, ChatModel> chatModels = new ConcurrentHashMap<>();
+    private final Map<ClientKey, EmbeddingModel> embeddingModels = new ConcurrentHashMap<>();
+
     public ChatModel chatModel(ProviderProfile profile, String model) {
+        return cached(chatModels, ClientKey.of(profile, model), () -> buildChatModel(profile, model));
+    }
+
+    public EmbeddingModel embeddingModel(ProviderProfile profile, String model) {
+        return cached(embeddingModels, ClientKey.of(profile, model), () -> buildEmbeddingModel(profile, model));
+    }
+
+    private static ChatModel buildChatModel(ProviderProfile profile, String model) {
         return switch (profile.type()) {
             case OLLAMA -> ollamaChat(profile, model);
             case OPENAI, OPENAI_COMPATIBLE -> openAiChat(profile, model);
         };
     }
 
-    public EmbeddingModel embeddingModel(ProviderProfile profile, String model) {
+    private static EmbeddingModel buildEmbeddingModel(ProviderProfile profile, String model) {
         return switch (profile.type()) {
             case OLLAMA -> ollamaEmbedding(profile, model);
             case OPENAI, OPENAI_COMPATIBLE -> openAiEmbedding(profile, model);
         };
+    }
+
+    private static <T> T cached(Map<ClientKey, T> cache, ClientKey key, Supplier<T> factory) {
+        if (cache.size() >= MAX_CACHED_CLIENTS) {
+            cache.clear();
+        }
+        return cache.computeIfAbsent(key, ignored -> factory.get());
+    }
+
+    private record ClientKey(ProviderType type, String baseUrl, String apiKey, String model) {
+        static ClientKey of(ProviderProfile profile, String model) {
+            return new ClientKey(profile.type(), profile.baseUrl(), profile.apiKey(), model);
+        }
     }
 
     private static ChatModel ollamaChat(ProviderProfile profile, String model) {

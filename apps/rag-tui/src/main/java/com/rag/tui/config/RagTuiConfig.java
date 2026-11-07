@@ -24,13 +24,16 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 
 import java.io.OutputStreamWriter;
 
+import java.net.http.HttpClient;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 
 @Configuration
@@ -67,8 +70,18 @@ public class RagTuiConfig {
     }
 
     @Bean
-    public RestClient.Builder restClientBuilder(ObservationRegistry observationRegistry) {
-        return RestClient.builder().observationRegistry(observationRegistry);
+    public RestClient.Builder restClientBuilder(
+            ObservationRegistry observationRegistry,
+            @Value("${rag.http.connect-timeout-seconds:5}") long connectTimeoutSeconds,
+            @Value("${rag.http.read-timeout-seconds:60}") long readTimeoutSeconds) {
+        var httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(connectTimeoutSeconds))
+                .build();
+        var requestFactory = new JdkClientHttpRequestFactory(httpClient);
+        requestFactory.setReadTimeout(Duration.ofSeconds(readTimeoutSeconds));
+        return RestClient.builder()
+                .observationRegistry(observationRegistry)
+                .requestFactory(requestFactory);
     }
 
     @Bean

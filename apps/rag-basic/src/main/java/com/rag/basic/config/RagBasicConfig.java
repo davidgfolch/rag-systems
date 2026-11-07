@@ -2,7 +2,7 @@ package com.rag.basic.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rag.basic.services.RetrievalService;
-import com.rag.basic.services.WebCrawlerClient;
+import com.rag.common.ingestion.web.WebCrawlerClient;
 import com.rag.common.app.config.RagPipelineConfiguration;
 import com.rag.common.core.repositories.DocumentStorePort;
 import com.rag.common.core.repositories.VectorStorePort;

@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Retrieval-augmented chat: retrieve relevant chunks, build a grounded prompt,
@@ -18,6 +19,9 @@ import java.util.List;
 public class ChatService {
 
     private static final Logger log = LoggerFactory.getLogger(ChatService.class);
+
+    private static final String CONTEXT_SEPARATOR = "\n---\n";
+    private static final String NO_CONTEXT = "(no context retrieved)";
 
     private static final String PROMPT_TEMPLATE = """
             You are a helpful assistant. Answer the question using ONLY the provided
@@ -60,10 +64,10 @@ public class ChatService {
     }
 
     private String context(List<Chunk> sources) {
-        return sources.stream()
+        var joined = sources.stream()
                 .map(Chunk::getContent)
-                .reduce((a, b) -> a + "\n---\n" + b)
-                .orElse("(no context retrieved)");
+                .collect(Collectors.joining(CONTEXT_SEPARATOR));
+        return joined.isEmpty() ? NO_CONTEXT : joined;
     }
 
     public record ChatResult(String answer, List<Chunk> sources) {}

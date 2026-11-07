@@ -1,7 +1,7 @@
 package com.rag.agentic.tools;
 
 import com.rag.agentic.domain.ToolCall;
-import com.rag.agentic.services.WebCrawlerClient;
+import com.rag.common.ingestion.web.WebCrawlerClient;
 import com.rag.contract.model.PageDTO;
 import org.junit.jupiter.api.Test;
 

@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorator;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 import reactor.core.Disposable;
 
@@ -20,6 +21,7 @@ import java.io.UncheckedIOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.rag.contract.constants.FrameTypes.ASK;
 import static com.rag.contract.constants.FrameTypes.CANCEL;
@@ -39,12 +41,15 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     private static final Logger log = LoggerFactory.getLogger(ChatWebSocketHandler.class);
 
+    private static final int SEND_TIME_LIMIT_MS = 10_000;
+    private static final int SEND_BUFFER_SIZE_BYTES = 512 * 1024;
+
     private final AnswerStreamer answerStreamer;
     private final ObjectMapper objectMapper;
     private final Tracer tracer;
     private final Map<String, Disposable> streams = new ConcurrentHashMap<>();
     private final Map<String, String> conversationBySession = new ConcurrentHashMap<>();
-    private final Object sendLock = new Object();
+    private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
 
     public ChatWebSocketHandler(AnswerStreamer answerStreamer, ObjectMapper objectMapper) {
         this(answerStreamer, objectMapper, null);
@@ -82,6 +87,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         int topK = request.topK() == null ? 5 : request.topK();
         log.info("Ask request: conversationId={}, topK={}", request.conversationId(), topK);
         AtomicBoolean finished = new AtomicBoolean();
+        AtomicReference<Disposable> ref = new AtomicReference<>();
         Disposable disposable = answerStreamer.askStream(request.question(), topK)
                 .doOnNext(answer::append)
                 .doOnCancel(() -> finished.set(true))
@@ -92,6 +98,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                             log.error("Stream error: conversationId={}, error={}",
                                     request.conversationId(), error.getMessage(), error);
                             send(session, new ChatResponse(ERROR, error.getMessage(), request.conversationId()));
+                            removeStream(request.conversationId(), ref);
                         },
                         () -> {
                             if (finished.compareAndSet(false, true)) {
@@ -101,8 +108,20 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                             } else {
                                 log.info("Stream cancelled: conversationId={}", request.conversationId());
                             }
+                            removeStream(request.conversationId(), ref);
                         });
+        ref.set(disposable);
         streams.put(request.conversationId(), disposable);
+        if (disposable.isDisposed()) {
+            streams.remove(request.conversationId(), disposable);
+        }
+    }
+
+    private void removeStream(String conversationId, AtomicReference<Disposable> ref) {
+        var disposable = ref.get();
+        if (disposable != null) {
+            streams.remove(conversationId, disposable);
+        }
     }
 
     private void cancel(String conversationId) {
@@ -113,7 +132,14 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
+    public void afterConnectionEstablished(WebSocketSession session) {
+        sessions.put(session.getId(), new ConcurrentWebSocketSessionDecorator(
+                session, SEND_TIME_LIMIT_MS, SEND_BUFFER_SIZE_BYTES));
+    }
+
+    @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
+        sessions.remove(session.getId());
         var conversationId = conversationBySession.remove(session.getId());
         if (conversationId != null) {
             log.info("Connection closed: conversationId={}, status={}", conversationId, status);
@@ -123,9 +149,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     private void send(WebSocketSession session, ChatResponse response) {
         try {
-            synchronized (sendLock) {
-                session.sendMessage(new TextMessage(toJson(response)));
-            }
+            var target = sessions.getOrDefault(session.getId(), session);
+            target.sendMessage(new TextMessage(toJson(response)));
         } catch (Exception exception) {
             throw new UncheckedIOException(new IOException(exception));
         }

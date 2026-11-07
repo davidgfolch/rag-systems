@@ -10,7 +10,8 @@ class EmbeddingModelPortTest {
 
     @Test
     void defaultBatchEmbedDelegatesToSingleEmbed() {
-        EmbeddingModelPort port = text -> List.of((float) text.length());
-        assertThat(port.embed(List.of("ab", "cde"))).containsExactly(List.of(2.0f), List.of(3.0f));
+        EmbeddingModelPort port = text -> new float[]{(float) text.length()};
+        assertThat(port.embed(List.of("ab", "cde")))
+                .containsExactly(new float[]{2.0f}, new float[]{3.0f});
     }
 }
