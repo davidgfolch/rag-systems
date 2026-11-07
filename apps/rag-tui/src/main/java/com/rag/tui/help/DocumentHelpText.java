@@ -66,15 +66,17 @@ public final class DocumentHelpText {
                   add-url                          prompt for the URL
                   add-url <url>                    start an interactive breadth-first crawl
                   add-url <url> --max-pages <n>    cap the crawl at <n> pages
-                  add-url <url> --all              crawl every discovered page
+                  add-url <url> --all              crawl every discovered page without prompts
+                  add-url <url> --override-all     delete and re-ingest pages that already exist
                   add-url <url> --no-discover      follow only the root page's links
 
                 Arguments:
                   <url>   http(s) URL of the first page
 
                 Options:
-                  --max-pages <n>   maximum pages fetched (default 50)
-                  --all             no practical page cap (uses the server discovery limit)
+                  --max-pages <n>   maximum pages fetched (default 50); suppresses "Go on?"
+                  --all             no practical page cap and no prompts at all
+                  --override-all    override every already-ingested page instead of skipping it
                   --no-discover     skip sitemap/navigation discovery; crawl the root
                                     page's outbound links in ranked order
 
@@ -83,9 +85,11 @@ public final class DocumentHelpText {
                   conventional sitemap locations and the root page navigation), removes
                   duplicate versions/locales and visits the tree section by section, so
                   a capped crawl still covers every chapter. The TUI asks one question
-                  per page to steer link ranking (blank = no guidance). After the
-                  initial pages one "Go on?" question decides whether to crawl more.
-                  Answer 'add-url-cancel' or 'cancel' at any prompt to stop. Pages are
+                  per crawl to steer link ranking (blank = no guidance). "Go on?" is
+                  only asked when no page cap was given. When a page is already ingested
+                  the TUI asks per page: Enter = override, Esc = ignore,
+                  y = override the rest, n = ignore the rest. --all skips existing pages
+                  silently; add --override-all to delete and re-ingest them. Pages are
                   ingested asynchronously and de-duplicated by domain + URI.
                 """);
         details.put("add-url-cancel", """

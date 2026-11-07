@@ -60,7 +60,10 @@ public class CrawlController {
     @PostMapping("/{sessionId}/step")
     public ResponseEntity<CrawlStepResponse> step(@PathVariable String sessionId,
                                                   @RequestBody(required = false) CrawlStepRequest request) {
-        var result = crawlSessionService.step(sessionId, request == null ? null : request.getQuestion());
+        var result = request == null
+                ? crawlSessionService.step(sessionId, null)
+                : crawlSessionService.step(sessionId, request.getQuestion(),
+                        Boolean.TRUE.equals(request.getOverride()));
         return ResponseEntity.ok(new CrawlStepResponse()
                 .sessionId(result.sessionId())
                 .documentId(result.documentId())

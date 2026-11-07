@@ -16,10 +16,10 @@
 | Vulnerabilities | 0 |
 | Security Hotspots | 0 |
 | Code Smells | 0 |
-| Coverage | 91.2% |
-| Duplication | 0.8%
+| Coverage | 91.3% |
+| Duplication | 0.7%
 
-*Last scan: 2026-11-07 09:38 UTC*
+*Last scan: 2026-11-07 12:41 UTC*
 <!-- SONARQUBE_RESULTS_END -->
 
 A monorepo for learning and comparing different RAG (Retrieval-Augmented Generation) implementations using Java Spring Boot and Spring AI. Each module is a decoupled bounded context with interchangeable chunking, embedding, and retrieval strategies — designed to be reusable across knowledge domains and to run comfortably on a regular local machine.
@@ -116,7 +116,8 @@ Once started, use these commands interactively:
 
 ```
 add-file /path/to/document.pdf    # ingest a local file
-add-url https://example.com       # crawl a site from a URL, one question per page
+add-url https://example.com       # crawl a site from a URL, one ranking question per crawl
+add-url https://example.com --all # crawl every discovered page without prompts
 add-url-cancel                    # stop the crawl currently running
 ask What is this document about?  # ask a question against ingested content
 exit                              # quit
@@ -124,7 +125,7 @@ exit                              # quit
 
 The pipeline: files and URLs are parsed, split into chunks, embedded, and stored in a vector store. Questions retrieve the most relevant chunks and generate a grounded answer via the configured LLM.
 
-`add-url` is an interactive breadth-first crawl, not a single-page fetch: the active rag-module asks **rag-webcrawler** for the root page and for link rankings, then ingests each page asynchronously while the TUI prompts for a question per page (the question ranks that page's links). The crawl starts with the root plus up to 5 ranked links, asks once whether to keep going after that initial set, and is bounded to 50 pages on the root host by default.
+`add-url` is an interactive breadth-first crawl, not a single-page fetch: the active rag-module asks **rag-webcrawler** for the root page and for link rankings, then ingests each page asynchronously. The TUI asks one ranking question per crawl (reused for every page), asks once whether to keep going after the initial set (only when no page cap was given), and is bounded to 50 pages on the root host by default. `--all` crawls every discovered page without prompting and skips already-ingested pages; `--override-all` deletes and re-ingests them instead. In interactive mode each duplicate asks `Enter=override, Esc=ignore, y=override rest, n=ignore rest`.
 
 Models default to **Ollama** (phi4 chat, nomic-embed-text embeddings). Switch chat/embedding providers at runtime — no restart — with the TUI `connect` command (e.g. `connect chat openrouter gpt-4o`), or via the rag-provider HTTP API.
 

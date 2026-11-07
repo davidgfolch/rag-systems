@@ -43,6 +43,8 @@ class CommandDispatcherIntegrationTest {
     private StubModuleServer stub;
     private ModuleRegistry registry;
     private ModuleLifecycleManager lifecycle;
+    private CommandDispatcher.RagClients clients;
+    private CommandDispatcher.Settings settings;
     private CommandDispatcher sut;
 
     @BeforeEach
@@ -57,11 +59,11 @@ class CommandDispatcherIntegrationTest {
                 new ObjectMapper(), 60);
         MemoryClient memoryClient = new MemoryClient(
                 RestClient.builder().baseUrl(stub.baseUrl()).build());
-        sut = new CommandDispatcher(registry, lifecycle,
-                new CommandDispatcher.RagClients(apiClient, chatGateway, memoryClient,
-                        new FileDocumentLoader(), new ModuleHealthClient(RestClient.builder()),
-                        new ProviderClient(stub.baseUrl(), RestClient.builder())),
-                new CommandDispatcher.Settings(5_000, 4, 60), new CommandRegistry(),
+        clients = new CommandDispatcher.RagClients(apiClient, chatGateway, memoryClient,
+                new FileDocumentLoader(), new ModuleHealthClient(RestClient.builder()),
+                new ProviderClient(stub.baseUrl(), RestClient.builder()));
+        settings = new CommandDispatcher.Settings(5_000, 4, 60);
+        sut = new CommandDispatcher(registry, lifecycle, clients, settings, new CommandRegistry(),
                 new NoopPrompter(new StringReader("")));
     }
 
@@ -100,12 +102,20 @@ class CommandDispatcherIntegrationTest {
     }
 
     @Test
-    void addUrlDeduplicatesByUriOverHttp() {
+    void addUrlSkipsExistingPageWithoutOverrideOverHttp() {
         stub.documents("[{\"documentId\":\"web-1\",\"title\":\"Old page\",\"chunkCount\":5,"
                 + "\"metadata\":{\"source\":\"https://example.com/guide\"}}]");
+        stub.crawlStart("{\"sessionId\":\"c-1\",\"page\":{\"url\":\"https://example.com/guide\","
+                + "\"title\":\"Guide\"},\"initialRemaining\":0,\"hasMore\":false}");
+        stub.crawlSteps("{\"sessionId\":\"c-1\",\"pageUrl\":\"https://example.com/guide\","
+                + "\"title\":\"Guide\",\"ingested\":false,\"initialRemaining\":0,"
+                + "\"hasMore\":false,\"skippedLinks\":0}");
+        sut = new CommandDispatcher(registry, lifecycle, clients, settings, new CommandRegistry(),
+                new NoopPrompter(new StringReader("\n")));
         var result = sut.handle("add-url https://example.com/guide", token -> {});
-        assertThat(result).contains("already ingested", "web-1");
-        assertThat(stub.lastIngestUrl()).isNull();
+        assertThat(result).contains("Crawl finished", "1 page(s) skipped");
+        assertThat(stub.lastDeletedDocumentId()).isNull();
+        assertThat(stub.lastCrawlStepBody()).contains("\"override\":false");
     }
 
     private static void await(List<String> tokens, String needle) {

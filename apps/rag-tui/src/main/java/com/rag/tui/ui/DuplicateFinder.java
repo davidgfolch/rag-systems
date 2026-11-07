@@ -9,6 +9,7 @@ import com.rag.tui.launcher.ModuleRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 
@@ -69,15 +70,26 @@ public class DuplicateFinder {
             log.debug("Unparseable url '{}' treated as no duplicate", rawUrl);
             return Optional.empty();
         }
+        return Optional.ofNullable(sourceIndex().get(target));
+    }
+
+    /**
+     * Indexes every ingested document by its stable source key (host + path) in
+     * one pass over the reachable modules, so a crawl can check its whole
+     * frontier without listing documents again per page.
+     */
+    public Map<String, Match> sourceIndex() {
+        var index = new LinkedHashMap<String, Match>();
         for (Module module : registry.modules()) {
             if (!healthClient.isUp(module.baseUrl())) continue;
-            var match = apiClient.listDocuments(module.baseUrl()).stream()
-                    .filter(d -> target.equals(WebUrls.key(metadataValue(d, SOURCE))))
-                    .findFirst()
-                    .map(d -> new Match(d.getDocumentId(), module.name(), module.baseUrl()));
-            if (match.isPresent()) return match;
+            for (var doc : apiClient.listDocuments(module.baseUrl())) {
+                var key = WebUrls.key(metadataValue(doc, SOURCE));
+                if (key != null) {
+                    index.putIfAbsent(key, new Match(doc.getDocumentId(), module.name(), module.baseUrl()));
+                }
+            }
         }
-        return Optional.empty();
+        return index;
     }
 
     private static String metadataValue(DocumentSummaryDTO doc, String key) {

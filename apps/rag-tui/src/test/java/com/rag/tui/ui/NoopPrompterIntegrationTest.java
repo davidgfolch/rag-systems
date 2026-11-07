@@ -26,4 +26,11 @@ class NoopPrompterIntegrationTest {
         var sut = new NoopPrompter(new StringReader(""));
         assertThat(sut.pick("title", List.of(new Prompter.Choice("a", "a")))).isEmpty();
     }
+
+    @Test
+    void overrideDecisionNeverDeletesDocuments() {
+        var sut = new NoopPrompter(new StringReader("y\n"));
+        assertThat(sut.overrideDecision("Override? "))
+                .isEqualTo(Prompter.OverrideDecision.SKIP_ALL);
+    }
 }

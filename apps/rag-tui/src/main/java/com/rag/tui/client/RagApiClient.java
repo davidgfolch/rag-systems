@@ -130,8 +130,13 @@ public class RagApiClient {
 
     /** Submits the current crawl page and resolves the next one. */
     public CrawlStepResponse stepCrawl(String sessionId, String question) {
+        return stepCrawl(sessionId, question, false);
+    }
+
+    /** Submits the current crawl page, optionally overriding an already-ingested source. */
+    public CrawlStepResponse stepCrawl(String sessionId, String question, boolean override) {
         return client().post().uri(CRAWL_STEP, sessionId)
-                .body(new CrawlStepRequest().question(question))
+                .body(new CrawlStepRequest().question(question).override(override))
                 .retrieve().body(CrawlStepResponse.class);
     }
 

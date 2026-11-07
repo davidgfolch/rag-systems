@@ -60,7 +60,7 @@ class CrawlCommandsIntegrationTest {
         var result = sut.addUrl(URL, tokens::add);
         assertThat(result).contains("Crawl finished", "1 page(s) submitted");
         assertThat(stub.lastCrawlUrl()).contains(URL);
-        assertThat(stub.lastCrawlStepBody()).contains("question");
+        assertThat(stub.lastCrawlStepBody()).contains("question").contains("\"override\":false");
         assertThat(stub.lastCrawlCancelledSession()).isEqualTo(SESSION);
         await(tokens, "page " + URL + " complete");
     }
@@ -75,13 +75,41 @@ class CrawlCommandsIntegrationTest {
     }
 
     @Test
-    void skipsCrawlWhenUriAlreadyIngested() {
+    void allFlagCrawlsWithoutAnyPrompt() {
+        stub.crawlStart(startJson(1));
+        stub.crawlSteps(
+                stepJson("i-1", 1, "https://example.com/a"),
+                stepJson("i-2", 0, null));
+        var result = sut.addUrl(URL + " --all", token -> {});
+        assertThat(result).contains("Crawl finished", "2 page(s) submitted");
+        assertThat(prompter.promptCount()).isZero();
+        assertThat(prompter.confirmCount()).isZero();
+    }
+
+    @Test
+    void skipsExistingPageWhenOverrideIgnoredButKeepsCrawling() {
         stub.documents("[{\"documentId\":\"web-1\",\"title\":\"Old page\",\"chunkCount\":5,"
                 + "\"metadata\":{\"source\":\"" + URL + "\"}}]");
-        prompter.confirmAnswer(false);
+        prompter.overrideAnswer(Prompter.OverrideDecision.SKIP);
+        stub.crawlStart(startJson(0));
+        stub.crawlSteps(skippedStepJson(0));
         var result = sut.addUrl(URL, token -> {});
-        assertThat(result).contains("already ingested", "web-1");
-        assertThat(stub.lastCrawlUrl()).isNull();
+        assertThat(result).contains("Crawl finished", "1 page(s) skipped");
+        assertThat(stub.lastCrawlUrl()).contains(URL);
+        assertThat(stub.lastCrawlStepBody()).contains("\"override\":false");
+        assertThat(stub.lastDeletedDocumentId()).isNull();
+    }
+
+    @Test
+    void overrideAllDeletesAndReingestsOverHttp() {
+        stub.documents("[{\"documentId\":\"web-1\",\"title\":\"Old page\",\"chunkCount\":5,"
+                + "\"metadata\":{\"source\":\"" + URL + "\"}}]");
+        stub.crawlStart(startJson(0));
+        stub.crawlSteps(stepJson("i-2", 0, null));
+        var result = sut.addUrl(URL + " --all --override-all", token -> {});
+        assertThat(result).contains("Crawl finished", "1 page(s) submitted");
+        assertThat(stub.lastDeletedDocumentId()).isEqualTo("web-1");
+        assertThat(stub.lastCrawlStepBody()).contains("\"override\":true");
     }
 
     @Test
@@ -100,8 +128,8 @@ class CrawlCommandsIntegrationTest {
     void cancelsCrawlWhenCancelCommandEnteredAtPrompt() {
         prompter.questionAnswer(CrawlCommands.CANCEL_COMMAND);
         var result = sut.addUrl(URL, token -> {});
-        assertThat(result).contains("Crawl cancelled", "0 page(s) submitted");
-        assertThat(stub.lastCrawlCancelledSession()).isEqualTo(SESSION);
+        assertThat(result).contains("Crawl cancelled");
+        assertThat(stub.lastCrawlUrl()).isNull();
         assertThat(stub.lastCrawlStepBody()).isNull();
     }
 
@@ -124,6 +152,12 @@ class CrawlCommandsIntegrationTest {
                 + ",\"skippedLinks\":0" + next + "}";
     }
 
+    private static String skippedStepJson(int initialRemaining) {
+        return "{\"sessionId\":\"" + SESSION + "\",\"pageUrl\":\"" + URL + "\",\"title\":\"Root\","
+                + "\"ingested\":false,\"initialRemaining\":" + initialRemaining
+                + ",\"hasMore\":false,\"skippedLinks\":0}";
+    }
+
     private static void await(List<String> tokens, String needle) {
         Awaitility.await().atMost(Duration.ofSeconds(5))
                 .until(() -> tokens.stream().anyMatch(t -> t.contains(needle)));
@@ -132,11 +166,18 @@ class CrawlCommandsIntegrationTest {
     private static final class ScriptedPrompter implements Prompter {
 
         private final AtomicReference<String> questionAnswer = new AtomicReference<>("");
+        private final AtomicReference<OverrideDecision> overrideAnswer =
+                new AtomicReference<>(OverrideDecision.SKIP_ALL);
         private final AtomicBoolean confirmAnswer = new AtomicBoolean(true);
         private final AtomicInteger confirmCount = new AtomicInteger();
+        private final AtomicInteger promptCount = new AtomicInteger();
 
         void questionAnswer(String answer) {
             questionAnswer.set(answer);
+        }
+
+        void overrideAnswer(OverrideDecision answer) {
+            overrideAnswer.set(answer);
         }
 
         void confirmAnswer(boolean answer) {
@@ -147,6 +188,10 @@ class CrawlCommandsIntegrationTest {
             return confirmCount.get();
         }
 
+        int promptCount() {
+            return promptCount.get();
+        }
+
         @Override
         public Optional<String> pick(String title, List<Choice> choices) {
             return Optional.empty();
@@ -154,6 +199,7 @@ class CrawlCommandsIntegrationTest {
 
         @Override
         public String prompt(String promptText) {
+            promptCount.incrementAndGet();
             return questionAnswer.get();
         }
 
@@ -161,6 +207,11 @@ class CrawlCommandsIntegrationTest {
         public boolean confirm(String promptText) {
             confirmCount.incrementAndGet();
             return confirmAnswer.get();
+        }
+
+        @Override
+        public OverrideDecision overrideDecision(String promptText) {
+            return overrideAnswer.get();
         }
     }
 }

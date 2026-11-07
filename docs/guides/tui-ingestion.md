@@ -66,11 +66,13 @@ providers, models and `variant add` strategies.
 active rag-module orchestrates.
 
 - The module fetches the root page through **rag-webcrawler** and returns its URL and title to the TUI.
-- Before **every** page (including the root), the TUI asks one question. That question is sent
-  with the page and ranks its outbound links; a blank answer uses the deterministic ranker.
+- In interactive mode the TUI asks **one question per crawl** (not per page). That question is sent
+  with every page and ranks its outbound links; a blank answer uses the deterministic ranker.
 - The initial crawl set is the root plus up to **5** links ranked from the root.
-- After the initial set, the TUI asks **“Go on?” once** if more links are queued. Accepting continues
-  the crawl; declining stops it.
+- After the initial set, the TUI asks **“Go on?” once** if more links are queued — but only when the
+  user did not already set a page cap. `--max-pages N` and `--all` skip that question.
+- `--all` crawls every discovered page **without any prompt**: no ranking question, no “Go on?”,
+  and already-ingested pages are skipped silently.
 - Each page is submitted for **asynchronous** ingestion, so the shell stays responsive and reports
   each page as its job completes.
 - Type `add-url-cancel` (or `cancel`) at any crawl prompt, or run the `add-url-cancel` command, to
@@ -83,17 +85,21 @@ The legacy `POST /api/documents/ingest-url` endpoint remains as a single-page AP
 
 ## De-duplication
 
-Re-ingesting the same content is detected before submission, with an `Override? (y/N)` prompt:
+Re-ingesting the same content is detected before submission:
 
 - **`add-file` / `add-folder`** — a SHA-256 content hash is computed from the file bytes and sent as
   `contentHash` metadata. The TUI lists documents on reachable rag-* modules and skips the file when a
-  document already carries the same hash.
-- **`add-url`** — the root is checked before the crawl starts, and the module also skips later
-  crawled pages whose `source` is already ingested. Documents match on the `source` metadata by
+  document already carries the same hash. `add-file` asks `Override? (y/N)`; `add-folder` skips
+  duplicates silently.
+- **`add-url`** — every page (root and sublinks) is checked against the document `source` metadata by
   **domain + URI** (host + path; `http`/`https`, `#fragment` and trailing-slash differences don't
-  count as different pages).
-- **Override = delete + re-ingest**: confirming `y` deletes the existing document (removing its chunks
-  from PgVector) before submitting the new content, so no stale chunks remain.
+  count as different pages). In interactive mode each existing page asks:
+  `Enter = override`, `Esc = ignore`, `y = override the rest`, `n = ignore the rest`.
+  `--all` skips existing pages silently; `--override-all` overrides every existing page without
+  asking.
+- **Override = delete + re-ingest**: confirming `y`/Enter deletes the existing document (removing its
+  chunks from PgVector) before submitting the new content, so no stale chunks remain. The module is
+  told to ingest the page via the `override` flag on `POST /api/documents/crawl/{id}/step`.
 
 The matching only consults document metadata on reachable modules; a document without `contentHash` or
 `source` metadata simply never matches, so nothing is blocked.

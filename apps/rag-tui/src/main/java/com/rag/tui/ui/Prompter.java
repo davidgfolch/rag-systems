@@ -9,6 +9,9 @@ import java.util.Optional;
  */
 public interface Prompter {
 
+    /** How to handle a page whose source is already ingested. */
+    enum OverrideDecision { OVERRIDE, SKIP, OVERRIDE_ALL, SKIP_ALL }
+
     /** A selectable list entry: a display label, a stable value, and optional detail text. */
     record Choice(String label, String value, String detail) {
         public Choice(String label, String value) {
@@ -30,4 +33,12 @@ public interface Prompter {
      * Returns false when no input is available (EOF or non-interactive mode).
      */
     boolean confirm(String promptText);
+
+    /**
+     * Asks how to handle an already-ingested page. The default keeps existing
+     * prompters working by mapping {@link #confirm} to a single-page decision.
+     */
+    default OverrideDecision overrideDecision(String promptText) {
+        return confirm(promptText) ? OverrideDecision.OVERRIDE : OverrideDecision.SKIP;
+    }
 }

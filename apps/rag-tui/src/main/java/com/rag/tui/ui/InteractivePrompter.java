@@ -5,6 +5,7 @@ import org.jline.terminal.Terminal;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.function.Consumer;
 
@@ -101,11 +102,53 @@ public class InteractivePrompter implements Prompter {
     }
 
     private static final String CONFIRM_YES = "y";
+    private static final String CONFIRM_YES_LONG = "yes";
+    private static final String CONFIRM_NO = "n";
+    private static final String CONFIRM_NO_LONG = "no";
 
     @Override
     public boolean confirm(String promptText) {
         String line = prompt(promptText);
         return line != null && line.trim().equalsIgnoreCase(CONFIRM_YES);
+    }
+
+    /**
+     * Enter/blank overrides this page, Esc ignores it, {@code y}/{@code n}
+     * override or ignore the rest of the crawl.
+     */
+    @Override
+    public OverrideDecision overrideDecision(String promptText) {
+        editor.start();
+        renderPrompt(promptText, editor.view());
+        while (true) {
+            Key key = promptRead();
+            if (key == null) {
+                renderSink.accept(CLEAR_LINE);
+                return OverrideDecision.SKIP_ALL;
+            }
+            if (key.type() == KeyType.ESC) {
+                renderSink.accept(CLEAR_LINE);
+                return OverrideDecision.SKIP;
+            }
+            if (key.type() == KeyType.ENTER && editor.text().isEmpty()) {
+                renderSink.accept(CLEAR_LINE);
+                return OverrideDecision.OVERRIDE;
+            }
+            if (editor.accept(key)) {
+                var decision = decisionOf(editor.submitted());
+                renderSink.accept(CLEAR_LINE);
+                return decision;
+            }
+            renderPrompt(promptText, editor.view());
+        }
+    }
+
+    private static OverrideDecision decisionOf(String input) {
+        return switch (input.trim().toLowerCase(Locale.ROOT)) {
+            case CONFIRM_YES, CONFIRM_YES_LONG -> OverrideDecision.OVERRIDE_ALL;
+            case CONFIRM_NO, CONFIRM_NO_LONG -> OverrideDecision.SKIP_ALL;
+            default -> OverrideDecision.SKIP;
+        };
     }
 
     @Override
