@@ -66,6 +66,15 @@ class CrawlCommandsIntegrationTest {
     }
 
     @Test
+    void passesCrawlOptionsWhenFlagsAreGiven() {
+        var result = sut.addUrl(URL + " --max-pages 7 --no-discover", token -> {});
+        assertThat(result).contains("Crawl finished");
+        assertThat(stub.lastCrawlUrl())
+                .contains("\"maxPages\":7")
+                .contains("\"discover\":false");
+    }
+
+    @Test
     void skipsCrawlWhenUriAlreadyIngested() {
         stub.documents("[{\"documentId\":\"web-1\",\"title\":\"Old page\",\"chunkCount\":5,"
                 + "\"metadata\":{\"source\":\"" + URL + "\"}}]");

@@ -54,6 +54,59 @@ class CrawlSessionServiceTest {
     }
 
     @Test
+    void startSeedsFrontierFromDiscovery() {
+        pages.put(ROOT, page(ROOT));
+        pages.put(ROOT + "/a", page(ROOT + "/a"));
+        when(async.submitParsed(any())).thenReturn("d1");
+        var service = new CrawlSessionService(discoveringFetcher(List.of(ROOT + "/a", ROOT + "/b")),
+                async, documents);
+
+        var start = service.start(ROOT, 5, 50, true, true);
+
+        assertThat(start.discoveredPages()).isEqualTo(2);
+        assertThat(start.initialRemaining()).isEqualTo(3);
+        assertThat(service.step(start.sessionId(), null).nextPage().url()).isEqualTo(ROOT + "/a");
+    }
+
+    @Test
+    void discoveryIsCappedByMaxPages() {
+        pages.put(ROOT, page(ROOT));
+        when(async.submitParsed(any())).thenReturn("d1");
+        var service = new CrawlSessionService(discoveringFetcher(List.of(ROOT + "/a", ROOT + "/b")),
+                async, documents);
+
+        var start = service.start(ROOT, 5, 2, true, true);
+
+        assertThat(start.discoveredPages()).isEqualTo(1);
+        assertThat(start.initialRemaining()).isEqualTo(2);
+    }
+
+    @Test
+    void discoveryFailureFallsBackToRootLinks() {
+        pages.put(ROOT, page(ROOT, ROOT + "/a"));
+        pages.put(ROOT + "/a", page(ROOT + "/a"));
+        when(async.submitParsed(any())).thenReturn("d1");
+        var failing = new WebPageFetcher() {
+            @Override
+            public PageDTO fetch(String url) {
+                return pages.get(url);
+            }
+
+            @Override
+            public List<String> discover(String url) {
+                throw new IllegalStateException("discovery down");
+            }
+        };
+        var service = new CrawlSessionService(failing, async, documents);
+
+        var start = service.start(ROOT, 5, 50, true, true);
+
+        assertThat(start.discoveredPages()).isZero();
+        assertThat(start.initialRemaining()).isEqualTo(1);
+        assertThat(service.step(start.sessionId(), null).nextPage().url()).isEqualTo(ROOT + "/a");
+    }
+
+    @Test
     void stepSubmitsPageAndAddsRankedRootLinksToInitialSet() {
         pages.put(ROOT, page(ROOT, ROOT + "/a", ROOT + "/b", "https://other.com/c"));
         pages.put(ROOT + "/a", page(ROOT + "/a"));
@@ -162,6 +215,20 @@ class CrawlSessionServiceTest {
         var service = new CrawlSessionService(fetcher, async, null);
         var start = service.start(ROOT, 5, 50, true);
         assertThat(service.step(start.sessionId(), null).ingested()).isTrue();
+    }
+
+    private WebPageFetcher discoveringFetcher(List<String> discovered) {
+        return new WebPageFetcher() {
+            @Override
+            public PageDTO fetch(String url) {
+                return pages.get(url);
+            }
+
+            @Override
+            public List<String> discover(String url) {
+                return discovered;
+            }
+        };
     }
 
     private static PageDTO page(String url, String... links) {

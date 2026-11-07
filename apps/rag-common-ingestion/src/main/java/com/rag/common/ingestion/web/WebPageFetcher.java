@@ -18,4 +18,8 @@ public interface WebPageFetcher {
     default List<String> rankLinks(List<String> links, String question) {
         return links == null ? List.of() : links;
     }
+
+    default List<String> discover(String url) {
+        return List.of();
+    }
 }

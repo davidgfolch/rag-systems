@@ -22,6 +22,7 @@ class JsoupWebPageFetcherTest {
         Connection connection = mock(Connection.class);
         when(connection.get()).thenReturn(Jsoup.parse(
                 "<html><head><title>Spring</title></head><body>"
+                        + "<nav><a href=\"/nav.html\">Nav</a></nav>"
                         + "<p>RAG retrieval augmented generation.</p>"
                         + "<a href=\"/guide.html\">Guide</a></body></html>",
                 "https://example.com/spring"));
@@ -32,6 +33,7 @@ class JsoupWebPageFetcherTest {
         assertThat(page.getText()).contains("RAG retrieval augmented generation");
         assertThat(page.getText()).doesNotContain("<p>");
         assertThat(page.getLinks()).contains("https://example.com/guide.html");
+        assertThat(page.getNavLinks()).containsExactly("https://example.com/nav.html");
         verify(connection).get();
     }
 

@@ -23,7 +23,8 @@ final class PageBlockExtractor {
     static final String CODE = "CODE";
     static final String QUOTE = "QUOTE";
 
-    private static final Set<String> SKIPPED = Set.of("script", "style", "noscript", "head", "template", "nav");
+    private static final Set<String> SKIPPED = Set.of(
+            "script", "style", "noscript", "head", "template", "nav", "aside", "footer");
     private static final Set<String> HEADINGS = Set.of("h1", "h2", "h3", "h4", "h5", "h6");
     private static final Set<String> CONTAINERS = Set.of("html", "body", "main", "article", "section",
             "div", "header", "footer", "figure", "figcaption", "details", "summary");

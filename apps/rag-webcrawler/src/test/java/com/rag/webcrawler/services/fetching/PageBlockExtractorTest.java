@@ -52,7 +52,8 @@ class PageBlockExtractorTest {
     void walksContainersAndSkipsNavigationAndScripts() {
         var html = """
                 <html><body>
-                  <nav>skip me</nav><script>hidden()</script>
+                  <nav>skip me</nav><aside>sidebar</aside><footer>footer</footer>
+                  <script>hidden()</script>
                   <div><section><p>keep me</p></section></div>
                 </body></html>
                 """;

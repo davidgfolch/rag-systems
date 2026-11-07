@@ -2,6 +2,10 @@ package com.rag.webcrawler.config;
 
 import com.rag.common.core.services.ChatModelPort;
 import com.rag.webcrawler.services.WebCrawlService;
+import com.rag.webcrawler.services.discovery.HttpUrlContentLoader;
+import com.rag.webcrawler.services.discovery.SitemapUrlDiscovery;
+import com.rag.webcrawler.services.discovery.UrlContentLoader;
+import com.rag.webcrawler.services.discovery.UrlDiscoveryService;
 import com.rag.webcrawler.services.fetching.JsoupWebPageFetcher;
 import com.rag.webcrawler.services.fetching.WebPageFetcher;
 import com.rag.webcrawler.services.ranking.DeterministicLinkPrioritizer;
@@ -42,5 +46,25 @@ public class WebcrawlerConfig {
     @Bean
     public WebCrawlService webCrawlService(WebPageFetcher fetcher, LinkPrioritizer linkPrioritizer) {
         return new WebCrawlService(fetcher, linkPrioritizer);
+    }
+
+    @Bean
+    public UrlContentLoader urlContentLoader() {
+        return new HttpUrlContentLoader();
+    }
+
+    @Bean
+    public SitemapUrlDiscovery sitemapUrlDiscovery(
+            UrlContentLoader loader,
+            @Value("${rag.crawler.discovery.max-urls:2000}") int maxUrls) {
+        return new SitemapUrlDiscovery(loader, maxUrls);
+    }
+
+    @Bean
+    public UrlDiscoveryService urlDiscoveryService(
+            WebPageFetcher fetcher,
+            SitemapUrlDiscovery sitemaps,
+            @Value("${rag.crawler.discovery.max-urls:2000}") int maxUrls) {
+        return new UrlDiscoveryService(fetcher, sitemaps, maxUrls);
     }
 }

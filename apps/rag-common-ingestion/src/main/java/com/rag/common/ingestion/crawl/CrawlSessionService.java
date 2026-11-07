@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -51,6 +52,11 @@ public class CrawlSessionService {
     }
 
     public StartResult start(String url, int maxInitialLinks, int maxPages, boolean sameHostOnly) {
+        return start(url, maxInitialLinks, maxPages, sameHostOnly, false);
+    }
+
+    public StartResult start(String url, int maxInitialLinks, int maxPages, boolean sameHostOnly,
+                             boolean discover) {
         evictExpired();
         var page = fetcher.fetch(url);
         var session = new Session(UUID.randomUUID().toString(), WebUrls.host(url),
@@ -58,10 +64,12 @@ public class CrawlSessionService {
         session.current = page;
         session.known.add(WebUrls.key(page.getUrl()));
         session.existingSources.addAll(existingSourceKeys());
+        var discovered = discover ? seed(session, url) : 0;
+        session.initialRemaining += discovered;
         sessions.put(session.id, session);
-        log.info("Crawl session {} started at {} (maxInitialLinks={}, maxPages={}, sameHostOnly={})",
-                session.id, page.getUrl(), session.maxInitialLinks, session.maxPages, sameHostOnly);
-        return new StartResult(session.id, pageInfo(page), 1, true);
+        log.info("Crawl session {} started at {} (maxInitialLinks={}, maxPages={}, sameHostOnly={}, discovered={})",
+                session.id, page.getUrl(), session.maxInitialLinks, session.maxPages, sameHostOnly, discovered);
+        return new StartResult(session.id, pageInfo(page), session.initialRemaining, true, discovered);
     }
 
     public StepResult step(String sessionId, String question) {
@@ -118,8 +126,31 @@ public class CrawlSessionService {
         }
         if (session.pages == 1) {
             int capacity = Math.max(0, session.maxPages - session.pages);
-            session.initialRemaining += Math.min(added, Math.min(session.maxInitialLinks, capacity));
+            int room = Math.max(0, capacity - session.initialRemaining);
+            session.initialRemaining += Math.min(added, Math.min(session.maxInitialLinks, room));
         }
+    }
+
+    /** Seeds the frontier from discovery and returns how many URLs were queued. */
+    private int seed(Session session, String url) {
+        List<String> discovered;
+        try {
+            discovered = fetcher.discover(url);
+        } catch (RuntimeException e) {
+            log.warn("Crawl discovery failed for {}: {}", url, e.getMessage());
+            return 0;
+        }
+        if (discovered == null || discovered.isEmpty()) return 0;
+        int capacity = Math.max(0, session.maxPages - 1);
+        int added = 0;
+        for (var link : discovered) {
+            if (added >= capacity) break;
+            if (isEnqueuable(session, link)) {
+                session.frontier.add(link);
+                added++;
+            }
+        }
+        return added;
     }
 
     private static boolean isEnqueuable(Session session, String link) {
@@ -177,7 +208,13 @@ public class CrawlSessionService {
 
     public record PageInfo(String url, String title) {}
 
-    public record StartResult(String sessionId, PageInfo page, int initialRemaining, boolean hasMore) {}
+    public record StartResult(String sessionId, PageInfo page, int initialRemaining, boolean hasMore,
+                              int discoveredPages) {
+
+        public StartResult(String sessionId, PageInfo page, int initialRemaining, boolean hasMore) {
+            this(sessionId, page, initialRemaining, hasMore, 0);
+        }
+    }
 
     public record StepResult(String sessionId, String documentId, String pageUrl, String title,
                              boolean ingested, int initialRemaining, boolean hasMore,

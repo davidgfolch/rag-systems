@@ -63,4 +63,22 @@ class WebCrawlerClientTest {
         assertThat(sut.rankLinks(List.of(), "question")).isEmpty();
         assertThat(sut.rankLinks(null, "question")).isEmpty();
     }
+
+    @Test
+    void discoversUrlsViaWebcrawler() {
+        RestClient.Builder builder = RestClient.builder()
+                .baseUrl("http://localhost:8085")
+                .requestFactory(new JdkClientHttpRequestFactory());
+        MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+        WebCrawlerClient sut = new WebCrawlerClient(builder.build());
+        server.expect(requestTo("http://localhost:8085/api/discover"))
+                .andExpect(method(HttpMethod.POST))
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andRespond(withSuccess("""
+                        {"urls":["https://example.com/docs/a","https://example.com/docs/b"]}
+                        """, MediaType.APPLICATION_JSON));
+        List<String> urls = sut.discover("https://example.com/docs/");
+        assertThat(urls).containsExactly("https://example.com/docs/a", "https://example.com/docs/b");
+        server.verify();
+    }
 }
