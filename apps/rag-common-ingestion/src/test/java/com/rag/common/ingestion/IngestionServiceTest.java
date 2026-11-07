@@ -37,7 +37,7 @@ class IngestionServiceTest {
         when(parser.parse(doc)).thenReturn(text("d1", "content"));
         var chunk = new Chunk("c1", "d1", "content", 0, Map.of());
         when(splitter.split(doc)).thenReturn(List.of(chunk));
-        when(embeddingModel.embed(List.of("content"))).thenReturn(List.of(List.of(1.0f, 0.0f)));
+        when(embeddingModel.embed(List.of("content"))).thenReturn(List.of(new float[]{1.0f, 0.0f}));
         var result = service.ingest(doc);
         assertThat(result.documentId()).isEqualTo("d1");
         assertThat(result.chunkCount()).isEqualTo(1);
@@ -52,7 +52,7 @@ class IngestionServiceTest {
         var c2 = new Chunk("c2", "d1", "part two", 1, Map.of());
         when(splitter.split(doc)).thenReturn(List.of(c1, c2));
         when(embeddingModel.embed(List.of("part one", "part two")))
-                .thenReturn(List.of(List.of(1.0f, 0.0f), List.of(0.0f, 1.0f)));
+                .thenReturn(List.of(new float[]{1.0f, 0.0f}, new float[]{0.0f, 1.0f}));
         service.ingest(doc);
         verify(embeddingModel).embed(List.of("part one", "part two"));
         assertThat(c1.getEmbedding()).containsExactly(1.0f, 0.0f);
@@ -69,9 +69,9 @@ class IngestionServiceTest {
         var c3 = new Chunk("c3", "d1", "part three", 2, Map.of());
         when(splitter.split(doc)).thenReturn(List.of(c1, c2, c3));
         when(embeddingModel.embed(List.of("part one", "part two")))
-                .thenReturn(List.of(List.of(1.0f, 0.0f), List.of(0.0f, 1.0f)));
+                .thenReturn(List.of(new float[]{1.0f, 0.0f}, new float[]{0.0f, 1.0f}));
         when(embeddingModel.embed(List.of("part three")))
-                .thenReturn(List.of(List.of(2.0f, 2.0f)));
+                .thenReturn(List.of(new float[]{2.0f, 2.0f}));
         batchService.ingest(doc);
         verify(embeddingModel).embed(List.of("part one", "part two"));
         verify(embeddingModel).embed(List.of("part three"));

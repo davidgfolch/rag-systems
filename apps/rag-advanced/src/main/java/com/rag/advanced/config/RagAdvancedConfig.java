@@ -3,7 +3,7 @@ package com.rag.advanced.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rag.advanced.retrieval.LexicalScorer;
 import com.rag.advanced.services.AdvancedRetrievalService;
-import com.rag.advanced.services.WebCrawlerClient;
+import com.rag.common.ingestion.web.WebCrawlerClient;
 import com.rag.common.app.config.RagPipelineConfiguration;
 import com.rag.common.core.repositories.DocumentStorePort;
 import com.rag.common.core.repositories.VectorStorePort;

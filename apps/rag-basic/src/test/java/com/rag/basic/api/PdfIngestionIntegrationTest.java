@@ -1,7 +1,7 @@
 package com.rag.basic.api;
 
 import com.rag.basic.services.RetrievalService;
-import com.rag.basic.services.WebCrawlerClient;
+import com.rag.common.ingestion.web.WebCrawlerClient;
 import com.rag.common.core.domain.Chunk;
 import com.rag.common.retrieval.store.InMemoryVectorStore;
 import com.rag.common.core.services.DocumentParser;
@@ -131,10 +131,12 @@ class PdfIngestionIntegrationTest {
     /** Deterministic, collision-safe-enough embedding for integration testing. */
     private static final class HashEmbeddingModel implements EmbeddingModelPort {
         @Override
-        public List<Float> embed(String text) {
-            return text.chars()
-                    .mapToObj(c -> (float) (c % 7))
-                    .toList();
+        public float[] embed(String text) {
+            var vector = new float[text.length()];
+            for (int i = 0; i < text.length(); i++) {
+                vector[i] = text.charAt(i) % 7;
+            }
+            return vector;
         }
     }
 }

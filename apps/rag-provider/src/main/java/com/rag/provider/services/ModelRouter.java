@@ -11,41 +11,51 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.embedding.EmbeddingModel;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Holds the active chat/embedding model specs and their live clients. All
- * reads and writes are synchronized, so switching only replaces the references
- * under lock: in-flight generation keeps using the client it started with. The
- * embedding dimension is resolved lazily on first status read so booting does
- * not require a provider round-trip.
+ * Holds the active chat/embedding model specs and their live clients. Reads are
+ * lock-free (a single volatile immutable {@link State} snapshot): in-flight
+ * generation keeps using the client it started with, and switching just swaps
+ * the snapshot. Only switching and profile configuration take the lock, so no
+ * request ever waits for a provider round trip.
+ *
+ * <p>The embedding dimension is detected at most once per active model: a
+ * single-flight probe runs on a virtual thread and all concurrent callers await
+ * the same result instead of serializing behind the monitor.
  */
 public class ModelRouter {
 
     private static final Logger log = LoggerFactory.getLogger(ModelRouter.class);
 
+    private static final int UNKNOWN_DIMENSION = -1;
+    private static final String PROBE_TEXT = "probe";
+
     private final ProviderRegistry registry;
     private final ProviderClientFactory factory;
-    private ModelSpec activeChat;
-    private ModelSpec activeEmbedding;
-    private ChatModel chatModel;
-    private EmbeddingModel embeddingModel;
-    private int embeddingDimension = -1;
-    private final Map<String, EmbeddingModel> variantEmbeddingModels = new HashMap<>();
+    private final Map<String, EmbeddingModel> variantEmbeddingModels = new ConcurrentHashMap<>();
+    @SuppressWarnings("java:S3077") // State is an immutable snapshot; the reference is swapped atomically
+    private volatile State state;
+    @SuppressWarnings("java:S3077") // CompletableFuture is thread-safe; the reference is swapped atomically
+    private volatile CompletableFuture<Integer> dimensionProbe;
 
     public ModelRouter(ProviderRegistry registry, ProviderClientFactory factory,
                        ModelSpec initialChat, ModelSpec initialEmbedding) {
         this.registry = registry;
         this.factory = factory;
-        this.activeChat = initialChat;
-        this.activeEmbedding = initialEmbedding;
+        this.state = new State(initialChat, initialEmbedding, null, null, UNKNOWN_DIMENSION);
     }
 
-    public synchronized void switchChat(ModelSpec spec) {
+    public void switchChat(ModelSpec spec) {
         var profile = requireProfile(spec.providerId());
-        this.chatModel = factory.chatModel(profile, spec.model());
-        this.activeChat = spec;
+        var model = factory.chatModel(profile, spec.model());
+        synchronized (this) {
+            var current = state;
+            state = new State(spec, current.activeEmbedding(), model,
+                    current.embeddingModel(), current.embeddingDimension());
+        }
         log.info("Active chat model switched to {}", spec);
     }
 
@@ -53,12 +63,15 @@ public class ModelRouter {
         switchChat(new ModelSpec(request.providerId(), request.model()));
     }
 
-    public synchronized void switchEmbedding(ModelSpec spec) {
+    public void switchEmbedding(ModelSpec spec) {
         var profile = requireProfile(spec.providerId());
-        this.embeddingModel = factory.embeddingModel(profile, spec.model());
-        this.activeEmbedding = spec;
-        this.embeddingDimension = -1;
-        this.variantEmbeddingModels.clear();
+        var model = factory.embeddingModel(profile, spec.model());
+        synchronized (this) {
+            var current = state;
+            state = new State(current.activeChat(), spec, current.chatModel(), model, UNKNOWN_DIMENSION);
+            dimensionProbe = null;
+            variantEmbeddingModels.clear();
+        }
         log.info("Active embedding model switched to {} (dimension resolved on demand)", spec);
     }
 
@@ -70,34 +83,36 @@ public class ModelRouter {
      * Upserts a profile; active specs pointing at it are rebuilt so the new
      * credentials/base URL take effect immediately.
      */
-    public synchronized void configure(ConfigureProviderRequest request) {
+    public void configure(ConfigureProviderRequest request) {
         var profile = registry.save(request);
-        if (profile.id().equals(activeChat.providerId())) {
-            switchChat(activeChat);
+        synchronized (this) {
+            if (profile.id().equals(state.activeChat().providerId())) {
+                switchChat(state.activeChat());
+            }
+            if (profile.id().equals(state.activeEmbedding().providerId())) {
+                switchEmbedding(state.activeEmbedding());
+            }
         }
-        if (profile.id().equals(activeEmbedding.providerId())) {
-            switchEmbedding(activeEmbedding);
-        }
     }
 
-    public synchronized ModelSpec currentChat() {
-        return activeChat;
+    public ModelSpec currentChat() {
+        return state.activeChat();
     }
 
-    public synchronized ModelSpec currentEmbedding() {
-        return activeEmbedding;
+    public ModelSpec currentEmbedding() {
+        return state.activeEmbedding();
     }
 
-    public synchronized String provider() {
-        return activeChat.providerId();
+    public String provider() {
+        return state.activeChat().providerId();
     }
 
-    public synchronized ChatModel chatModel() {
-        return chatModel;
+    public ChatModel chatModel() {
+        return state.chatModel();
     }
 
-    public synchronized EmbeddingModel embeddingModel() {
-        return embeddingModel;
+    public EmbeddingModel embeddingModel() {
+        return state.embeddingModel();
     }
 
     /**
@@ -106,31 +121,77 @@ public class ModelRouter {
      * active embedding provider and cached, so switching variants never has to
      * change the global active model.
      */
-    public synchronized EmbeddingModel embeddingModelFor(String model) {
-        if (model == null || model.isBlank() || model.equals(activeEmbedding.model())) {
-            return embeddingModel;
+    public EmbeddingModel embeddingModelFor(String model) {
+        var current = state;
+        if (model == null || model.isBlank() || model.equals(current.activeEmbedding().model())) {
+            return current.embeddingModel();
         }
-        return variantEmbeddingModels.computeIfAbsent(model, this::buildEmbeddingModel);
+        return variantEmbeddingModels.computeIfAbsent(model,
+                variant -> buildEmbeddingModel(variant, current.activeEmbedding()));
     }
 
-    private EmbeddingModel buildEmbeddingModel(String model) {
+    private EmbeddingModel buildEmbeddingModel(String model, ModelSpec activeEmbedding) {
         var profile = requireProfile(activeEmbedding.providerId());
         log.info("Using embedding model {} on provider {}", model, profile.id());
         return factory.embeddingModel(profile, model);
     }
 
-    public synchronized int embeddingDimension() {
-        if (embeddingDimension < 0) {
-            embeddingDimension = detectDimension(embeddingModel);
+    public int embeddingDimension() {
+        var current = state;
+        if (current.embeddingDimension() != UNKNOWN_DIMENSION) {
+            return current.embeddingDimension();
         }
-        return embeddingDimension;
+        var probe = probeFor(current);
+        var dimension = probe.join();
+        if (dimension > 0) {
+            storeDimension(current, dimension);
+        } else {
+            clearFailedProbe(probe);
+        }
+        return dimension;
     }
 
-    public synchronized ProviderStatusDTO status() {
+    private CompletableFuture<Integer> probeFor(State current) {
+        var probe = dimensionProbe;
+        if (probe != null) {
+            return probe;
+        }
+        synchronized (this) {
+            if (dimensionProbe == null) {
+                var model = current.embeddingModel();
+                var started = new CompletableFuture<Integer>();
+                Thread.ofVirtual().start(() -> started.complete(detectDimension(model)));
+                dimensionProbe = started;
+            }
+            return dimensionProbe;
+        }
+    }
+
+    private void storeDimension(State probed, int dimension) {
+        synchronized (this) {
+            var latest = state;
+            if (latest.embeddingModel() == probed.embeddingModel()) {
+                state = new State(latest.activeChat(), latest.activeEmbedding(), latest.chatModel(),
+                        latest.embeddingModel(), dimension);
+            }
+        }
+    }
+
+    private void clearFailedProbe(CompletableFuture<Integer> probe) {
+        synchronized (this) {
+            if (dimensionProbe == probe) {
+                dimensionProbe = null;
+            }
+        }
+    }
+
+    public ProviderStatusDTO status() {
+        var current = state;
         return new ProviderStatusDTO(
-                new ModelSpecDTO(activeChat.providerId(), activeChat.model()),
-                new ModelSpecDTO(activeEmbedding.providerId(), activeEmbedding.model()),
-                provider(), embeddingDimension());
+                new ModelSpecDTO(current.activeChat().providerId(), current.activeChat().model()),
+                new ModelSpecDTO(current.activeEmbedding().providerId(), current.activeEmbedding().model()),
+                current.activeChat().providerId(),
+                embeddingDimension());
     }
 
     private ProviderProfile requireProfile(String providerId) {
@@ -149,10 +210,14 @@ public class ModelRouter {
             if (dim > 0) {
                 return dim;
             }
-            return model.embed("probe").length;
+            return model.embed(PROBE_TEXT).length;
         } catch (Exception e) {
             log.warn("Could not detect embedding dimension: {}", e.getMessage());
-            return -1;
+            return UNKNOWN_DIMENSION;
         }
+    }
+
+    private record State(ModelSpec activeChat, ModelSpec activeEmbedding, ChatModel chatModel,
+                         EmbeddingModel embeddingModel, int embeddingDimension) {
     }
 }

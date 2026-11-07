@@ -34,6 +34,6 @@ class SpringAiEmbeddingModelTest {
                         new Embedding(new float[]{1.0f, 2.0f}, 0),
                         new Embedding(new float[]{3.0f, 4.0f}, 1))));
         var result = model.embed(List.of("a", "b"));
-        assertThat(result).containsExactly(List.of(1.0f, 2.0f), List.of(3.0f, 4.0f));
+        assertThat(result).containsExactly(new float[]{1.0f, 2.0f}, new float[]{3.0f, 4.0f});
     }
 }

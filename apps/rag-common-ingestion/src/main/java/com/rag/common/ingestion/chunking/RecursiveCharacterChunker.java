@@ -100,15 +100,17 @@ public class RecursiveCharacterChunker implements TextSplitter {
         var current = new StringBuilder();
 
         for (String part : parts) {
-            String candidate = current.isEmpty() ? part : current + separator + part;
-            if (candidate.length() <= maxChunkSize) {
-                current = new StringBuilder(candidate);
+            int extra = current.isEmpty() ? part.length() : separator.length() + part.length();
+            if (current.length() + extra <= maxChunkSize) {
+                if (!current.isEmpty()) current.append(separator);
+                current.append(part);
             } else if (!current.isEmpty()) {
                 result.add(current.toString());
-                current = new StringBuilder(part);
+                current.setLength(0);
                 if (part.length() > maxChunkSize) {
                     splitRecursively(part, separators, sepIndex + 1, result);
-                    current = new StringBuilder();
+                } else {
+                    current.append(part);
                 }
             } else if (part.length() > maxChunkSize) {
                 splitRecursively(part, separators, sepIndex + 1, result);

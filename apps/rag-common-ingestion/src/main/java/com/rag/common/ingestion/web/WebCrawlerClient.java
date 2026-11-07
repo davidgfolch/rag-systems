@@ -1,7 +1,5 @@
-package com.rag.basic.services;
+package com.rag.common.ingestion.web;
 
-import com.rag.common.ingestion.web.WebCrawlerDiscovery;
-import com.rag.common.ingestion.web.WebPageFetcher;
 import com.rag.contract.model.FetchRequest;
 import com.rag.contract.model.PageDTO;
 import com.rag.contract.model.RankLinksRequest;
@@ -18,9 +16,10 @@ import static com.rag.contract.constants.ApiPaths.FETCH;
 import static com.rag.contract.constants.ApiPaths.RANK_LINKS;
 
 /**
- * Client for the shared rag-webcrawler tool. The rag-module orchestrates URL
+ * Client for the shared rag-webcrawler tool. The RAG modules orchestrate URL
  * ingestion by fetching pages and ranking their outbound links here before
- * chunking/embedding them itself.
+ * chunking/embedding them itself, and the agent's web tool reuses it to ground
+ * answers on live page text.
  */
 public class WebCrawlerClient implements WebPageFetcher {
 

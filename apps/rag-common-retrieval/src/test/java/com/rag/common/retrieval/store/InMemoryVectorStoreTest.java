@@ -5,7 +5,6 @@ import com.rag.common.core.domain.MetadataKeys;
 import com.rag.common.core.services.EmbeddingModelPort;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -22,7 +21,7 @@ class InMemoryVectorStoreTest {
 
     @Test
     void storesAndRetrievesBySimilarity() {
-        when(embeddingModel.embed(anyString())).thenReturn(List.of(0.9f, 0.1f));
+        when(embeddingModel.embed(anyString())).thenReturn(new float[]{0.9f, 0.1f});
         var aboutDogs = chunk("c1", new float[]{1, 0});
         var aboutCats = chunk("c2", new float[]{0, 1});
         store.add(List.of(aboutDogs, aboutCats));
@@ -33,7 +32,7 @@ class InMemoryVectorStoreTest {
 
     @Test
     void respectsTopK() {
-        when(embeddingModel.embed(anyString())).thenReturn(List.of(1f, 0f));
+        when(embeddingModel.embed(anyString())).thenReturn(new float[]{1f, 0f});
         store.add(List.of(chunk("c1", new float[]{1, 0}),
                 chunk("c2", new float[]{0.8f, 0.2f}),
                 chunk("c3", new float[]{0, 1})));
@@ -42,7 +41,7 @@ class InMemoryVectorStoreTest {
 
     @Test
     void returnsEmptyForEmptyStore() {
-        when(embeddingModel.embed(anyString())).thenReturn(List.of(1f, 0f));
+        when(embeddingModel.embed(anyString())).thenReturn(new float[]{1f, 0f});
         assertThat(store.similaritySearch("dogs", 5)).isEmpty();
     }
 
@@ -62,11 +61,11 @@ class InMemoryVectorStoreTest {
 
     @Test
     void filtersByDocumentId() {
-        when(embeddingModel.embed(anyString())).thenReturn(List.of(1f, 0f));
+        when(embeddingModel.embed(anyString())).thenReturn(new float[]{1f, 0f});
         var a = chunk("c1", new float[]{1, 0});
         var b = chunk("c2", new float[]{1, 0});
         var otherDoc = new Chunk("c3", "d2", "text", 0, Map.of());
-        otherDoc.setEmbedding(List.of(1f, 0f));
+        otherDoc.setEmbedding(new float[]{1f, 0f});
         store.add(List.of(a, b, otherDoc));
         var results = store.similaritySearch("q", 5, "d1");
         assertThat(results).hasSize(2).allMatch(c -> c.getDocumentId().equals("d1"));
@@ -75,11 +74,11 @@ class InMemoryVectorStoreTest {
     @Test
     void listsDocumentsGroupedByDocumentIdWithChunkCountAndMetadata() {
         var a = new Chunk("c1", "d1", "text a", 0, Map.of(MetadataKeys.FILE_NAME, "note.txt"));
-        a.setEmbedding(List.of(1f, 0f));
+        a.setEmbedding(new float[]{1f, 0f});
         var b = new Chunk("c2", "d1", "text b", 1, Map.of(MetadataKeys.FILE_NAME, "note.txt"));
-        b.setEmbedding(List.of(1f, 0f));
+        b.setEmbedding(new float[]{1f, 0f});
         var c = new Chunk("c3", "d2", "text c", 0, Map.of(MetadataKeys.FILE_NAME, "other.txt"));
-        c.setEmbedding(List.of(1f, 0f));
+        c.setEmbedding(new float[]{1f, 0f});
         store.add(List.of(a, b, c));
         var documents = store.listDocuments();
         assertThat(documents).hasSize(2);
@@ -97,7 +96,7 @@ class InMemoryVectorStoreTest {
     @Test
     void deletesAllChunksOfDocument() {
         var otherDoc = new Chunk("c2", "d2", "text", 0, Map.of());
-        otherDoc.setEmbedding(List.of(1f, 0f));
+        otherDoc.setEmbedding(new float[]{1f, 0f});
         store.add(List.of(chunk("c1", new float[]{1, 0}), otherDoc));
         store.delete("d1");
         assertThat(store.listDocuments()).hasSize(1);
@@ -113,13 +112,7 @@ class InMemoryVectorStoreTest {
 
     private static Chunk chunk(String id, float[] embedding) {
         var c = new Chunk(id, "d1", "text " + id, 0, Map.of());
-        c.setEmbedding(floatList(embedding));
+        c.setEmbedding(embedding);
         return c;
-    }
-
-    private static List<Float> floatList(float[] values) {
-        var out = new ArrayList<Float>(values.length);
-        for (float v : values) out.add(v);
-        return out;
     }
 }

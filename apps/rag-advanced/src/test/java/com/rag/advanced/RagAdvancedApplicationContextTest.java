@@ -12,7 +12,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.anyList;
@@ -53,22 +52,20 @@ class RagAdvancedApplicationContextTest {
     void stubDeterministicEmbeddings() {
         when(domainEmbeddingModel.embed(anyString())).thenAnswer(inv -> {
             var text = inv.getArgument(0, String.class);
-            return toEmbeddingList(text);
+            return toEmbedding(text);
         });
         when(domainEmbeddingModel.embed(anyList())).thenAnswer(inv -> {
             List<String> texts = inv.getArgument(0);
-            return texts.stream().map(RagAdvancedApplicationContextTest::toEmbeddingList).toList();
+            return texts.stream().map(RagAdvancedApplicationContextTest::toEmbedding).toList();
         });
     }
 
-    private static List<Float> toEmbeddingList(String text) {
+    private static float[] toEmbedding(String text) {
         float[] vec = new float[text.length()];
         for (int i = 0; i < text.length(); i++) {
             vec[i] = (float) (text.charAt(i) % 7);
         }
-        var result = new ArrayList<Float>(vec.length);
-        for (float v : vec) result.add(v);
-        return result;
+        return vec;
     }
 
     @Test
@@ -98,7 +95,7 @@ class RagAdvancedApplicationContextTest {
         mockMvc.perform(post("/api/query")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"query": "azure virtual machines", "topK": 3}"""))
+                                {"question": "azure virtual machines", "topK": 3}"""))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.results").isArray())
                 .andExpect(jsonPath("$.results.length()").value(1))

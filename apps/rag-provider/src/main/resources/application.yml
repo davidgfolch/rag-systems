@@ -1,6 +1,9 @@
 spring:
   application:
     name: rag-provider
+  threads:
+    virtual:
+      enabled: true
 
 server:
   port: ${RAG_PROVIDER_PORT:8086}

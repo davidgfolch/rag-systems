@@ -11,6 +11,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
@@ -28,6 +29,7 @@ public class SitemapUrlDiscovery {
 
     static final int MAX_SITEMAPS = 25;
     static final int MAX_DEPTH = 2;
+    public static final Duration DEFAULT_DISCOVERY_TIMEOUT = Duration.ofSeconds(20);
     private static final String ROBOTS_PATH = "/robots.txt";
     private static final String SITEMAP = "sitemap.xml";
     private static final String SITEMAP_INDEX = "sitemap_index.xml";
@@ -40,20 +42,27 @@ public class SitemapUrlDiscovery {
 
     private final UrlContentLoader loader;
     private final int maxUrls;
+    private final long timeoutNanos;
 
     public SitemapUrlDiscovery(UrlContentLoader loader, int maxUrls) {
+        this(loader, maxUrls, DEFAULT_DISCOVERY_TIMEOUT);
+    }
+
+    public SitemapUrlDiscovery(UrlContentLoader loader, int maxUrls, Duration timeout) {
         this.loader = loader;
         this.maxUrls = maxUrls;
+        this.timeoutNanos = timeout.toNanos();
     }
 
     public List<String> discover(String startUrl) {
+        var deadline = System.nanoTime() + timeoutNanos;
         var scope = UrlScope.of(startUrl);
         var robots = robots(scope);
         var found = new LinkedHashSet<String>();
         var visited = new LinkedHashSet<String>();
         for (var candidate : candidates(scope, robots)) {
-            if (found.size() >= maxUrls || visited.size() >= MAX_SITEMAPS) break;
-            collect(candidate, found, visited, 0);
+            if (found.size() >= maxUrls || visited.size() >= MAX_SITEMAPS || expired(deadline)) break;
+            collect(candidate, found, visited, 0, deadline);
         }
         var urls = found.stream()
                 .filter(scope::accepts)
@@ -66,8 +75,8 @@ public class SitemapUrlDiscovery {
         return new UrlFamilySelector().select(urls, startUrl);
     }
 
-    private void collect(String sitemapUrl, Set<String> found, Set<String> visited, int depth) {
-        if (depth > MAX_DEPTH || found.size() >= maxUrls || !visited.add(sitemapUrl)) return;
+    private void collect(String sitemapUrl, Set<String> found, Set<String> visited, int depth, long deadline) {
+        if (depth > MAX_DEPTH || found.size() >= maxUrls || !visited.add(sitemapUrl) || expired(deadline)) return;
         var body = loader.load(sitemapUrl);
         if (body.isEmpty()) return;
         var document = parse(body.get());
@@ -75,11 +84,19 @@ public class SitemapUrlDiscovery {
         var index = isIndex(document);
         var locs = document.getElementsByTagName(LOC);
         for (int i = 0; i < locs.getLength() && found.size() < maxUrls; i++) {
+            if (expired(deadline)) {
+                log.warn("Sitemap discovery deadline reached while reading {}", sitemapUrl);
+                return;
+            }
             var value = locs.item(i).getTextContent().trim();
             if (value.isEmpty()) continue;
-            if (index) collect(value, found, visited, depth + 1);
+            if (index) collect(value, found, visited, depth + 1, deadline);
             else found.add(value);
         }
+    }
+
+    private static boolean expired(long deadline) {
+        return System.nanoTime() - deadline > 0;
     }
 
     private RobotsPolicy robots(UrlScope scope) {

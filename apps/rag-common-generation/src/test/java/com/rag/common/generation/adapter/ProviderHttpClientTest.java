@@ -149,6 +149,18 @@ class ProviderHttpClientTest {
         var error = org.assertj.core.api.Assertions.catchThrowable(
                 () -> failing.get(ApiPaths.PROVIDER, ProviderStatusDTO.class));
         assertThat(error).isInstanceOf(IllegalStateException.class).hasMessageContaining("boom");
+        assertThat(Thread.currentThread().isInterrupted()).isFalse();
+    }
+
+    @Test
+    void shouldRestoreInterruptFlagOnlyWhenInterrupted() throws Exception {
+        var httpClient = mock(HttpClient.class);
+        when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+                .thenThrow(new InterruptedException("halt"));
+        var failing = new ProviderHttpClient("http://localhost:1", httpClient, new ObjectMapper());
+        assertThatThrownBy(() -> failing.get(ApiPaths.PROVIDER, ProviderStatusDTO.class))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("interrupted");
         assertThat(Thread.currentThread().isInterrupted()).isTrue();
         Thread.interrupted();
     }

@@ -119,6 +119,8 @@ public class SectionAwareBlockGrouper implements BlockGrouper {
         private final List<DocumentBlock> blocks = new ArrayList<>();
         private List<String> section = List.of();
         private Integer page;
+        private int chars;
+        private int visibleBlocks;
 
         GroupAccumulator(int maxChars) {
             this.maxChars = maxChars;
@@ -129,11 +131,16 @@ public class SectionAwareBlockGrouper implements BlockGrouper {
                 section = nextSection;
                 page = block.location().page();
             }
+            if (!block.content().isBlank()) {
+                if (visibleBlocks > 0) chars += BLOCK_SEPARATOR.length();
+                chars += block.content().length();
+                visibleBlocks++;
+            }
             blocks.add(block);
         }
 
         boolean overLimit() {
-            return join(blocks).length() > maxChars;
+            return chars > maxChars;
         }
 
         boolean pageChanged(DocumentBlock block) {
@@ -146,6 +153,8 @@ public class SectionAwareBlockGrouper implements BlockGrouper {
             groups.add(new BlockGroup(join(blocks), contentType(blocks), section,
                     blocks.getFirst().location(), metadata(blocks), false, context(section)));
             blocks.clear();
+            chars = 0;
+            visibleBlocks = 0;
         }
     }
 }

@@ -9,10 +9,13 @@ import io.micrometer.tracing.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -32,11 +35,15 @@ public class AsyncIngestionService {
 
     private static final Logger log = LoggerFactory.getLogger(AsyncIngestionService.class);
 
+    static final int MAX_RETAINED_JOBS = 1000;
+    private static final Duration JOB_TTL = Duration.ofHours(1);
+
     private final IngestionService delegate;
     private final ExecutorService executor;
     private final VectorStorePort preflight;
     private final Tracer tracer;
     private final Map<String, Job> jobs = new ConcurrentHashMap<>();
+    private final AtomicInteger running = new AtomicInteger();
 
     public AsyncIngestionService(IngestionService delegate) {
         this(delegate, null, null, null);
@@ -72,6 +79,7 @@ public class AsyncIngestionService {
     }
 
     private String submit(String documentId, Consumer<Job> task) {
+        evictOldJobs();
         Job job = new Job(documentId);
         jobs.put(documentId, job);
         job.state = STATE_PENDING;
@@ -79,6 +87,30 @@ public class AsyncIngestionService {
         Span span = tracer != null ? tracer.currentSpan() : null;
         executor.submit(() -> TracePropagation.runWithSpan(tracer, span, () -> task.accept(job)));
         return documentId;
+    }
+
+    /**
+     * Keeps the job registry bounded: completed jobs are dropped after the TTL,
+     * then the oldest finished jobs are dropped until the size fits. Running
+     * jobs are never evicted.
+     */
+    private void evictOldJobs() {
+        if (jobs.size() < MAX_RETAINED_JOBS) {
+            return;
+        }
+        var cutoff = System.nanoTime() - JOB_TTL.toNanos();
+        jobs.entrySet().removeIf(e -> e.getValue().finishedAt > 0 && e.getValue().finishedAt < cutoff);
+        if (jobs.size() < MAX_RETAINED_JOBS) {
+            return;
+        }
+        var excess = jobs.size() - MAX_RETAINED_JOBS + 1;
+        jobs.values().stream()
+                .filter(j -> j.finishedAt > 0)
+                .sorted(Comparator.comparingLong(j -> j.finishedAt))
+                .limit(excess)
+                .map(j -> j.documentId)
+                .toList()
+                .forEach(jobs::remove);
     }
 
     public JobStatus status(String documentId) {
@@ -91,6 +123,7 @@ public class AsyncIngestionService {
 
     private void run(Job job, Supplier<IngestionService.IngestionResult> ingestion) {
         job.state = STATE_RUNNING;
+        running.incrementAndGet();
         try {
             if (preflight != null) {
                 log.info("Async ingestion preflight: vector store availability check for document {}", job.documentId);
@@ -103,6 +136,9 @@ public class AsyncIngestionService {
             job.state = STATE_FAILED;
             job.message = messageFor(e);
             log.error("Async ingestion failed for document {}", job.documentId, e);
+        } finally {
+            job.finishedAt = System.nanoTime();
+            running.decrementAndGet();
         }
     }
 
@@ -114,7 +150,7 @@ public class AsyncIngestionService {
     }
 
     public int running() {
-        return (int) jobs.values().stream().filter(j -> STATE_RUNNING.equals(j.state)).count();
+        return running.get();
     }
 
     private static final class Job {
@@ -122,6 +158,7 @@ public class AsyncIngestionService {
         volatile String state;
         volatile int chunkCount;
         volatile String message;
+        volatile long finishedAt;
 
         Job(String documentId) {
             this.documentId = documentId;

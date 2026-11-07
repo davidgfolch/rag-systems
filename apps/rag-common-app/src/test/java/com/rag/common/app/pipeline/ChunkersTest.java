@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class ChunkersTest {
 
-    private final EmbeddingModelPort embeddings = text -> List.of(1f, 0f);
+    private final EmbeddingModelPort embeddings = text -> new float[]{1f, 0f};
 
     @Test
     void buildsTheChunkerForEachStrategy() {

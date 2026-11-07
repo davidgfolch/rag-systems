@@ -16,8 +16,11 @@ import reactor.core.publisher.Sinks;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static com.rag.contract.constants.ApiPaths.CHAT_STREAM;
 import static com.rag.contract.constants.ApiPaths.COMPLETE;
@@ -34,6 +37,10 @@ import static com.rag.contract.constants.FrameTypes.TOKEN;
 public class RemoteChatModelPort implements ChatModelPort, StreamingChatModelPort {
 
     private static final Logger log = LoggerFactory.getLogger(RemoteChatModelPort.class);
+
+    static final int STREAM_BUFFER_CAPACITY = 256;
+    private static final String DATA_PREFIX = "data:";
+    private static final String STREAM_FAILED = "Provider stream failed: ";
 
     private final ProviderHttpClient httpClient;
     private final ObjectMapper objectMapper;
@@ -61,18 +68,22 @@ public class RemoteChatModelPort implements ChatModelPort, StreamingChatModelPor
     public Flux<String> completeStream(String prompt) {
         log.info("Remote chat stream started: promptLength={}", prompt.length());
         Span span = tracer != null ? tracer.currentSpan() : null;
-        Sinks.Many<String> sink = Sinks.many().unicast().onBackpressureBuffer();
-        Thread.ofVirtual().start(() -> TracePropagation.runWithSpan(tracer, span, () -> readStream(prompt, sink)));
-        return sink.asFlux();
+        Sinks.Many<String> sink = Sinks.many().unicast()
+                .onBackpressureBuffer(new ArrayBlockingQueue<>(STREAM_BUFFER_CAPACITY));
+        var bodyRef = new AtomicReference<InputStream>();
+        Thread.ofVirtual().start(() -> TracePropagation.runWithSpan(
+                tracer, span, () -> readStream(prompt, sink, bodyRef)));
+        return sink.asFlux().doOnCancel(() -> closeQuietly(bodyRef.get()));
     }
 
-    private void readStream(String prompt, Sinks.Many<String> sink) {
+    private void readStream(String prompt, Sinks.Many<String> sink, AtomicReference<InputStream> bodyRef) {
         try (var body = httpClient.postStream(CHAT_STREAM, new CompleteRequest(prompt));
              var reader = new BufferedReader(new InputStreamReader(body, StandardCharsets.UTF_8))) {
+            bodyRef.set(body);
             String line;
             while ((line = reader.readLine()) != null) {
-                if (line.startsWith("data:")) {
-                    var json = line.substring("data:".length()).trim();
+                if (line.startsWith(DATA_PREFIX)) {
+                    var json = line.substring(DATA_PREFIX.length()).trim();
                     if (!json.isEmpty() && !consumeFrame(sink, json)) {
                         return;
                     }
@@ -80,8 +91,10 @@ public class RemoteChatModelPort implements ChatModelPort, StreamingChatModelPor
             }
             sink.tryEmitComplete();
         } catch (Exception e) {
-            log.error("Remote chat stream failed", e);
-            sink.tryEmitError(new IllegalStateException("Provider stream failed: " + e.getMessage(), e));
+            var error = new IllegalStateException(STREAM_FAILED + e.getMessage(), e);
+            if (sink.tryEmitError(error) != Sinks.EmitResult.FAIL_CANCELLED) {
+                log.error("Remote chat stream failed", e);
+            }
         }
     }
 
@@ -89,8 +102,9 @@ public class RemoteChatModelPort implements ChatModelPort, StreamingChatModelPor
         var frame = objectMapper.readValue(json, ChatResponse.class);
         return switch (frame.type()) {
             case TOKEN -> {
-                if (frame.content() != null) {
-                    sink.tryEmitNext(frame.content());
+                if (frame.content() != null && sink.tryEmitNext(frame.content()).isFailure()) {
+                    log.debug("Consumer stopped accepting tokens; closing provider stream");
+                    yield false;
                 }
                 yield true;
             }
@@ -104,5 +118,16 @@ public class RemoteChatModelPort implements ChatModelPort, StreamingChatModelPor
             }
             default -> true;
         };
+    }
+
+    private static void closeQuietly(InputStream body) {
+        if (body == null) {
+            return;
+        }
+        try {
+            body.close();
+        } catch (IOException e) {
+            log.debug("Could not close provider stream: {}", e.getMessage());
+        }
     }
 }

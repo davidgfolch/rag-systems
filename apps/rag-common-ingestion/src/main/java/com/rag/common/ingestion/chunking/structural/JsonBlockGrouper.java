@@ -25,21 +25,21 @@ public class JsonBlockGrouper implements BlockGrouper {
     @Override
     public List<BlockGroup> group(ParsedDocument document, ChunkingConfig config, int maxChars) {
         var groups = new ArrayList<BlockGroup>();
-        var records = new ArrayList<DocumentBlock>();
+        var records = new RecordAccumulator();
         for (var block : document.blocks()) {
             if (block.isBlank()) {
                 continue;
             }
             if (isHeading(block)) {
-                flush(records, groups);
+                records.flush(groups);
             } else {
-                if (needsFlush(records, block, config, maxChars)) {
-                    flush(records, groups);
+                if (records.shouldFlush(block, config, maxChars)) {
+                    records.flush(groups);
                 }
                 records.add(block);
             }
         }
-        flush(records, groups);
+        records.flush(groups);
         log.debug("Grouped {} JSON blocks into {} record groups", document.blocks().size(), groups.size());
         return groups;
     }
@@ -48,42 +48,53 @@ public class JsonBlockGrouper implements BlockGrouper {
         return block.type() == BlockType.HEADING || block.type() == BlockType.TITLE;
     }
 
-    private static boolean needsFlush(List<DocumentBlock> records, DocumentBlock block,
-                                      ChunkingConfig config, int maxChars) {
-        if (records.isEmpty()) {
-            return false;
-        }
-        if (records.size() >= config.maxRecordsPerChunk()) {
-            return true;
-        }
-        if (!records.getFirst().sectionPath().equals(block.sectionPath())) {
-            return true;
-        }
-        return join(records).length() + block.content().length() > maxChars;
-    }
+    private static final class RecordAccumulator {
+        private final List<DocumentBlock> records = new ArrayList<>();
+        private int chars;
 
-    private static void flush(List<DocumentBlock> records, List<BlockGroup> groups) {
-        if (records.isEmpty()) {
-            return;
+        void add(DocumentBlock block) {
+            if (!records.isEmpty()) chars += BLOCK_SEPARATOR.length();
+            chars += block.content().length();
+            records.add(block);
         }
-        var first = records.getFirst();
-        groups.add(new BlockGroup(join(records), contentType(records), first.sectionPath(),
-                first.location(), first.metadata(), false, context(first.sectionPath())));
-        records.clear();
-    }
 
-    private static String join(List<DocumentBlock> records) {
-        return String.join(BLOCK_SEPARATOR, records.stream().map(DocumentBlock::content).toList());
-    }
-
-    private static String context(List<String> section) {
-        return String.join(CONTEXT_SEPARATOR, section);
-    }
-
-    private static BlockType contentType(List<DocumentBlock> records) {
-        if (records.stream().allMatch(block -> block.type() == BlockType.JSON_ARRAY)) {
-            return BlockType.JSON_ARRAY;
+        boolean shouldFlush(DocumentBlock block, ChunkingConfig config, int maxChars) {
+            if (records.isEmpty()) {
+                return false;
+            }
+            if (records.size() >= config.maxRecordsPerChunk()) {
+                return true;
+            }
+            if (!records.getFirst().sectionPath().equals(block.sectionPath())) {
+                return true;
+            }
+            return chars + block.content().length() > maxChars;
         }
-        return BlockType.JSON_OBJECT;
+
+        void flush(List<BlockGroup> groups) {
+            if (records.isEmpty()) {
+                return;
+            }
+            var first = records.getFirst();
+            groups.add(new BlockGroup(join(), contentType(), first.sectionPath(),
+                    first.location(), first.metadata(), false, context(first.sectionPath())));
+            records.clear();
+            chars = 0;
+        }
+
+        private String join() {
+            return String.join(BLOCK_SEPARATOR, records.stream().map(DocumentBlock::content).toList());
+        }
+
+        private static String context(List<String> section) {
+            return String.join(CONTEXT_SEPARATOR, section);
+        }
+
+        private BlockType contentType() {
+            if (records.stream().allMatch(block -> block.type() == BlockType.JSON_ARRAY)) {
+                return BlockType.JSON_ARRAY;
+            }
+            return BlockType.JSON_OBJECT;
+        }
     }
 }

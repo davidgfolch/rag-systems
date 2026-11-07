@@ -5,6 +5,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClient;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 /**
@@ -18,9 +20,11 @@ public class ModuleHealthClient {
 
     private static final long POLL_MILLIS = 500;
     private static final long PROGRESS_MILLIS = 5_000;
+    private static final int MAX_CACHED_CLIENTS = 16;
 
     private final RestClient.Builder builder;
     private final String healthPath;
+    private final Map<String, RestClient> clients = new ConcurrentHashMap<>();
 
     public ModuleHealthClient(RestClient.Builder builder) {
         this(builder, "/actuator/health");
@@ -60,12 +64,19 @@ public class ModuleHealthClient {
 
     public boolean isUp(String baseUrl) {
         try {
-            builder.clone().baseUrl(baseUrl).build().get().uri(healthPath).retrieve().toBodilessEntity();
+            client(baseUrl).get().uri(healthPath).retrieve().toBodilessEntity();
             return true;
         } catch (RestClientException e) {
             log.debug("Health probe failed for {}: {}", baseUrl, e.getMessage());
             return false;
         }
+    }
+
+    private RestClient client(String baseUrl) {
+        if (clients.size() >= MAX_CACHED_CLIENTS) {
+            clients.clear();
+        }
+        return clients.computeIfAbsent(baseUrl, url -> builder.clone().baseUrl(url).build());
     }
 
     private static void sleep(long millis) {

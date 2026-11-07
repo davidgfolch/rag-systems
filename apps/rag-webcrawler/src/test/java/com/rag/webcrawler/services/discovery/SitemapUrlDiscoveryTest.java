@@ -3,6 +3,8 @@ package com.rag.webcrawler.services.discovery;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -88,6 +90,19 @@ class SitemapUrlDiscoveryTest {
                 "https://example.com/docs/a", "https://example.com/docs/b", "https://example.com/docs/c"));
 
         assertThat(new SitemapUrlDiscovery(loader, 2).discover(START)).hasSizeLessThanOrEqualTo(2);
+    }
+
+    @Test
+    void stopsProbingOnceTheDiscoveryDeadlineExpires() {
+        var loaded = new ArrayList<String>();
+        var countingLoader = (UrlContentLoader) url -> {
+            loaded.add(url);
+            return Optional.of(urlset("https://example.com/docs/a", "https://example.com/docs/b")
+                    .getBytes(StandardCharsets.UTF_8));
+        };
+        var urls = new SitemapUrlDiscovery(countingLoader, 100, Duration.ofNanos(1)).discover(START);
+        assertThat(urls).isEmpty();
+        assertThat(loaded).containsExactly(ROBOTS);
     }
 
     private static String urlset(String... locations) {

@@ -24,12 +24,12 @@ public class ActiveEmbeddingModelPort implements EmbeddingModelPort {
     }
 
     @Override
-    public List<Float> embed(String text) {
+    public float[] embed(String text) {
         return adapter().embed(text);
     }
 
     @Override
-    public List<List<Float>> embed(List<String> texts) {
+    public List<float[]> embed(List<String> texts) {
         return adapter().embed(texts);
     }
 

@@ -14,12 +14,17 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Cached, offline-safe access to the model catalog. Data is fetched lazily and
  * refreshed when it is older than the TTL or on demand; a failed refresh keeps
  * the previous snapshot (or empty state) instead of throwing, so the service
  * never couples availability to the upstream source.
+ *
+ * <p>Reads never take the lock. A stale snapshot triggers one single-flight
+ * refresh on a virtual thread: concurrent callers await the same fetch instead
+ * of each holding the monitor across an HTTP call.
  *
  * <p>{@link #isKnown} backs the advisory switch check: an empty catalog states
  * "unknown/unverifiable" (returns true) so switching stays uninhibited when the
@@ -34,8 +39,11 @@ public class ModelCatalogService {
     private final Duration ttl;
     private final boolean enabled;
     private final Clock clock;
-    private List<ModelInfo> cache = List.of();
-    private Instant lastFetched;
+    @SuppressWarnings("java:S3077") // only ever replaced with an immutable snapshot
+    private volatile List<ModelInfo> cache = List.of();
+    private volatile Instant lastFetched;
+    @SuppressWarnings("java:S3077") // CompletableFuture is thread-safe; the reference is swapped atomically
+    private volatile CompletableFuture<Void> refreshInFlight;
 
     public ModelCatalogService(ModelCatalogPort port, String source, Duration ttl,
                                boolean enabled, Clock clock) {
@@ -46,34 +54,55 @@ public class ModelCatalogService {
         this.clock = clock;
     }
 
-    public synchronized ModelCatalogDTO catalog() {
+    public ModelCatalogDTO catalog() {
         if (enabled && stale()) {
-            refreshCache();
+            awaitRefresh();
         }
         return toDto();
     }
 
-    public synchronized ModelCatalogDTO refresh() {
+    public ModelCatalogDTO refresh() {
         if (enabled) {
-            refreshCache();
+            awaitRefresh();
         }
         return toDto();
     }
 
-    public synchronized boolean isKnown(String providerId, String modelId) {
-        if (!enabled || cache.isEmpty()) {
+    public boolean isKnown(String providerId, String modelId) {
+        var snapshot = cache;
+        if (!enabled || snapshot.isEmpty()) {
             return true;
         }
-        return cache.stream().anyMatch(m ->
+        return snapshot.stream().anyMatch(m ->
                 m.providerId().equals(providerId) && m.modelId().equals(modelId));
     }
 
     private boolean stale() {
-        return lastFetched == null
-                || Duration.between(lastFetched, clock.instant()).compareTo(ttl) >= 0;
+        var fetched = lastFetched;
+        return fetched == null
+                || Duration.between(fetched, clock.instant()).compareTo(ttl) >= 0;
     }
 
-    private void refreshCache() {
+    private void awaitRefresh() {
+        var inFlight = refreshInFlight;
+        if (inFlight == null) {
+            synchronized (this) {
+                if (refreshInFlight == null) {
+                    refreshInFlight = CompletableFuture.runAsync(this::fetchAndStore,
+                            command -> Thread.ofVirtual().start(command));
+                }
+                inFlight = refreshInFlight;
+            }
+        }
+        inFlight.join();
+        synchronized (this) {
+            if (refreshInFlight == inFlight) {
+                refreshInFlight = null;
+            }
+        }
+    }
+
+    private void fetchAndStore() {
         try {
             cache = List.copyOf(port.fetch());
             lastFetched = clock.instant();
@@ -85,7 +114,8 @@ public class ModelCatalogService {
     }
 
     private ModelCatalogDTO toDto() {
-        return new ModelCatalogDTO(cache.stream().map(ModelCatalogService::toDto).toList(),
+        var snapshot = cache;
+        return new ModelCatalogDTO(snapshot.stream().map(ModelCatalogService::toDto).toList(),
                 source, lastFetched);
     }
 

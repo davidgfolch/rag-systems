@@ -12,6 +12,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 
 /**
  * Minimal JSON-over-HTTP client for the rag-provider service. Uses only the JDK
@@ -23,17 +24,22 @@ public class ProviderHttpClient {
 
     private static final Logger log = LoggerFactory.getLogger(ProviderHttpClient.class);
 
+    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(10);
+    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
+    private static final String CONTENT_TYPE = "application/json";
+    private static final String ACCEPT_EVENT_STREAM = "text/event-stream";
+
     private final String baseUrl;
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
     private final Tracer tracer;
 
     public ProviderHttpClient(String baseUrl, ObjectMapper objectMapper) {
-        this(baseUrl, HttpClient.newHttpClient(), objectMapper, null);
+        this(baseUrl, defaultClient(), objectMapper, null);
     }
 
     public ProviderHttpClient(String baseUrl, ObjectMapper objectMapper, Tracer tracer) {
-        this(baseUrl, HttpClient.newHttpClient(), objectMapper, tracer);
+        this(baseUrl, defaultClient(), objectMapper, tracer);
     }
 
     public ProviderHttpClient(String baseUrl, HttpClient httpClient, ObjectMapper objectMapper) {
@@ -50,13 +56,17 @@ public class ProviderHttpClient {
     public <T> T postJson(String path, Object body, Class<T> responseType) {
         try {
             var request = withTracePropagation(HttpRequest.newBuilder(uri(path))
-                    .header("Content-Type", "application/json")
+                    .timeout(REQUEST_TIMEOUT)
+                    .header("Content-Type", CONTENT_TYPE)
                     .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body))))
                     .build();
             var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             return parse(response, responseType);
-        } catch (IOException | InterruptedException e) {
+        } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            throw new IllegalStateException(
+                    "Provider request interrupted for " + path + " at " + baseUrl + ": " + describe(e), e);
+        } catch (IOException e) {
             throw new IllegalStateException(
                     "Provider request failed for " + path + " at " + baseUrl + ": " + describe(e), e);
         }
@@ -64,11 +74,15 @@ public class ProviderHttpClient {
 
     public <T> T get(String path, Class<T> responseType) {
         try {
-            var request = withTracePropagation(HttpRequest.newBuilder(uri(path))).GET().build();
+            var request = withTracePropagation(HttpRequest.newBuilder(uri(path)).timeout(REQUEST_TIMEOUT))
+                    .GET().build();
             var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             return parse(response, responseType);
-        } catch (IOException | InterruptedException e) {
+        } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            throw new IllegalStateException(
+                    "Provider request interrupted for " + path + " at " + baseUrl + ": " + describe(e), e);
+        } catch (IOException e) {
             throw new IllegalStateException(
                     "Provider request failed for " + path + " at " + baseUrl + ": " + describe(e), e);
         }
@@ -81,8 +95,9 @@ public class ProviderHttpClient {
     public InputStream postStream(String path, Object body) {
         try {
             var request = withTracePropagation(HttpRequest.newBuilder(uri(path))
-                    .header("Content-Type", "application/json")
-                    .header("Accept", "text/event-stream")
+                    .timeout(REQUEST_TIMEOUT)
+                    .header("Content-Type", CONTENT_TYPE)
+                    .header("Accept", ACCEPT_EVENT_STREAM)
                     .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body))))
                     .build();
             log.debug("Opening provider stream at {}", path);
@@ -91,11 +106,18 @@ public class ProviderHttpClient {
                 throw new IllegalStateException("Provider stream failed: HTTP " + response.statusCode());
             }
             return response.body();
-        } catch (IOException | InterruptedException e) {
+        } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            throw new IllegalStateException(
+                    "Provider stream interrupted for " + path + " at " + baseUrl + ": " + describe(e), e);
+        } catch (IOException e) {
             throw new IllegalStateException(
                     "Provider stream request failed for " + path + " at " + baseUrl + ": " + describe(e), e);
         }
+    }
+
+    private static HttpClient defaultClient() {
+        return HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build();
     }
 
     private HttpRequest.Builder withTracePropagation(HttpRequest.Builder builder) {

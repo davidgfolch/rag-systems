@@ -8,7 +8,7 @@ import com.rag.agentic.orchestration.AgentLoop;
 import com.rag.agentic.orchestration.AgenticChatService;
 import com.rag.agentic.orchestration.ToolRegistry;
 import com.rag.agentic.services.AgenticRetrievalService;
-import com.rag.agentic.services.WebCrawlerClient;
+import com.rag.common.ingestion.web.WebCrawlerClient;
 import com.rag.agentic.tools.AgentTool;
 import com.rag.agentic.tools.DocumentSearchTool;
 import com.rag.agentic.tools.SearchTool;

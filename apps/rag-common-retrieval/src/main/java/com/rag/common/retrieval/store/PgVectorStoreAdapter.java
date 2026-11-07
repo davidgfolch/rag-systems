@@ -27,8 +27,10 @@ import static com.rag.common.core.domain.MetadataKeys.DOCUMENT_ID;
  * Maps our {@link Chunk} model to Spring AI documents for storage and back for
  * retrieval.
  *
- * <p>Spring AI embeds documents and queries internally via its own injected
- * embedding model, so this adapter does not handle embeddings directly.
+ * <p>Retrieval is delegated to Spring AI, which embeds the query and searches
+ * the same table. Writes persist the embeddings already computed by the
+ * ingestion pipeline (see {@link PgVectorWriter}); only stores built without a
+ * {@link DataSource} fall back to Spring AI's add, which re-embeds documents.
  */
 public class PgVectorStoreAdapter implements VectorStorePort {
 
@@ -41,6 +43,7 @@ public class PgVectorStoreAdapter implements VectorStorePort {
     private final VectorStore delegate;
     private final DataSource dataSource;
     private final String table;
+    private final PgVectorWriter writer;
 
     public PgVectorStoreAdapter(VectorStore delegate) {
         this(delegate, null, DEFAULT_SCHEMA, DEFAULT_TABLE);
@@ -59,6 +62,8 @@ public class PgVectorStoreAdapter implements VectorStorePort {
         this.delegate = delegate;
         this.dataSource = dataSource;
         this.table = qualified(schema, table);
+        this.writer = dataSource == null ? null
+                : new PgVectorWriter(dataSource, this.table, PgVectorWriter.indexName(schema, table));
     }
 
     /**
@@ -99,6 +104,10 @@ public class PgVectorStoreAdapter implements VectorStorePort {
     @Override
     public void add(List<Chunk> chunks) {
         log.debug("Adding {} chunks to vector store {}", chunks.size(), table);
+        if (writer != null) {
+            writer.add(chunks);
+            return;
+        }
         var docs = chunks.stream()
                 .map(this::toSpringDocument)
                 .toList();
@@ -139,12 +148,14 @@ public class PgVectorStoreAdapter implements VectorStorePort {
         if (dataSource == null) {
             return result;
         }
-        var sql = "SELECT metadata->>'documentId' AS document_id, " +
-                "count(*) AS chunk_count, " +
-                "(array_agg(metadata ORDER BY metadata->>'chunkIndex'))[1] AS first_meta " +
-                "FROM " + table + " " +
-                "WHERE metadata->>'documentId' IS NOT NULL " +
-                "GROUP BY metadata->>'documentId'";
+        var sql = "SELECT d.document_id, d.chunk_count, first.metadata AS first_meta " +
+                "FROM (SELECT metadata->>'documentId' AS document_id, count(*) AS chunk_count " +
+                "      FROM " + table + " " +
+                "      WHERE metadata->>'documentId' IS NOT NULL " +
+                "      GROUP BY 1) d " +
+                "JOIN LATERAL (SELECT c.metadata FROM " + table + " c " +
+                "              WHERE c.metadata->>'documentId' = d.document_id " +
+                "              ORDER BY (c.metadata->>'chunkIndex')::int LIMIT 1) first ON true";
         try (var conn = dataSource.getConnection();
              var pstmt = conn.prepareStatement(sql);
              var rs = pstmt.executeQuery()) {

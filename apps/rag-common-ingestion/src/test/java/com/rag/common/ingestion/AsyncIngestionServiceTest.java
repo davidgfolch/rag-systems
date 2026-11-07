@@ -50,7 +50,7 @@ class AsyncIngestionServiceTest {
         var chunk = new Chunk("c1", "d1", "hello world", 0, Map.of());
         when(splitter.split(any())).thenReturn(List.of(chunk));
         when(embeddingModel.embed(List.of("hello world")))
-                .thenReturn(List.of(List.of(1.0f, 0.0f)));
+                .thenReturn(List.of(new float[]{1.0f, 0.0f}));
         var service = new AsyncIngestionService(delegate);
         var id = service.submit(new Document("d1", "", Map.of(MetadataKeys.RAW_BYTES, new byte[]{1})));
         var status = await(service, id);
@@ -113,6 +113,54 @@ class AsyncIngestionServiceTest {
         var status = await(service, id);
         assertThat(status.state()).isEqualTo("COMPLETED");
         assertThat(status.chunkCount()).isEqualTo(2);
+    }
+
+    @Test
+    void evictsTheOldestFinishedJobsWhenTheRegistryIsFull() {
+        var delegate = mock(IngestionService.class);
+        when(delegate.ingest(any())).thenReturn(new IngestionService.IngestionResult("d", 0));
+        var service = new AsyncIngestionService(delegate, directExecutor());
+        int total = AsyncIngestionService.MAX_RETAINED_JOBS + 5;
+        for (int i = 0; i < total; i++) {
+            service.submit(new Document("doc-" + i, "content", Map.of()));
+        }
+        assertThat(service.status("doc-0").message()).contains("No such ingestion job");
+        assertThat(service.status("doc-" + (total - 1)).state()).isEqualTo(AsyncIngestionService.STATE_COMPLETED);
+        assertThat(service.status("doc-5").state()).isEqualTo(AsyncIngestionService.STATE_COMPLETED);
+    }
+
+    private static ExecutorService directExecutor() {
+        return new AbstractExecutorService() {
+            @Override
+            public void execute(Runnable command) {
+                command.run();
+            }
+
+            @Override
+            public void shutdown() {
+                // no-op: work already ran inline
+            }
+
+            @Override
+            public List<Runnable> shutdownNow() {
+                return List.of();
+            }
+
+            @Override
+            public boolean isShutdown() {
+                return false;
+            }
+
+            @Override
+            public boolean isTerminated() {
+                return false;
+            }
+
+            @Override
+            public boolean awaitTermination(long timeout, TimeUnit unit) {
+                return true;
+            }
+        };
     }
 
     private static ExecutorService capturingExecutor(AtomicReference<Runnable> captured) {
@@ -180,7 +228,7 @@ class AsyncIngestionServiceTest {
         AtomicReference<String> workerTraceId = new AtomicReference<>();
         when(embeddingModel.embed(anyList())).thenAnswer(invocation -> {
             workerTraceId.set(MDC.get(TracePropagation.MDC_TRACE_ID));
-            return List.of(List.of(1.0f, 0.0f));
+            return List.of(new float[]{1.0f, 0.0f});
         });
         ExecutorService executor = Executors.newSingleThreadExecutor();
         try {

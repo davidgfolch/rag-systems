@@ -134,7 +134,7 @@ class ChunkingCostComparisonTest {
         private final AtomicInteger calls = new AtomicInteger();
 
         @Override
-        public List<Float> embed(String text) {
+        public float[] embed(String text) {
             calls.incrementAndGet();
             var vector = new float[VECTOR_DIMENSIONS];
             for (var token : TOKEN_BOUNDARY.split(text.toLowerCase(Locale.ROOT))) {
@@ -142,11 +142,7 @@ class ChunkingCostComparisonTest {
                     vector[Math.floorMod(token.hashCode(), VECTOR_DIMENSIONS)] += 1f;
                 }
             }
-            var result = new ArrayList<Float>(VECTOR_DIMENSIONS);
-            for (var value : vector) {
-                result.add(value);
-            }
-            return result;
+            return vector;
         }
     }
 }

@@ -1,6 +1,9 @@
 spring:
   application:
     name: rag-webcrawler
+  threads:
+    virtual:
+      enabled: true
   profiles:
     active: local,observability
 
@@ -18,3 +21,4 @@ rag:
     prioritizer: ${CRAWLER_PRIORITIZER:deterministic}
     discovery:
       max-urls: ${CRAWLER_MAX_URLS:2000}
+      timeout-seconds: ${CRAWLER_DISCOVERY_TIMEOUT_SECONDS:20}

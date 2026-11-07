@@ -18,7 +18,12 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.times;
@@ -120,6 +125,34 @@ class ModelCatalogServiceTest {
         assertThat(sut.isKnown("ollama", "phi4")).isTrue();
         assertThat(sut.isKnown("ollama", "missing")).isFalse();
         assertThat(sut.isKnown("openai", "phi4")).isFalse();
+    }
+
+    @Test
+    void shouldShareOneRefreshAmongConcurrentReaders() throws Exception {
+        var calls = new AtomicInteger();
+        var started = new CountDownLatch(1);
+        var release = new CountDownLatch(1);
+        when(port.fetch()).thenAnswer(inv -> {
+            calls.incrementAndGet();
+            started.countDown();
+            release.await(5, TimeUnit.SECONDS);
+            return List.of(PHI4);
+        });
+        var executor = Executors.newFixedThreadPool(4);
+        try {
+            var futures = new ArrayList<java.util.concurrent.Future<ModelCatalogDTO>>();
+            for (int i = 0; i < 4; i++) {
+                futures.add(executor.submit(sut::catalog));
+            }
+            assertThat(started.await(5, TimeUnit.SECONDS)).isTrue();
+            release.countDown();
+            for (var future : futures) {
+                assertThat(future.get(5, TimeUnit.SECONDS).models()).hasSize(1);
+            }
+        } finally {
+            executor.shutdownNow();
+        }
+        assertThat(calls).hasValue(1);
     }
 
     private static final class MutableClock extends Clock {
