@@ -123,6 +123,41 @@ class InteractivePrompterIntegrationTest {
         assertThat(result).hasValue("openai");
     }
 
+    @Test
+    void overrideDecisionEnterOverridesThisPage() {
+        var sut = new InteractivePrompter(keys(key(ENTER)), s -> { }, 8);
+        assertThat(sut.overrideDecision("Override? "))
+                .isEqualTo(Prompter.OverrideDecision.OVERRIDE);
+    }
+
+    @Test
+    void overrideDecisionEscapeIgnoresThisPage() {
+        var sut = new InteractivePrompter(keys(key(ESC)), s -> { }, 8);
+        assertThat(sut.overrideDecision("Override? "))
+                .isEqualTo(Prompter.OverrideDecision.SKIP);
+    }
+
+    @Test
+    void overrideDecisionYOverridesTheRest() {
+        var sut = new InteractivePrompter(keys(typeChar('y'), key(ENTER)), s -> { }, 8);
+        assertThat(sut.overrideDecision("Override? "))
+                .isEqualTo(Prompter.OverrideDecision.OVERRIDE_ALL);
+    }
+
+    @Test
+    void overrideDecisionNNoIgnoresTheRest() {
+        var sut = new InteractivePrompter(keys(typeChar('n'), key(ENTER)), s -> { }, 8);
+        assertThat(sut.overrideDecision("Override? "))
+                .isEqualTo(Prompter.OverrideDecision.SKIP_ALL);
+    }
+
+    @Test
+    void overrideDecisionEofSkipsTheRest() {
+        var sut = new InteractivePrompter(keys(), s -> { }, 8);
+        assertThat(sut.overrideDecision("Override? "))
+                .isEqualTo(Prompter.OverrideDecision.SKIP_ALL);
+    }
+
     private static InteractivePrompter.PickSource keys(Key... keys) {
         return new InteractivePrompter.PickSource() {
             int i = 0;

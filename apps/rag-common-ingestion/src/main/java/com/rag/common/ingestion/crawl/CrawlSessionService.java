@@ -73,13 +73,17 @@ public class CrawlSessionService {
     }
 
     public StepResult step(String sessionId, String question) {
+        return step(sessionId, question, false);
+    }
+
+    public StepResult step(String sessionId, String question, boolean override) {
         var session = require(sessionId);
         synchronized (session) {
             session.touch();
             if (session.current == null) throw new NoPageException(sessionId);
             var page = session.current;
             int skippedBefore = session.skipped;
-            var documentId = submit(session, page);
+            var documentId = submit(session, page, override);
             session.pages++;
             if (session.initialRemaining > 0) session.initialRemaining--;
             enqueue(session, page, question);
@@ -100,15 +104,20 @@ public class CrawlSessionService {
         return removed != null;
     }
 
-    private String submit(Session session, PageDTO page) {
-        if (session.existingSources.contains(WebUrls.key(page.getUrl()))) {
-            log.info("Crawl {} skipping already ingested page {}", session.id, page.getUrl());
-            return null;
+    private String submit(Session session, PageDTO page, boolean override) {
+        var key = WebUrls.key(page.getUrl());
+        if (session.existingSources.contains(key)) {
+            if (!override) {
+                log.info("Crawl {} skipping already ingested page {}", session.id, page.getUrl());
+                return null;
+            }
+            session.existingSources.remove(key);
+            log.info("Crawl {} overriding already ingested page {}", session.id, page.getUrl());
         }
         var documentId = UUID.randomUUID().toString();
         var parsed = PageDocumentMapper.toParsedDocument(documentId, page);
         var submitted = asyncIngestion.submitParsed(parsed);
-        session.known.add(WebUrls.key(page.getUrl()));
+        session.known.add(key);
         return submitted;
     }
 

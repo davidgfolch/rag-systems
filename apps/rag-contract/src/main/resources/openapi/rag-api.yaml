@@ -538,6 +538,10 @@ components:
         question:
           type: string
           description: Question used to rank this page's outbound links (blank = deterministic)
+        override:
+          type: boolean
+          default: false
+          description: Ingest the page even when its source is already ingested (the caller deletes the old document first)
 
     CrawlStepResponse:
       type: object

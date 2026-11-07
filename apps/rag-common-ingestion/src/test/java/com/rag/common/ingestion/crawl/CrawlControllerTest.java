@@ -51,7 +51,7 @@ class CrawlControllerTest {
 
     @Test
     void stepsCrawl() {
-        when(service.step(SESSION, "q")).thenReturn(stepResult());
+        when(service.step(SESSION, "q", false)).thenReturn(stepResult());
         var response = sut.step(SESSION, new CrawlStepRequest().question("q"));
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody().getDocumentId()).isEqualTo("d1");
@@ -59,6 +59,13 @@ class CrawlControllerTest {
         assertThat(response.getBody().getIngested()).isTrue();
         assertThat(response.getBody().getSkippedLinks()).isEqualTo(2);
         assertThat(response.getBody().getNextPage().getUrl()).isEqualTo(URL + "/next");
+    }
+
+    @Test
+    void stepsCrawlWithOverride() {
+        when(service.step(SESSION, "q", true)).thenReturn(stepResult());
+        sut.step(SESSION, new CrawlStepRequest().question("q").override(true));
+        verify(service).step(SESSION, "q", true);
     }
 
     @Test

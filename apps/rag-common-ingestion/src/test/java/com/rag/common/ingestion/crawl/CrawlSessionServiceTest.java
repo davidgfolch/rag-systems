@@ -135,6 +135,19 @@ class CrawlSessionServiceTest {
     }
 
     @Test
+    void stepIngestsAlreadyIngestedSourceWhenOverridden() {
+        pages.put(ROOT, page(ROOT));
+        when(documents.listDocuments())
+                .thenReturn(List.of(new DocumentSummary("d0", 1, Map.<String, Object>of(SOURCE, ROOT))));
+        when(async.submitParsed(any())).thenReturn("d1");
+        var start = sut.start(ROOT, 5, 50, true);
+        var result = sut.step(start.sessionId(), null, true);
+        assertThat(result.ingested()).isTrue();
+        assertThat(result.documentId()).isEqualTo("d1");
+        verify(async).submitParsed(any());
+    }
+
+    @Test
     void stepSkipsDuplicateAndOffHostLinks() {
         pages.put(ROOT, page(ROOT, ROOT + "/a", ROOT + "/a", "https://other.com/x"));
         pages.put(ROOT + "/a", page(ROOT + "/a"));

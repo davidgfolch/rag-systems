@@ -1,12 +1,11 @@
 package com.rag.tui.ui;
 
-import com.rag.contract.model.CrawlPageDTO;
 import com.rag.contract.model.CrawlStartResponse;
 import io.micrometer.tracing.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import static com.rag.tui.ui.CommandDispatcher.orEmpty;
@@ -15,25 +14,22 @@ import static com.rag.tui.ui.TerminalStyle.success;
 /**
  * Drives the interactive breadth-first {@code add-url} crawl. The TUI only
  * prompts and calls the active rag-module; the module owns the frontier and
- * submits each page for asynchronous ingestion. Every page, including the root,
- * is preceded by a question that ranks that page's outbound links, and after the
- * initial set one single "Go on?" prompt decides whether to keep crawling.
+ * submits each page for asynchronous ingestion. In interactive mode the
+ * link-ranking question is asked once and reused, and "Go on?" is only asked
+ * when the user has not already set a page cap. {@code --all} runs without
+ * prompts.
  */
 public class CrawlCommands {
 
     static final String CANCEL_COMMAND = "add-url-cancel";
     private static final String CANCEL_ALIAS = "cancel";
     private static final String QUESTION_PROMPT =
-            "Question for \"%s\" (blank = none, '%s' to stop): ";
+            "Question to rank links for this crawl (blank = none, '%s' to stop): ";
     private static final String GO_ON_PROMPT =
             "Initial pages submitted. Go on and crawl more pages? (y/N) ";
     private static final String NO_ACTIVE_CRAWL = "No URL crawl is active.";
     private static final String USAGE =
-            "Usage: add-url <url> [--max-pages N] [--all] [--no-discover]";
-    private static final String MAX_PAGES_FLAG = "--max-pages";
-    private static final String ALL_FLAG = "--all";
-    private static final String NO_DISCOVER_FLAG = "--no-discover";
-    private static final int ALL_PAGES = Integer.MAX_VALUE;
+            "Usage: add-url <url> [--max-pages N] [--all] [--override-all] [--no-discover]";
 
     private static final Logger log = LoggerFactory.getLogger(CrawlCommands.class);
 
@@ -64,21 +60,13 @@ public class CrawlCommands {
             url = orEmpty(prompter.prompt("URL: "));
             if (url.isEmpty()) return USAGE;
         }
-        var duplicate = duplicates.findBySource(url);
-        if (duplicate.isPresent()) {
-            var match = duplicate.get();
-            if (!prompter.confirm("Duplicate web page %s already ingested as document %s on %s. Override? (y/N) "
-                    .formatted(url, match.documentId(), match.moduleName()))) {
-                return "Skipped - already ingested as document " + match.documentId()
-                        + " on " + match.moduleName() + ".";
-            }
-            clients.apiClient().deleteDocument(match.baseUrl(), match.documentId());
-            log.info("Overriding duplicate document {} for {}", match.documentId(), url);
-        }
+        var question = options.interactive() ? askQuestion() : "";
+        if (isCancel(question)) return success("Crawl cancelled.");
+        var guard = guard(options);
         var start = options.hasOptions()
                 ? clients.apiClient().startCrawl(url, options.maxPages(), options.discover())
                 : clients.apiClient().startCrawl(url);
-        return run(start, tokenSink);
+        return run(start, options, question, guard, tokenSink);
     }
 
     /** Cancels the crawl currently being driven, if any. */
@@ -90,7 +78,16 @@ public class CrawlCommands {
         return success("URL crawl cancelled.");
     }
 
-    private String run(CrawlStartResponse start, Consumer<String> tokenSink) {
+    private CrawlDuplicateGuard guard(CrawlOptions options) {
+        var index = options.all() && !options.overrideAll()
+                ? Map.<String, DuplicateFinder.Match>of()
+                : duplicates.sourceIndex();
+        return new CrawlDuplicateGuard(index, prompter, clients.apiClient(),
+                options.overrideAll(), options.all());
+    }
+
+    private String run(CrawlStartResponse start, CrawlOptions options, String question,
+                       CrawlDuplicateGuard guard, Consumer<String> tokenSink) {
         activeSessionId = start.getSessionId();
         int discovered = intOrZero(start.getDiscoveredPages());
         int ingested = 0;
@@ -100,11 +97,8 @@ public class CrawlCommands {
         try {
             var page = start.getPage();
             while (page != null) {
-                var question = askQuestion(page);
-                if (isCancel(question)) {
-                    return cancelSummary(start.getSessionId(), ingested, skippedPages, skippedLinks, discovered);
-                }
-                var step = clients.apiClient().stepCrawl(start.getSessionId(), question);
+                var step = clients.apiClient().stepCrawl(start.getSessionId(), question,
+                        guard.overrideFor(page.getUrl()));
                 if (Boolean.TRUE.equals(step.getIngested()) && step.getDocumentId() != null) {
                     poller.start(step.getDocumentId(), null, "page " + step.getPageUrl(), tokenSink);
                     ingested++;
@@ -113,7 +107,8 @@ public class CrawlCommands {
                 }
                 skippedLinks += intOrZero(step.getSkippedLinks());
                 page = step.getNextPage();
-                if (page != null && intOrZero(step.getInitialRemaining()) == 0 && !goOnAsked) {
+                if (page != null && intOrZero(step.getInitialRemaining()) == 0 && !goOnAsked
+                        && options.interactive() && !options.hasExplicitLimit()) {
                     goOnAsked = true;
                     if (!prompter.confirm(GO_ON_PROMPT)) {
                         return cancelSummary(start.getSessionId(), ingested, skippedPages, skippedLinks, discovered);
@@ -127,9 +122,8 @@ public class CrawlCommands {
         }
     }
 
-    private String askQuestion(CrawlPageDTO page) {
-        var title = page.getTitle().isBlank() ? page.getUrl() : page.getTitle();
-        var answer = prompter.prompt(QUESTION_PROMPT.formatted(title, CANCEL_COMMAND));
+    private String askQuestion() {
+        var answer = prompter.prompt(QUESTION_PROMPT.formatted(CANCEL_COMMAND));
         return answer == null ? CANCEL_COMMAND : answer.trim();
     }
 
@@ -161,37 +155,5 @@ public class CrawlCommands {
 
     private static int intOrZero(Integer value) {
         return value == null ? 0 : value;
-    }
-
-    record CrawlOptions(String url, Integer maxPages, boolean discover, boolean hasOptions, boolean valid) {
-
-        static CrawlOptions parse(String arg) {
-            var tokens = List.of(arg == null ? new String[0] : arg.trim().split("\\s+"));
-            var url = "";
-            Integer maxPages = null;
-            boolean all = false;
-            boolean discover = true;
-            try {
-                var iterator = tokens.iterator();
-                while (iterator.hasNext()) {
-                    var token = iterator.next();
-                    if (MAX_PAGES_FLAG.equals(token)) {
-                        maxPages = Integer.parseInt(iterator.next());
-                    } else if (ALL_FLAG.equals(token)) {
-                        all = true;
-                    } else if (NO_DISCOVER_FLAG.equals(token)) {
-                        discover = false;
-                    } else if (!token.isEmpty()) {
-                        url = url.isEmpty() ? token : url + " " + token;
-                    }
-                }
-            } catch (RuntimeException _) {
-                return new CrawlOptions("", null, true, false, false);
-            }
-            if (maxPages != null && maxPages < 1) return new CrawlOptions("", null, true, false, false);
-            if (all) maxPages = ALL_PAGES;
-            var hasOptions = all || maxPages != null || !discover;
-            return new CrawlOptions(url, maxPages, discover, hasOptions, true);
-        }
     }
 }

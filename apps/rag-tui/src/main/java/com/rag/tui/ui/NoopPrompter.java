@@ -34,4 +34,10 @@ public class NoopPrompter implements Prompter {
         String line = prompt(promptText);
         return line != null && line.trim().equalsIgnoreCase("y");
     }
+
+    /** Non-interactive input must never delete documents implicitly. */
+    @Override
+    public OverrideDecision overrideDecision(String promptText) {
+        return OverrideDecision.SKIP_ALL;
+    }
 }
