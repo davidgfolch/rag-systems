@@ -60,6 +60,20 @@ class InMemoryVectorStoreTest {
     }
 
     @Test
+    void collapsesDuplicateContentAndRefillsTopKFromOverfetch() {
+        when(embeddingModel.embed(anyString())).thenReturn(new float[]{1f, 0f});
+        store.add(List.of(
+                chunkWithText("c1", "Kafka Streams > use cases", new float[]{1, 0}),
+                chunkWithText("c2", "Kafka Streams > use cases", new float[]{0.99f, 0.01f}),
+                chunkWithText("c3", "Kafka Streams is a client library", new float[]{0.9f, 0.1f}),
+                chunkWithText("c4", "unrelated", new float[]{0, 1})));
+
+        var results = store.similaritySearch("kafka streams", 2);
+
+        assertThat(results).extracting(Chunk::getId).containsExactly("c1", "c3");
+    }
+
+    @Test
     void filtersByDocumentId() {
         when(embeddingModel.embed(anyString())).thenReturn(new float[]{1f, 0f});
         var a = chunk("c1", new float[]{1, 0});
@@ -112,6 +126,12 @@ class InMemoryVectorStoreTest {
 
     private static Chunk chunk(String id, float[] embedding) {
         var c = new Chunk(id, "d1", "text " + id, 0, Map.of());
+        c.setEmbedding(embedding);
+        return c;
+    }
+
+    private static Chunk chunkWithText(String id, String text, float[] embedding) {
+        var c = new Chunk(id, "d1", text, 0, Map.of());
         c.setEmbedding(embedding);
         return c;
     }

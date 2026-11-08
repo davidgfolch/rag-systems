@@ -85,14 +85,15 @@ public class InMemoryVectorStore implements VectorStorePort {
         if (topK <= 0) {
             return List.of();
         }
-        var best = new java.util.PriorityQueue<Scored>(Math.min(topK, 64),
+        int fetch = ContentDeduplicator.fetchSize(topK);
+        var best = new java.util.PriorityQueue<Scored>(Math.min(fetch, 64),
                 Comparator.comparingDouble(Scored::score));
         for (var chunk : chunksById.values()) {
             if (documentId != null && !documentId.equals(chunk.getDocumentId())) {
                 continue;
             }
             best.offer(new Scored(chunk, cosine(queryEmbedding, chunk.getEmbedding())));
-            if (best.size() > topK) {
+            if (best.size() > fetch) {
                 best.poll();
             }
         }
@@ -100,8 +101,9 @@ public class InMemoryVectorStore implements VectorStorePort {
                 .sorted(Comparator.comparingDouble(Scored::score).reversed())
                 .map(Scored::chunk)
                 .toList();
-        log.debug("In-memory search returned {} hits", hits.size());
-        return hits;
+        var distinct = ContentDeduplicator.distinct(hits, topK);
+        log.debug("In-memory search returned {} hits ({} distinct)", hits.size(), distinct.size());
+        return distinct;
     }
 
     private static double cosine(float[] a, float[] b) {

@@ -24,6 +24,8 @@ public class StructuralDocumentChunker implements DocumentChunker {
 
     private static final Logger log = LoggerFactory.getLogger(StructuralDocumentChunker.class);
 
+    private static final String CONTEXT_SEPARATOR = "\n\n";
+
     private final Set<SourceType> sourceTypes;
     private final TextSplitter splitter;
     private final BlockGrouper grouper;
@@ -73,7 +75,21 @@ public class StructuralDocumentChunker implements DocumentChunker {
         if (group.text().isBlank()) {
             return List.of();
         }
-        var text = new Document(document.documentId(), group.renderedText(), document.metadata());
-        return splitter.split(text);
+        var text = new Document(document.documentId(), group.text(), document.metadata());
+        var pieces = splitter.split(text).stream()
+                .filter(piece -> piece.getContent() != null && !piece.getContent().isBlank())
+                .toList();
+        if (group.context().isBlank()) {
+            return pieces;
+        }
+        return pieces.stream()
+                .map(piece -> withContext(piece, group.context()))
+                .toList();
+    }
+
+    /** Adds the section path to a body piece, so every split keeps its heading context. */
+    private static Chunk withContext(Chunk piece, String context) {
+        return new Chunk(piece.getId(), piece.getDocumentId(),
+                context + CONTEXT_SEPARATOR + piece.getContent().trim(), piece.getIndex(), piece.getMetadata());
     }
 }

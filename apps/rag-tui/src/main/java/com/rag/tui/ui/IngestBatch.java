@@ -65,7 +65,7 @@ final class IngestBatch {
     }
 
     private String summary() {
-        var text = new StringBuilder("%s: %d page(s) complete, %d failed, %d chunk(s) total.\n"
+        var text = new StringBuilder("%s: %d page(s) complete, %d failed, %d chunk(s) total.%n"
                 .formatted(label, completed, failed, chunks));
         for (var failure : failures) {
             text.append(" - ").append(failure).append('\n');

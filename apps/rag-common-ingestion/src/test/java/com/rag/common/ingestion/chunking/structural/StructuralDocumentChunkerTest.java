@@ -96,6 +96,45 @@ class StructuralDocumentChunkerTest {
     }
 
     @Test
+    void doesNotEmitAChunkThatOnlyRepeatsTheSectionContext() {
+        var chunker = new StructuralDocumentChunker(SourceType.TEXT,
+                new RecursiveCharacterChunker(120, 0), new SectionAwareBlockGrouper(), 120);
+        var section = List.of("Kafka Streams", "Kafka Streams use cases");
+        var body = "The New York Times uses Apache Kafka and the Kafka Streams API to store and "
+                + "distribute, in real-time, published content to the various applications.";
+        var doc = document(List.of(
+                new DocumentBlock(BlockType.HEADING, "Kafka Streams", List.of("Kafka Streams"),
+                        SourceLocation.NONE, Map.of()),
+                new DocumentBlock(BlockType.HEADING, "Kafka Streams use cases", section,
+                        SourceLocation.NONE, Map.of()),
+                new DocumentBlock(BlockType.PARAGRAPH, body, section, SourceLocation.NONE, Map.of())));
+
+        var chunks = chunker.chunk(doc, ChunkingConfig.DEFAULT);
+
+        assertThat(chunks)
+                .isNotEmpty()
+                .noneMatch(chunk -> chunk.getContent().equals("Kafka Streams > Kafka Streams use cases"))
+                .allMatch(chunk -> chunk.getContent().contains("Kafka Streams > Kafka Streams use cases"));
+    }
+
+    @Test
+    void prependsTheSectionContextToEverySplitPiece() {
+        var chunker = new StructuralDocumentChunker(SourceType.TEXT,
+                new RecursiveCharacterChunker(60, 0), new SectionAwareBlockGrouper(), 60);
+        var section = List.of("Guide");
+        var body = "First sentence is here. Second sentence follows. Third sentence closes it. Fourth one ends.";
+        var doc = document(List.of(
+                new DocumentBlock(BlockType.HEADING, "Guide", section, SourceLocation.NONE, Map.of()),
+                new DocumentBlock(BlockType.PARAGRAPH, body, section, SourceLocation.NONE, Map.of())));
+
+        var chunks = chunker.chunk(doc, ChunkingConfig.DEFAULT);
+
+        assertThat(chunks)
+                .hasSizeGreaterThan(1)
+                .allSatisfy(chunk -> assertThat(chunk.getContent()).startsWith("Guide\n\n"));
+    }
+
+    @Test
     void rejectsANonPositiveWindow() {
         var splitter = new RecursiveCharacterChunker(100, 0);
         assertThatThrownBy(() -> new StructuralDocumentChunker(SourceType.TEXT, splitter, null, 0))
