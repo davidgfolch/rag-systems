@@ -11,6 +11,8 @@ import com.rag.common.app.pipeline.PipelineVariantController;
 import com.rag.common.app.pipeline.VariantStore;
 import com.rag.common.app.pipeline.VariantStoreFactory;
 import com.rag.common.core.repositories.VectorStorePort;
+import com.rag.common.core.resilience.ConcurrencyLimiter;
+import com.rag.common.core.resilience.RetryPolicy;
 import com.rag.common.core.services.ChatModelPort;
 import com.rag.common.core.services.DocumentChunker;
 import com.rag.common.core.services.DocumentParser;
@@ -20,6 +22,7 @@ import com.rag.common.core.domain.SourceType;
 import com.rag.common.generation.ChatService;
 import com.rag.common.generation.StreamingChatModelPort;
 import com.rag.common.generation.adapter.ProviderHttpClient;
+import com.rag.common.generation.adapter.ProviderHttpSettings;
 import com.rag.common.generation.adapter.RemoteChatModelPort;
 import com.rag.common.generation.adapter.RemoteEmbeddingModel;
 import com.rag.common.generation.adapter.SpringAiEmbeddingModel;
@@ -51,6 +54,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import javax.sql.DataSource;
+import java.time.Duration;
 import java.util.EnumMap;
 
 /**
@@ -169,11 +173,24 @@ public class RagPipelineConfiguration {
     }
 
     @Bean
+    public ProviderHttpSettings providerHttpSettings(
+            @Value("${rag.provider.http.connect-timeout:10s}") Duration connectTimeout,
+            @Value("${rag.provider.http.request-timeout:180s}") Duration requestTimeout,
+            @Value("${rag.provider.http.retry.max-attempts:4}") int maxAttempts,
+            @Value("${rag.provider.http.retry.initial-backoff:500ms}") Duration initialBackoff,
+            @Value("${rag.provider.http.retry.max-backoff:10s}") Duration maxBackoff) {
+        return new ProviderHttpSettings(connectTimeout, requestTimeout,
+                new RetryPolicy(maxAttempts, initialBackoff, maxBackoff,
+                        RetryPolicy.DEFAULT_MULTIPLIER, RetryPolicy.DEFAULT_JITTER));
+    }
+
+    @Bean
     public ProviderHttpClient providerHttpClient(
             @Value("${rag.provider.url:http://localhost:8086}") String baseUrl,
             ObjectMapper objectMapper,
-            Tracer tracer) {
-        return new ProviderHttpClient(baseUrl, objectMapper, tracer);
+            Tracer tracer,
+            ProviderHttpSettings providerHttpSettings) {
+        return new ProviderHttpClient(baseUrl, objectMapper, tracer, providerHttpSettings);
     }
 
     @Bean
@@ -207,14 +224,22 @@ public class RagPipelineConfiguration {
     @Bean
     public IngestionService ingestionService(DocumentParser parser, DocumentChunker documentChunker,
                                              EmbeddingModelPort embeddingModel, VectorStorePort vectorStore,
-                                             @Value("${rag.embedding.batch-size:100}") int maxEmbeddingBatchSize) {
+                                             @Value("${rag.embedding.batch-size:32}") int maxEmbeddingBatchSize) {
         return new IngestionService(parser, documentChunker, embeddingModel, vectorStore, maxEmbeddingBatchSize);
     }
 
     @Bean
+    public ConcurrencyLimiter ingestionLimiter(
+            @Value("${rag.ingestion.max-concurrent:2}") int maxConcurrent,
+            @Value("${rag.ingestion.queue-wait:5m}") Duration queueWait) {
+        return new ConcurrencyLimiter("ingestion", maxConcurrent, queueWait);
+    }
+
+    @Bean
     public AsyncIngestionService asyncIngestionService(
-            IngestionService ingestionService, VectorStorePort vectorStore, Tracer tracer) {
-        return new AsyncIngestionService(ingestionService, vectorStore, null, tracer);
+            IngestionService ingestionService, VectorStorePort vectorStore, Tracer tracer,
+            ConcurrencyLimiter ingestionLimiter) {
+        return new AsyncIngestionService(ingestionService, vectorStore, null, tracer, ingestionLimiter);
     }
 
     @Bean

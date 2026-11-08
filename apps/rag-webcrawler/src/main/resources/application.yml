@@ -19,6 +19,12 @@ management:
 rag:
   crawler:
     prioritizer: ${CRAWLER_PRIORITIZER:deterministic}
+    fetch:
+      timeout-seconds: ${CRAWLER_FETCH_TIMEOUT_SECONDS:20}
+    retry:
+      max-attempts: ${CRAWLER_RETRY_MAX_ATTEMPTS:4}
+      initial-backoff: ${CRAWLER_RETRY_INITIAL_BACKOFF:500ms}
+      max-backoff: ${CRAWLER_RETRY_MAX_BACKOFF:10s}
     discovery:
       max-urls: ${CRAWLER_MAX_URLS:2000}
       timeout-seconds: ${CRAWLER_DISCOVERY_TIMEOUT_SECONDS:20}

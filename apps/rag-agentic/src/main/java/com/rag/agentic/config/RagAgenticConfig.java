@@ -49,7 +49,7 @@ public class RagAgenticConfig {
     public WebCrawlerClient webCrawlerClient(
             RestClient.Builder restClientBuilder,
             @Value("${rag.webcrawler.url:http://localhost:8085}") String baseUrl) {
-        return new WebCrawlerClient(restClientBuilder.clone().baseUrl(baseUrl).build());
+        return WebCrawlerClient.create(restClientBuilder, baseUrl);
     }
 
     @Bean

@@ -3,6 +3,7 @@ package com.rag.common.ingestion;
 import com.rag.common.core.domain.Document;
 import com.rag.common.core.domain.ParsedDocument;
 import com.rag.common.core.repositories.VectorStorePort;
+import com.rag.common.core.resilience.ConcurrencyLimiter;
 import com.rag.common.core.tracing.TracePropagation;
 import io.micrometer.tracing.Span;
 import io.micrometer.tracing.Tracer;
@@ -12,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import java.time.Duration;
 import java.util.Comparator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -37,11 +39,17 @@ public class AsyncIngestionService {
 
     static final int MAX_RETAINED_JOBS = 1000;
     private static final Duration JOB_TTL = Duration.ofHours(1);
+    public static final int DEFAULT_MAX_CONCURRENT = 2;
+    public static final Duration DEFAULT_QUEUE_WAIT = Duration.ofMinutes(5);
+    private static final String LIMITER_NAME = "ingestion";
+    private static final String SATURATION_MESSAGE =
+            "Ingestion capacity exhausted after waiting %d ms (max concurrent %d)";
 
     private final IngestionService delegate;
     private final ExecutorService executor;
     private final VectorStorePort preflight;
     private final Tracer tracer;
+    private final ConcurrencyLimiter limiter;
     private final Map<String, Job> jobs = new ConcurrentHashMap<>();
     private final AtomicInteger running = new AtomicInteger();
 
@@ -58,10 +66,20 @@ public class AsyncIngestionService {
     }
 
     public AsyncIngestionService(IngestionService delegate, VectorStorePort preflight, ExecutorService executor, Tracer tracer) {
+        this(delegate, preflight, executor, tracer, defaultLimiter());
+    }
+
+    public AsyncIngestionService(IngestionService delegate, VectorStorePort preflight, ExecutorService executor,
+                                 Tracer tracer, ConcurrencyLimiter limiter) {
         this.delegate = delegate;
         this.preflight = preflight;
         this.executor = executor != null ? executor : Executors.newVirtualThreadPerTaskExecutor();
         this.tracer = tracer;
+        this.limiter = Objects.requireNonNull(limiter, "limiter must not be null");
+    }
+
+    private static ConcurrencyLimiter defaultLimiter() {
+        return new ConcurrencyLimiter(LIMITER_NAME, DEFAULT_MAX_CONCURRENT, DEFAULT_QUEUE_WAIT);
     }
 
     /**
@@ -82,11 +100,35 @@ public class AsyncIngestionService {
         evictOldJobs();
         Job job = new Job(documentId);
         jobs.put(documentId, job);
+        if (!limiter.tryEnter()) {
+            rejectSaturated(job);
+            return documentId;
+        }
         job.state = STATE_PENDING;
         log.info("Async ingestion submitted: document {}", documentId);
         Span span = tracer != null ? tracer.currentSpan() : null;
-        executor.submit(() -> TracePropagation.runWithSpan(tracer, span, () -> task.accept(job)));
+        try {
+            executor.submit(() -> TracePropagation.runWithSpan(tracer, span, () -> task.accept(job)));
+        } catch (RuntimeException e) {
+            limiter.exit();
+            failBeforeRun(job, e);
+            throw e;
+        }
         return documentId;
+    }
+
+    private void rejectSaturated(Job job) {
+        job.state = STATE_FAILED;
+        job.message = SATURATION_MESSAGE.formatted(limiter.waitTimeout().toMillis(), limiter.maxConcurrent());
+        job.finishedAt = System.nanoTime();
+        log.warn("Async ingestion rejected for document {}: {}", job.documentId, job.message);
+    }
+
+    private void failBeforeRun(Job job, RuntimeException failure) {
+        job.state = STATE_FAILED;
+        job.message = messageFor(failure);
+        job.finishedAt = System.nanoTime();
+        log.error("Async ingestion could not be scheduled for document {}", job.documentId, failure);
     }
 
     /**
@@ -139,6 +181,7 @@ public class AsyncIngestionService {
         } finally {
             job.finishedAt = System.nanoTime();
             running.decrementAndGet();
+            limiter.exit();
         }
     }
 

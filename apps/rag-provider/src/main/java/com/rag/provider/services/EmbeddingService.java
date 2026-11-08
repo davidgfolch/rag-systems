@@ -1,33 +1,63 @@
 package com.rag.provider.services;
 
 import com.rag.common.core.domain.FloatConversions;
+import com.rag.common.core.resilience.ConcurrencyLimiter;
+import com.rag.common.core.resilience.RetryExecutor;
+import com.rag.common.core.resilience.RetryPolicy;
+import com.rag.common.core.resilience.RetryableStatuses;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.embedding.Embedding;
 import org.springframework.ai.embedding.EmbeddingRequest;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestClientResponseException;
 
+import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Embedding generation against the currently active embedding model.
+ *
+ * <p>Calls are bounded by a {@link ConcurrencyLimiter} so a burst of ingestion
+ * jobs cannot overwhelm the backing model server, and transient failures
+ * (timeouts, connection resets, 408/425/429/5xx) are retried with backoff.
  */
 public class EmbeddingService {
 
-    public static final int DEFAULT_EMBED_BATCH_SIZE = 100;
+    public static final int DEFAULT_EMBED_BATCH_SIZE = 32;
+    public static final int DEFAULT_MAX_CONCURRENT = 2;
+    public static final Duration DEFAULT_QUEUE_WAIT = Duration.ofSeconds(180);
 
     private static final Logger log = LoggerFactory.getLogger(EmbeddingService.class);
+    private static final String LIMITER_NAME = "provider-embedding";
 
     private final ModelRouter router;
     private final int maxEmbeddingBatchSize;
+    private final ConcurrencyLimiter limiter;
+    private final RetryExecutor retry;
 
     public EmbeddingService(ModelRouter router) {
         this(router, DEFAULT_EMBED_BATCH_SIZE);
     }
 
     public EmbeddingService(ModelRouter router, int maxEmbeddingBatchSize) {
+        this(router, maxEmbeddingBatchSize, defaultLimiter(), RetryPolicy.defaults());
+    }
+
+    public EmbeddingService(ModelRouter router, int maxEmbeddingBatchSize,
+                            ConcurrencyLimiter limiter, RetryPolicy retryPolicy) {
         this.router = router;
         this.maxEmbeddingBatchSize = requirePositive(maxEmbeddingBatchSize);
+        this.limiter = Objects.requireNonNull(limiter, "limiter must not be null");
+        this.retry = new RetryExecutor(Objects.requireNonNull(retryPolicy, "retryPolicy must not be null"),
+                EmbeddingService::isRetryable);
+    }
+
+    public static ConcurrencyLimiter defaultLimiter() {
+        return new ConcurrencyLimiter(LIMITER_NAME, DEFAULT_MAX_CONCURRENT, DEFAULT_QUEUE_WAIT);
     }
 
     public List<List<Float>> embed(List<String> texts) {
@@ -53,9 +83,35 @@ public class EmbeddingService {
 
     private List<List<Float>> embedWindow(List<String> texts, String model) {
         log.debug("Embedding window of {} texts", texts.size());
-        var response = router.embeddingModelFor(model).call(new EmbeddingRequest(texts, null));
-        return response.getResults().stream().map(Embedding::getOutput)
-                .map(FloatConversions::toFloatList).toList();
+        if (!limiter.tryEnter()) {
+            throw new ProviderBusyException("Provider embedding capacity exhausted after waiting "
+                    + limiter.waitTimeout().toMillis() + " ms (max concurrent "
+                    + limiter.maxConcurrent() + ")");
+        }
+        try {
+            var response = retry.call("embed " + texts.size() + " texts",
+                    () -> router.embeddingModelFor(model).call(new EmbeddingRequest(texts, null)));
+            return response.getResults().stream().map(Embedding::getOutput)
+                    .map(FloatConversions::toFloatList).toList();
+        } finally {
+            limiter.exit();
+        }
+    }
+
+    static boolean isRetryable(Throwable failure) {
+        if (failure instanceof RestClientResponseException http) {
+            return RetryableStatuses.isRetryable(http.getStatusCode().value());
+        }
+        return failure instanceof ResourceAccessException || hasIoCause(failure);
+    }
+
+    private static boolean hasIoCause(Throwable failure) {
+        for (Throwable cause = failure.getCause(); cause != null; cause = cause.getCause()) {
+            if (cause instanceof IOException) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static int requirePositive(int value) {

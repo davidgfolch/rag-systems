@@ -16,6 +16,13 @@ management:
 
 rag:
   provider:
+    http:
+      connect-timeout: ${RAG_PROVIDER_HTTP_CONNECT_TIMEOUT:10s}
+      read-timeout: ${RAG_PROVIDER_HTTP_READ_TIMEOUT:240s}
+      retry:
+        max-attempts: ${RAG_PROVIDER_HTTP_RETRY_MAX_ATTEMPTS:4}
+        initial-backoff: ${RAG_PROVIDER_HTTP_RETRY_INITIAL_BACKOFF:500ms}
+        max-backoff: ${RAG_PROVIDER_HTTP_RETRY_MAX_BACKOFF:10s}
     ollama:
       base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
       chat-model: ${OLLAMA_CHAT_MODEL:phi4}
@@ -36,7 +43,9 @@ rag:
       chat-model: ${OPENAI_CHAT_MODEL:gpt-4o}
       embedding-model: ${OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
     embedding:
-      batch-size: ${RAG_PROVIDER_EMBED_BATCH_SIZE:100}
+      batch-size: ${RAG_PROVIDER_EMBED_BATCH_SIZE:32}
+      max-concurrent: ${RAG_PROVIDER_EMBED_MAX_CONCURRENT:2}
+      queue-wait: ${RAG_PROVIDER_EMBED_QUEUE_WAIT:180s}
     defaults:
       chat-provider: ${DEFAULT_CHAT_PROVIDER:ollama}
       embedding-provider: ${DEFAULT_EMBEDDING_PROVIDER:ollama}
