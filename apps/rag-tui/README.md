@@ -70,8 +70,10 @@ Ingested document file-<uuid> -> 12 chunks
 > add-url https://spring.io/projects/spring-ai
 Question to rank links for this crawl (blank = none, 'add-url-cancel' to stop):
 Initial pages submitted. Go on and crawl more pages? (y/N) n
-Crawl cancelled: 5 page(s) submitted for async ingestion, 0 page(s) skipped, 12 link(s) skipped. Ingestion continues in the background; I'll report each page as it completes.
+Crawl cancelled: 5 page(s) submitted for async ingestion, 0 page(s) skipped, 12 link(s) skipped. Discovery queued 0 page(s). I'll report each page and print a summary when all async jobs finish.
 Ingestion of page https://spring.io/projects/spring-ai complete: 8 chunks.
+...
+Crawl ingestion finished: 5 page(s) complete, 0 failed, 42 chunk(s) total.
 > ask what is spring ai
 Answer:
 Spring AI is a framework that simplifies building RAG applications...
@@ -105,6 +107,8 @@ Set via environment variables or `application.yml`:
 | `rag.chunking.size` | `512` | Max chunk size (chars) |
 | `rag.chunking.overlap` | `64` | Chunk overlap |
 | `rag.chat.top-k` | `4` | Retrieval depth for `ask` |
+| `rag.http.read-timeout-seconds` | `60` | Read timeout for ordinary module calls |
+| `rag.http.crawl-read-timeout-seconds` | `600` | Read timeout for crawl start/step/cancel; must exceed `rag.ingestion.queue-wait` plus crawler timeouts |
 
 Profiles: `local` (Ollama) and `cloud` (OpenAI). See the root `application.yml` and `docs/guides/tui-ingestion.md`.
 

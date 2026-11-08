@@ -2,6 +2,7 @@ package com.rag.tui.ui;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.web.client.ResourceAccessException;
 
 import static com.rag.tui.testfixture.TestCrawlFixtures.SESSION;
 import static com.rag.tui.testfixture.TestCrawlFixtures.URL;
@@ -92,6 +93,18 @@ class CommandDispatcherAddUrlTest extends AbstractCommandDispatcherTest {
         var result = handle("add-url " + URL);
         assertThat(result).contains("Crawl cancelled");
         verify(apiClient, never()).startCrawl(anyString());
+    }
+
+    @Test
+    void addUrlReportsPartialSummaryWhenStepRequestFails() {
+        when(apiClient.startCrawl(URL)).thenReturn(start(1));
+        when(apiClient.stepCrawl(SESSION, "", false))
+                .thenReturn(step("d1", 1, page("https://x.com/a")))
+                .thenThrow(new ResourceAccessException("Request cancelled"));
+        var result = handle("add-url " + URL);
+        assertThat(result).contains("Crawl interrupted", "Request cancelled", "Crawl partial",
+                "1 page(s) submitted");
+        verify(apiClient).cancelCrawl(SESSION);
     }
 
     @Test

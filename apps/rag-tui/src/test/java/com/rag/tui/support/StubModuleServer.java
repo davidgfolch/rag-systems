@@ -23,6 +23,8 @@ public final class StubModuleServer {
     private static final String DEFAULT_CRAWL_STEP = "{\"sessionId\":\"c-1\","
             + "\"documentId\":\"i-1\",\"pageUrl\":\"https://example.com/root\",\"title\":\"Root\","
             + "\"ingested\":true,\"initialRemaining\":0,\"hasMore\":false,\"skippedLinks\":0}";
+    private static final String DEFAULT_INGEST_STATUS =
+            "{\"documentId\":\"i-1\",\"state\":\"COMPLETED\",\"chunkCount\":2}";
 
     private final HttpServer server;
     private final AtomicReference<byte[]> lastIngestBody = new AtomicReference<>();
@@ -35,6 +37,7 @@ public final class StubModuleServer {
     private final AtomicReference<String> lastCrawlUrl = new AtomicReference<>();
     private final AtomicReference<String> lastCrawlStepBody = new AtomicReference<>();
     private final AtomicReference<String> lastCrawlCancelledSession = new AtomicReference<>();
+    private final AtomicReference<String> ingestStatusBody = new AtomicReference<>(DEFAULT_INGEST_STATUS);
     private final AtomicReference<String> variantsBody = new AtomicReference<>("[]");
     private final AtomicReference<String> activationBody = new AtomicReference<>("{}");
     private final AtomicReference<String> lastActivatedVariant = new AtomicReference<>();
@@ -66,7 +69,7 @@ public final class StubModuleServer {
             respond(exchange, 202, "{\"documentId\":\"i-1\"}");
         });
         server.createContext("/api/documents/ingest-status", exchange -> {
-            respond(exchange, 200, "{\"documentId\":\"i-1\",\"state\":\"COMPLETED\",\"chunkCount\":2}");
+            respond(exchange, 200, ingestStatusBody.get());
         });
         server.createContext("/api/documents/crawl", this::handleCrawl);
         server.createContext("/api/conversations", exchange -> {
@@ -202,6 +205,10 @@ public final class StubModuleServer {
         for (var body : jsonBodies) {
             crawlStepBodies.add(body);
         }
+    }
+
+    public void ingestStatus(String json) {
+        ingestStatusBody.set(json);
     }
 
     public void stop() {

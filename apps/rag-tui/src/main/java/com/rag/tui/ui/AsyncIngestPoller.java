@@ -53,6 +53,12 @@ final class AsyncIngestPoller {
     }
 
     void start(String documentId, String contentHash, String label, Consumer<String> tokenSink) {
+        start(documentId, contentHash, label, tokenSink, null);
+    }
+
+    void start(String documentId, String contentHash, String label, Consumer<String> tokenSink,
+               IngestBatch batch) {
+        if (batch != null) batch.submitted();
         var span = tracer == null ? null : tracer.currentSpan();
         var poller = new Thread(() -> {
             try {
@@ -63,24 +69,32 @@ final class AsyncIngestPoller {
                     if (IngestStatusDTO.StateEnum.COMPLETED == state) {
                         clearInFlight(contentHash);
                         tokenSink.accept(success(INGESTION_OF + label + " complete: " + status.getChunkCount() + " chunks.\n"));
+                        complete(batch, status.getChunkCount());
                         return;
                     }
                     if (IngestStatusDTO.StateEnum.FAILED == state) {
                         clearInFlight(contentHash);
                         tokenSink.accept(error(INGESTION_OF + label + " failed: " + status.getMessage() + "\n"));
+                        if (batch != null) batch.failed(label, status.getMessage());
                         return;
                     }
                 }
             } catch (InterruptedException _) {
                 clearInFlight(contentHash);
+                if (batch != null) batch.cancelled();
                 Thread.currentThread().interrupt();
             } catch (RuntimeException e) {
                 clearInFlight(contentHash);
                 tokenSink.accept(error(INGESTION_OF + label + " could not be checked: " + e.getMessage() + "\n"));
+                if (batch != null) batch.failed(label, e.getMessage());
             }
         }, THREAD_NAME);
         poller.setDaemon(true);
         poller.start();
+    }
+
+    private static void complete(IngestBatch batch, Integer chunkCount) {
+        if (batch != null) batch.completed(chunkCount == null ? 0 : chunkCount);
     }
 
     private void clearInFlight(String contentHash) {

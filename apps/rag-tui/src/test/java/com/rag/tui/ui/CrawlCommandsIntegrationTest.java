@@ -63,6 +63,9 @@ class CrawlCommandsIntegrationTest {
         assertThat(stub.lastCrawlStepBody()).contains("question").contains("\"override\":false");
         assertThat(stub.lastCrawlCancelledSession()).isEqualTo(SESSION);
         await(tokens, "page " + URL + " complete");
+        await(tokens, "Crawl ingestion");
+        assertThat(tokens).anyMatch(t -> t.contains("1 page(s) complete")
+                && t.contains("0 failed") && t.contains("2 chunk(s) total"));
     }
 
     @Test
