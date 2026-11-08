@@ -44,6 +44,7 @@ Each module has its own README under `apps/*/README.md` — see the [module tabl
 | [Vector Stores](guides/vector-stores.md) | PgVector, SimpleVectorStore, and provider options |
 | [Observability](guides/observability.md) | OpenTelemetry tracing, Micrometer metrics, Grafana dashboards |
 | [TUI Ingestion](guides/tui-ingestion.md) | Terminal UI for adding files/web pages and asking questions |
+| [Resilience](guides/resilience.md) | Bounded concurrency, timeouts, retries and backpressure |
 | [SonarQube](guides/sonarqube.md) | Static analysis setup and quality gate |
 | [CI Workflow](guides/ci-workflow.md) | GitHub Actions CI and badge setup |
 

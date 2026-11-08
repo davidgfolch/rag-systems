@@ -21,6 +21,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -69,12 +70,16 @@ class ProviderHttpClientTest {
 
     @Test
     void shouldThrowOnServerError() {
-        server.createContext(ApiPaths.COMPLETE,
-                exchange -> respond(exchange, 500, "text/plain", "boom"));
+        var calls = new AtomicInteger();
+        server.createContext(ApiPaths.COMPLETE, exchange -> {
+            calls.incrementAndGet();
+            respond(exchange, 500, "text/plain", "boom");
+        });
         var request = new CompleteRequest("hi");
         assertThatThrownBy(() -> client.postJson(ApiPaths.COMPLETE, request, CompleteResponse.class))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("HTTP 500");
+        assertThat(calls).hasValue(1);
     }
 
     @Test

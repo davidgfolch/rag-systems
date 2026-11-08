@@ -1,6 +1,8 @@
 package com.rag.provider.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rag.common.core.resilience.ConcurrencyLimiter;
+import com.rag.common.core.resilience.RetryPolicy;
 import com.rag.provider.adapter.ModelsDevCatalogClient;
 import com.rag.provider.adapter.ProviderClientFactory;
 import com.rag.provider.adapter.ProviderProfileFileStore;
@@ -58,8 +60,26 @@ public class RagProviderConfig {
     }
 
     @Bean
-    public ProviderClientFactory providerClientFactory() {
-        return new ProviderClientFactory();
+    public ProviderClientFactory providerClientFactory(
+            @Value("${rag.provider.http.connect-timeout:10s}") Duration connectTimeout,
+            @Value("${rag.provider.http.read-timeout:240s}") Duration readTimeout) {
+        return new ProviderClientFactory(connectTimeout, readTimeout);
+    }
+
+    @Bean
+    public RetryPolicy providerRetryPolicy(
+            @Value("${rag.provider.http.retry.max-attempts:4}") int maxAttempts,
+            @Value("${rag.provider.http.retry.initial-backoff:500ms}") Duration initialBackoff,
+            @Value("${rag.provider.http.retry.max-backoff:10s}") Duration maxBackoff) {
+        return new RetryPolicy(maxAttempts, initialBackoff, maxBackoff,
+                RetryPolicy.DEFAULT_MULTIPLIER, RetryPolicy.DEFAULT_JITTER);
+    }
+
+    @Bean
+    public ConcurrencyLimiter embeddingLimiter(
+            @Value("${rag.provider.embedding.max-concurrent:2}") int maxConcurrent,
+            @Value("${rag.provider.embedding.queue-wait:180s}") Duration queueWait) {
+        return new ConcurrencyLimiter("provider-embedding", maxConcurrent, queueWait);
     }
 
     @Bean
@@ -107,7 +127,8 @@ public class RagProviderConfig {
     @Bean
     public EmbeddingService embeddingService(
             ModelRouter router,
-            @Value("${rag.provider.embedding.batch-size:100}") int maxEmbeddingBatchSize) {
-        return new EmbeddingService(router, maxEmbeddingBatchSize);
+            @Value("${rag.provider.embedding.batch-size:32}") int maxEmbeddingBatchSize,
+            ConcurrencyLimiter embeddingLimiter, RetryPolicy providerRetryPolicy) {
+        return new EmbeddingService(router, maxEmbeddingBatchSize, embeddingLimiter, providerRetryPolicy);
     }
 }

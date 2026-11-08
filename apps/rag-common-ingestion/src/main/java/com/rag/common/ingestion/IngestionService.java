@@ -24,7 +24,7 @@ import java.util.stream.IntStream;
  */
 public class IngestionService {
 
-    public static final int DEFAULT_EMBED_BATCH_SIZE = 100;
+    public static final int DEFAULT_EMBED_BATCH_SIZE = 32;
 
     private static final Logger log = LoggerFactory.getLogger(IngestionService.class);
 

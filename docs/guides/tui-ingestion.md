@@ -74,7 +74,9 @@ active rag-module orchestrates.
 - `--all` crawls every discovered page **without any prompt**: no ranking question, no “Go on?”,
   and already-ingested pages are skipped silently.
 - Each page is submitted for **asynchronous** ingestion, so the shell stays responsive and reports
-  each page as its job completes.
+  each page as its job completes. Submission is bounded by `rag.ingestion.max-concurrent`
+  (default **2**); if the queue wait is exceeded the job fails with an explicit capacity error
+  instead of overloading the provider. See the [Resilience guide](resilience.md).
 - Type `add-url-cancel` (or `cancel`) at any crawl prompt, or run the `add-url-cancel` command, to
   stop scheduling new pages. Pages already submitted finish ingesting.
 - The frontier is de-duplicated per crawl and skips pages whose `source` is already ingested on the

@@ -2,6 +2,7 @@ package com.rag.provider.api;
 
 import com.rag.provider.services.ChatService;
 import com.rag.provider.services.EmbeddingService;
+import com.rag.provider.services.ProviderBusyException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,7 +39,9 @@ class ComputeControllerTest {
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(new ComputeController(chatService, embeddingService)).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(new ComputeController(chatService, embeddingService))
+                .setControllerAdvice(new ApiExceptionHandler())
+                .build();
     }
 
     @Test
@@ -61,6 +64,17 @@ class ComputeControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.embeddings[0][0]").value(0.1))
                 .andExpect(jsonPath("$.embeddings[1][0]").value(0.2));
+    }
+
+    @Test
+    void shouldReturnServiceUnavailableWhenProviderIsBusy() throws Exception {
+        when(embeddingService.embed(List.of("a"), null))
+                .thenThrow(new ProviderBusyException("capacity exhausted"));
+        mockMvc.perform(post(EMBED)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"texts\":[\"a\"]}"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(content().string("capacity exhausted"));
     }
 
     @Test

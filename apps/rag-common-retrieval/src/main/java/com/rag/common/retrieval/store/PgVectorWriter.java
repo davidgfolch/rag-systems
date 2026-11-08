@@ -4,6 +4,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pgvector.PGvector;
 import com.rag.common.core.domain.Chunk;
+import com.rag.common.core.resilience.RetryExecutor;
+import com.rag.common.core.resilience.RetryPolicy;
+import com.rag.common.core.resilience.SqlRetry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,7 +29,8 @@ import static com.rag.common.core.domain.MetadataKeys.DOCUMENT_ID;
  * round trip.
  *
  * <p>Columns and upsert semantics mirror {@code PgVectorStore.doAdd} so both
- * write paths stay interchangeable.
+ * write paths stay interchangeable. The upsert is idempotent, so transient
+ * connection/transaction failures are retried with backoff.
  */
 final class PgVectorWriter {
 
@@ -34,6 +38,7 @@ final class PgVectorWriter {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final int BATCH_SIZE = 500;
+    private static final int DEFAULT_QUERY_TIMEOUT_SECONDS = 30;
     private static final int MAX_IDENTIFIER_LENGTH = 63;
     private static final String DOCUMENT_INDEX_SUFFIX = "_document_id_idx";
     private static final String INSERT_SQL_TEMPLATE =
@@ -43,18 +48,29 @@ final class PgVectorWriter {
             "CREATE INDEX IF NOT EXISTS %s ON %s ((metadata->>'documentId'))";
     private static final String INSERT_FAILED = "Failed to write %d chunks to %s: %s: %s";
     private static final String INDEX_FAILED = "Could not create documentId index on %s: %s";
+    private static final String WRITE_OPERATION = "write %d chunks to %s";
+    private static final String INDEX_OPERATION = "create index %s on %s";
 
     private final DataSource dataSource;
     private final String qualifiedTable;
     private final String indexName;
     private final String insertSql;
+    private final RetryExecutor retry;
+    private final int queryTimeoutSeconds;
     private final AtomicBoolean indexEnsured = new AtomicBoolean();
 
     PgVectorWriter(DataSource dataSource, String qualifiedTable, String rawIndexName) {
+        this(dataSource, qualifiedTable, rawIndexName, RetryPolicy.noRetry(), DEFAULT_QUERY_TIMEOUT_SECONDS);
+    }
+
+    PgVectorWriter(DataSource dataSource, String qualifiedTable, String rawIndexName,
+                   RetryPolicy retryPolicy, int queryTimeoutSeconds) {
         this.dataSource = dataSource;
         this.qualifiedTable = qualifiedTable;
         this.indexName = quote(truncate(rawIndexName));
         this.insertSql = INSERT_SQL_TEMPLATE.formatted(qualifiedTable);
+        this.retry = new RetryExecutor(retryPolicy, SqlRetry::isTransient);
+        this.queryTimeoutSeconds = queryTimeoutSeconds;
     }
 
     void add(List<Chunk> chunks) {
@@ -68,18 +84,27 @@ final class PgVectorWriter {
     }
 
     private void write(List<Chunk> batch) {
+        try {
+            retry.run(WRITE_OPERATION.formatted(batch.size(), qualifiedTable), () -> executeWrite(batch));
+        } catch (SqlRetry.Failure e) {
+            throw failure(e.sqlException(), INSERT_FAILED.formatted(batch.size(), qualifiedTable,
+                    e.sqlException().getClass().getSimpleName(), e.sqlException().getMessage()));
+        }
+        log.debug("Wrote {} pre-embedded chunks to {}", batch.size(), qualifiedTable);
+    }
+
+    private void executeWrite(List<Chunk> batch) {
         try (var conn = dataSource.getConnection();
              var ps = conn.prepareStatement(insertSql)) {
+            ps.setQueryTimeout(queryTimeoutSeconds);
             for (var chunk : batch) {
                 bind(ps, chunk);
                 ps.addBatch();
             }
             ps.executeBatch();
         } catch (SQLException e) {
-            throw new IllegalStateException(INSERT_FAILED.formatted(
-                    batch.size(), qualifiedTable, e.getClass().getSimpleName(), e.getMessage()), e);
+            throw new SqlRetry.Failure(e);
         }
-        log.debug("Wrote {} pre-embedded chunks to {}", batch.size(), qualifiedTable);
     }
 
     private static void bind(PreparedStatement ps, Chunk chunk) throws SQLException {
@@ -102,13 +127,26 @@ final class PgVectorWriter {
         if (!indexEnsured.compareAndSet(false, true)) {
             return;
         }
+        try {
+            retry.run(INDEX_OPERATION.formatted(indexName, qualifiedTable), this::executeIndex);
+            log.info("Ensured documentId index {} on {}", indexName, qualifiedTable);
+        } catch (SqlRetry.Failure e) {
+            log.warn(INDEX_FAILED.formatted(qualifiedTable, e.sqlException().getMessage()));
+        }
+    }
+
+    private void executeIndex() {
         try (var conn = dataSource.getConnection();
              var stmt = conn.createStatement()) {
+            stmt.setQueryTimeout(queryTimeoutSeconds);
             stmt.execute(INDEX_SQL_TEMPLATE.formatted(indexName, qualifiedTable));
-            log.info("Ensured documentId index {} on {}", indexName, qualifiedTable);
         } catch (SQLException e) {
-            log.warn(INDEX_FAILED.formatted(qualifiedTable, e.getMessage()));
+            throw new SqlRetry.Failure(e);
         }
+    }
+
+    private static IllegalStateException failure(SQLException sql, String message) {
+        return new IllegalStateException(message, sql);
     }
 
     private static String toJson(Chunk chunk) {

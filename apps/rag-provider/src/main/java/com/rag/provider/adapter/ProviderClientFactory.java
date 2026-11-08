@@ -17,7 +17,10 @@ import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.OpenAiEmbeddingModel;
 import org.springframework.ai.openai.OpenAiEmbeddingOptions;
 import org.springframework.ai.openai.api.OpenAiApi;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.web.client.RestClient;
 
+import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
@@ -38,9 +41,22 @@ public class ProviderClientFactory {
     private static final Logger log = LoggerFactory.getLogger(ProviderClientFactory.class);
 
     private static final int MAX_CACHED_CLIENTS = 64;
+    private static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(10);
+    private static final Duration DEFAULT_READ_TIMEOUT = Duration.ofSeconds(240);
 
     private final Map<ClientKey, ChatModel> chatModels = new ConcurrentHashMap<>();
     private final Map<ClientKey, EmbeddingModel> embeddingModels = new ConcurrentHashMap<>();
+    private final Duration connTimeout;
+    private final Duration readTimeout;
+
+    public ProviderClientFactory() {
+        this(DEFAULT_CONNECT_TIMEOUT, DEFAULT_READ_TIMEOUT);
+    }
+
+    public ProviderClientFactory(Duration connTimeout, Duration readTimeout) {
+        this.connTimeout = requirePositive(connTimeout, "connectTimeout");
+        this.readTimeout = requirePositive(readTimeout, "readTimeout");
+    }
 
     public ChatModel chatModel(ProviderProfile profile, String model) {
         return cached(chatModels, ClientKey.of(profile, model), () -> buildChatModel(profile, model));
@@ -50,14 +66,14 @@ public class ProviderClientFactory {
         return cached(embeddingModels, ClientKey.of(profile, model), () -> buildEmbeddingModel(profile, model));
     }
 
-    private static ChatModel buildChatModel(ProviderProfile profile, String model) {
+    private ChatModel buildChatModel(ProviderProfile profile, String model) {
         return switch (profile.type()) {
             case OLLAMA -> ollamaChat(profile, model);
             case OPENAI, OPENAI_COMPATIBLE -> openAiChat(profile, model);
         };
     }
 
-    private static EmbeddingModel buildEmbeddingModel(ProviderProfile profile, String model) {
+    private EmbeddingModel buildEmbeddingModel(ProviderProfile profile, String model) {
         return switch (profile.type()) {
             case OLLAMA -> ollamaEmbedding(profile, model);
             case OPENAI, OPENAI_COMPATIBLE -> openAiEmbedding(profile, model);
@@ -77,21 +93,21 @@ public class ProviderClientFactory {
         }
     }
 
-    private static ChatModel ollamaChat(ProviderProfile profile, String model) {
-        var api = OllamaApi.builder().baseUrl(profile.baseUrl()).build();
+    private ChatModel ollamaChat(ProviderProfile profile, String model) {
+        var api = OllamaApi.builder().baseUrl(profile.baseUrl()).restClientBuilder(restClientBuilder()).build();
         var options = OllamaChatOptions.builder().model(model).build();
         log.debug("Built Ollama chat client for model {}", model);
         return OllamaChatModel.builder().ollamaApi(api).defaultOptions(options).build();
     }
 
-    private static EmbeddingModel ollamaEmbedding(ProviderProfile profile, String model) {
-        var api = OllamaApi.builder().baseUrl(profile.baseUrl()).build();
+    private EmbeddingModel ollamaEmbedding(ProviderProfile profile, String model) {
+        var api = OllamaApi.builder().baseUrl(profile.baseUrl()).restClientBuilder(restClientBuilder()).build();
         var options = OllamaEmbeddingOptions.builder().model(model).build();
         log.debug("Built Ollama embedding client for model {}", model);
         return OllamaEmbeddingModel.builder().ollamaApi(api).defaultOptions(options).build();
     }
 
-    private static ChatModel openAiChat(ProviderProfile profile, String model) {
+    private ChatModel openAiChat(ProviderProfile profile, String model) {
         var api = openAiApi(profile);
         var options = OpenAiChatOptions.builder().model(model).build();
         log.debug("Built OpenAI chat client for model {} via {}", model,
@@ -99,7 +115,7 @@ public class ProviderClientFactory {
         return OpenAiChatModel.builder().openAiApi(api).defaultOptions(options).build();
     }
 
-    private static EmbeddingModel openAiEmbedding(ProviderProfile profile, String model) {
+    private EmbeddingModel openAiEmbedding(ProviderProfile profile, String model) {
         var api = openAiApi(profile);
         var options = OpenAiEmbeddingOptions.builder().model(model).build();
         log.debug("Built OpenAI embedding client for model {} via {}", model,
@@ -107,14 +123,32 @@ public class ProviderClientFactory {
         return new OpenAiEmbeddingModel(api, MetadataMode.EMBED, options);
     }
 
-    private static OpenAiApi openAiApi(ProviderProfile profile) {
-        var builder = OpenAiApi.builder().apiKey(profile.apiKey());
+    private OpenAiApi openAiApi(ProviderProfile profile) {
+        var builder = OpenAiApi.builder().apiKey(profile.apiKey()).restClientBuilder(restClientBuilder());
         var baseUrl = withoutApiVersion(profile.baseUrl());
         if (ProviderType.OPENAI_COMPATIBLE.equals(profile.type())
                 || (baseUrl != null && !baseUrl.isBlank())) {
             return builder.baseUrl(baseUrl).build();
         }
         return builder.build();
+    }
+
+    private RestClient.Builder restClientBuilder() {
+        var requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(toTimeoutMillis(connTimeout));
+        requestFactory.setReadTimeout(toTimeoutMillis(readTimeout));
+        return RestClient.builder().requestFactory(requestFactory);
+    }
+
+    private static int toTimeoutMillis(Duration timeout) {
+        return Math.toIntExact(Math.min(timeout.toMillis(), Integer.MAX_VALUE));
+    }
+
+    private static Duration requirePositive(Duration value, String name) {
+        if (value == null || value.isNegative() || value.isZero()) {
+            throw new IllegalArgumentException(name + " must be positive");
+        }
+        return value;
     }
 
     static String withoutApiVersion(String baseUrl) {

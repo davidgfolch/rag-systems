@@ -1,5 +1,6 @@
 package com.rag.webcrawler.config;
 
+import com.rag.common.core.resilience.RetryPolicy;
 import com.rag.common.core.services.ChatModelPort;
 import com.rag.webcrawler.services.WebCrawlService;
 import com.rag.webcrawler.services.discovery.HttpUrlContentLoader;
@@ -23,8 +24,19 @@ import java.time.Duration;
 public class WebcrawlerConfig {
 
     @Bean
-    public WebPageFetcher webPageFetcher() {
-        return new JsoupWebPageFetcher();
+    public RetryPolicy crawlerRetryPolicy(
+            @Value("${rag.crawler.retry.max-attempts:4}") int maxAttempts,
+            @Value("${rag.crawler.retry.initial-backoff:500ms}") Duration initialBackoff,
+            @Value("${rag.crawler.retry.max-backoff:10s}") Duration maxBackoff) {
+        return new RetryPolicy(maxAttempts, initialBackoff, maxBackoff,
+                RetryPolicy.DEFAULT_MULTIPLIER, RetryPolicy.DEFAULT_JITTER);
+    }
+
+    @Bean
+    public WebPageFetcher webPageFetcher(
+            @Value("${rag.crawler.fetch.timeout-seconds:20}") long timeoutSeconds,
+            RetryPolicy crawlerRetryPolicy) {
+        return new JsoupWebPageFetcher(Duration.ofSeconds(timeoutSeconds), crawlerRetryPolicy);
     }
 
     @Bean
@@ -51,8 +63,8 @@ public class WebcrawlerConfig {
     }
 
     @Bean
-    public UrlContentLoader urlContentLoader() {
-        return new HttpUrlContentLoader();
+    public UrlContentLoader urlContentLoader(RetryPolicy crawlerRetryPolicy) {
+        return new HttpUrlContentLoader(crawlerRetryPolicy);
     }
 
     @Bean

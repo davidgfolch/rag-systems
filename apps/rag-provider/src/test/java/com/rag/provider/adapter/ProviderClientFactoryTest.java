@@ -8,7 +8,10 @@ import org.springframework.ai.ollama.OllamaEmbeddingModel;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiEmbeddingModel;
 
+import java.time.Duration;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ProviderClientFactoryTest {
 
@@ -36,6 +39,16 @@ class ProviderClientFactoryTest {
                 "https://glhf.chat", "k");
         assertThat(factory.chatModel(profile, "some-model")).isInstanceOf(OpenAiChatModel.class);
         assertThat(factory.embeddingModel(profile, "some-embedding")).isInstanceOf(OpenAiEmbeddingModel.class);
+    }
+
+    @Test
+    void shouldRejectNonPositiveTimeouts() {
+        assertThatThrownBy(() -> new ProviderClientFactory(Duration.ZERO, Duration.ofSeconds(1)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("connectTimeout");
+        assertThatThrownBy(() -> new ProviderClientFactory(Duration.ofSeconds(1), Duration.ZERO))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("readTimeout");
     }
 
     @Test

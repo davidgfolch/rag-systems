@@ -1,10 +1,9 @@
 package com.rag.common.retrieval.store;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rag.common.core.domain.Chunk;
 import com.rag.common.core.domain.DocumentSummary;
 import com.rag.common.core.repositories.VectorStorePort;
+import com.rag.common.core.resilience.RetryPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.Document;
@@ -12,11 +11,8 @@ import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 
 import javax.sql.DataSource;
-import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import static com.rag.common.core.domain.MetadataKeys.CHUNK_INDEX;
 import static com.rag.common.core.domain.MetadataKeys.DOCUMENT_ID;
@@ -31,39 +27,51 @@ import static com.rag.common.core.domain.MetadataKeys.DOCUMENT_ID;
  * the same table. Writes persist the embeddings already computed by the
  * ingestion pipeline (see {@link PgVectorWriter}); only stores built without a
  * {@link DataSource} fall back to Spring AI's add, which re-embeds documents.
+ *
+ * <p>Idempotent JDBC statements (delete, list, connectivity probe) are retried
+ * on transient connection/transaction failures by {@link PgVectorJdbc}.
  */
 public class PgVectorStoreAdapter implements VectorStorePort {
 
     private static final Logger log = LoggerFactory.getLogger(PgVectorStoreAdapter.class);
-    private static final ObjectMapper om = new ObjectMapper();
 
     static final String DEFAULT_SCHEMA = "public";
     static final String DEFAULT_TABLE = "chunks";
+    private static final int QUERY_TIMEOUT_SECONDS = 30;
 
     private final VectorStore delegate;
     private final DataSource dataSource;
     private final String table;
     private final PgVectorWriter writer;
+    private final PgVectorJdbc jdbc;
 
     public PgVectorStoreAdapter(VectorStore delegate) {
-        this(delegate, null, DEFAULT_SCHEMA, DEFAULT_TABLE);
+        this(delegate, null, DEFAULT_SCHEMA, DEFAULT_TABLE, RetryPolicy.defaults());
     }
 
     public PgVectorStoreAdapter(VectorStore delegate, DataSource dataSource) {
-        this(delegate, dataSource, DEFAULT_SCHEMA, DEFAULT_TABLE);
+        this(delegate, dataSource, DEFAULT_SCHEMA, DEFAULT_TABLE, RetryPolicy.defaults());
     }
 
     public PgVectorStoreAdapter(VectorStore delegate, DataSource dataSource, String table) {
-        this(delegate, dataSource, DEFAULT_SCHEMA, table);
+        this(delegate, dataSource, DEFAULT_SCHEMA, table, RetryPolicy.defaults());
     }
 
     public PgVectorStoreAdapter(VectorStore delegate, DataSource dataSource,
                                 String schema, String table) {
+        this(delegate, dataSource, schema, table, RetryPolicy.defaults());
+    }
+
+    public PgVectorStoreAdapter(VectorStore delegate, DataSource dataSource,
+                                String schema, String table, RetryPolicy retryPolicy) {
         this.delegate = delegate;
         this.dataSource = dataSource;
         this.table = qualified(schema, table);
         this.writer = dataSource == null ? null
-                : new PgVectorWriter(dataSource, this.table, PgVectorWriter.indexName(schema, table));
+                : new PgVectorWriter(dataSource, this.table, PgVectorWriter.indexName(schema, table),
+                retryPolicy, QUERY_TIMEOUT_SECONDS);
+        this.jdbc = dataSource == null ? null
+                : new PgVectorJdbc(dataSource, this.table, retryPolicy, QUERY_TIMEOUT_SECONDS);
     }
 
     /**
@@ -84,20 +92,8 @@ public class PgVectorStoreAdapter implements VectorStorePort {
 
     @Override
     public void checkAvailable() {
-        if (dataSource == null) {
-            return;
-        }
-        try (var conn = dataSource.getConnection()) {
-            try (var stmt = conn.createStatement();
-                 var rs = stmt.executeQuery("SELECT 1")) {
-                if (!rs.next()) {
-                    throw new IllegalStateException("Vector store did not respond to connectivity probe");
-                }
-            }
-            log.debug("Vector store connectivity probe succeeded");
-        } catch (Exception e) {
-            throw new IllegalStateException(
-                    "Vector store not available: " + e.getClass().getSimpleName() + ": " + e.getMessage(), e);
+        if (jdbc != null) {
+            jdbc.checkAvailable();
         }
     }
 
@@ -142,67 +138,14 @@ public class PgVectorStoreAdapter implements VectorStorePort {
     }
 
     @Override
-    @SuppressWarnings("java:S2077")
     public List<DocumentSummary> listDocuments() {
-        var result = new ArrayList<DocumentSummary>();
-        if (dataSource == null) {
-            return result;
-        }
-        var sql = "SELECT d.document_id, d.chunk_count, first.metadata AS first_meta " +
-                "FROM (SELECT metadata->>'documentId' AS document_id, count(*) AS chunk_count " +
-                "      FROM " + table + " " +
-                "      WHERE metadata->>'documentId' IS NOT NULL " +
-                "      GROUP BY 1) d " +
-                "JOIN LATERAL (SELECT c.metadata FROM " + table + " c " +
-                "              WHERE c.metadata->>'documentId' = d.document_id " +
-                "              ORDER BY (c.metadata->>'chunkIndex')::int LIMIT 1) first ON true";
-        try (var conn = dataSource.getConnection();
-             var pstmt = conn.prepareStatement(sql);
-             var rs = pstmt.executeQuery()) {
-            while (rs.next()) {
-                var docId = rs.getString("document_id");
-                var chunkCount = rs.getInt("chunk_count");
-                var metadata = toMetadata(rs.getString("first_meta"));
-                result.add(new DocumentSummary(docId, chunkCount, metadata));
-            }
-        } catch (SQLException e) {
-            if (isMissingTable(e)) {
-                return List.of();
-            }
-            throw new IllegalStateException("Failed to list documents from vector store: "
-                    + e.getClass().getSimpleName() + ": " + e.getMessage(), e);
-        }
-        log.debug("Listed {} documents from vector store", result.size());
-        return result;
-    }
-
-    /**
-     * The vector store table may not exist if nothing has been ingested yet.
-     * Treat that as "no documents" rather than a fatal error so the TUI can
-     * report an empty list instead of crashing (PostgreSQL error 42P01).
-     */
-    private static boolean isMissingTable(SQLException e) {
-        return "42P01".equals(e.getSQLState());
+        return jdbc == null ? List.of() : jdbc.listDocuments();
     }
 
     @Override
-    @SuppressWarnings("java:S2077")
     public void delete(String documentId) {
-        if (dataSource == null) {
-            return;
-        }
-        var sql = "DELETE FROM " + table + " WHERE metadata->>'documentId' = ?";
-        try (var conn = dataSource.getConnection();
-             var pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, documentId);
-            int deleted = pstmt.executeUpdate();
-            log.debug("Deleted {} chunks for document {} from vector store", deleted, documentId);
-        } catch (SQLException e) {
-            if (isMissingTable(e)) {
-                return;
-            }
-            throw new IllegalStateException("Failed to delete document " + documentId
-                    + " from vector store: " + e.getClass().getSimpleName() + ": " + e.getMessage(), e);
+        if (jdbc != null) {
+            jdbc.delete(documentId);
         }
     }
 
@@ -227,26 +170,5 @@ public class PgVectorStoreAdapter implements VectorStorePort {
                 index == null ? 0 : Integer.parseInt(String.valueOf(index)),
                 doc.getMetadata()
         );
-    }
-
-    /**
-     * Converts a raw metadata value read from the jsonb column into a map. The
-     * driver may expose it as a plain JSON string or as a PGobject.
-     */
-    @SuppressWarnings("unchecked")
-    private static Map<String, Object> toMetadata(Object raw) {
-        if (raw == null) {
-            return Map.of();
-        }
-        if (raw instanceof Map<?, ?> map) {
-            return (Map<String, Object>) map;
-        }
-        try {
-            return om.readValue(String.valueOf(raw),
-                    new TypeReference<Map<String, Object>>() {
-                    });
-        } catch (Exception _) {
-            return Map.of();
-        }
     }
 }
