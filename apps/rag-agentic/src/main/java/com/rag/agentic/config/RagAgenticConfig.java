@@ -16,6 +16,7 @@ import com.rag.agentic.tools.WebSearchTool;
 import com.rag.common.app.config.RagPipelineConfiguration;
 import com.rag.common.core.repositories.DocumentStorePort;
 import com.rag.common.core.repositories.VectorStorePort;
+import com.rag.common.core.resilience.ResilienceMetrics;
 import com.rag.common.core.services.ChatModelPort;
 import com.rag.common.generation.StreamingChatModelPort;
 import com.rag.common.generation.config.WebSocketConfiguration;
@@ -25,7 +26,9 @@ import com.rag.common.ingestion.IngestionService;
 import com.rag.common.ingestion.crawl.CrawlController;
 import com.rag.common.ingestion.crawl.CrawlSessionService;
 import com.rag.common.ingestion.web.IngestionController;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.tracing.Tracer;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -48,8 +51,10 @@ public class RagAgenticConfig {
     @Bean
     public WebCrawlerClient webCrawlerClient(
             RestClient.Builder restClientBuilder,
-            @Value("${rag.webcrawler.url:http://localhost:8085}") String baseUrl) {
-        return WebCrawlerClient.create(restClientBuilder, baseUrl);
+            @Value("${rag.webcrawler.url:http://localhost:8085}") String baseUrl,
+            ObjectProvider<MeterRegistry> meterRegistry) {
+        return WebCrawlerClient.create(restClientBuilder, baseUrl,
+                ResilienceMetrics.of(meterRegistry.getIfAvailable()).retryObserver("crawler-client"));
     }
 
     @Bean

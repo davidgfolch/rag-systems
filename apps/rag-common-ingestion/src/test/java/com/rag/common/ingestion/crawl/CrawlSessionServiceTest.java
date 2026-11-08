@@ -2,6 +2,7 @@ package com.rag.common.ingestion.crawl;
 
 import com.rag.common.core.domain.DocumentSummary;
 import com.rag.common.core.repositories.DocumentStorePort;
+import com.rag.common.core.resilience.CapacityExceededException;
 import com.rag.common.ingestion.AsyncIngestionService;
 import com.rag.common.ingestion.web.WebPageFetcher;
 import com.rag.contract.model.PageDTO;
@@ -132,6 +133,19 @@ class CrawlSessionServiceTest {
         assertThat(result.ingested()).isFalse();
         assertThat(result.documentId()).isNull();
         verify(async, never()).submitParsed(any());
+    }
+
+    @Test
+    void stepReportsNotIngestedWhenCapacityIsExhausted() {
+        pages.put(ROOT, page(ROOT));
+        when(async.submitParsed(any()))
+                .thenThrow(new CapacityExceededException("Ingestion capacity exhausted"));
+        var start = sut.start(ROOT, 5, 50, true);
+
+        var result = sut.step(start.sessionId(), null);
+
+        assertThat(result.ingested()).isFalse();
+        assertThat(result.documentId()).isNull();
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.rag.common.ingestion.crawl;
 
 import com.rag.common.core.repositories.DocumentStorePort;
+import com.rag.common.core.resilience.CapacityExceededException;
 import com.rag.common.core.util.WebUrls;
 import com.rag.common.ingestion.AsyncIngestionService;
 import com.rag.common.ingestion.web.PageDocumentMapper;
@@ -116,9 +117,13 @@ public class CrawlSessionService {
         }
         var documentId = UUID.randomUUID().toString();
         var parsed = PageDocumentMapper.toParsedDocument(documentId, page);
-        var submitted = asyncIngestion.submitParsed(parsed);
         session.known.add(key);
-        return submitted;
+        try {
+            return asyncIngestion.submitParsed(parsed);
+        } catch (CapacityExceededException e) {
+            log.warn("Crawl {} could not ingest {}: {}", session.id, page.getUrl(), e.getMessage());
+            return null;
+        }
     }
 
     private void enqueue(Session session, PageDTO page, String question) {

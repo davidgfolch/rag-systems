@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -83,6 +84,86 @@ class RetryExecutorTest {
             assertThat(Thread.currentThread().isInterrupted()).isTrue();
         } finally {
             Thread.interrupted();
+        }
+    }
+
+    @Test
+    void shouldNotifyTheObserverBeforeEveryRetry() {
+        var observed = new ArrayList<String>();
+        RetryObserver observer = (operation, attempt, max, delay, failure) ->
+                observed.add(operation + ":" + attempt + "/" + max);
+        var executor = new RetryExecutor(POLICY, error -> true, observer, delay -> { });
+
+        assertThatThrownBy(() -> executor.run("op", () -> {
+            throw new IllegalStateException("still failing");
+        })).isInstanceOf(IllegalStateException.class);
+
+        assertThat(observed).containsExactly("op:1/4", "op:2/4", "op:3/4");
+    }
+
+    @Test
+    void shouldHonourAServerRetryDelayThatExceedsTheComputedBackoff() {
+        var sleeps = new ArrayList<Duration>();
+        var policy = new RetryPolicy(2, Duration.ofMillis(1), Duration.ofSeconds(5), 2.0, 0);
+        var executor = new RetryExecutor(policy, error -> true, sleeps::add);
+        var attempts = new AtomicInteger();
+
+        var result = executor.call("op", () -> {
+            if (attempts.incrementAndGet() == 1) {
+                throw new HintedFailure(Duration.ofMillis(300));
+            }
+            return "ok";
+        });
+
+        assertThat(result).isEqualTo("ok");
+        assertThat(sleeps).containsExactly(Duration.ofMillis(300));
+    }
+
+    @Test
+    void shouldClampAServerRetryDelayToTheMaximumBackoff() {
+        var sleeps = new ArrayList<Duration>();
+        var policy = new RetryPolicy(2, Duration.ofMillis(1), Duration.ofSeconds(2), 2.0, 0);
+        var executor = new RetryExecutor(policy, error -> true, sleeps::add);
+        var attempts = new AtomicInteger();
+
+        executor.call("op", () -> {
+            if (attempts.incrementAndGet() == 1) {
+                throw new HintedFailure(Duration.ofMinutes(5));
+            }
+            return "ok";
+        });
+
+        assertThat(sleeps).containsExactly(Duration.ofSeconds(2));
+    }
+
+    @Test
+    void shouldIgnoreAServerRetryDelayShorterThanTheComputedBackoff() {
+        var sleeps = new ArrayList<Duration>();
+        var policy = new RetryPolicy(2, Duration.ofSeconds(1), Duration.ofSeconds(5), 2.0, 0);
+        var executor = new RetryExecutor(policy, error -> true, sleeps::add);
+        var attempts = new AtomicInteger();
+
+        executor.call("op", () -> {
+            if (attempts.incrementAndGet() == 1) {
+                throw new HintedFailure(Duration.ZERO);
+            }
+            return "ok";
+        });
+
+        assertThat(sleeps).containsExactly(Duration.ofSeconds(1));
+    }
+
+    private static final class HintedFailure extends RuntimeException implements RetryHint {
+        private final Duration retryAfter;
+
+        private HintedFailure(Duration retryAfter) {
+            super("overloaded");
+            this.retryAfter = retryAfter;
+        }
+
+        @Override
+        public Optional<Duration> retryAfter() {
+            return Optional.of(retryAfter);
         }
     }
 }

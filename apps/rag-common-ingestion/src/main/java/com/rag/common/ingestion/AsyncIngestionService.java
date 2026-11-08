@@ -3,6 +3,7 @@ package com.rag.common.ingestion;
 import com.rag.common.core.domain.Document;
 import com.rag.common.core.domain.ParsedDocument;
 import com.rag.common.core.repositories.VectorStorePort;
+import com.rag.common.core.resilience.CapacityExceededException;
 import com.rag.common.core.resilience.ConcurrencyLimiter;
 import com.rag.common.core.tracing.TracePropagation;
 import io.micrometer.tracing.Span;
@@ -84,8 +85,12 @@ public class AsyncIngestionService {
 
     /**
      * Submits a document for background ingestion and returns its id so callers
-     * can poll {@link #status(String)}. Returns immediately; the job state
-     * starts as PENDING and becomes RUNNING once the worker thread picks it up.
+     * can poll {@link #status(String)}. Waits up to the configured queue wait
+     * for capacity; the job starts as PENDING once a worker is scheduled and
+     * becomes RUNNING when the worker picks it up.
+     *
+     * @throws CapacityExceededException when the gate stays saturated for the
+     *         whole queue wait, so the job is never registered
      */
     public String submit(Document document) {
         return submit(document.getId(), job -> run(job, () -> delegate.ingest(document)));
@@ -98,12 +103,11 @@ public class AsyncIngestionService {
 
     private String submit(String documentId, Consumer<Job> task) {
         evictOldJobs();
+        if (!limiter.tryEnter()) {
+            throw saturated();
+        }
         Job job = new Job(documentId);
         jobs.put(documentId, job);
-        if (!limiter.tryEnter()) {
-            rejectSaturated(job);
-            return documentId;
-        }
         job.state = STATE_PENDING;
         log.info("Async ingestion submitted: document {}", documentId);
         Span span = tracer != null ? tracer.currentSpan() : null;
@@ -117,11 +121,10 @@ public class AsyncIngestionService {
         return documentId;
     }
 
-    private void rejectSaturated(Job job) {
-        job.state = STATE_FAILED;
-        job.message = SATURATION_MESSAGE.formatted(limiter.waitTimeout().toMillis(), limiter.maxConcurrent());
-        job.finishedAt = System.nanoTime();
-        log.warn("Async ingestion rejected for document {}: {}", job.documentId, job.message);
+    private CapacityExceededException saturated() {
+        var message = SATURATION_MESSAGE.formatted(limiter.waitTimeout().toMillis(), limiter.maxConcurrent());
+        log.warn("Async ingestion rejected: {}", message);
+        return new CapacityExceededException(message);
     }
 
     private void failBeforeRun(Job job, RuntimeException failure) {

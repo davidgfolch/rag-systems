@@ -3,6 +3,7 @@ package com.rag.common.ingestion.web;
 import com.rag.common.core.domain.Document;
 import com.rag.common.core.domain.DocumentSummary;
 import com.rag.common.core.repositories.DocumentStorePort;
+import com.rag.common.core.resilience.CapacityExceededException;
 import com.rag.common.ingestion.AsyncIngestionService;
 import com.rag.common.ingestion.IngestionService;
 import com.rag.contract.model.DocumentSummaryDTO;
@@ -212,5 +213,11 @@ public class IngestionController {
     @ExceptionHandler(IngestionService.EmptyExtractionException.class)
     public ResponseEntity<String> handleEmptyExtraction(IngestionService.EmptyExtractionException e) {
         return ResponseEntity.unprocessableEntity().body(e.getMessage());
+    }
+
+    @ExceptionHandler(CapacityExceededException.class)
+    public ResponseEntity<String> handleCapacityExceeded(CapacityExceededException e) {
+        log.warn("Async ingestion rejected because capacity is exhausted: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(e.getMessage());
     }
 }

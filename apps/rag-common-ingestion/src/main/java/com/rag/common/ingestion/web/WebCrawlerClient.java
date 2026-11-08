@@ -1,6 +1,7 @@
 package com.rag.common.ingestion.web;
 
 import com.rag.common.core.resilience.RetryExecutor;
+import com.rag.common.core.resilience.RetryObserver;
 import com.rag.common.core.resilience.RetryPolicy;
 import com.rag.common.core.resilience.RetryableStatuses;
 import com.rag.contract.model.FetchRequest;
@@ -49,9 +50,13 @@ public class WebCrawlerClient implements WebPageFetcher {
     }
 
     public WebCrawlerClient(RestClient restClient, RetryPolicy retryPolicy) {
+        this(restClient, retryPolicy, RetryObserver.NOOP);
+    }
+
+    public WebCrawlerClient(RestClient restClient, RetryPolicy retryPolicy, RetryObserver observer) {
         this.restClient = restClient;
         this.retry = new RetryExecutor(Objects.requireNonNull(retryPolicy, "retryPolicy must not be null"),
-                WebCrawlerClient::isRetryable);
+                WebCrawlerClient::isRetryable, observer);
     }
 
     /**
@@ -60,13 +65,17 @@ public class WebCrawlerClient implements WebPageFetcher {
      * shared bean is left untouched.
      */
     public static WebCrawlerClient create(RestClient.Builder builder, String baseUrl) {
+        return create(builder, baseUrl, RetryObserver.NOOP);
+    }
+
+    public static WebCrawlerClient create(RestClient.Builder builder, String baseUrl, RetryObserver observer) {
         var requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(toMillis(DEFAULT_CONNECT_TIMEOUT));
         requestFactory.setReadTimeout(toMillis(DEFAULT_READ_TIMEOUT));
         log.debug("Building webcrawler client for {} (connect={} ms, read={} ms)",
                 baseUrl, toMillis(DEFAULT_CONNECT_TIMEOUT), toMillis(DEFAULT_READ_TIMEOUT));
         var client = builder.clone().baseUrl(baseUrl).requestFactory(requestFactory).build();
-        return new WebCrawlerClient(client, RetryPolicy.defaults());
+        return new WebCrawlerClient(client, RetryPolicy.defaults(), observer);
     }
 
     @Override

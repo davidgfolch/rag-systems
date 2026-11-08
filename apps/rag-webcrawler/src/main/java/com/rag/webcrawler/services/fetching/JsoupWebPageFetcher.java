@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.rag.common.core.resilience.RetryExecutor;
+import com.rag.common.core.resilience.RetryObserver;
 import com.rag.common.core.resilience.RetryPolicy;
 import com.rag.common.core.resilience.RetryableStatuses;
 
@@ -53,14 +54,23 @@ public class JsoupWebPageFetcher implements WebPageFetcher {
     }
 
     public JsoupWebPageFetcher(Duration timeout, RetryPolicy retryPolicy) {
-        this(null, timeout, retryPolicy);
+        this(null, timeout, retryPolicy, RetryObserver.NOOP);
+    }
+
+    public JsoupWebPageFetcher(Duration timeout, RetryPolicy retryPolicy, RetryObserver observer) {
+        this(null, timeout, retryPolicy, observer);
     }
 
     public JsoupWebPageFetcher(Connection connection, Duration timeout, RetryPolicy retryPolicy) {
+        this(connection, timeout, retryPolicy, RetryObserver.NOOP);
+    }
+
+    public JsoupWebPageFetcher(Connection connection, Duration timeout, RetryPolicy retryPolicy,
+                               RetryObserver observer) {
         this.connection = connection;
         this.timeout = requirePositive(timeout);
         this.retry = new RetryExecutor(Objects.requireNonNull(retryPolicy, "retryPolicy must not be null"),
-                JsoupWebPageFetcher::isRetryable);
+                JsoupWebPageFetcher::isRetryable, observer);
     }
 
     @Override

@@ -43,10 +43,11 @@ class ProviderClientFactoryTest {
 
     @Test
     void shouldRejectNonPositiveTimeouts() {
-        assertThatThrownBy(() -> new ProviderClientFactory(Duration.ZERO, Duration.ofSeconds(1)))
+        var oneSecond = Duration.ofSeconds(1);
+        assertThatThrownBy(() -> new ProviderClientFactory(Duration.ZERO, oneSecond))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("connectTimeout");
-        assertThatThrownBy(() -> new ProviderClientFactory(Duration.ofSeconds(1), Duration.ZERO))
+        assertThatThrownBy(() -> new ProviderClientFactory(oneSecond, Duration.ZERO))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("readTimeout");
     }

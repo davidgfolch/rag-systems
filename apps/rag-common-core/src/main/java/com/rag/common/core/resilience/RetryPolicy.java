@@ -55,7 +55,7 @@ public record RetryPolicy(int maxAttempts, Duration initialBackoff, Duration max
      */
     public Duration nextDelay(int failedAttempt) {
         int attempt = Math.max(failedAttempt, NO_RETRY_ATTEMPTS);
-        double exponential = initialBackoff.toMillis() * Math.pow(multiplier, attempt - NO_RETRY_ATTEMPTS);
+        double exponential = initialBackoff.toMillis() * Math.pow(multiplier, (double) attempt - NO_RETRY_ATTEMPTS);
         long capped = Math.min((long) exponential, maxBackoff.toMillis());
         long jitterMs = (long) (capped * jitter);
         long low = capped - jitterMs;

@@ -60,8 +60,9 @@ class PgVectorWriterRetryTest {
     void shouldGiveUpAfterTransientFailuresAreExhausted() throws Exception {
         when(statement.executeBatch()).thenThrow(sqlException("40P01"));
         var sut = writer();
+        var batch = List.of(chunk());
 
-        assertThatThrownBy(() -> sut.add(List.of(chunk())))
+        assertThatThrownBy(() -> sut.add(batch))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Failed to write 1 chunks to " + TABLE)
                 .hasMessageContaining("40P01");
@@ -72,8 +73,9 @@ class PgVectorWriterRetryTest {
     void shouldNotRetryIntegrityViolation() throws Exception {
         when(statement.executeBatch()).thenThrow(sqlException("23505"));
         var sut = writer();
+        var batch = List.of(chunk());
 
-        assertThatThrownBy(() -> sut.add(List.of(chunk())))
+        assertThatThrownBy(() -> sut.add(batch))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Failed to write 1 chunks to " + TABLE);
         verify(statement, times(1)).executeBatch();
@@ -83,8 +85,9 @@ class PgVectorWriterRetryTest {
     void shouldNotRetryMissingTable() throws Exception {
         when(statement.executeBatch()).thenThrow(sqlException("42P01"));
         var sut = writer();
+        var batch = List.of(chunk());
 
-        assertThatThrownBy(() -> sut.add(List.of(chunk())))
+        assertThatThrownBy(() -> sut.add(batch))
                 .isInstanceOf(IllegalStateException.class);
         verify(statement, times(1)).executeBatch();
     }

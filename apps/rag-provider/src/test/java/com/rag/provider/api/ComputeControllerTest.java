@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -26,6 +27,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -67,13 +69,14 @@ class ComputeControllerTest {
     }
 
     @Test
-    void shouldReturnServiceUnavailableWhenProviderIsBusy() throws Exception {
+    void shouldReturnTooManyRequestsWithRetryAfterWhenProviderIsBusy() throws Exception {
         when(embeddingService.embed(List.of("a"), null))
                 .thenThrow(new ProviderBusyException("capacity exhausted"));
         mockMvc.perform(post(EMBED)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"texts\":[\"a\"]}"))
-                .andExpect(status().isServiceUnavailable())
+                .andExpect(status().isTooManyRequests())
+                .andExpect(header().string(HttpHeaders.RETRY_AFTER, "5"))
                 .andExpect(content().string("capacity exhausted"));
     }
 

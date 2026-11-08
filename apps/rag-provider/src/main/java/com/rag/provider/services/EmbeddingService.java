@@ -3,6 +3,7 @@ package com.rag.provider.services;
 import com.rag.common.core.domain.FloatConversions;
 import com.rag.common.core.resilience.ConcurrencyLimiter;
 import com.rag.common.core.resilience.RetryExecutor;
+import com.rag.common.core.resilience.RetryObserver;
 import com.rag.common.core.resilience.RetryPolicy;
 import com.rag.common.core.resilience.RetryableStatuses;
 import org.slf4j.Logger;
@@ -49,11 +50,16 @@ public class EmbeddingService {
 
     public EmbeddingService(ModelRouter router, int maxEmbeddingBatchSize,
                             ConcurrencyLimiter limiter, RetryPolicy retryPolicy) {
+        this(router, maxEmbeddingBatchSize, limiter, retryPolicy, RetryObserver.NOOP);
+    }
+
+    public EmbeddingService(ModelRouter router, int maxEmbeddingBatchSize,
+                            ConcurrencyLimiter limiter, RetryPolicy retryPolicy, RetryObserver observer) {
         this.router = router;
         this.maxEmbeddingBatchSize = requirePositive(maxEmbeddingBatchSize);
         this.limiter = Objects.requireNonNull(limiter, "limiter must not be null");
         this.retry = new RetryExecutor(Objects.requireNonNull(retryPolicy, "retryPolicy must not be null"),
-                EmbeddingService::isRetryable);
+                EmbeddingService::isRetryable, observer);
     }
 
     public static ConcurrencyLimiter defaultLimiter() {

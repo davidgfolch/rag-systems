@@ -23,15 +23,25 @@ public final class RetryExecutor {
 
     private final RetryPolicy policy;
     private final Predicate<Throwable> retryable;
+    private final RetryObserver observer;
     private final Sleeper sleeper;
 
     public RetryExecutor(RetryPolicy policy, Predicate<Throwable> retryable) {
-        this(policy, retryable, Thread::sleep);
+        this(policy, retryable, RetryObserver.NOOP, Thread::sleep);
+    }
+
+    public RetryExecutor(RetryPolicy policy, Predicate<Throwable> retryable, RetryObserver observer) {
+        this(policy, retryable, observer, Thread::sleep);
     }
 
     RetryExecutor(RetryPolicy policy, Predicate<Throwable> retryable, Sleeper sleeper) {
+        this(policy, retryable, RetryObserver.NOOP, sleeper);
+    }
+
+    RetryExecutor(RetryPolicy policy, Predicate<Throwable> retryable, RetryObserver observer, Sleeper sleeper) {
         this.policy = policy;
         this.retryable = retryable;
+        this.observer = observer != null ? observer : RetryObserver.NOOP;
         this.sleeper = sleeper;
     }
 
@@ -57,15 +67,34 @@ public final class RetryExecutor {
     }
 
     private void backoff(String operation, int failedAttempt, RuntimeException failure) {
-        var delay = policy.nextDelay(failedAttempt);
-        log.warn("{} failed (attempt {}/{}): {}; retrying in {} ms", operation, failedAttempt,
-                policy.maxAttempts(), describe(failure), delay.toMillis());
+        var delay = retryDelay(failedAttempt, failure);
+        observer.onRetry(operation, failedAttempt, policy.maxAttempts(), delay, failure);
+        if (log.isWarnEnabled()) {
+            log.warn("{} failed (attempt {}/{}): {}; retrying in {} ms", operation, failedAttempt,
+                    policy.maxAttempts(), describe(failure), delay.toMillis());
+        }
         try {
             sleeper.sleep(delay);
-        } catch (InterruptedException e) {
+        } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
             throw failure;
         }
+    }
+
+    private Duration retryDelay(int failedAttempt, RuntimeException failure) {
+        var delay = policy.nextDelay(failedAttempt);
+        if (!(failure instanceof RetryHint hint)) {
+            return delay;
+        }
+        var requested = hint.retryAfter().map(this::clampToMaxBackoff).orElse(delay);
+        return requested.compareTo(delay) > 0 ? requested : delay;
+    }
+
+    private Duration clampToMaxBackoff(Duration hinted) {
+        if (hinted.isNegative()) {
+            return Duration.ZERO;
+        }
+        return hinted.compareTo(policy.maxBackoff()) > 0 ? policy.maxBackoff() : hinted;
     }
 
     private static String describe(Throwable failure) {

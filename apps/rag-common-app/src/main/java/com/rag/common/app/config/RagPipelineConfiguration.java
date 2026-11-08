@@ -12,6 +12,7 @@ import com.rag.common.app.pipeline.VariantStore;
 import com.rag.common.app.pipeline.VariantStoreFactory;
 import com.rag.common.core.repositories.VectorStorePort;
 import com.rag.common.core.resilience.ConcurrencyLimiter;
+import com.rag.common.core.resilience.ResilienceMetrics;
 import com.rag.common.core.resilience.RetryPolicy;
 import com.rag.common.core.services.ChatModelPort;
 import com.rag.common.core.services.DocumentChunker;
@@ -41,6 +42,7 @@ import com.rag.common.retrieval.store.InMemoryVectorStore;
 import com.rag.common.retrieval.store.PgVectorStoreAdapter;
 import com.rag.contract.pipeline.ChunkingStrategy;
 import com.rag.contract.pipeline.PipelineVariantDTO;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.tracing.Tracer;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
@@ -98,13 +100,15 @@ public class RagPipelineConfiguration {
             ObjectProvider<DataSource> dataSource,
             EmbeddingModel springAiEmbeddingModel,
             ProviderHttpClient providerHttpClient,
+            ObjectProvider<MeterRegistry> meterRegistry,
             @Value("${spring.ai.vectorstore.pgvector.schema-name:}") String schemaOverride) {
         return new VariantStoreFactory(jdbcTemplate, dataSource,
                 variant -> BOOT_VARIANT_ID.equals(variant.variantId())
                         ? springAiEmbeddingModel
                         : new RemoteEmbeddingModel(providerHttpClient, variant.embeddingDimension(),
                         variant.embeddingModel()),
-                springAiEmbeddingModel, schemaOverride);
+                springAiEmbeddingModel, schemaOverride,
+                ResilienceMetrics.of(meterRegistry.getIfAvailable()).retryObserver("pgvector"));
     }
 
     @Bean
@@ -189,8 +193,10 @@ public class RagPipelineConfiguration {
             @Value("${rag.provider.url:http://localhost:8086}") String baseUrl,
             ObjectMapper objectMapper,
             Tracer tracer,
-            ProviderHttpSettings providerHttpSettings) {
-        return new ProviderHttpClient(baseUrl, objectMapper, tracer, providerHttpSettings);
+            ProviderHttpSettings providerHttpSettings,
+            ObjectProvider<MeterRegistry> meterRegistry) {
+        return new ProviderHttpClient(baseUrl, objectMapper, tracer, providerHttpSettings,
+                ResilienceMetrics.of(meterRegistry.getIfAvailable()).retryObserver("provider-http"));
     }
 
     @Bean
@@ -231,8 +237,10 @@ public class RagPipelineConfiguration {
     @Bean
     public ConcurrencyLimiter ingestionLimiter(
             @Value("${rag.ingestion.max-concurrent:2}") int maxConcurrent,
-            @Value("${rag.ingestion.queue-wait:5m}") Duration queueWait) {
-        return new ConcurrencyLimiter("ingestion", maxConcurrent, queueWait);
+            @Value("${rag.ingestion.queue-wait:5m}") Duration queueWait,
+            ObjectProvider<MeterRegistry> meterRegistry) {
+        return ResilienceMetrics.of(meterRegistry.getIfAvailable())
+                .limiter("ingestion", maxConcurrent, queueWait);
     }
 
     @Bean

@@ -4,6 +4,7 @@ import com.rag.common.core.domain.Document;
 import com.rag.common.core.domain.DocumentSummary;
 import com.rag.common.core.domain.MetadataKeys;
 import com.rag.common.core.repositories.DocumentStorePort;
+import com.rag.common.core.resilience.CapacityExceededException;
 import com.rag.common.ingestion.AsyncIngestionService;
 import com.rag.common.ingestion.IngestionService;
 import com.rag.contract.model.DocumentSummaryDTO;
@@ -165,6 +166,14 @@ class IngestionControllerTest {
                 asyncController.ingestFileAsync(file, Map.of());
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         verify(service, never()).ingest(any());
+    }
+
+    @Test
+    void mapsCapacityExhaustionToServiceUnavailable() {
+        ResponseEntity<String> response =
+                controller.handleCapacityExceeded(new CapacityExceededException("capacity exhausted"));
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(response.getBody()).isEqualTo("capacity exhausted");
     }
 
     private static String awaitState(IngestionController asyncController, String documentId) {
