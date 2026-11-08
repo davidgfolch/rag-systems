@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pgvector.PGvector;
 import com.rag.common.core.domain.Chunk;
 import com.rag.common.core.resilience.RetryExecutor;
+import com.rag.common.core.resilience.RetryObserver;
 import com.rag.common.core.resilience.RetryPolicy;
 import com.rag.common.core.resilience.SqlRetry;
 import org.slf4j.Logger;
@@ -65,11 +66,16 @@ final class PgVectorWriter {
 
     PgVectorWriter(DataSource dataSource, String qualifiedTable, String rawIndexName,
                    RetryPolicy retryPolicy, int queryTimeoutSeconds) {
+        this(dataSource, qualifiedTable, rawIndexName, retryPolicy, queryTimeoutSeconds, RetryObserver.NOOP);
+    }
+
+    PgVectorWriter(DataSource dataSource, String qualifiedTable, String rawIndexName,
+                   RetryPolicy retryPolicy, int queryTimeoutSeconds, RetryObserver observer) {
         this.dataSource = dataSource;
         this.qualifiedTable = qualifiedTable;
         this.indexName = quote(truncate(rawIndexName));
         this.insertSql = INSERT_SQL_TEMPLATE.formatted(qualifiedTable);
-        this.retry = new RetryExecutor(retryPolicy, SqlRetry::isTransient);
+        this.retry = new RetryExecutor(retryPolicy, SqlRetry::isTransient, observer);
         this.queryTimeoutSeconds = queryTimeoutSeconds;
     }
 
@@ -135,6 +141,7 @@ final class PgVectorWriter {
         }
     }
 
+    @SuppressWarnings("java:S2077") // identifiers are quoted constants, not user input
     private void executeIndex() {
         try (var conn = dataSource.getConnection();
              var stmt = conn.createStatement()) {

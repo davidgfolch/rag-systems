@@ -76,10 +76,30 @@ class ProviderHttpClientRetryTest {
             respond(exchange, 503, "text/plain", "busy");
         });
 
-        assertThatThrownBy(() -> resilientClient().postJson(ApiPaths.COMPLETE,
-                new CompleteRequest("hi"), CompleteResponse.class))
+        var client = resilientClient();
+        var req = new CompleteRequest("hi");
+        assertThatThrownBy(() -> client.postJson(ApiPaths.COMPLETE, req, CompleteResponse.class))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("HTTP 503");
+        assertThat(calls).hasValue(FAST_RETRY_ATTEMPTS);
+    }
+
+    @Test
+    void shouldRetryRateLimitedResponse() {
+        var calls = new AtomicInteger();
+        server.createContext(ApiPaths.COMPLETE, exchange -> {
+            exchange.getResponseHeaders().set("Retry-After", "0");
+            if (calls.incrementAndGet() < FAST_RETRY_ATTEMPTS) {
+                respond(exchange, 429, "text/plain", "slow down");
+            } else {
+                respond(exchange, 200, "application/json", ANSWER_JSON);
+            }
+        });
+
+        var answer = resilientClient().postJson(ApiPaths.COMPLETE,
+                new CompleteRequest("hi"), CompleteResponse.class);
+
+        assertThat(answer.answer()).isEqualTo("Hi");
         assertThat(calls).hasValue(FAST_RETRY_ATTEMPTS);
     }
 
@@ -91,8 +111,9 @@ class ProviderHttpClientRetryTest {
             respond(exchange, 400, "text/plain", "bad request");
         });
 
-        assertThatThrownBy(() -> resilientClient().postJson(ApiPaths.COMPLETE,
-                new CompleteRequest("hi"), CompleteResponse.class))
+        var client = resilientClient();
+        var req = new CompleteRequest("hi");
+        assertThatThrownBy(() -> client.postJson(ApiPaths.COMPLETE, req, CompleteResponse.class))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("HTTP 400");
         assertThat(calls).hasValue(1);

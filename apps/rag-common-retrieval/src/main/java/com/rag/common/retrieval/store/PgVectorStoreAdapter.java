@@ -3,6 +3,7 @@ package com.rag.common.retrieval.store;
 import com.rag.common.core.domain.Chunk;
 import com.rag.common.core.domain.DocumentSummary;
 import com.rag.common.core.repositories.VectorStorePort;
+import com.rag.common.core.resilience.RetryObserver;
 import com.rag.common.core.resilience.RetryPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,7 +41,6 @@ public class PgVectorStoreAdapter implements VectorStorePort {
     private static final int QUERY_TIMEOUT_SECONDS = 30;
 
     private final VectorStore delegate;
-    private final DataSource dataSource;
     private final String table;
     private final PgVectorWriter writer;
     private final PgVectorJdbc jdbc;
@@ -64,14 +64,19 @@ public class PgVectorStoreAdapter implements VectorStorePort {
 
     public PgVectorStoreAdapter(VectorStore delegate, DataSource dataSource,
                                 String schema, String table, RetryPolicy retryPolicy) {
+        this(delegate, dataSource, schema, table, retryPolicy, RetryObserver.NOOP);
+    }
+
+    public PgVectorStoreAdapter(VectorStore delegate, DataSource dataSource,
+                                String schema, String table, RetryPolicy retryPolicy,
+                                RetryObserver observer) {
         this.delegate = delegate;
-        this.dataSource = dataSource;
         this.table = qualified(schema, table);
         this.writer = dataSource == null ? null
                 : new PgVectorWriter(dataSource, this.table, PgVectorWriter.indexName(schema, table),
-                retryPolicy, QUERY_TIMEOUT_SECONDS);
+                retryPolicy, QUERY_TIMEOUT_SECONDS, observer);
         this.jdbc = dataSource == null ? null
-                : new PgVectorJdbc(dataSource, this.table, retryPolicy, QUERY_TIMEOUT_SECONDS);
+                : new PgVectorJdbc(dataSource, this.table, retryPolicy, QUERY_TIMEOUT_SECONDS, observer);
     }
 
     /**

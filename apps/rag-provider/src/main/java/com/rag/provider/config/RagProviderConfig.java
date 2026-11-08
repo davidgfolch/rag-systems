@@ -2,6 +2,7 @@ package com.rag.provider.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rag.common.core.resilience.ConcurrencyLimiter;
+import com.rag.common.core.resilience.ResilienceMetrics;
 import com.rag.common.core.resilience.RetryPolicy;
 import com.rag.provider.adapter.ModelsDevCatalogClient;
 import com.rag.provider.adapter.ProviderClientFactory;
@@ -17,6 +18,8 @@ import com.rag.provider.services.ModelCatalogService;
 import com.rag.provider.services.ModelRouter;
 import com.rag.provider.services.OllamaEndpointResolver;
 import com.rag.provider.services.ProviderRegistry;
+import io.micrometer.core.instrument.MeterRegistry;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -78,8 +81,10 @@ public class RagProviderConfig {
     @Bean
     public ConcurrencyLimiter embeddingLimiter(
             @Value("${rag.provider.embedding.max-concurrent:2}") int maxConcurrent,
-            @Value("${rag.provider.embedding.queue-wait:180s}") Duration queueWait) {
-        return new ConcurrencyLimiter("provider-embedding", maxConcurrent, queueWait);
+            @Value("${rag.provider.embedding.queue-wait:180s}") Duration queueWait,
+            ObjectProvider<MeterRegistry> meterRegistry) {
+        return ResilienceMetrics.of(meterRegistry.getIfAvailable())
+                .limiter("provider-embedding", maxConcurrent, queueWait);
     }
 
     @Bean
@@ -128,7 +133,9 @@ public class RagProviderConfig {
     public EmbeddingService embeddingService(
             ModelRouter router,
             @Value("${rag.provider.embedding.batch-size:32}") int maxEmbeddingBatchSize,
-            ConcurrencyLimiter embeddingLimiter, RetryPolicy providerRetryPolicy) {
-        return new EmbeddingService(router, maxEmbeddingBatchSize, embeddingLimiter, providerRetryPolicy);
+            ConcurrencyLimiter embeddingLimiter, RetryPolicy providerRetryPolicy,
+            ObjectProvider<MeterRegistry> meterRegistry) {
+        return new EmbeddingService(router, maxEmbeddingBatchSize, embeddingLimiter, providerRetryPolicy,
+                ResilienceMetrics.of(meterRegistry.getIfAvailable()).retryObserver("provider-embedding"));
     }
 }

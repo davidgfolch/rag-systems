@@ -1,5 +1,6 @@
 package com.rag.webcrawler.config;
 
+import com.rag.common.core.resilience.ResilienceMetrics;
 import com.rag.common.core.resilience.RetryPolicy;
 import com.rag.common.core.services.ChatModelPort;
 import com.rag.webcrawler.services.WebCrawlService;
@@ -12,6 +13,7 @@ import com.rag.webcrawler.services.fetching.WebPageFetcher;
 import com.rag.webcrawler.services.ranking.DeterministicLinkPrioritizer;
 import com.rag.webcrawler.services.ranking.LinkPrioritizer;
 import com.rag.webcrawler.services.ranking.LlmLinkPrioritizer;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -35,8 +37,10 @@ public class WebcrawlerConfig {
     @Bean
     public WebPageFetcher webPageFetcher(
             @Value("${rag.crawler.fetch.timeout-seconds:20}") long timeoutSeconds,
-            RetryPolicy crawlerRetryPolicy) {
-        return new JsoupWebPageFetcher(Duration.ofSeconds(timeoutSeconds), crawlerRetryPolicy);
+            RetryPolicy crawlerRetryPolicy,
+            ObjectProvider<MeterRegistry> meterRegistry) {
+        return new JsoupWebPageFetcher(Duration.ofSeconds(timeoutSeconds), crawlerRetryPolicy,
+                metrics(meterRegistry).retryObserver("webcrawler"));
     }
 
     @Bean
@@ -63,8 +67,10 @@ public class WebcrawlerConfig {
     }
 
     @Bean
-    public UrlContentLoader urlContentLoader(RetryPolicy crawlerRetryPolicy) {
-        return new HttpUrlContentLoader(crawlerRetryPolicy);
+    public UrlContentLoader urlContentLoader(RetryPolicy crawlerRetryPolicy,
+                                            ObjectProvider<MeterRegistry> meterRegistry) {
+        return new HttpUrlContentLoader(crawlerRetryPolicy,
+                metrics(meterRegistry).retryObserver("webcrawler"));
     }
 
     @Bean
@@ -81,5 +87,9 @@ public class WebcrawlerConfig {
             SitemapUrlDiscovery sitemaps,
             @Value("${rag.crawler.discovery.max-urls:2000}") int maxUrls) {
         return new UrlDiscoveryService(fetcher, sitemaps, maxUrls);
+    }
+
+    private static ResilienceMetrics metrics(ObjectProvider<MeterRegistry> meterRegistry) {
+        return ResilienceMetrics.of(meterRegistry.getIfAvailable());
     }
 }

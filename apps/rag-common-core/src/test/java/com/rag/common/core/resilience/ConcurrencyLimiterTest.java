@@ -1,5 +1,6 @@
 package com.rag.common.core.resilience;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
@@ -54,5 +55,22 @@ class ConcurrencyLimiterTest {
         org.assertj.core.api.Assertions.assertThatThrownBy(
                         () -> new ConcurrencyLimiter("test", 0, Duration.ZERO))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void shouldRecordInFlightWaitAndRejectionsWhenRegistryIsPresent() {
+        var registry = new SimpleMeterRegistry();
+        var limiter = new ConcurrencyLimiter("instrumented", 1, Duration.ofMillis(1), registry);
+
+        assertThat(limiter.tryEnter()).isTrue();
+        assertThat(limiter.tryEnter()).isFalse();
+        limiter.exit();
+
+        assertThat(registry.get(ConcurrencyLimiter.IN_FLIGHT_METRIC).tag("name", "instrumented")
+                .gauge().value()).isZero();
+        assertThat(registry.get(ConcurrencyLimiter.REJECTIONS_METRIC).tag("name", "instrumented")
+                .counter().count()).isEqualTo(1.0);
+        assertThat(registry.get(ConcurrencyLimiter.WAIT_METRIC).tag("name", "instrumented")
+                .timer().count()).isEqualTo(2);
     }
 }

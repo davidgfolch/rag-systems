@@ -73,10 +73,11 @@ class JsoupWebPageFetcherResilienceTest {
 
     @Test
     void shouldRejectNonPositiveTimeout() {
-        assertThatThrownBy(() -> new JsoupWebPageFetcher((Duration) null, RetryPolicy.noRetry()))
+        var policy = RetryPolicy.noRetry();
+        assertThatThrownBy(() -> new JsoupWebPageFetcher((Duration) null, policy))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("timeout");
-        assertThatThrownBy(() -> new JsoupWebPageFetcher(Duration.ZERO, RetryPolicy.noRetry()))
+        assertThatThrownBy(() -> new JsoupWebPageFetcher(Duration.ZERO, policy))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("timeout");
     }

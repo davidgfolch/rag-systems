@@ -1,6 +1,8 @@
 package com.rag.common.app.pipeline;
 
 import com.rag.common.core.repositories.VectorStorePort;
+import com.rag.common.core.resilience.RetryObserver;
+import com.rag.common.core.resilience.RetryPolicy;
 import com.rag.common.retrieval.store.PgVectorStoreAdapter;
 import com.rag.contract.pipeline.PipelineVariantDTO;
 import org.slf4j.Logger;
@@ -33,15 +35,24 @@ public class VariantStoreFactory implements VariantStores {
     private final Function<PipelineVariantDTO, EmbeddingModel> embeddingModels;
     private final EmbeddingModel defaultEmbeddingModel;
     private final String schemaOverride;
+    private final RetryObserver retryObserver;
 
     public VariantStoreFactory(ObjectProvider<JdbcTemplate> jdbcTemplate, ObjectProvider<DataSource> dataSource,
                                Function<PipelineVariantDTO, EmbeddingModel> embeddingModels,
                                EmbeddingModel defaultEmbeddingModel, String schemaOverride) {
+        this(jdbcTemplate, dataSource, embeddingModels, defaultEmbeddingModel, schemaOverride, RetryObserver.NOOP);
+    }
+
+    public VariantStoreFactory(ObjectProvider<JdbcTemplate> jdbcTemplate, ObjectProvider<DataSource> dataSource,
+                               Function<PipelineVariantDTO, EmbeddingModel> embeddingModels,
+                               EmbeddingModel defaultEmbeddingModel, String schemaOverride,
+                               RetryObserver retryObserver) {
         this.jdbcTemplate = jdbcTemplate;
         this.dataSource = dataSource;
         this.embeddingModels = embeddingModels;
         this.defaultEmbeddingModel = defaultEmbeddingModel;
         this.schemaOverride = schemaOverride;
+        this.retryObserver = retryObserver != null ? retryObserver : RetryObserver.NOOP;
     }
 
     @Override
@@ -59,7 +70,8 @@ public class VariantStoreFactory implements VariantStores {
                 .vectorTableName(table)
                 .initializeSchema(true)
                 .build();
-        return new PgVectorStoreAdapter(pgStore, dataSource.getIfAvailable(), schema, table);
+        return new PgVectorStoreAdapter(pgStore, dataSource.getIfAvailable(), schema, table,
+                RetryPolicy.defaults(), retryObserver);
     }
 
     @Override

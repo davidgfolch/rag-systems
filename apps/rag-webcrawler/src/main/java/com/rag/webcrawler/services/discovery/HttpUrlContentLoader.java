@@ -1,6 +1,7 @@
 package com.rag.webcrawler.services.discovery;
 
 import com.rag.common.core.resilience.RetryExecutor;
+import com.rag.common.core.resilience.RetryObserver;
 import com.rag.common.core.resilience.RetryPolicy;
 import com.rag.common.core.resilience.RetryableStatuses;
 import org.slf4j.Logger;
@@ -55,13 +56,21 @@ public class HttpUrlContentLoader implements UrlContentLoader {
     }
 
     public HttpUrlContentLoader(RetryPolicy retryPolicy) {
-        this(defaultClient(), retryPolicy);
+        this(defaultClient(), retryPolicy, RetryObserver.NOOP);
+    }
+
+    public HttpUrlContentLoader(RetryPolicy retryPolicy, RetryObserver observer) {
+        this(defaultClient(), retryPolicy, observer);
     }
 
     public HttpUrlContentLoader(HttpClient client, RetryPolicy retryPolicy) {
+        this(client, retryPolicy, RetryObserver.NOOP);
+    }
+
+    public HttpUrlContentLoader(HttpClient client, RetryPolicy retryPolicy, RetryObserver observer) {
         this.client = client;
         this.retry = new RetryExecutor(Objects.requireNonNull(retryPolicy, "retryPolicy must not be null"),
-                HttpUrlContentLoader::isRetryable);
+                HttpUrlContentLoader::isRetryable, observer);
     }
 
     @Override
@@ -98,6 +107,7 @@ public class HttpUrlContentLoader implements UrlContentLoader {
             }
             return res;
         } catch (InterruptedException _) {
+            Thread.currentThread().interrupt();
             throw new InterruptedLoad();
         } catch (IOException e) {
             throw new IoFailure(e);

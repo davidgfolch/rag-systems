@@ -5,7 +5,7 @@
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.5-6DB33F?logo=spring)](https://spring.io/projects/spring-boot)
 [![Maven](https://img.shields.io/badge/Maven-3.9-C71A36?logo=apache-maven)](https://maven.apache.org/)
 <!-- COVERAGE_BADGES_START -->
-![rag-advanced](https://img.shields.io/badge/rag--advanced-98%25-brightgreen)  ![rag-agentic](https://img.shields.io/badge/rag--agentic-93%25-brightgreen)  ![rag-basic](https://img.shields.io/badge/rag--basic-100%25-brightgreen)  ![rag-common-app](https://img.shields.io/badge/rag--common--app-92%25-brightgreen)  ![rag-common-core](https://img.shields.io/badge/rag--common--core-92%25-brightgreen)  ![rag-common-generation](https://img.shields.io/badge/rag--common--generation-89%25-brightgreen)  ![rag-common-ingestion](https://img.shields.io/badge/rag--common--ingestion-89%25-brightgreen)  ![rag-common-retrieval](https://img.shields.io/badge/rag--common--retrieval-96%25-brightgreen)  ![rag-memory](https://img.shields.io/badge/rag--memory-99%25-brightgreen)  ![rag-provider](https://img.shields.io/badge/rag--provider-93%25-brightgreen)  ![rag-tui](https://img.shields.io/badge/rag--tui-90%25-brightgreen)  ![rag-webcrawler](https://img.shields.io/badge/rag--webcrawler-90%25-brightgreen)
+![rag-advanced](https://img.shields.io/badge/rag--advanced-98%25-brightgreen)  ![rag-agentic](https://img.shields.io/badge/rag--agentic-93%25-brightgreen)  ![rag-basic](https://img.shields.io/badge/rag--basic-100%25-brightgreen)  ![rag-common-app](https://img.shields.io/badge/rag--common--app-92%25-brightgreen)  ![rag-common-core](https://img.shields.io/badge/rag--common--core-92%25-brightgreen)  ![rag-common-generation](https://img.shields.io/badge/rag--common--generation-89%25-brightgreen)  ![rag-common-ingestion](https://img.shields.io/badge/rag--common--ingestion-89%25-brightgreen)  ![rag-common-retrieval](https://img.shields.io/badge/rag--common--retrieval-95%25-brightgreen)  ![rag-memory](https://img.shields.io/badge/rag--memory-99%25-brightgreen)  ![rag-provider](https://img.shields.io/badge/rag--provider-93%25-brightgreen)  ![rag-tui](https://img.shields.io/badge/rag--tui-90%25-brightgreen)  ![rag-webcrawler](https://img.shields.io/badge/rag--webcrawler-90%25-brightgreen)
 <!-- COVERAGE_BADGES_END -->
 
 <!-- SONARQUBE_RESULTS_START -->
@@ -16,10 +16,10 @@
 | Vulnerabilities | 0 |
 | Security Hotspots | 0 |
 | Code Smells | 0 |
-| Coverage | 90.9% |
+| Coverage | 90.8% |
 | Duplication | 0.2%
 
-*Last scan: 2026-11-08 08:15 UTC*
+*Last scan: 2026-11-08 09:12 UTC*
 <!-- SONARQUBE_RESULTS_END -->
 
 A monorepo for learning and comparing different RAG (Retrieval-Augmented Generation) implementations using Java Spring Boot and Spring AI. Each module is a decoupled bounded context with interchangeable chunking, embedding, and retrieval strategies — designed to be reusable across knowledge domains and to run comfortably on a regular local machine.

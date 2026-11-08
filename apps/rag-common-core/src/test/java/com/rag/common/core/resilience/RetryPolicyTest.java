@@ -55,13 +55,15 @@ class RetryPolicyTest {
 
     @Test
     void shouldRejectInvalidConfiguration() {
-        assertThatThrownBy(() -> new RetryPolicy(0, Duration.ofMillis(1), Duration.ofMillis(1), 2.0, 0))
+        var shortBackoff = Duration.ofMillis(1);
+        var longBackoff = Duration.ofMillis(10);
+        assertThatThrownBy(() -> new RetryPolicy(0, shortBackoff, shortBackoff, 2.0, 0))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new RetryPolicy(2, Duration.ofMillis(10), Duration.ofMillis(1), 2.0, 0))
+        assertThatThrownBy(() -> new RetryPolicy(2, longBackoff, shortBackoff, 2.0, 0))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new RetryPolicy(2, Duration.ofMillis(1), Duration.ofMillis(10), 0.5, 0))
+        assertThatThrownBy(() -> new RetryPolicy(2, shortBackoff, longBackoff, 0.5, 0))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new RetryPolicy(2, Duration.ofMillis(1), Duration.ofMillis(10), 2.0, 1.5))
+        assertThatThrownBy(() -> new RetryPolicy(2, shortBackoff, longBackoff, 2.0, 1.5))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

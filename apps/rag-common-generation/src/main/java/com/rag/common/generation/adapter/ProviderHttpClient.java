@@ -3,6 +3,7 @@ package com.rag.common.generation.adapter;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rag.common.core.resilience.RetryExecutor;
+import com.rag.common.core.resilience.RetryObserver;
 import com.rag.common.core.tracing.TracePropagation;
 import io.micrometer.tracing.Tracer;
 import org.slf4j.Logger;
@@ -33,6 +34,7 @@ public class ProviderHttpClient {
     private static final String CONTENT_TYPE_HEADER = "Content-Type";
     private static final String ACCEPT_HEADER = "Accept";
     private static final String ACCEPT_EVENT_STREAM = "text/event-stream";
+    private static final String RETRY_AFTER_HEADER = "Retry-After";
     private static final int ERROR_STATUS_MIN = 400;
 
     private final String baseUrl;
@@ -60,17 +62,29 @@ public class ProviderHttpClient {
 
     public ProviderHttpClient(String baseUrl, ObjectMapper objectMapper, Tracer tracer,
                               ProviderHttpSettings settings) {
-        this(baseUrl, defaultClient(settings.connectTimeout()), objectMapper, tracer, settings);
+        this(baseUrl, defaultClient(settings.connectTimeout()), objectMapper, tracer, settings,
+                RetryObserver.NOOP);
+    }
+
+    public ProviderHttpClient(String baseUrl, ObjectMapper objectMapper, Tracer tracer,
+                              ProviderHttpSettings settings, RetryObserver observer) {
+        this(baseUrl, defaultClient(settings.connectTimeout()), objectMapper, tracer, settings, observer);
     }
 
     public ProviderHttpClient(String baseUrl, HttpClient httpClient, ObjectMapper objectMapper,
                               Tracer tracer, ProviderHttpSettings settings) {
+        this(baseUrl, httpClient, objectMapper, tracer, settings, RetryObserver.NOOP);
+    }
+
+    public ProviderHttpClient(String baseUrl, HttpClient httpClient, ObjectMapper objectMapper,
+                              Tracer tracer, ProviderHttpSettings settings, RetryObserver observer) {
         this.baseUrl = trimSlash(baseUrl);
         this.httpClient = httpClient;
         this.objectMapper = objectMapper;
         this.tracer = tracer;
         this.settings = settings;
-        this.retry = new RetryExecutor(ProviderHttpRetry.policy(settings), ProviderHttpRetry::isRetryable);
+        this.retry = new RetryExecutor(ProviderHttpRetry.policy(settings), ProviderHttpRetry::isRetryable,
+                observer);
     }
 
     public <T> T postJson(String path, Object body, Class<T> responseType) {
@@ -140,7 +154,7 @@ public class ProviderHttpClient {
             if (response.statusCode() >= ERROR_STATUS_MIN) {
                 closeQuietly(response.body());
                 throw new ProviderHttpException(response.statusCode(),
-                        "Provider stream failed: HTTP " + response.statusCode());
+                        "Provider stream failed: HTTP " + response.statusCode(), retryAfter(response));
             }
             return response.body();
         } catch (InterruptedException e) {
@@ -173,7 +187,8 @@ public class ProviderHttpClient {
     private <T> T parse(HttpResponse<String> response, Class<T> responseType) {
         if (response.statusCode() >= ERROR_STATUS_MIN) {
             throw new ProviderHttpException(response.statusCode(),
-                    "Provider request failed: HTTP " + response.statusCode() + " -> " + response.body());
+                    "Provider request failed: HTTP " + response.statusCode() + " -> " + response.body(),
+                    retryAfter(response));
         }
         try {
             return objectMapper.readValue(response.body(), responseType);
@@ -202,6 +217,12 @@ public class ProviderHttpClient {
         } catch (IOException e) {
             log.debug("Could not close failed provider stream body: {}", e.getMessage());
         }
+    }
+
+    private static Duration retryAfter(HttpResponse<?> response) {
+        return response.headers().firstValue(RETRY_AFTER_HEADER)
+                .flatMap(RetryAfter::parse)
+                .orElse(null);
     }
 
     private URI uri(String path) {

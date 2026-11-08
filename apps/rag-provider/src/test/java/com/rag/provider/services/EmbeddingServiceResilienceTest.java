@@ -70,9 +70,11 @@ class EmbeddingServiceResilienceTest {
     @Test
     void shouldFailFastWhenSaturatedWithoutCallingTheModel() {
         var limiter = new ConcurrencyLimiter("test", 1, SHORT_WAIT);
+        var service = service(limiter);
+        var texts = List.of("a");
         assertThat(limiter.tryEnter()).isTrue();
         try {
-            assertThatThrownBy(() -> service(limiter).embed(List.of("a")))
+            assertThatThrownBy(() -> service.embed(texts))
                     .isInstanceOf(ProviderBusyException.class)
                     .hasMessageContaining("capacity exhausted");
             verifyNoInteractions(embeddingModel);
@@ -88,8 +90,9 @@ class EmbeddingServiceResilienceTest {
                 .thenThrow(new IllegalArgumentException("permanent"));
         var limiter = new ConcurrencyLimiter("test", 1, SHORT_WAIT);
         var service = service(limiter);
+        var texts = List.of("a");
 
-        assertThatThrownBy(() -> service.embed(List.of("a")))
+        assertThatThrownBy(() -> service.embed(texts))
                 .isInstanceOf(IllegalArgumentException.class);
 
         assertThat(limiter.inFlight()).isZero();

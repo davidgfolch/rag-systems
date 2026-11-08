@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rag.common.core.domain.DocumentSummary;
 import com.rag.common.core.resilience.RetryExecutor;
+import com.rag.common.core.resilience.RetryObserver;
 import com.rag.common.core.resilience.RetryPolicy;
 import com.rag.common.core.resilience.SqlRetry;
 import org.slf4j.Logger;
@@ -50,9 +51,14 @@ final class PgVectorJdbc {
     private final int queryTimeoutSeconds;
 
     PgVectorJdbc(DataSource dataSource, String table, RetryPolicy retryPolicy, int queryTimeoutSeconds) {
+        this(dataSource, table, retryPolicy, queryTimeoutSeconds, RetryObserver.NOOP);
+    }
+
+    PgVectorJdbc(DataSource dataSource, String table, RetryPolicy retryPolicy, int queryTimeoutSeconds,
+                 RetryObserver observer) {
         this.dataSource = dataSource;
         this.table = table;
-        this.retry = new RetryExecutor(retryPolicy, SqlRetry::isTransient);
+        this.retry = new RetryExecutor(retryPolicy, SqlRetry::isTransient, observer);
         this.queryTimeoutSeconds = queryTimeoutSeconds;
     }
 

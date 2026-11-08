@@ -1,6 +1,7 @@
 package com.rag.common.ingestion;
 
 import com.rag.common.core.domain.Document;
+import com.rag.common.core.resilience.CapacityExceededException;
 import com.rag.common.core.resilience.ConcurrencyLimiter;
 import org.junit.jupiter.api.Test;
 
@@ -16,6 +17,7 @@ import static com.rag.common.ingestion.AsyncIngestionService.STATE_COMPLETED;
 import static com.rag.common.ingestion.AsyncIngestionService.STATE_FAILED;
 import static com.rag.common.ingestion.AsyncIngestionService.STATE_PENDING;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -27,7 +29,7 @@ class AsyncIngestionServiceConcurrencyTest {
     private final IngestionService delegate = mock(IngestionService.class);
 
     @Test
-    void shouldFailJobWhenCapacityWaitExpires() {
+    void shouldThrowWhenCapacityWaitExpires() {
         var captured = new AtomicReference<Runnable>();
         when(delegate.ingest(any())).thenReturn(new IngestionService.IngestionResult("d1", 0));
         var service = new AsyncIngestionService(delegate, null, capturingExecutor(captured), null,
@@ -35,10 +37,12 @@ class AsyncIngestionServiceConcurrencyTest {
         var first = service.submit(new Document("d1", "content", Map.of()));
         assertThat(service.status(first).state()).isEqualTo(STATE_PENDING);
 
-        var second = service.submit(new Document("d2", "content", Map.of()));
+        var second = new Document("d2", "content", Map.of());
+        assertThatThrownBy(() -> service.submit(second))
+                .isInstanceOf(CapacityExceededException.class)
+                .hasMessageContaining("capacity exhausted");
 
-        assertThat(service.status(second).state()).isEqualTo(STATE_FAILED);
-        assertThat(service.status(second).message()).contains("capacity exhausted");
+        assertThat(service.status("d2").state()).isEqualTo(STATE_FAILED);
         captured.get().run();
         assertThat(service.status(first).state()).isEqualTo(STATE_COMPLETED);
     }

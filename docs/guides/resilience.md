@@ -14,8 +14,8 @@ The pipeline now applies three safeguards at every network boundary:
    are retried, so a slow provider recovers instead of failing the whole crawl.
 
 The shared primitives live in `rag-common-core` (`com.rag.common.core.resilience`):
-`RetryPolicy`, `RetryExecutor`, `ConcurrencyLimiter`, `RetryableStatuses` and
-`SqlRetry`.
+`RetryPolicy`, `RetryExecutor`, `RetryObserver`, `RetryHint`, `ConcurrencyLimiter`,
+`RetryableStatuses`, `ResilienceMetrics` and `SqlRetry`.
 
 ## Defaults
 
@@ -44,7 +44,9 @@ Retries are limited to **idempotent** operations and **transient** failures.
 **HTTP** (`RetryableStatuses`): `408`, `425`, `429` and every `5xx`. Connection
 resets, DNS failures and timeouts are retried. Other client errors (`400`, `401`,
 `403`, `404`, `409`, `422`, …) fail immediately because repeating the request
-cannot help.
+cannot help. When a response carries a `Retry-After` header, the retry waits at
+least that long (clamped to `max-backoff`), so a `429` from a saturated provider
+is not immediately hammered again.
 
 **SQL** (`SqlRetry`): `SQLState` classes `08` (connection loss), `40` (deadlock /
 serialization / rollback), `53` (insufficient resources) and `57P03` (cannot
@@ -65,20 +67,49 @@ answer or double-bill a provider call.
 ## Saturation behaviour
 
 When the ingestion limiter cannot hand out a permit within `rag.ingestion.queue-wait`,
-the job is marked `FAILED` with:
+`AsyncIngestionService` throws `CapacityExceededException` before registering the
+job, with:
 
 ```
 Ingestion capacity exhausted after waiting <ms> ms (max concurrent <n>)
 ```
 
-The same applies to provider embeddings: when the provider's limiter is full it
-returns HTTP `503` with `ProviderBusyException` instead of piling more work onto
-Ollama. This is intentional backpressure — the crawl keeps scheduling, and each
-page resolves as `DONE` or `FAILED` rather than hanging.
+The async endpoints map that to HTTP `503`, and an interactive crawl step reports
+the page as not ingested instead of pretending it is `DONE`. No `FAILED` job is
+left behind for a document that was never accepted.
+
+Provider embeddings behave the same way: when the provider's limiter is full it
+returns HTTP `429` with `Retry-After: 5` (and `ProviderBusyException` as the
+body), so module clients back off instead of piling more work onto Ollama. The
+module client honours the header on its next attempt. This is intentional
+backpressure.
 
 `add-url --all` still submits pages asynchronously, so the shell stays
 responsive. The crawl step holds the session lock while submitting, which means
 `add-url-cancel` can be delayed by up to the queue wait under heavy saturation.
+
+## Metrics
+
+Resilience primitives register Micrometer meters when a `MeterRegistry` is
+present. Metrics are optional: contexts without observability keep the same
+behaviour with instrumentation disabled.
+
+| Meter | Type | Tags | Meaning |
+|-------|------|------|---------|
+| `rag.resilience.retry` | counter | `component` | Transient failures scheduled for another attempt |
+| `rag.resilience.retry.delay` | timer | `component` | Backoff delay applied before each retry |
+| `rag.resilience.limiter.in_flight` | gauge | `name` | Permits currently held by the gate |
+| `rag.resilience.limiter.rejections` | counter | `name` | Callers rejected after the queue wait |
+| `rag.resilience.limiter.wait` | timer | `name` | Time callers spent waiting for a permit |
+
+Components currently instrumented: `provider-http`, `provider-embedding`,
+`ingestion`, `pgvector`, `webcrawler` and `crawler-client`. Query them in
+Prometheus, for example:
+
+```promql
+rate(rag_resilience_retry_total[5m]) by (component)
+histogram_quantile(0.95, sum by (le, name) (rate(rag_resilience_limiter_wait_seconds_bucket[5m])))
+```
 
 ## Ollama limits
 
@@ -112,7 +143,8 @@ inside Ollama and eventually time out.
 | Symptom | Likely cause | Action |
 |---------|--------------|--------|
 | `Ingestion capacity exhausted` | More pages than the ingestion gate allows | Wait, lower crawl scope, or raise `rag.ingestion.max-concurrent` |
-| HTTP `503` from rag-provider | Provider embedding limiter saturated | Lower crawl scope or raise `rag.provider.embedding.max-concurrent` |
+| HTTP `503` from an async ingest endpoint | Ingestion limiter stayed saturated for the whole queue wait | Retry later or lower crawl scope |
+| HTTP `429` from rag-provider | Provider embedding limiter saturated | Honour `Retry-After`, lower crawl scope or raise `rag.provider.embedding.max-concurrent` |
 | `HttpTimeoutException` | Ollama too slow or queue unbounded | Raise `read-timeout`, lower concurrency, set Ollama limits |
 | Repeated retry warnings | Persistent downstream failure | Check container logs; retries only mask transient errors |
 | `42P01` missing table | Nothing ingested into the module schema yet | Expected; list/delete return empty |

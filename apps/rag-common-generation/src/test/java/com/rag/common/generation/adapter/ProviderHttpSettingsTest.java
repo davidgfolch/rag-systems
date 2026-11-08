@@ -30,18 +30,20 @@ class ProviderHttpSettingsTest {
     @Test
     void shouldRejectNonPositiveTimeouts() {
         var policy = RetryPolicy.noRetry();
+        var oneSecond = Duration.ofSeconds(1);
 
-        assertThatThrownBy(() -> new ProviderHttpSettings(Duration.ZERO, Duration.ofSeconds(1), policy))
+        assertThatThrownBy(() -> new ProviderHttpSettings(Duration.ZERO, oneSecond, policy))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("connectTimeout");
-        assertThatThrownBy(() -> new ProviderHttpSettings(Duration.ofSeconds(1), Duration.ZERO, policy))
+        assertThatThrownBy(() -> new ProviderHttpSettings(oneSecond, Duration.ZERO, policy))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("requestTimeout");
     }
 
     @Test
     void shouldRejectMissingRetryPolicy() {
-        assertThatThrownBy(() -> new ProviderHttpSettings(Duration.ofSeconds(1), Duration.ofSeconds(1), null))
+        var oneSecond = Duration.ofSeconds(1);
+        assertThatThrownBy(() -> new ProviderHttpSettings(oneSecond, oneSecond, null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("retryPolicy");
     }
