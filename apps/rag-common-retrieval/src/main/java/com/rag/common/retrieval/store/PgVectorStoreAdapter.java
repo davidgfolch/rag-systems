@@ -117,29 +117,28 @@ public class PgVectorStoreAdapter implements VectorStorePort {
 
     @Override
     public List<Chunk> similaritySearch(String query, int topK) {
-        var req = SearchRequest.builder()
-                .query(query)
-                .topK(topK)
-                .build();
-        var hits = delegate.similaritySearch(req).stream()
-                .map(this::toChunk)
-                .toList();
-        log.debug("Vector store returned {} chunks for query", hits.size());
-        return hits;
+        return search(query, topK, null);
     }
 
     @Override
     public List<Chunk> similaritySearch(String query, int topK, String documentId) {
-        var req = SearchRequest.builder()
+        return search(query, topK, documentId);
+    }
+
+    private List<Chunk> search(String query, int topK, String documentId) {
+        var request = SearchRequest.builder()
                 .query(query)
-                .topK(topK)
-                .filterExpression("documentId == '%s'".formatted(documentId))
-                .build();
-        var hits = delegate.similaritySearch(req).stream()
+                .topK(ContentDeduplicator.fetchSize(topK));
+        if (documentId != null) {
+            request.filterExpression("documentId == '%s'".formatted(documentId));
+        }
+        var hits = delegate.similaritySearch(request.build()).stream()
                 .map(this::toChunk)
                 .toList();
-        log.debug("Vector store returned {} chunks for query scoped to {}", hits.size(), documentId);
-        return hits;
+        var distinct = ContentDeduplicator.distinct(hits, topK);
+        log.debug("Vector store returned {} chunks ({} distinct) for query scoped to {}",
+                hits.size(), distinct.size(), documentId);
+        return distinct;
     }
 
     @Override

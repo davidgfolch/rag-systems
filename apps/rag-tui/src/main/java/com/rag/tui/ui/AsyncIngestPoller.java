@@ -60,37 +60,54 @@ final class AsyncIngestPoller {
                IngestBatch batch) {
         if (batch != null) batch.submitted();
         var span = tracer == null ? null : tracer.currentSpan();
-        var poller = new Thread(() -> {
-            try {
-                while (true) {
-                    Thread.sleep(pollMillis);
-                    var status = status(documentId, span);
-                    var state = status.getState();
-                    if (IngestStatusDTO.StateEnum.COMPLETED == state) {
-                        clearInFlight(contentHash);
-                        tokenSink.accept(success(INGESTION_OF + label + " complete: " + status.getChunkCount() + " chunks.\n"));
-                        complete(batch, status.getChunkCount());
-                        return;
-                    }
-                    if (IngestStatusDTO.StateEnum.FAILED == state) {
-                        clearInFlight(contentHash);
-                        tokenSink.accept(error(INGESTION_OF + label + " failed: " + status.getMessage() + "\n"));
-                        if (batch != null) batch.failed(label, status.getMessage());
-                        return;
-                    }
-                }
-            } catch (InterruptedException _) {
-                clearInFlight(contentHash);
-                if (batch != null) batch.cancelled();
-                Thread.currentThread().interrupt();
-            } catch (RuntimeException e) {
-                clearInFlight(contentHash);
-                tokenSink.accept(error(INGESTION_OF + label + " could not be checked: " + e.getMessage() + "\n"));
-                if (batch != null) batch.failed(label, e.getMessage());
-            }
-        }, THREAD_NAME);
+        var target = new PollTarget(documentId, contentHash, label, tokenSink, batch, span);
+        var poller = new Thread(() -> poll(target), THREAD_NAME);
         poller.setDaemon(true);
         poller.start();
+    }
+
+    private void poll(PollTarget target) {
+        try {
+            while (true) {
+                Thread.sleep(pollMillis);
+                if (handleStatus(status(target.documentId(), target.span()), target)) {
+                    return;
+                }
+            }
+        } catch (InterruptedException _) {
+            clearInFlight(target.contentHash());
+            if (target.batch() != null) target.batch().cancelled();
+            Thread.currentThread().interrupt();
+        } catch (RuntimeException e) {
+            clearInFlight(target.contentHash());
+            target.tokenSink().accept(
+                    error(INGESTION_OF + target.label() + " could not be checked: " + e.getMessage() + "\n"));
+            if (target.batch() != null) target.batch().failed(target.label(), e.getMessage());
+        }
+    }
+
+    /** Reports a terminal state and returns whether polling should stop. */
+    private boolean handleStatus(IngestStatusDTO status, PollTarget target) {
+        var state = status.getState();
+        if (IngestStatusDTO.StateEnum.COMPLETED == state) {
+            clearInFlight(target.contentHash());
+            target.tokenSink().accept(success(INGESTION_OF + target.label() + " complete: "
+                    + status.getChunkCount() + " chunks.\n"));
+            complete(target.batch(), status.getChunkCount());
+            return true;
+        }
+        if (IngestStatusDTO.StateEnum.FAILED == state) {
+            clearInFlight(target.contentHash());
+            target.tokenSink().accept(error(INGESTION_OF + target.label() + " failed: "
+                    + status.getMessage() + "\n"));
+            if (target.batch() != null) target.batch().failed(target.label(), status.getMessage());
+            return true;
+        }
+        return false;
+    }
+
+    private record PollTarget(String documentId, String contentHash, String label,
+                              Consumer<String> tokenSink, IngestBatch batch, Span span) {
     }
 
     private static void complete(IngestBatch batch, Integer chunkCount) {
