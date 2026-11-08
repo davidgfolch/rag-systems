@@ -4,11 +4,13 @@ import com.rag.contract.model.CrawlStartResponse;
 import io.micrometer.tracing.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.web.client.RestClientException;
 
 import java.util.Map;
 import java.util.function.Consumer;
 
 import static com.rag.tui.ui.CommandDispatcher.orEmpty;
+import static com.rag.tui.ui.TerminalStyle.error;
 import static com.rag.tui.ui.TerminalStyle.success;
 
 /**
@@ -89,6 +91,7 @@ public class CrawlCommands {
     private String run(CrawlStartResponse start, CrawlOptions options, String question,
                        CrawlDuplicateGuard guard, Consumer<String> tokenSink) {
         activeSessionId = start.getSessionId();
+        var batch = new IngestBatch("Crawl ingestion", tokenSink);
         int discovered = intOrZero(start.getDiscoveredPages());
         int ingested = 0;
         int skippedPages = 0;
@@ -100,7 +103,7 @@ public class CrawlCommands {
                 var step = clients.apiClient().stepCrawl(start.getSessionId(), question,
                         guard.overrideFor(page.getUrl()));
                 if (Boolean.TRUE.equals(step.getIngested()) && step.getDocumentId() != null) {
-                    poller.start(step.getDocumentId(), null, "page " + step.getPageUrl(), tokenSink);
+                    poller.start(step.getDocumentId(), null, "page " + step.getPageUrl(), tokenSink, batch);
                     ingested++;
                 } else {
                     skippedPages++;
@@ -117,7 +120,13 @@ public class CrawlCommands {
             }
             cancel(start.getSessionId());
             return success(summary("Crawl finished", ingested, skippedPages, skippedLinks, discovered));
+        } catch (RestClientException e) {
+            log.warn("Crawl {} interrupted: {}", start.getSessionId(), e.getMessage());
+            cancel(start.getSessionId());
+            return error("Crawl interrupted: " + e.getMessage() + "\n"
+                    + summary("Crawl partial", ingested, skippedPages, skippedLinks, discovered));
         } finally {
+            batch.close();
             activeSessionId = null;
         }
     }
@@ -148,8 +157,7 @@ public class CrawlCommands {
     private static String summary(String prefix, int ingested, int skippedPages, int skippedLinks,
                                   int discovered) {
         return ("%s: %d page(s) submitted for async ingestion, %d page(s) skipped, %d link(s) skipped. "
-                + "Discovery queued %d page(s). Ingestion continues in the background; "
-                + "I'll report each page as it completes.")
+                + "Discovery queued %d page(s). I'll report each page and print a summary when all async jobs finish.")
                 .formatted(prefix, ingested, skippedPages, skippedLinks, discovered);
     }
 

@@ -59,11 +59,18 @@ public class RagApiClient {
 
     private final ModuleRegistry registry;
     private final RestClient.Builder builder;
+    private final RestClient.Builder crawlBuilder;
     private final Map<String, RestClient> clients = new ConcurrentHashMap<>();
+    private final Map<String, RestClient> crawlClients = new ConcurrentHashMap<>();
 
     public RagApiClient(ModuleRegistry registry, RestClient.Builder builder) {
+        this(registry, builder, builder);
+    }
+
+    public RagApiClient(ModuleRegistry registry, RestClient.Builder builder, RestClient.Builder crawlBuilder) {
         this.registry = registry;
         this.builder = builder;
+        this.crawlBuilder = crawlBuilder;
     }
 
     public IngestResponse ingest(String content, Map<String, Object> metadata) {
@@ -122,14 +129,16 @@ public class RagApiClient {
 
     /** Starts an interactive crawl session and returns the root page to prompt for. */
     public CrawlStartResponse startCrawl(String url) {
-        return post(CRAWL, new CrawlStartRequest().url(URI.create(url)), CrawlStartResponse.class);
+        return crawlClient().post().uri(CRAWL)
+                .body(new CrawlStartRequest().url(URI.create(url)))
+                .retrieve().body(CrawlStartResponse.class);
     }
 
     /** Starts a crawl with an optional page cap and discovery toggle. */
     public CrawlStartResponse startCrawl(String url, Integer maxPages, boolean discover) {
         var request = new CrawlStartRequest().url(URI.create(url)).discover(discover);
         if (maxPages != null) request.maxPages(maxPages);
-        return post(CRAWL, request, CrawlStartResponse.class);
+        return crawlClient().post().uri(CRAWL).body(request).retrieve().body(CrawlStartResponse.class);
     }
 
     /** Submits the current crawl page and resolves the next one. */
@@ -139,14 +148,14 @@ public class RagApiClient {
 
     /** Submits the current crawl page, optionally overriding an already-ingested source. */
     public CrawlStepResponse stepCrawl(String sessionId, String question, boolean override) {
-        return client().post().uri(CRAWL_STEP, sessionId)
+        return crawlClient().post().uri(CRAWL_STEP, sessionId)
                 .body(new CrawlStepRequest().question(question).override(override))
                 .retrieve().body(CrawlStepResponse.class);
     }
 
     /** Cancels a crawl session; pages already submitted keep ingesting. */
     public void cancelCrawl(String sessionId) {
-        client().delete().uri(CRAWL_BY_ID, sessionId).retrieve().toBodilessEntity();
+        crawlClient().delete().uri(CRAWL_BY_ID, sessionId).retrieve().toBodilessEntity();
     }
 
     /**
@@ -222,5 +231,14 @@ public class RagApiClient {
             clients.clear();
         }
         return clients.computeIfAbsent(baseUrl, url -> builder.clone().baseUrl(url).build());
+    }
+
+    /** Crawl calls may wait for the module's ingestion queue, so they use a longer read timeout. */
+    private RestClient crawlClient() {
+        var baseUrl = registry.active().baseUrl();
+        if (crawlClients.size() >= MAX_CACHED_CLIENTS) {
+            crawlClients.clear();
+        }
+        return crawlClients.computeIfAbsent(baseUrl, url -> crawlBuilder.clone().baseUrl(url).build());
     }
 }

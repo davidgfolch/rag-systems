@@ -28,6 +28,8 @@ The shared primitives live in `rag-common-core` (`com.rag.common.core.resilience
 | Module → provider HTTP | `rag.provider.http.connect-timeout` / `request-timeout` | 10s / 180s |
 | Provider → Ollama HTTP | `rag.provider.http.connect-timeout` / `read-timeout` | 10s / 240s |
 | Webcrawler client | client factory | 5s connect / 60s read |
+| rag-tui → module (other calls) | `rag.http.read-timeout-seconds` | 60s |
+| rag-tui → module (crawl start/step/cancel) | `rag.http.crawl-read-timeout-seconds` | 600s |
 | Jsoup page fetch | `rag.crawler.fetch.timeout-seconds` | 20s |
 | robots.txt / sitemap loader | per request | 15s |
 | JDBC statements | adapter constant | 30s query timeout |
@@ -88,6 +90,13 @@ backpressure.
 responsive. The crawl step holds the session lock while submitting, which means
 `add-url-cancel` can be delayed by up to the queue wait under heavy saturation.
 
+Because a crawl step blocks for up to `rag.ingestion.queue-wait`, the TUI gives
+crawl calls their own longer read timeout (`rag.http.crawl-read-timeout-seconds`,
+default 600s) while every other module call keeps
+`rag.http.read-timeout-seconds` (default 60s). Keep the crawl timeout above the
+module's queue wait plus the crawler fetch timeout; otherwise the client cancels
+the request and the crawl is reported as interrupted.
+
 ## Metrics
 
 Resilience primitives register Micrometer meters when a `MeterRegistry` is
@@ -146,6 +155,7 @@ inside Ollama and eventually time out.
 | HTTP `503` from an async ingest endpoint | Ingestion limiter stayed saturated for the whole queue wait | Retry later or lower crawl scope |
 | HTTP `429` from rag-provider | Provider embedding limiter saturated | Honour `Retry-After`, lower crawl scope or raise `rag.provider.embedding.max-concurrent` |
 | `HttpTimeoutException` | Ollama too slow or queue unbounded | Raise `read-timeout`, lower concurrency, set Ollama limits |
+| `Request cancelled` in `add-url` | The crawl step waited longer than the TUI crawl read timeout | Raise `rag.http.crawl-read-timeout-seconds`, lower `rag.ingestion.queue-wait`, or reduce crawl scope |
 | Repeated retry warnings | Persistent downstream failure | Check container logs; retries only mask transient errors |
 | `42P01` missing table | Nothing ingested into the module schema yet | Expected; list/delete return empty |
 

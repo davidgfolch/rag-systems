@@ -74,6 +74,11 @@ public class RagTuiConfig {
             ObservationRegistry observationRegistry,
             @Value("${rag.http.connect-timeout-seconds:5}") long connectTimeoutSeconds,
             @Value("${rag.http.read-timeout-seconds:60}") long readTimeoutSeconds) {
+        return httpBuilder(observationRegistry, connectTimeoutSeconds, readTimeoutSeconds);
+    }
+
+    private static RestClient.Builder httpBuilder(ObservationRegistry observationRegistry,
+                                                  long connectTimeoutSeconds, long readTimeoutSeconds) {
         var httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(connectTimeoutSeconds))
                 .build();
@@ -85,8 +90,12 @@ public class RagTuiConfig {
     }
 
     @Bean
-    public RagApiClient ragApiClient(ModuleRegistry registry, RestClient.Builder builder) {
-        return new RagApiClient(registry, builder);
+    public RagApiClient ragApiClient(ModuleRegistry registry, RestClient.Builder builder,
+                                     ObservationRegistry observationRegistry,
+                                     @Value("${rag.http.connect-timeout-seconds:5}") long connectTimeoutSeconds,
+                                     @Value("${rag.http.crawl-read-timeout-seconds:600}") long crawlReadTimeoutSeconds) {
+        return new RagApiClient(registry, builder,
+                httpBuilder(observationRegistry, connectTimeoutSeconds, crawlReadTimeoutSeconds));
     }
 
     @Bean
