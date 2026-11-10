@@ -41,7 +41,7 @@ This document captures the key architectural trade-offs across the RAG implement
 | Module | Retrieval quality | Complex reasoning | Complexity | Cost |
 |--------|-------------------|-------------------|------------|------|
 | rag-basic | Good | No | Low | Low |
-| rag-advanced | High (rerank, hybrid) | No | Medium | Medium |
+| rag-advanced | High (BM25+RRF, metadata filter) | No | Medium | Medium |
 | rag-agentic | High | Yes (multi-step) | High | High |
 
 ## Reactive/Parallel Trade-offs

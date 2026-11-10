@@ -219,9 +219,9 @@ rag-systems/
 │   │   └── src/test/java/com/rag/basic/
 │   ├── rag-advanced/                 # Advanced RAG
 │   │   ├── src/main/java/com/rag/advanced/
-│   │   │   ├── reranking/           # Reranking strategies
-│   │   │   ├── hybrid/              # Hybrid search
-│   │   │   └── metadata/            # Metadata filtering
+│   │   │   ├── api/                 # QueryController, AdvancedQueryRequest
+│   │   │   ├── services/            # AdvancedRetrievalService (widening + RRF)
+│   │   │   └── retrieval/           # LexicalScorer (BM25), MetadataFilter
 │   │   └── src/test/java/com/rag/advanced/
 │   ├── rag-agentic/                  # Agentic RAG
 │   │   ├── src/main/java/com/rag/agentic/
@@ -307,15 +307,15 @@ Simple RAG with fixed chunking and basic similarity search.
 
 ### 3. rag-advanced (Advanced RAG)
 
-Production-grade RAG with reranking, hybrid search, and metadata filtering.
+Retrieval-quality upgrade over rag-basic: wider vector candidates plus a lexical re-rank fused with the vector order and exact metadata filtering.
 
-**Features**: Reranking (Cohere/LLM), hybrid search (vector + keyword), metadata filtering, query transformation, contextual compression
+**Features**: `topK × 4` candidate widening, BM25-style lexical scoring over candidates, Reciprocal Rank Fusion (vector + lexical ranks), exact metadata filtering. Not implemented: cross-encoder/LLM re-ranking, query transformation, contextual compression. See the [rag-advanced deep dive](architecture/modules/rag-advanced.md).
 
 ### 4. rag-agentic (Agentic RAG)
 
 RAG with AI agents and tool calling for dynamic retrieval.
 
-**Features**: Query planning agents, multi-step retrieval, tool calling, self-reflective RAG
+**Features**: deterministic query planning, prompt-based JSON tool calls, multi-step retrieval over vector/document/web tools, deterministic search fallback, bounded self-reflection. See the [rag-agentic deep dive](architecture/modules/rag-agentic.md).
 
 ### 5. rag-evaluation (Evaluation)
 
@@ -396,7 +396,7 @@ The project is designed to run comfortably on a **regular local machine** (CPU-o
 
 All provider connectivity is centralized in the **rag-provider** service. It owns the Ollama/OpenAI/OpenAI-compatible clients and exposes chat and embedding compute + runtime model switching over HTTP (port **8086**). Downstream modules no longer bundle provider dependencies; they consume rag-provider through thin `rag-common-generation` bridges (`RemoteChatModelPort`, `RemoteEmbeddingModel`).
 
-- rag-provider reads Ollama/OpenAI defaults from its `application.yml` (overridable via `OLLAMA_*`, `OPENAI_*`, `DEFAULT_CHAT_PROVIDER`/`DEFAULT_EMBEDDING_PROVIDER` env vars, see [rag-provider README](../../apps/rag-provider/README.md))
+- rag-provider reads Ollama/OpenAI defaults from its `application.yml` (overridable via `OLLAMA_*`, `OPENAI_*`, `DEFAULT_CHAT_PROVIDER`/`DEFAULT_EMBEDDING_PROVIDER` env vars, see [rag-provider README](../apps/rag-provider/README.md))
 - Additional providers (any OpenAI-compatible endpoint) can be added at runtime via `POST /api/provider/configure` and are persisted
 - Switching chat/embedding models is a runtime HTTP call; no restart, no code, no config-profile edit
 - Profile selection via `SPRING_PROFILES_ACTIVE=local` or `=cloud`
@@ -533,7 +533,7 @@ See [guides/sonarqube.md](guides/sonarqube.md) and [ADR-0004](architecture/decis
 - [x] Commands: `modules`, `use`, `start`, `stop`, `add-file`, `add-url`, `ask` (WS/cancel), `history`
 
 ### Phase 6: Advanced RAG & Agentic RAG
-- [x] rag-advanced: reranking, hybrid search, metadata filtering
+- [x] rag-advanced: BM25-style lexical re-ranking fused with vector order via RRF, candidate widening, exact metadata filtering
 - [x] rag-agentic: query planning, tool calling, multi-step retrieval (prompt-based JSON tool calls; bounded agent loop with deterministic search fallback and self-reflection)
 
 ### Phase 7: Observability, Evaluation & Docs

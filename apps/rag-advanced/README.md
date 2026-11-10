@@ -1,31 +1,34 @@
 # rag-advanced
 
-Production-grade RAG with reranking, hybrid search, semantic chunking, and metadata filtering. A runnable Spring Boot app on port **8082** (env `RAG_ADVANCED_URL`). It is the direct "quality upgrade" over [rag-basic](../rag-basic/README.md).
+Production-grade RAG with candidate widening, BM25-style lexical re-ranking fused with the vector order (RRF), exact metadata filtering, and pipeline variants. A runnable Spring Boot app on port **8082** (env `RAG_ADVANCED_URL`). It is the direct "quality upgrade" over [rag-basic](../rag-basic/README.md).
 
 ## Purpose
 
-Extend rag-basic with techniques that materially improve retrieval quality — two-stage retrieval (fast search + cross-encoder/LLM rerank), hybrid vector+keyword search, and metadata-aware filtering — so you can measure *how much* better each technique is against the baseline.
+Extend rag-basic with techniques that materially improve retrieval quality — candidate widening, a BM25-style lexical re-rank fused with the vector order via Reciprocal Rank Fusion (RRF), and exact metadata filtering — so you can measure *how much* better each technique is against the baseline. How it works end to end: [rag-advanced deep dive](../../docs/architecture/modules/rag-advanced.md).
 
 ## Layers
 
 ```
 com.rag.advanced
-├── api/             - IngestionController, QueryController, chat WebSocketHandler
-├── config/          - RagAdvancedConfig, WebSocketConfig, TraceHandshakeInterceptor
-├── services/        - AdvancedRetrievalService, WebCrawlerClient
-├── retrieval/       - LexicalScorer, MetadataFilter
-└── (reranking, hybrid, query transformation live in AdvancedRetrievalService)
+├── api/             - QueryController (/api/query, /api/query/advanced), AdvancedQueryRequest
+├── config/          - RagAdvancedConfig (shared pipeline + retrieval beans)
+├── services/        - AdvancedRetrievalService
+└── retrieval/       - LexicalScorer (BM25-style), MetadataFilter
 ```
+
+The shared `IngestionController`, `ChatService`, `ChatWebSocketHandler`, parser and variant wiring come from `rag-common-*`; this module only adds the retrieval stage.
 
 ## Advanced Features
 
 | Feature | Description | Why it helps |
 |---------|-------------|--------------|
-| Reranking | Re-score top-K candidates with a cross-encoder/LLM | Precision: drops borderline matches that plain similarity keeps |
-| Hybrid search | Combine semantic + lexical (BM25) scores | Robustness: catches exact keyword matches vectors miss |
-| Metadata filtering | Filter by source, doc_type, language, date | Focuses retrieval before reranking, cutting noise |
-| Query transformation | Expand/rewrite queries | Handles vague or multi-part questions |
-| Contextual compression | Reduce noise in retrieved context | Fits more signal into the LLM prompt |
+| Candidate widening | Fetch `topK × 4` vector hits before re-ranking | Gives the lexical pass candidates it can promote |
+| Lexical re-ranking | BM25-style score (k1=1.2, b=0.75, δ=0.5) over the candidate set | Rewards exact/rare terms that embeddings blur |
+| Hybrid fusion | RRF over vector rank + lexical rank: `1/(60+r+1)` each | Combines both signals without score normalization |
+| Metadata filtering | Exact key/value match on chunk metadata before fusion | Removes off-topic sources early |
+| Pipeline variants | Boot + runtime variants with their own table | Compare chunking/model choices per module |
+
+**Not implemented:** cross-encoder/LLM re-ranking, query transformation/expansion, and contextual compression. The implemented re-ranker is the lexical BM25 + RRF pass above.
 
 ## Pipeline variants
 
@@ -70,6 +73,8 @@ A switch applies to the **next** ingestion and query. Each variant embeds with i
 
 Same contract as rag-basic (shared [rag-contract](../rag-contract/README.md)) — `/api/documents/*` and `/api/query` — plus the streaming `/ws/chat` WebSocket. The difference is *what happens inside* `AdvancedRetrievalService` when a query arrives.
 
+> `/api/query` and `/api/query/advanced` use the advanced pipeline (widening + metadata filter + BM25/RRF fusion). `/ws/chat` uses the shared `ChatService`, which retrieves with the vector store directly, so chat answers use plain vector top-K.
+
 ```bash
 curl -F "file=@docs/report.pdf" http://localhost:8082/api/documents/ingest-file
 
@@ -103,7 +108,7 @@ Both modules expose the identical API and answer the same questions, which makes
    - **Latency & cost** — Grafana "RAG Pipeline Overview" + "Cost & Usage" dashboards (see [rag-observability](../rag-observability/README.md)).
    - **End-to-end answer quality** — inspect citations in `/ws/chat` answers and the `rag_quality_*` metrics.
 
-Why bother: each feature above (rerank, hybrid, metadata filter) is a deliberate trade of extra compute for better retrieval. This workflow shows whether that trade pays off *for your corpus*, and [performance-metrics.md](../../docs/comparison/performance-metrics.md) records the published numbers.
+Why bother: each feature above (candidate widening, lexical/BM25 fusion, metadata filter) is a deliberate trade of extra compute for better retrieval. This workflow shows whether that trade pays off *for your corpus*, and [performance-metrics.md](../../docs/comparison/performance-metrics.md) records the published numbers.
 
 ## Testing
 

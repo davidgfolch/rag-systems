@@ -25,9 +25,9 @@ This document describes the high-level architecture of the RAG Systems monorepo.
 │  │  rag-common-* │   rag-basic   │ rag-advanced  │ rag-agentic   │ │
 │  │ (shared lib)  │ (basic RAG)   │ (prod RAG)    │ (agents)      │ │
 │  ├───────────────┼───────────────┼───────────────┼───────────────┤ │
-│  │ Domain models │ Fixed chunk   │ Semantic chunk│ Tool calling  │ │
-│  │ Interfaces    │ Similarity    │ Reranking     │ Multi-step    │ │
-│  │ VectorStore   │ search        │ Hybrid search │ Self-reflect  │ │
+│  │ Domain models │ Variant chunk │ BM25 + RRF    │ Tool calling  │ │
+│  │ Interfaces    │ Similarity    │ Lexical + RRF │ Multi-step    │ │
+│  │ VectorStore   │ search        │ Meta filter   │ Self-reflect  │ │
 │  └───────────────┴───────────────┴───────────────┴───────────────┘ │
 │                                                                     │
 │  ┌───────────────┬───────────────┬───────────────┬───────────────┐ │
@@ -117,7 +117,7 @@ apps/
 ├── rag-common-generation/ # Chat/embedding adapters, ChatService
 ├── rag-provider/     # Centralized provider hub: model switching, chat/embed APIs
 ├── rag-basic/        # Basic RAG: fixed chunking, similarity search
-├── rag-advanced/     # Advanced RAG: reranking, hybrid search, metadata
+├── rag-advanced/     # Advanced RAG: BM25+RRF hybrid retrieval, metadata filters
 ├── rag-agentic/      # Agentic RAG: tool calling, multi-step retrieval
 ├── rag-evaluation/   # Metrics, benchmarking, comparison
 ├── rag-observability/# Tracing, metrics, dashboards
@@ -135,7 +135,7 @@ apps/
 | rag-common-generation | Chat/embedding adapters and the generation service |
 | rag-provider | Centralized LLM/embedding clients, runtime model switching, provider profiles |
 | rag-basic | Baseline RAG: fixed/recursive chunking, similarity search |
-| rag-advanced | Reranking, hybrid search, semantic chunking, metadata filtering |
+| rag-advanced | BM25+RRF hybrid retrieval, metadata filtering, variant chunking |
 | rag-agentic | Agents, tool calling, multi-step retrieval, self-reflection |
 | rag-evaluation | Metrics (precision, recall, MRR), benchmarking, comparison |
 | rag-observability | Tracing, metrics, structured logging, dashboards |
@@ -146,9 +146,9 @@ apps/
 
 | Module | Chunking | Retrieval | Extras |
 |--------|----------|-----------|--------|
-| rag-basic | Fixed, recursive, token | Vector similarity | Simple, baseline |
-| rag-advanced | + Semantic | + Hybrid, reranking | Metadata filtering, query transform |
-| rag-agentic | Agentic | Tool calling, multi-step | Self-reflection |
+| rag-basic | Recursive (fixed/token/semantic via variants) | Vector similarity | Baseline, document-scoped search |
+| rag-advanced | Variants (any strategy) | Vector + BM25 fused with RRF | Metadata filtering, candidate widening |
+| rag-agentic | Variants (any strategy) | Multi-step tool-driven retrieval | Query planning, self-reflection, web tool |
 | rag-evaluation | - | - | Metrics, benchmarking, comparison |
 | rag-provider | - | - | Chat/embed APIs, runtime model switching, model catalog |
 | rag-tui | Recursive, Tika | Vector similarity | Interactive add-file / add-url + chat |

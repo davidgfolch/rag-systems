@@ -5,6 +5,7 @@ Documentation on the RAG Systems architecture — layered design, module roles, 
 | Document | Purpose |
 |----------|---------|
 | [Overview](overview.md) | Layered architecture, module roles, pipeline diagrams, provider abstraction |
+| [Module Deep Dives](modules/README.md) | Features and internals of rag-basic, rag-advanced and rag-agentic |
 | [Decision Records](decision-records/) | Architecture Decision Records (ADRs) for significant design choices |
 | [Master Plan](../PLAN.md) | Full architecture plan, technology stack, implementation phases |
 

@@ -26,7 +26,7 @@ Each module has its own README under `apps/*/README.md` — see the [module tabl
 | [rag-common-app](../apps/rag-common-app/README.md) | Shared pipeline wiring for the rag-* runtimes |
 | [rag-provider](../apps/rag-provider/README.md) | LLM/embedding provider hub (**8086**) |
 | [rag-basic](../apps/rag-basic/README.md) | Baseline RAG (**8081**) |
-| [rag-advanced](../apps/rag-advanced/README.md) | Reranking, hybrid, metadata filtering (**8082**) |
+| [rag-advanced](../apps/rag-advanced/README.md) | BM25+RRF hybrid retrieval, metadata filtering (**8082**) |
 | [rag-agentic](../apps/rag-agentic/README.md) | Query planning, tool calling, multi-step retrieval (**8083**) |
 | [rag-memory](../apps/rag-memory/README.md) | Conversation history (**8084**) |
 | [rag-webcrawler](../apps/rag-webcrawler/README.md) | Web fetching tool (**8085**) |
@@ -53,6 +53,7 @@ Each module has its own README under `apps/*/README.md` — see the [module tabl
 | Document | Purpose |
 |----------|---------|
 | [Overview](architecture/overview.md) | Layered architecture, module roles, pipeline diagrams |
+| [Module Deep Dives](architecture/modules/) | rag-basic, rag-advanced and rag-agentic: features, request flows, internals |
 | [Decision Records](architecture/decision-records/) | Architecture Decision Records (ADRs) |
 
 ## Comparison

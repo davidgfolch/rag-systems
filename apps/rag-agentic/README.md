@@ -1,6 +1,6 @@
 # rag-agentic
 
-Agentic RAG: retrieval augmented with an AI agent that decomposes the question into sub-queries, plans which tools to call, executes them, reflects on whether the gathered context is sufficient, and only then composes the final answer. Port **8083** (`RAG_AGENTIC_URL`).
+Agentic RAG: retrieval augmented with an AI agent that decomposes the question into sub-queries, plans which tools to call, executes them, reflects on whether the gathered context is sufficient, and only then composes the final answer. Port **8083** (`RAG_AGENTIC_URL`). How it works end to end: [rag-agentic deep dive](../../docs/architecture/modules/rag-agentic.md).
 
 ## Architecture
 
@@ -14,11 +14,13 @@ com.rag.agentic
 ├── tools/          - SearchTool, DocumentSearchTool, WebSearchTool
 ├── orchestration/  - ToolRegistry, AgentLoop (bounded, self-reflecting),
 │                     AgenticChatService (one-shot + streaming answers)
-├── services/       - WebCrawlerClient (rag-webcrawler), AgenticRetrievalService
+├── services/       - AgenticRetrievalService
 ├── config/         - Spring wiring (schema rag_agentic, agent knobs)
 └── api/            - AgenticQueryController, IngestionController,
                       chat/ChatWebSocketHandler (streaming, cancellable)
 ```
+
+`IngestionController`, `ChatWebSocketHandler`, parser/chunker/variant wiring and the `WebCrawlerClient` come from the shared `rag-common-*` modules.
 
 The loop (max steps `rag.agent.max-steps`, default 3) works as follows:
 
@@ -75,5 +77,5 @@ Each variant embeds with its own `embeddingModel` via rag-provider, so variants 
 ## Related
 
 - [rag-basic](../rag-basic/README.md) — the fixed-chunking baseline
-- [rag-advanced](../rag-advanced/README.md) — reranking, hybrid search, metadata filtering
+- [rag-advanced](../rag-advanced/README.md) — BM25+RRF hybrid retrieval, metadata filtering
 - [README module table](../../README.md#modules--strategy) — how rag-* modules are evaluated side by side
