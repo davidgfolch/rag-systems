@@ -4,18 +4,25 @@ The **baseline** RAG implementation: document ingestion with fixed/recursive chu
 
 ## Purpose
 
-Demonstrate the core RAG pipeline — **Ingest → Chunk → Embed → Store → Retrieve → Generate** — with simple, understandable components. Use as the baseline for quantitative and qualitative comparison with the other modules.
+Demonstrate the core RAG pipeline — **Ingest → Chunk → Embed → Store → Retrieve → Generate** — with simple, understandable components. Use as the baseline for quantitative and qualitative comparison with the other modules. How it works end to end: [rag-basic deep dive](../../docs/architecture/modules/rag-basic.md).
 
 ## Layers
 
 ```
 com.rag.basic
-├── api/             - IngestionController, QueryController, chat WebSocketHandler
-├── config/          - RagBasicConfig, WebSocketConfig, TraceHandshakeInterceptor
-└── services/        - RetrievalService, WebCrawlerClient
+├── api/       - QueryController (/api/query)
+├── config/    - RagBasicConfig (imports the shared pipeline + WebSocket wiring)
+└── services/  - RetrievalService (similarity search + DocumentStorePort)
 ```
 
-The heavy lifting (parsing, chunking, stores, adapters) comes from the `rag-common-*` libraries so this module stays thin.
+The heavy lifting comes from the `rag-common-*` libraries, so this module only keeps its retrieval strategy:
+
+| Shared component | Source |
+|------------------|--------|
+| `IngestionController`, `IngestionService`, crawl | `rag-common-ingestion` |
+| `ChatService`, `ChatWebSocketHandler` | `rag-common-generation` |
+| Parser, chunker, variant store, chat wiring | `rag-common-app` |
+| `PgVectorStoreAdapter`, `InMemoryVectorStore` | `rag-common-retrieval` |
 
 ## Chunking Strategies
 
@@ -24,6 +31,7 @@ The heavy lifting (parsing, chunking, stores, adapters) comes from the `rag-comm
 | Fixed-size sliding window | Homogeneous text, baseline |
 | Recursive character | Most cases, default |
 | Token-based | Match embedding model windows |
+| Semantic | High-value documents; more embedding calls (via a variant) |
 
 ## Pipeline variants
 

@@ -24,7 +24,7 @@
 
 A monorepo for learning and comparing different RAG (Retrieval-Augmented Generation) implementations using Java Spring Boot and Spring AI. Each module is a decoupled bounded context with interchangeable chunking, embedding, and retrieval strategies — designed to be reusable across knowledge domains and to run comfortably on a regular local machine.
 
-Modules range from basic vector similarity search to advanced hybrid retrieval with reranking, agentic tool-calling pipelines, and a terminal UI for interactive ingestion and Q&A. Full observability (tracing, metrics, dashboards) and benchmarking are built in for quantitative comparison.
+Modules range from basic vector similarity search to advanced hybrid retrieval, agentic tool-calling pipelines, and a terminal UI for interactive ingestion and Q&A. Full observability (tracing, metrics, dashboards) and benchmarking are built in for quantitative comparison.
 
 ## Prerequisites
 
@@ -228,7 +228,7 @@ The monorepo is organized around a **thin TUI + switchable RAG modules**. Each `
 | **rag-common-app** | Shared pipeline wiring for the rag-* runtimes | - | - | [README](apps/rag-common-app/README.md) |
 | **rag-provider** | Centralized LLM/embedding provider service | - | 8086 | [README](apps/rag-provider/README.md) |
 | **rag-basic** | Basic RAG | schema `rag_basic` | 8081 | [README](apps/rag-basic/README.md) |
-| **rag-advanced** | Advanced RAG (reranking, hybrid) | schema `rag_advanced` | 8082 | [README](apps/rag-advanced/README.md) |
+| **rag-advanced** | Advanced RAG (BM25+RRF hybrid, metadata filter) | schema `rag_advanced` | 8082 | [README](apps/rag-advanced/README.md) |
 | **rag-agentic** | Agentic RAG (tool calling) | schema `rag_agentic` | 8083 | [README](apps/rag-agentic/README.md) |
 | **rag-memory** | Conversation history (non-vector) | schema `rag_memory` | 8084 | [README](apps/rag-memory/README.md) |
 | **rag-webcrawler** | Intelligent web fetching tool | - | 8085 | [README](apps/rag-webcrawler/README.md) |
