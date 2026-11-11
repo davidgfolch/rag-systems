@@ -57,8 +57,4 @@ public final class Chunkers {
                 new StructuralDocumentChunker(SourceType.JSON, splitter, new JsonBlockGrouper(), size)));
     }
 
-    public static DocumentChunker chunker(ChunkingStrategy strategy, int size, int overlap,
-                                          Supplier<EmbeddingModelPort> embeddings) {
-        return chunker(of(strategy, size, overlap, embeddings), size);
-    }
 }

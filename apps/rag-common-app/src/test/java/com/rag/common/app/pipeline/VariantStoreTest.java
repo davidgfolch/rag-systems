@@ -39,7 +39,7 @@ class VariantStoreTest {
         when(storage.create(any())).thenReturn(variantStore);
         when(storage.embedding(any())).thenReturn(embeddingModel);
         when(repository.load()).thenReturn(List.of());
-        sut = new VariantStore(MODULE, new RecursiveCharacterChunker(256, 32), storage, bootStore, repository);
+        sut = new VariantStore(MODULE, new RecursiveCharacterChunker(256, 32), null, storage, bootStore, repository);
     }
 
     private static PipelineVariantDTO variant(String strategy, int size, int overlap) {

@@ -51,16 +51,6 @@ public class VariantStore {
     private volatile String activeId;
     private volatile String defaultVariantId;
 
-    public VariantStore(String module, TextSplitter defaultSplitter, VariantStores storage,
-                        VectorStorePort defaultStore) {
-        this(module, defaultSplitter, null, storage, defaultStore, null);
-    }
-
-    public VariantStore(String module, TextSplitter defaultSplitter, VariantStores storage,
-                        VectorStorePort defaultStore, VariantRepository repository) {
-        this(module, defaultSplitter, null, storage, defaultStore, repository);
-    }
-
     public VariantStore(String module, TextSplitter defaultSplitter, DocumentChunker defaultChunker,
                         VariantStores storage, VectorStorePort defaultStore, VariantRepository repository) {
         this.module = module;
