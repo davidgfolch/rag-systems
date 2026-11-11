@@ -34,14 +34,6 @@ public class AdvancedRetrievalService implements DocumentStorePort {
         this.lexicalScorer = lexicalScorer;
     }
 
-    public List<Chunk> retrieve(String query, int topK) {
-        return retrieve(query, topK, null, Map.of());
-    }
-
-    public List<Chunk> retrieve(String query, int topK, String documentId) {
-        return retrieve(query, topK, documentId, Map.of());
-    }
-
     public List<Chunk> retrieve(String query, int topK, Map<String, Object> filterValues) {
         return retrieve(query, topK, null, filterValues);
     }
