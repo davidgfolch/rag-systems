@@ -37,6 +37,6 @@ public final class TestAsyncIngestionServices {
     }
 
     private static ConcurrencyLimiter defaultLimiter() {
-        return new ConcurrencyLimiter(LIMITER_NAME, DEFAULT_MAX_CONCURRENT, DEFAULT_QUEUE_WAIT);
+        return new ConcurrencyLimiter(LIMITER_NAME, DEFAULT_MAX_CONCURRENT, DEFAULT_QUEUE_WAIT, null);
     }
 }

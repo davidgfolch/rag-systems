@@ -41,7 +41,8 @@ class AsyncIngestionServiceTest {
     private final VectorStorePort vectorStore = mock(VectorStorePort.class);
 
     private IngestionService ingestionService() {
-        return new IngestionService(parser, splitter, embeddingModel, vectorStore);
+        return new IngestionService(parser, splitter, embeddingModel, vectorStore,
+                IngestionService.DEFAULT_EMBED_BATCH_SIZE);
     }
 
     @Test

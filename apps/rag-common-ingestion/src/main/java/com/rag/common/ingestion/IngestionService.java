@@ -36,19 +36,9 @@ public class IngestionService {
     private final int maxEmbeddingBatchSize;
 
     public IngestionService(DocumentParser parser, TextSplitter splitter,
-                            EmbeddingModelPort embeddingModel, VectorStorePort vectorStore) {
-        this(parser, splitter, null, embeddingModel, vectorStore, DEFAULT_EMBED_BATCH_SIZE);
-    }
-
-    public IngestionService(DocumentParser parser, TextSplitter splitter,
                             EmbeddingModelPort embeddingModel, VectorStorePort vectorStore,
                             int maxEmbeddingBatchSize) {
         this(parser, splitter, null, embeddingModel, vectorStore, maxEmbeddingBatchSize);
-    }
-
-    public IngestionService(DocumentParser parser, DocumentChunker documentChunker,
-                            EmbeddingModelPort embeddingModel, VectorStorePort vectorStore) {
-        this(parser, null, documentChunker, embeddingModel, vectorStore, DEFAULT_EMBED_BATCH_SIZE);
     }
 
     public IngestionService(DocumentParser parser, DocumentChunker documentChunker,
