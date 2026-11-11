@@ -2,6 +2,7 @@ package com.rag.common.generation.adapter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rag.common.core.tracing.TracePropagation;
+import com.rag.common.generation.testfixture.TestProviderHttpClients;
 import com.rag.contract.constants.ApiPaths;
 import com.rag.contract.provider.CompleteRequest;
 import com.rag.contract.provider.CompleteResponse;
@@ -42,7 +43,7 @@ class ProviderHttpClientTest {
     void setUp() throws IOException {
         server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
         server.start();
-        client = new ProviderHttpClient("http://localhost:" + server.getAddress().getPort(),
+        client = TestProviderHttpClients.of("http://localhost:" + server.getAddress().getPort(),
                 new ObjectMapper());
     }
 
@@ -125,7 +126,8 @@ class ProviderHttpClientTest {
         var httpClient = mock(HttpClient.class);
         when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
                 .thenThrow(new IOException("refused"));
-        var failing = new ProviderHttpClient("http://localhost:1", httpClient, new ObjectMapper());
+        var failing = TestProviderHttpClients.withHttpClient("http://localhost:1", httpClient,
+                new ObjectMapper());
         assertThatThrownBy(() -> failing.get(ApiPaths.PROVIDER, ProviderStatusDTO.class))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Provider request failed");
@@ -137,7 +139,8 @@ class ProviderHttpClientTest {
         var httpClient = mock(HttpClient.class);
         when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
                 .thenThrow(new IOException("refused"));
-        var failing = new ProviderHttpClient("http://localhost:1", httpClient, new ObjectMapper());
+        var failing = TestProviderHttpClients.withHttpClient("http://localhost:1", httpClient,
+                new ObjectMapper());
         var req = new CompleteRequest("hi");
         assertThatThrownBy(() -> failing.postStream(ApiPaths.CHAT_STREAM, req))
                 .isInstanceOf(IllegalStateException.class)
@@ -150,7 +153,8 @@ class ProviderHttpClientTest {
         var httpClient = mock(HttpClient.class);
         when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
                 .thenThrow(new IOException("boom", new RuntimeException("root")));
-        var failing = new ProviderHttpClient("http://localhost:1", httpClient, new ObjectMapper());
+        var failing = TestProviderHttpClients.withHttpClient("http://localhost:1", httpClient,
+                new ObjectMapper());
         var error = org.assertj.core.api.Assertions.catchThrowable(
                 () -> failing.get(ApiPaths.PROVIDER, ProviderStatusDTO.class));
         assertThat(error).isInstanceOf(IllegalStateException.class).hasMessageContaining("boom");
@@ -162,7 +166,8 @@ class ProviderHttpClientTest {
         var httpClient = mock(HttpClient.class);
         when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
                 .thenThrow(new InterruptedException("halt"));
-        var failing = new ProviderHttpClient("http://localhost:1", httpClient, new ObjectMapper());
+        var failing = TestProviderHttpClients.withHttpClient("http://localhost:1", httpClient,
+                new ObjectMapper());
         assertThatThrownBy(() -> failing.get(ApiPaths.PROVIDER, ProviderStatusDTO.class))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("interrupted");
@@ -175,7 +180,8 @@ class ProviderHttpClientTest {
         var httpClient = mock(HttpClient.class);
         when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
                 .thenThrow(new IOException());
-        var failing = new ProviderHttpClient("http://localhost:1", httpClient, new ObjectMapper());
+        var failing = TestProviderHttpClients.withHttpClient("http://localhost:1", httpClient,
+                new ObjectMapper());
         assertThatThrownBy(() -> failing.get(ApiPaths.PROVIDER, ProviderStatusDTO.class))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("IOException");
@@ -187,7 +193,8 @@ class ProviderHttpClientTest {
         var httpClient = mock(HttpClient.class);
         when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
                 .thenThrow(new IOException("refused"));
-        var injected = new ProviderHttpClient("http://localhost:1", httpClient, new ObjectMapper());
+        var injected = TestProviderHttpClients.withHttpClient("http://localhost:1", httpClient,
+                new ObjectMapper());
         assertThatThrownBy(() -> injected.get(ApiPaths.PROVIDER, ProviderStatusDTO.class))
                 .isInstanceOf(IllegalStateException.class);
         Thread.interrupted();
@@ -210,7 +217,7 @@ class ProviderHttpClientTest {
             respond(exchange, 200, "application/json", "{\"answer\":\"Hi\"}");
         });
         var tracer = new SimpleTracer();
-        var traced = new ProviderHttpClient("http://localhost:" + server.getAddress().getPort(),
+        var traced = TestProviderHttpClients.withTracer("http://localhost:" + server.getAddress().getPort(),
                 new ObjectMapper(), tracer);
         var span = tracer.nextSpan().name("test-call").start();
         var context = (SimpleTraceContext) span.context();
@@ -231,7 +238,7 @@ class ProviderHttpClientTest {
             respond(exchange, 200, "application/json", "{\"answer\":\"Hi\"}");
         });
         var tracer = new SimpleTracer();
-        var traced = new ProviderHttpClient("http://localhost:" + server.getAddress().getPort(),
+        var traced = TestProviderHttpClients.withTracer("http://localhost:" + server.getAddress().getPort(),
                 new ObjectMapper(), tracer);
         var span = tracer.nextSpan().name("test-call").start();
         try (var _ = tracer.withSpan(span)) {
@@ -247,7 +254,7 @@ class ProviderHttpClientTest {
             traceparent.set(exchange.getRequestHeaders().getFirst(TracePropagation.TRACEPARENT_HEADER));
             respond(exchange, 200, "application/json", "{\"answer\":\"Hi\"}");
         });
-        var traced = new ProviderHttpClient("http://localhost:" + server.getAddress().getPort(),
+        var traced = TestProviderHttpClients.withTracer("http://localhost:" + server.getAddress().getPort(),
                 new ObjectMapper(), new SimpleTracer());
         traced.postJson(ApiPaths.COMPLETE, new CompleteRequest("hi"), CompleteResponse.class);
         assertThat(traceparent.get()).isNull();
@@ -267,13 +274,13 @@ class ProviderHttpClientTest {
     @Test
     void shouldRejectBlankBaseUrl() {
         var mapper = new ObjectMapper();
-        assertThatThrownBy(() -> new ProviderHttpClient("  ", mapper))
+        assertThatThrownBy(() -> TestProviderHttpClients.of("  ", mapper))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void shouldTrimTrailingSlashFromBaseUrl() {
-        var trimmed = new ProviderHttpClient("http://localhost:8086/", new ObjectMapper());
+        var trimmed = TestProviderHttpClients.of("http://localhost:8086/", new ObjectMapper());
         assertThat(trimmed).isNotNull();
     }
 
