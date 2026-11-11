@@ -53,14 +53,6 @@ public class FileDocumentLoader {
         }
     }
 
-    static String contentHash(byte[] bytes) {
-        try {
-            return sha256Hex(bytes);
-        } catch (IllegalStateException e) {
-            throw new DocumentLoadException("SHA-256 digest not available on this JVM", e);
-        }
-    }
-
     private LoadedFile loadFile(Path file, String source) {
         try {
             var bytes = Files.readAllBytes(file);
