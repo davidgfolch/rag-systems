@@ -36,12 +36,8 @@ public class LanScanner {
     private final List<String> extraSubnets;
     private final Supplier<List<String>> localAddresses;
 
-    public LanScanner(OllamaDiscoverySettings settings, List<String> extraSubnets) {
-        this(settings, extraSubnets, LanScanner::detectLocalAddresses);
-    }
-
-    LanScanner(OllamaDiscoverySettings settings, List<String> extraSubnets,
-               Supplier<List<String>> localAddresses) {
+    public LanScanner(OllamaDiscoverySettings settings, List<String> extraSubnets,
+                      Supplier<List<String>> localAddresses) {
         this.settings = settings;
         this.extraSubnets = extraSubnets == null ? List.of() : List.copyOf(extraSubnets);
         this.localAddresses = localAddresses;
@@ -113,7 +109,7 @@ public class LanScanner {
         }
     }
 
-    private static List<String> detectLocalAddresses() {
+    public static List<String> detectLocalAddresses() {
         var addresses = new ArrayList<String>();
         try {
             for (var networkInterface : NetworkInterface.networkInterfaces().toList()) {

@@ -33,6 +33,6 @@ public final class TestEmbeddingServices {
     }
 
     private static ConcurrencyLimiter limiter() {
-        return new ConcurrencyLimiter(LIMITER_NAME, MAX_CONCURRENT, QUEUE_WAIT);
+        return new ConcurrencyLimiter(LIMITER_NAME, MAX_CONCURRENT, QUEUE_WAIT, null);
     }
 }

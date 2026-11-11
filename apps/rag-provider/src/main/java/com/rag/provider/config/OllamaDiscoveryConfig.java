@@ -51,7 +51,7 @@ public class OllamaDiscoveryConfig {
     @Bean
     public LanScanner lanScanner(OllamaDiscoverySettings settings,
                                  @Value("${rag.provider.ollama.discovery.subnets:}") String subnets) {
-        return new LanScanner(settings, parseSubnets(subnets));
+        return new LanScanner(settings, parseSubnets(subnets), LanScanner::detectLocalAddresses);
     }
 
     @Bean

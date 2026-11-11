@@ -51,7 +51,7 @@ class EmbeddingServiceResilienceTest {
                 .thenThrow(new ResourceAccessException("timeout", new IOException("timeout")))
                 .thenReturn(new EmbeddingResponse(List.of(new Embedding(new float[]{1f}, 0))));
 
-        var vectors = service(new ConcurrencyLimiter("test", 1, SHORT_WAIT)).embed(List.of("a"), null);
+        var vectors = service(new ConcurrencyLimiter("test", 1, SHORT_WAIT, null)).embed(List.of("a"), null);
 
         assertThat(vectors).containsExactly(List.of(1f));
         verify(embeddingModel, times(2)).call(any(EmbeddingRequest.class));
@@ -63,14 +63,14 @@ class EmbeddingServiceResilienceTest {
         var failure = HttpClientErrorException.create(BAD_REQUEST, "bad", HttpHeaders.EMPTY, new byte[0], null);
         when(embeddingModel.call(any(EmbeddingRequest.class))).thenThrow(failure);
 
-        assertThatThrownBy(() -> service(new ConcurrencyLimiter("test", 1, SHORT_WAIT)).embed(List.of("a"), null))
+        assertThatThrownBy(() -> service(new ConcurrencyLimiter("test", 1, SHORT_WAIT, null)).embed(List.of("a"), null))
                 .isSameAs(failure);
         verify(embeddingModel, times(1)).call(any(EmbeddingRequest.class));
     }
 
     @Test
     void shouldFailFastWhenSaturatedWithoutCallingTheModel() {
-        var limiter = new ConcurrencyLimiter("test", 1, SHORT_WAIT);
+        var limiter = new ConcurrencyLimiter("test", 1, SHORT_WAIT, null);
         var service = service(limiter);
         var texts = List.of("a");
         assertThat(limiter.tryEnter()).isTrue();
@@ -89,7 +89,7 @@ class EmbeddingServiceResilienceTest {
         when(router.embeddingModelFor(null)).thenReturn(embeddingModel);
         when(embeddingModel.call(any(EmbeddingRequest.class)))
                 .thenThrow(new IllegalArgumentException("permanent"));
-        var limiter = new ConcurrencyLimiter("test", 1, SHORT_WAIT);
+        var limiter = new ConcurrencyLimiter("test", 1, SHORT_WAIT, null);
         var service = service(limiter);
         var texts = List.of("a");
 
