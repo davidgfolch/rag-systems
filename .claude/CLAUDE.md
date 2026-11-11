@@ -90,6 +90,7 @@ api/          - REST controllers (only in runnable modules)
 10. **Docs Placement**: All `.md` lives in `docs/`; `README.md` is the only root markdown
 11. **Scripts Placement**: All `.bat`/`.sh`/`.ps1` live in `scripts/`; `mvnw`/`mvnw.cmd` are the exception
 12. **Portability**: Every operational script has both a Windows (`.bat`/`.ps1`) and Unix (`.sh`) variant
+13. **No test-only production members**: production members must be referenced by production code; test convenience lives in a private test helper or a `Test*` fixture. Enforced cross-module by `TestOnlyMembersArchitectureTest` (one documented seam ctor per class may be allowlisted)
 
 ## Configuration Profiles
 
