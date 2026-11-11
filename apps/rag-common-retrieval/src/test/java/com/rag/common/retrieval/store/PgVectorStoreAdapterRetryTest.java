@@ -1,5 +1,6 @@
 package com.rag.common.retrieval.store;
 
+import com.rag.common.core.resilience.RetryObserver;
 import com.rag.common.core.resilience.RetryPolicy;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -142,7 +143,7 @@ class PgVectorStoreAdapterRetryTest {
     private PgVectorStoreAdapter adapter(Connection conn) throws Exception {
         var ds = mock(DataSource.class);
         when(ds.getConnection()).thenReturn(conn);
-        return new PgVectorStoreAdapter(delegate, ds, "rag_basic", "chunks", FAST_RETRY);
+        return new PgVectorStoreAdapter(delegate, ds, "rag_basic", "chunks", FAST_RETRY, RetryObserver.NOOP);
     }
 
     private static SQLException sqlException(String sqlState) {

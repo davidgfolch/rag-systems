@@ -1,6 +1,8 @@
 package com.rag.common.retrieval.store;
 
 import com.rag.common.core.domain.Chunk;
+import com.rag.common.core.resilience.RetryObserver;
+import com.rag.common.core.resilience.RetryPolicy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -24,6 +26,10 @@ import static org.mockito.Mockito.when;
 
 class PgVectorWriterTest {
 
+    private static final String TABLE = "\"s\".\"t\"";
+    private static final String INDEX_NAME = "idx";
+    private static final int QUERY_TIMEOUT_SECONDS = 30;
+
     private final DataSource dataSource = mock(DataSource.class);
     private final Connection connection = mock(Connection.class);
     private final PreparedStatement statement = mock(PreparedStatement.class);
@@ -38,7 +44,7 @@ class PgVectorWriterTest {
 
     @Test
     void writesPrecomputedEmbeddingsAndEnsuresTheDocumentIndexOnce() throws Exception {
-        var sut = new PgVectorWriter(dataSource, "\"s\".\"t\"", "idx");
+        var sut = writer();
         sut.add(List.of(chunk()));
         sut.add(List.of(chunk()));
         verify(indexStatement, times(1)).execute(contains("CREATE INDEX IF NOT EXISTS"));
@@ -52,25 +58,30 @@ class PgVectorWriterTest {
         for (int i = 0; i < 501; i++) {
             chunks.add(chunk());
         }
-        new PgVectorWriter(dataSource, "\"s\".\"t\"", "idx").add(chunks);
+        writer().add(chunks);
         verify(statement, times(2)).executeBatch();
         verify(statement, times(501)).addBatch();
     }
 
     @Test
     void skipsWritesForAnEmptyBatch() {
-        new PgVectorWriter(dataSource, "\"s\".\"t\"", "idx").add(List.of());
+        writer().add(List.of());
         verifyNoInteractions(dataSource);
     }
 
     @Test
     void rejectsChunksWithoutAnEmbedding() {
-        var sut = new PgVectorWriter(dataSource, "\"s\".\"t\"", "idx");
+        var sut = writer();
         var withoutEmbedding = new Chunk(UUID.randomUUID().toString(), "d1", "text", 0, Map.of());
         var batch = List.of(withoutEmbedding);
         assertThatThrownBy(() -> sut.add(batch))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("has no embedding");
+    }
+
+    private PgVectorWriter writer() {
+        return new PgVectorWriter(dataSource, TABLE, INDEX_NAME, RetryPolicy.noRetry(),
+                QUERY_TIMEOUT_SECONDS, RetryObserver.NOOP);
     }
 
     private static Chunk chunk() {

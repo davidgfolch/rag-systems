@@ -36,8 +36,6 @@ public class PgVectorStoreAdapter implements VectorStorePort {
 
     private static final Logger log = LoggerFactory.getLogger(PgVectorStoreAdapter.class);
 
-    static final String DEFAULT_SCHEMA = "public";
-    static final String DEFAULT_TABLE = "chunks";
     private static final int QUERY_TIMEOUT_SECONDS = 30;
 
     private final VectorStore delegate;
@@ -45,26 +43,9 @@ public class PgVectorStoreAdapter implements VectorStorePort {
     private final PgVectorWriter writer;
     private final PgVectorJdbc jdbc;
 
-    public PgVectorStoreAdapter(VectorStore delegate) {
-        this(delegate, null, DEFAULT_SCHEMA, DEFAULT_TABLE, RetryPolicy.defaults());
-    }
-
-    public PgVectorStoreAdapter(VectorStore delegate, DataSource dataSource) {
-        this(delegate, dataSource, DEFAULT_SCHEMA, DEFAULT_TABLE, RetryPolicy.defaults());
-    }
-
-    public PgVectorStoreAdapter(VectorStore delegate, DataSource dataSource, String table) {
-        this(delegate, dataSource, DEFAULT_SCHEMA, table, RetryPolicy.defaults());
-    }
-
     public PgVectorStoreAdapter(VectorStore delegate, DataSource dataSource,
                                 String schema, String table) {
-        this(delegate, dataSource, schema, table, RetryPolicy.defaults());
-    }
-
-    public PgVectorStoreAdapter(VectorStore delegate, DataSource dataSource,
-                                String schema, String table, RetryPolicy retryPolicy) {
-        this(delegate, dataSource, schema, table, retryPolicy, RetryObserver.NOOP);
+        this(delegate, dataSource, schema, table, RetryPolicy.defaults(), RetryObserver.NOOP);
     }
 
     public PgVectorStoreAdapter(VectorStore delegate, DataSource dataSource,

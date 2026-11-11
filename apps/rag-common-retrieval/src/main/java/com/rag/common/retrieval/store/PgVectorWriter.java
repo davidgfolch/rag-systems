@@ -39,7 +39,6 @@ final class PgVectorWriter {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final int BATCH_SIZE = 500;
-    private static final int DEFAULT_QUERY_TIMEOUT_SECONDS = 30;
     private static final int MAX_IDENTIFIER_LENGTH = 63;
     private static final String DOCUMENT_INDEX_SUFFIX = "_document_id_idx";
     private static final String INSERT_SQL_TEMPLATE =
@@ -59,15 +58,6 @@ final class PgVectorWriter {
     private final RetryExecutor retry;
     private final int queryTimeoutSeconds;
     private final AtomicBoolean indexEnsured = new AtomicBoolean();
-
-    PgVectorWriter(DataSource dataSource, String qualifiedTable, String rawIndexName) {
-        this(dataSource, qualifiedTable, rawIndexName, RetryPolicy.noRetry(), DEFAULT_QUERY_TIMEOUT_SECONDS);
-    }
-
-    PgVectorWriter(DataSource dataSource, String qualifiedTable, String rawIndexName,
-                   RetryPolicy retryPolicy, int queryTimeoutSeconds) {
-        this(dataSource, qualifiedTable, rawIndexName, retryPolicy, queryTimeoutSeconds, RetryObserver.NOOP);
-    }
 
     PgVectorWriter(DataSource dataSource, String qualifiedTable, String rawIndexName,
                    RetryPolicy retryPolicy, int queryTimeoutSeconds, RetryObserver observer) {
