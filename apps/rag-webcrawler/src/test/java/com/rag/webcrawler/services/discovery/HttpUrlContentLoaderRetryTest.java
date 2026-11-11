@@ -1,5 +1,6 @@
 package com.rag.webcrawler.services.discovery;
 
+import com.rag.common.core.resilience.RetryObserver;
 import com.rag.common.core.resilience.RetryPolicy;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -53,7 +54,7 @@ class HttpUrlContentLoaderRetryTest {
             int call = calls.incrementAndGet();
             respond(exchange, call == 1 ? 503 : 200, call == 1 ? "busy" : "<urlset/>");
         });
-        var sut = new HttpUrlContentLoader(HttpClient.newHttpClient(), FAST_RETRY);
+        var sut = new HttpUrlContentLoader(HttpClient.newHttpClient(), FAST_RETRY, RetryObserver.NOOP);
 
         assertThat(sut.load(baseUrl + "/sitemap.xml"))
                 .hasValueSatisfying(bytes ->
@@ -68,7 +69,7 @@ class HttpUrlContentLoaderRetryTest {
             calls.incrementAndGet();
             respond(exchange, 404, "");
         });
-        var sut = new HttpUrlContentLoader(HttpClient.newHttpClient(), FAST_RETRY);
+        var sut = new HttpUrlContentLoader(HttpClient.newHttpClient(), FAST_RETRY, RetryObserver.NOOP);
 
         assertThat(sut.load(baseUrl + "/missing.txt")).isEmpty();
         assertThat(calls).hasValue(1);
@@ -81,7 +82,7 @@ class HttpUrlContentLoaderRetryTest {
         when(client.send(any(HttpRequest.class), bodyHandler()))
                 .thenThrow(new ConnectException("refused"))
                 .thenReturn(res);
-        var sut = new HttpUrlContentLoader(client, FAST_RETRY);
+        var sut = new HttpUrlContentLoader(client, FAST_RETRY, RetryObserver.NOOP);
 
         assertThat(sut.load(baseUrl + "/robots.txt"))
                 .hasValueSatisfying(bytes ->
@@ -94,7 +95,7 @@ class HttpUrlContentLoaderRetryTest {
         var client = mock(HttpClient.class);
         when(client.send(any(HttpRequest.class), bodyHandler()))
                 .thenThrow(new IOException("broken pipe"));
-        var sut = new HttpUrlContentLoader(client, FAST_RETRY);
+        var sut = new HttpUrlContentLoader(client, FAST_RETRY, RetryObserver.NOOP);
 
         assertThat(sut.load(baseUrl + "/robots.txt")).isEmpty();
         verify(client, times(1)).send(any(HttpRequest.class), bodyHandler());
@@ -105,7 +106,7 @@ class HttpUrlContentLoaderRetryTest {
         var client = mock(HttpClient.class);
         when(client.send(any(HttpRequest.class), bodyHandler()))
                 .thenThrow(new InterruptedException("halt"));
-        var sut = new HttpUrlContentLoader(client, FAST_RETRY);
+        var sut = new HttpUrlContentLoader(client, FAST_RETRY, RetryObserver.NOOP);
 
         assertThat(sut.load(baseUrl + "/robots.txt")).isEmpty();
         assertThat(Thread.currentThread().isInterrupted()).isTrue();

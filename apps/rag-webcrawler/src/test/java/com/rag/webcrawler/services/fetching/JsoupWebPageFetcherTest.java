@@ -1,5 +1,7 @@
 package com.rag.webcrawler.services.fetching;
 
+import com.rag.common.core.resilience.RetryObserver;
+import com.rag.common.core.resilience.RetryPolicy;
 import com.rag.contract.model.PageDTO;
 import com.sun.net.httpserver.HttpServer;
 import org.jsoup.Connection;
@@ -8,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.time.Duration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -16,6 +19,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class JsoupWebPageFetcherTest {
+
+    private static final Duration TIMEOUT = Duration.ofSeconds(2);
 
     @Test
     void extractsTextTitleAndLinks() throws Exception {
@@ -26,7 +31,8 @@ class JsoupWebPageFetcherTest {
                         + "<p>RAG retrieval augmented generation.</p>"
                         + "<a href=\"/guide.html\">Guide</a></body></html>",
                 "https://example.com/spring"));
-        JsoupWebPageFetcher sut = new JsoupWebPageFetcher(connection);
+        JsoupWebPageFetcher sut =
+                new JsoupWebPageFetcher(connection, TIMEOUT, RetryPolicy.noRetry(), RetryObserver.NOOP);
         PageDTO page = sut.fetch("https://example.com/spring");
         assertThat(page.getUrl()).isEqualTo("https://example.com/spring");
         assertThat(page.getTitle()).isEqualTo("Spring");
@@ -41,7 +47,8 @@ class JsoupWebPageFetcherTest {
     void wrapsIoFailureInWebFetchException() throws Exception {
         Connection connection = mock(Connection.class);
         when(connection.get()).thenThrow(new IOException("refused"));
-        JsoupWebPageFetcher sut = new JsoupWebPageFetcher(connection);
+        JsoupWebPageFetcher sut =
+                new JsoupWebPageFetcher(connection, TIMEOUT, RetryPolicy.noRetry(), RetryObserver.NOOP);
         assertThatThrownBy(() -> sut.fetch("https://example.com/x"))
                 .isInstanceOf(JsoupWebPageFetcher.WebFetchException.class)
                 .hasMessage("Failed to fetch URL: https://example.com/x")
@@ -49,7 +56,7 @@ class JsoupWebPageFetcherTest {
     }
 
     @Test
-    void fetchesOverHttpWithDefaultConstructor() throws Exception {
+    void fetchesOverHttpWithProductionConstructor() throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/", exchange -> {
             byte[] body = ("<html><head><title>Local</title></head><body><p>hello</p>"
@@ -61,7 +68,8 @@ class JsoupWebPageFetcherTest {
         server.start();
         try {
             String url = "http://127.0.0.1:" + server.getAddress().getPort() + "/";
-            PageDTO page = new JsoupWebPageFetcher().fetch(url);
+            PageDTO page = new JsoupWebPageFetcher(TIMEOUT, RetryPolicy.noRetry(), RetryObserver.NOOP)
+                    .fetch(url);
             assertThat(page.getTitle()).isEqualTo("Local");
             assertThat(page.getText()).contains("hello");
         } finally {

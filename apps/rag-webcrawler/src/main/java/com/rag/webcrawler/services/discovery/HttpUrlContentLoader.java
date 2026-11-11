@@ -28,8 +28,7 @@ import java.util.zip.GZIPInputStream;
  * responses (servers often send sitemaps compressed even without {@code .gz}).
  *
  * <p>Transient failures (timeouts, connection resets, 408/425/429/5xx) are
- * retried with backoff when a {@link RetryPolicy} is supplied; the legacy
- * constructors keep the historical single-attempt behaviour.
+ * retried with backoff.
  */
 public class HttpUrlContentLoader implements UrlContentLoader {
 
@@ -47,24 +46,8 @@ public class HttpUrlContentLoader implements UrlContentLoader {
     private final HttpClient client;
     private final RetryExecutor retry;
 
-    public HttpUrlContentLoader() {
-        this(defaultClient(), RetryPolicy.noRetry());
-    }
-
-    public HttpUrlContentLoader(HttpClient client) {
-        this(client, RetryPolicy.noRetry());
-    }
-
-    public HttpUrlContentLoader(RetryPolicy retryPolicy) {
-        this(defaultClient(), retryPolicy, RetryObserver.NOOP);
-    }
-
     public HttpUrlContentLoader(RetryPolicy retryPolicy, RetryObserver observer) {
         this(defaultClient(), retryPolicy, observer);
-    }
-
-    public HttpUrlContentLoader(HttpClient client, RetryPolicy retryPolicy) {
-        this(client, retryPolicy, RetryObserver.NOOP);
     }
 
     public HttpUrlContentLoader(HttpClient client, RetryPolicy retryPolicy, RetryObserver observer) {

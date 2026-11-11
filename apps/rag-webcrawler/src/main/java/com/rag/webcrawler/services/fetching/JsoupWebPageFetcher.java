@@ -29,14 +29,12 @@ import com.rag.contract.model.PageDTO;
  * {@link Connection} so tests can supply a mock without network access.
  *
  * <p>Production wiring applies a fetch timeout and retries transient failures
- * (socket timeouts, connection resets, 408/425/429/5xx) with backoff. The legacy
- * constructors keep the historical no-retry behaviour.
+ * (socket timeouts, connection resets, 408/425/429/5xx) with backoff.
  */
 public class JsoupWebPageFetcher implements WebPageFetcher {
 
     private static final Logger log = LoggerFactory.getLogger(JsoupWebPageFetcher.class);
 
-    public static final Duration DEFAULT_TIMEOUT = Duration.ofSeconds(20);
     private static final String FAILURE_MESSAGE = "Failed to fetch URL: ";
 
     private final Connection connection;
@@ -45,24 +43,8 @@ public class JsoupWebPageFetcher implements WebPageFetcher {
     private final PageBlockExtractor blockExtractor = new PageBlockExtractor();
     private final NavLinkExtractor navLinkExtractor = new NavLinkExtractor();
 
-    public JsoupWebPageFetcher() {
-        this(null, DEFAULT_TIMEOUT, RetryPolicy.noRetry());
-    }
-
-    public JsoupWebPageFetcher(Connection connection) {
-        this(connection, DEFAULT_TIMEOUT, RetryPolicy.noRetry());
-    }
-
-    public JsoupWebPageFetcher(Duration timeout, RetryPolicy retryPolicy) {
-        this(null, timeout, retryPolicy, RetryObserver.NOOP);
-    }
-
     public JsoupWebPageFetcher(Duration timeout, RetryPolicy retryPolicy, RetryObserver observer) {
         this(null, timeout, retryPolicy, observer);
-    }
-
-    public JsoupWebPageFetcher(Connection connection, Duration timeout, RetryPolicy retryPolicy) {
-        this(connection, timeout, retryPolicy, RetryObserver.NOOP);
     }
 
     public JsoupWebPageFetcher(Connection connection, Duration timeout, RetryPolicy retryPolicy,
