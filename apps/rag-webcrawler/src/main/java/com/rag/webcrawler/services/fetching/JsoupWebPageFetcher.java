@@ -70,7 +70,7 @@ public class JsoupWebPageFetcher implements WebPageFetcher {
         this.connection = connection;
         this.timeout = requirePositive(timeout);
         this.retry = new RetryExecutor(Objects.requireNonNull(retryPolicy, "retryPolicy must not be null"),
-                JsoupWebPageFetcher::isRetryable, observer);
+                JsoupWebPageFetcher::isRetryable, observer, Thread::sleep);
     }
 
     @Override

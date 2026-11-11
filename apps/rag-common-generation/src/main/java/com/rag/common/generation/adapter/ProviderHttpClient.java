@@ -84,7 +84,7 @@ public class ProviderHttpClient {
         this.tracer = tracer;
         this.settings = settings;
         this.retry = new RetryExecutor(ProviderHttpRetry.policy(settings), ProviderHttpRetry::isRetryable,
-                observer);
+                observer, Thread::sleep);
     }
 
     public <T> T postJson(String path, Object body, Class<T> responseType) {

@@ -26,19 +26,7 @@ public final class RetryExecutor {
     private final RetryObserver observer;
     private final Sleeper sleeper;
 
-    public RetryExecutor(RetryPolicy policy, Predicate<Throwable> retryable) {
-        this(policy, retryable, RetryObserver.NOOP, Thread::sleep);
-    }
-
-    public RetryExecutor(RetryPolicy policy, Predicate<Throwable> retryable, RetryObserver observer) {
-        this(policy, retryable, observer, Thread::sleep);
-    }
-
-    RetryExecutor(RetryPolicy policy, Predicate<Throwable> retryable, Sleeper sleeper) {
-        this(policy, retryable, RetryObserver.NOOP, sleeper);
-    }
-
-    RetryExecutor(RetryPolicy policy, Predicate<Throwable> retryable, RetryObserver observer, Sleeper sleeper) {
+    public RetryExecutor(RetryPolicy policy, Predicate<Throwable> retryable, RetryObserver observer, Sleeper sleeper) {
         this.policy = policy;
         this.retryable = retryable;
         this.observer = observer != null ? observer : RetryObserver.NOOP;

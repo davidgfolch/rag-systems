@@ -18,7 +18,7 @@ class RetryExecutorTest {
     @Test
     void shouldReturnFirstSuccessfulResultWithoutSleeping() {
         var sleeps = new ArrayList<Duration>();
-        var executor = new RetryExecutor(POLICY, error -> true, sleeps::add);
+        var executor = new RetryExecutor(POLICY, error -> true, RetryObserver.NOOP, sleeps::add);
 
         String result = executor.call("op", () -> "ok");
 
@@ -30,7 +30,7 @@ class RetryExecutorTest {
     void shouldRetryUntilTheOperationSucceeds() {
         var attempts = new AtomicInteger();
         var sleeps = new ArrayList<Duration>();
-        var executor = new RetryExecutor(POLICY, error -> true, sleeps::add);
+        var executor = new RetryExecutor(POLICY, error -> true, RetryObserver.NOOP, sleeps::add);
 
         String result = executor.call("op", () -> {
             if (attempts.incrementAndGet() < 3) {
@@ -47,7 +47,7 @@ class RetryExecutorTest {
     @Test
     void shouldNotRetryFailuresRejectedByTheClassifier() {
         var attempts = new AtomicInteger();
-        var executor = new RetryExecutor(POLICY, error -> false, delay -> { });
+        var executor = new RetryExecutor(POLICY, error -> false, RetryObserver.NOOP, delay -> { });
 
         assertThatThrownBy(() -> executor.call("op", () -> {
             attempts.incrementAndGet();
@@ -60,7 +60,7 @@ class RetryExecutorTest {
     @Test
     void shouldGiveUpAfterMaxAttempts() {
         var attempts = new AtomicInteger();
-        var executor = new RetryExecutor(POLICY, error -> true, delay -> { });
+        var executor = new RetryExecutor(POLICY, error -> true, RetryObserver.NOOP, delay -> { });
 
         assertThatThrownBy(() -> executor.run("op", () -> {
             attempts.incrementAndGet();
@@ -76,7 +76,7 @@ class RetryExecutorTest {
         RetryExecutor.Sleeper interrupted = delay -> {
             throw new InterruptedException("stop");
         };
-        var executor = new RetryExecutor(POLICY, error -> true, interrupted);
+        var executor = new RetryExecutor(POLICY, error -> true, RetryObserver.NOOP, interrupted);
         try {
             assertThatThrownBy(() -> executor.run("op", () -> {
                 throw failure;
@@ -105,7 +105,7 @@ class RetryExecutorTest {
     void shouldHonourAServerRetryDelayThatExceedsTheComputedBackoff() {
         var sleeps = new ArrayList<Duration>();
         var policy = new RetryPolicy(2, Duration.ofMillis(1), Duration.ofSeconds(5), 2.0, 0);
-        var executor = new RetryExecutor(policy, error -> true, sleeps::add);
+        var executor = new RetryExecutor(policy, error -> true, RetryObserver.NOOP, sleeps::add);
         var attempts = new AtomicInteger();
 
         var result = executor.call("op", () -> {
@@ -123,7 +123,7 @@ class RetryExecutorTest {
     void shouldClampAServerRetryDelayToTheMaximumBackoff() {
         var sleeps = new ArrayList<Duration>();
         var policy = new RetryPolicy(2, Duration.ofMillis(1), Duration.ofSeconds(2), 2.0, 0);
-        var executor = new RetryExecutor(policy, error -> true, sleeps::add);
+        var executor = new RetryExecutor(policy, error -> true, RetryObserver.NOOP, sleeps::add);
         var attempts = new AtomicInteger();
 
         executor.call("op", () -> {
@@ -140,7 +140,7 @@ class RetryExecutorTest {
     void shouldIgnoreAServerRetryDelayShorterThanTheComputedBackoff() {
         var sleeps = new ArrayList<Duration>();
         var policy = new RetryPolicy(2, Duration.ofSeconds(1), Duration.ofSeconds(5), 2.0, 0);
-        var executor = new RetryExecutor(policy, error -> true, sleeps::add);
+        var executor = new RetryExecutor(policy, error -> true, RetryObserver.NOOP, sleeps::add);
         var attempts = new AtomicInteger();
 
         executor.call("op", () -> {

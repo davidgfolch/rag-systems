@@ -59,7 +59,7 @@ public class EmbeddingService {
         this.maxEmbeddingBatchSize = requirePositive(maxEmbeddingBatchSize);
         this.limiter = Objects.requireNonNull(limiter, "limiter must not be null");
         this.retry = new RetryExecutor(Objects.requireNonNull(retryPolicy, "retryPolicy must not be null"),
-                EmbeddingService::isRetryable, observer);
+                EmbeddingService::isRetryable, observer, Thread::sleep);
     }
 
     public static ConcurrencyLimiter defaultLimiter() {

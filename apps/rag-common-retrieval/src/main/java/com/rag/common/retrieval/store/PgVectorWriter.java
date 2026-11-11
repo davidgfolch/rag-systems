@@ -75,7 +75,7 @@ final class PgVectorWriter {
         this.qualifiedTable = qualifiedTable;
         this.indexName = quote(truncate(rawIndexName));
         this.insertSql = INSERT_SQL_TEMPLATE.formatted(qualifiedTable);
-        this.retry = new RetryExecutor(retryPolicy, SqlRetry::isTransient, observer);
+        this.retry = new RetryExecutor(retryPolicy, SqlRetry::isTransient, observer, Thread::sleep);
         this.queryTimeoutSeconds = queryTimeoutSeconds;
     }
 

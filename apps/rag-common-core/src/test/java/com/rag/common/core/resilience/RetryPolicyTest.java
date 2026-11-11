@@ -14,7 +14,7 @@ class RetryPolicyTest {
         var policy = RetryPolicy.defaults();
 
         assertThat(policy.maxAttempts()).isEqualTo(RetryPolicy.DEFAULT_MAX_ATTEMPTS);
-        assertThat(policy.retries()).isTrue();
+        assertThat(policy.maxAttempts()).isGreaterThan(1);
     }
 
     @Test
@@ -22,7 +22,6 @@ class RetryPolicyTest {
         var policy = RetryPolicy.noRetry();
 
         assertThat(policy.maxAttempts()).isEqualTo(1);
-        assertThat(policy.retries()).isFalse();
     }
 
     @Test

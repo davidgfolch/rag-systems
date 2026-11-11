@@ -70,7 +70,7 @@ public class HttpUrlContentLoader implements UrlContentLoader {
     public HttpUrlContentLoader(HttpClient client, RetryPolicy retryPolicy, RetryObserver observer) {
         this.client = client;
         this.retry = new RetryExecutor(Objects.requireNonNull(retryPolicy, "retryPolicy must not be null"),
-                HttpUrlContentLoader::isRetryable, observer);
+                HttpUrlContentLoader::isRetryable, observer, Thread::sleep);
     }
 
     @Override
