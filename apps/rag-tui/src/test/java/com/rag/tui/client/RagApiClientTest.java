@@ -1,6 +1,6 @@
 package com.rag.tui.client;
 
-import com.rag.contract.model.IngestResponse;
+import com.rag.contract.model.IngestJobResponse;
 import com.rag.contract.model.QueryResponse;
 import com.rag.contract.model.DocumentSummaryDTO;
 import com.rag.tui.launcher.ModuleRegistry;
@@ -25,9 +25,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 import static com.rag.contract.constants.ApiPaths.DOCUMENTS;
-import static com.rag.contract.constants.ApiPaths.INGEST;
-import static com.rag.contract.constants.ApiPaths.INGEST_FILE;
-import static com.rag.contract.constants.ApiPaths.INGEST_URL;
+import static com.rag.contract.constants.ApiPaths.INGEST_FILE_ASYNC;
 import static com.rag.contract.constants.ApiPaths.QUERY;
 
 class RagApiClientTest {
@@ -36,39 +34,17 @@ class RagApiClientTest {
             List.of(TestModules.basic()), TestModules.BASIC);
     private final RestClient.Builder builder = RestClient.builder()
             .requestFactory(new JdkClientHttpRequestFactory());
-    private final RagApiClient sut = new RagApiClient(registry, builder);
+    private final RagApiClient sut = new RagApiClient(registry, builder, builder);
     private final MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
 
     @Test
-    void ingestsContent() {
-        server.expect(requestTo(TestModules.BASIC_URL + INGEST))
-                .andExpect(method(POST))
-                .andRespond(withSuccess("{\"documentId\":\"d1\",\"chunkCount\":2}", APPLICATION_JSON));
-        IngestResponse res = sut.ingest("text", Map.of("k", "v"));
-        assertThat(res.getDocumentId()).isEqualTo("d1");
-        assertThat(res.getChunkCount()).isEqualTo(2);
-        server.verify();
-    }
-
-    @Test
-    void ingestsFileViaMultipart() {
+    void submitsFileForAsyncIngestionViaMultipart() {
         byte[] bytes = new byte[]{1, 2, 3};
-        server.expect(requestTo(TestModules.BASIC_URL + INGEST_FILE))
+        server.expect(requestTo(TestModules.BASIC_URL + INGEST_FILE_ASYNC))
                 .andExpect(method(POST))
                 .andExpect(content().contentTypeCompatibleWith(MULTIPART_FORM_DATA))
-                .andRespond(withSuccess("{\"documentId\":\"d1\",\"chunkCount\":5}", APPLICATION_JSON));
-        IngestResponse res = sut.ingestFile(bytes, "doc.pdf", Map.of("sourceType", "file"));
-        assertThat(res.getDocumentId()).isEqualTo("d1");
-        assertThat(res.getChunkCount()).isEqualTo(5);
-        server.verify();
-    }
-
-    @Test
-    void ingestsUrl() {
-        server.expect(requestTo(TestModules.BASIC_URL + INGEST_URL))
-                .andExpect(method(POST))
-                .andRespond(withSuccess("{\"documentId\":\"d1\",\"chunkCount\":3}", APPLICATION_JSON));
-        IngestResponse res = sut.ingestUrl("https://example.com");
+                .andRespond(withSuccess("{\"documentId\":\"d1\"}", APPLICATION_JSON));
+        IngestJobResponse res = sut.submitIngestFile(bytes, "doc.pdf", Map.of("sourceType", "file"));
         assertThat(res.getDocumentId()).isEqualTo("d1");
         server.verify();
     }

@@ -26,7 +26,7 @@ class CommandCompletionTest {
             new ModuleRegistry(List.of(
                     TestModules.basic(),
                     TestModules.advanced()), TestModules.BASIC),
-            providerClient);
+            providerClient, null);
 
     private void catalog() {
         when(providerClient.catalog())

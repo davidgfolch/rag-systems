@@ -39,7 +39,7 @@ class IngestCommandsIntegrationTest {
     void setUp() throws IOException {
         stub = new StubModuleServer();
         var registry = new ModuleRegistry(List.of(TestModules.withUrl(stub.baseUrl())), TestModules.BASIC);
-        var apiClient = new RagApiClient(registry, RestClient.builder());
+        var apiClient = new RagApiClient(registry, RestClient.builder(), RestClient.builder());
         var healthClient = new ModuleHealthClient(RestClient.builder());
         sut = new IngestCommands(
                 new CommandDispatcher.RagClients(apiClient, null, null, new FileDocumentLoader(),
@@ -122,7 +122,7 @@ class IngestCommandsIntegrationTest {
         Path txt = Files.createTempFile("done", ".txt");
         Files.write(txt, "done content".getBytes(StandardCharsets.UTF_8));
         var registry = new ModuleRegistry(List.of(TestModules.withUrl(stub.baseUrl())), TestModules.BASIC);
-        var apiClient = new RagApiClient(registry, RestClient.builder());
+        var apiClient = new RagApiClient(registry, RestClient.builder(), RestClient.builder());
         var healthClient = new ModuleHealthClient(RestClient.builder());
         var fast = new IngestCommands(
                 new CommandDispatcher.RagClients(apiClient, null, null, new FileDocumentLoader(),

@@ -42,7 +42,7 @@ class ChatGatewayTest {
             List.of(TestModules.basic()), TestModules.BASIC);
     private final WebSocketClient webSocketClient = mock(WebSocketClient.class);
     private final WebSocketSession session = mock(WebSocketSession.class);
-    private final ChatGateway sut = new ChatGateway(registry, webSocketClient, new ObjectMapper(), 60);
+    private final ChatGateway sut = new ChatGateway(registry, webSocketClient, new ObjectMapper(), 60, null);
     private final List<String> tokens = new ArrayList<>();
     private TextWebSocketHandler handler;
     private Thread runner;

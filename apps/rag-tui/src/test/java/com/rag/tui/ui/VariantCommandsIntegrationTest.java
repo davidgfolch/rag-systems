@@ -45,7 +45,8 @@ class VariantCommandsIntegrationTest {
         stub.variants(VARIANTS);
         prompter = mock(Prompter.class);
         var registry = new ModuleRegistry(List.of(TestModules.withUrl(stub.baseUrl())), TestModules.BASIC);
-        sut = new VariantCommands(registry, new RagApiClient(registry, RestClient.builder()), prompter);
+        sut = new VariantCommands(registry, new RagApiClient(registry, RestClient.builder(), RestClient.builder()),
+                prompter, null);
     }
 
     @AfterEach

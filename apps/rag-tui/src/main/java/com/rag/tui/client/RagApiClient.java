@@ -4,11 +4,8 @@ import com.rag.contract.model.CrawlStartRequest;
 import com.rag.contract.model.CrawlStartResponse;
 import com.rag.contract.model.CrawlStepRequest;
 import com.rag.contract.model.CrawlStepResponse;
-import com.rag.contract.model.IngestRequest;
-import com.rag.contract.model.IngestResponse;
 import com.rag.contract.model.IngestJobResponse;
 import com.rag.contract.model.IngestStatusDTO;
-import com.rag.contract.model.IngestUrlRequest;
 import com.rag.contract.model.QueryRequest;
 import com.rag.contract.model.QueryResponse;
 import com.rag.contract.model.DocumentSummaryDTO;
@@ -36,11 +33,8 @@ import static com.rag.contract.constants.ApiPaths.CRAWL_BY_ID;
 import static com.rag.contract.constants.ApiPaths.CRAWL_STEP;
 import static com.rag.contract.constants.ApiPaths.DOCUMENT_BY_ID;
 import static com.rag.contract.constants.ApiPaths.DOCUMENTS;
-import static com.rag.contract.constants.ApiPaths.INGEST;
-import static com.rag.contract.constants.ApiPaths.INGEST_FILE;
 import static com.rag.contract.constants.ApiPaths.INGEST_FILE_ASYNC;
 import static com.rag.contract.constants.ApiPaths.INGEST_STATUS;
-import static com.rag.contract.constants.ApiPaths.INGEST_URL;
 import static com.rag.contract.constants.ApiPaths.MODULE_VARIANTS_ACTIVE;
 import static com.rag.contract.constants.ApiPaths.QUERY;
 import static com.rag.contract.constants.ApiPaths.moduleVariants;
@@ -64,30 +58,10 @@ public class RagApiClient {
     private final Map<String, RestClient> clients = new ConcurrentHashMap<>();
     private final Map<String, RestClient> crawlClients = new ConcurrentHashMap<>();
 
-    public RagApiClient(ModuleRegistry registry, RestClient.Builder builder) {
-        this(registry, builder, builder);
-    }
-
     public RagApiClient(ModuleRegistry registry, RestClient.Builder builder, RestClient.Builder crawlBuilder) {
         this.registry = registry;
         this.builder = builder;
         this.crawlBuilder = crawlBuilder;
-    }
-
-    public IngestResponse ingest(String content, Map<String, Object> metadata) {
-        var request = new IngestRequest().content(content);
-        if (metadata != null) {
-            request.metadata(metadata);
-        }
-        return post(INGEST, request, IngestResponse.class);
-    }
-
-    public IngestResponse ingestFile(byte[] bytes, String fileName, Map<String, Object> metadata) {
-        return client()
-                .post().uri(INGEST_FILE)
-                .contentType(MULTIPART_FORM_DATA)
-                .body(buildBody(bytes, fileName, metadata))
-                .retrieve().body(IngestResponse.class);
     }
 
     @Nonnull
@@ -123,11 +97,6 @@ public class RagApiClient {
                 .retrieve().body(IngestStatusDTO.class);
     }
 
-    public IngestResponse ingestUrl(String url) {
-        return post(INGEST_URL,
-                new IngestUrlRequest().url(URI.create(url)), IngestResponse.class);
-    }
-
     /** Starts an interactive crawl session and returns the root page to prompt for. */
     public CrawlStartResponse startCrawl(String url) {
         return crawlClient().post().uri(CRAWL)
@@ -140,11 +109,6 @@ public class RagApiClient {
         var request = new CrawlStartRequest().url(URI.create(url)).discover(discover);
         if (maxPages != null) request.maxPages(maxPages);
         return crawlClient().post().uri(CRAWL).body(request).retrieve().body(CrawlStartResponse.class);
-    }
-
-    /** Submits the current crawl page and resolves the next one. */
-    public CrawlStepResponse stepCrawl(String sessionId, String question) {
-        return stepCrawl(sessionId, question, false);
     }
 
     /** Submits the current crawl page, optionally overriding an already-ingested source. */

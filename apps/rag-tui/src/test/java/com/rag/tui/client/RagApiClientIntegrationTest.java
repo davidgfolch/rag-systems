@@ -1,6 +1,6 @@
 package com.rag.tui.client;
 
-import com.rag.contract.model.IngestResponse;
+import com.rag.contract.model.IngestJobResponse;
 import com.rag.tui.launcher.Module;
 import com.rag.tui.launcher.ModuleRegistry;
 import com.rag.tui.support.StubModuleServer;
@@ -33,7 +33,7 @@ class RagApiClientIntegrationTest {
         stub = new StubModuleServer();
         ModuleRegistry registry = new ModuleRegistry(
                 List.of(new Module("rag-basic", stub.baseUrl())), "rag-basic");
-        sut = new RagApiClient(registry, RestClient.builder());
+        sut = new RagApiClient(registry, RestClient.builder(), RestClient.builder());
     }
 
     @AfterEach
@@ -42,12 +42,11 @@ class RagApiClientIntegrationTest {
     }
 
     @Test
-    void ingestsFileBytesOverMultipartHttp() {
+    void submitsFileBytesOverMultipartHttp() {
         byte[] bytes = new byte[]{1, 2, 3, 0, -1};
-        IngestResponse res = sut.ingestFile(bytes, "x.pdf",
+        IngestJobResponse res = sut.submitIngestFile(bytes, "x.pdf",
                 Map.of("sourceType", "file", "source", "x.pdf", "fileName", "x.pdf"));
         assertThat(res.getDocumentId()).isEqualTo("i-1");
-        assertThat(res.getChunkCount()).isEqualTo(2);
         assertThat(stub.lastIngestContentType()).startsWith("multipart/form-data");
         String body = new String(stub.lastIngestBody(), StandardCharsets.UTF_8);
         assertThat(body).contains("x.pdf");
@@ -57,9 +56,8 @@ class RagApiClientIntegrationTest {
     void surfacesConnectionErrorsWithoutEmbellishment() {
         ModuleRegistry dead = new ModuleRegistry(
                 List.of(new Module("rag-basic", "http://localhost:1")), "rag-basic");
-        RagApiClient client = new RagApiClient(dead, RestClient.builder());
-        Map<String, Object> metadata = Map.of();
-        assertThatThrownBy(() -> client.ingest("text", metadata))
+        RagApiClient client = new RagApiClient(dead, RestClient.builder(), RestClient.builder());
+        assertThatThrownBy(() -> client.ingestStatus("d1"))
                 .isInstanceOf(RestClientException.class)
                 .hasMessageContaining("localhost");
     }

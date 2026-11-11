@@ -32,7 +32,7 @@ class IngestBatchIntegrationTest {
     void setUp() throws IOException {
         stub = new StubModuleServer();
         var registry = new ModuleRegistry(List.of(TestModules.withUrl(stub.baseUrl())), TestModules.BASIC);
-        var apiClient = new RagApiClient(registry, RestClient.builder());
+        var apiClient = new RagApiClient(registry, RestClient.builder(), RestClient.builder());
         var healthClient = new ModuleHealthClient(RestClient.builder());
         poller = new AsyncIngestPoller(
                 new CommandDispatcher.RagClients(apiClient, null, null, null, healthClient, null),
