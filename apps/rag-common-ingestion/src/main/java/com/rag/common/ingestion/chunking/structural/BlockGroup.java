@@ -22,8 +22,4 @@ public record BlockGroup(String text, BlockType contentType, List<String> sectio
         metadata = metadata == null ? Map.of() : Map.copyOf(metadata);
         context = context == null ? "" : context;
     }
-
-    public String renderedText() {
-        return context.isBlank() ? text : context + "\n\n" + text;
-    }
 }

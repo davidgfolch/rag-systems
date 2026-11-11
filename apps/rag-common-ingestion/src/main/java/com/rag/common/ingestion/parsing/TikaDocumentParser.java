@@ -27,16 +27,8 @@ public class TikaDocumentParser implements DocumentParser {
     private final TikaXhtmlExtractor extractor;
 
     public TikaDocumentParser() {
-        this(SourceType.UNKNOWN);
-    }
-
-    public TikaDocumentParser(SourceType sourceType) {
-        this(sourceType, new TikaXhtmlExtractor());
-    }
-
-    TikaDocumentParser(SourceType sourceType, TikaXhtmlExtractor extractor) {
-        this.sourceType = sourceType == null ? SourceType.UNKNOWN : sourceType;
-        this.extractor = extractor;
+        this.sourceType = SourceType.UNKNOWN;
+        this.extractor = new TikaXhtmlExtractor();
     }
 
     @Override

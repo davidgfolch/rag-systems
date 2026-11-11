@@ -1,5 +1,6 @@
 package com.rag.common.ingestion.web;
 
+import com.rag.common.ingestion.testfixture.TestWebCrawlerClients;
 import com.rag.contract.model.PageDTO;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
@@ -24,7 +25,7 @@ class WebCrawlerClientTest {
     void fetchesPageAndMapsDto() {
         var builder = restClientBuilder();
         var server = MockRestServiceServer.bindTo(builder).build();
-        var sut = new WebCrawlerClient(builder.build());
+        var sut = TestWebCrawlerClients.noRetry(builder.build());
         server.expect(requestTo(BASE_URL + "/api/fetch"))
                 .andExpect(method(POST))
                 .andExpect(content().contentTypeCompatibleWith(APPLICATION_JSON))
@@ -42,7 +43,7 @@ class WebCrawlerClientTest {
     void ranksLinksViaWebcrawler() {
         var builder = restClientBuilder();
         var server = MockRestServiceServer.bindTo(builder).build();
-        var sut = new WebCrawlerClient(builder.build());
+        var sut = TestWebCrawlerClients.noRetry(builder.build());
         server.expect(requestTo(BASE_URL + "/api/rank-links"))
                 .andExpect(method(POST))
                 .andExpect(content().contentTypeCompatibleWith(APPLICATION_JSON))
@@ -57,7 +58,7 @@ class WebCrawlerClientTest {
 
     @Test
     void rankLinksSkipsHttpCallWhenThereAreNoLinks() {
-        var sut = new WebCrawlerClient(null);
+        var sut = TestWebCrawlerClients.noRetry(null);
         assertThat(sut.rankLinks(List.of(), "question")).isEmpty();
         assertThat(sut.rankLinks(null, "question")).isEmpty();
     }
@@ -66,7 +67,7 @@ class WebCrawlerClientTest {
     void discoversUrlsViaWebcrawler() {
         var builder = restClientBuilder();
         var server = MockRestServiceServer.bindTo(builder).build();
-        var sut = new WebCrawlerClient(builder.build());
+        var sut = TestWebCrawlerClients.noRetry(builder.build());
         server.expect(requestTo(BASE_URL + "/api/discover"))
                 .andExpect(method(POST))
                 .andExpect(content().contentTypeCompatibleWith(APPLICATION_JSON))

@@ -140,9 +140,6 @@ public class IngestionService {
 
     public static class EmptyExtractionException extends RuntimeException {
         public static final String MSG = "No text could be extracted from document ";
-        public EmptyExtractionException(Document doc) {
-            this(doc.getId());
-        }
         public EmptyExtractionException(String documentId) {
             super(MSG + documentId);
         }

@@ -52,10 +52,6 @@ public class CrawlSessionService {
         this.documentStore = documentStore;
     }
 
-    public StartResult start(String url, int maxInitialLinks, int maxPages, boolean sameHostOnly) {
-        return start(url, maxInitialLinks, maxPages, sameHostOnly, false);
-    }
-
     public StartResult start(String url, int maxInitialLinks, int maxPages, boolean sameHostOnly,
                              boolean discover) {
         evictExpired();
@@ -223,12 +219,7 @@ public class CrawlSessionService {
     public record PageInfo(String url, String title) {}
 
     public record StartResult(String sessionId, PageInfo page, int initialRemaining, boolean hasMore,
-                              int discoveredPages) {
-
-        public StartResult(String sessionId, PageInfo page, int initialRemaining, boolean hasMore) {
-            this(sessionId, page, initialRemaining, hasMore, 0);
-        }
-    }
+                              int discoveredPages) {}
 
     public record StepResult(String sessionId, String documentId, String pageUrl, String title,
                              boolean ingested, int initialRemaining, boolean hasMore,

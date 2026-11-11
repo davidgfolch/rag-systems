@@ -47,7 +47,7 @@ class CrawlSessionServiceTest {
     @Test
     void startFetchesRootAndReturnsSession() {
         pages.put(ROOT, page(ROOT));
-        var result = sut.start(ROOT, 5, 50, true);
+        var result = sut.start(ROOT, 5, 50, true, false);
         assertThat(result.sessionId()).isNotBlank();
         assertThat(result.page().url()).isEqualTo(ROOT);
         assertThat(result.initialRemaining()).isEqualTo(1);
@@ -112,7 +112,7 @@ class CrawlSessionServiceTest {
         pages.put(ROOT, page(ROOT, ROOT + "/a", ROOT + "/b", "https://other.com/c"));
         pages.put(ROOT + "/a", page(ROOT + "/a"));
         when(async.submitParsed(any())).thenReturn("d1");
-        var start = sut.start(ROOT, 2, 50, true);
+        var start = sut.start(ROOT, 2, 50, true, false);
         var result = sut.step(start.sessionId(), "q");
         assertThat(result.ingested()).isTrue();
         assertThat(result.documentId()).isEqualTo("d1");
@@ -128,7 +128,7 @@ class CrawlSessionServiceTest {
         pages.put(ROOT, page(ROOT));
         when(documents.listDocuments())
                 .thenReturn(List.of(new DocumentSummary("d0", 1, Map.<String, Object>of(SOURCE, ROOT))));
-        var start = sut.start(ROOT, 5, 50, true);
+        var start = sut.start(ROOT, 5, 50, true, false);
         var result = sut.step(start.sessionId(), null);
         assertThat(result.ingested()).isFalse();
         assertThat(result.documentId()).isNull();
@@ -140,7 +140,7 @@ class CrawlSessionServiceTest {
         pages.put(ROOT, page(ROOT));
         when(async.submitParsed(any()))
                 .thenThrow(new CapacityExceededException("Ingestion capacity exhausted"));
-        var start = sut.start(ROOT, 5, 50, true);
+        var start = sut.start(ROOT, 5, 50, true, false);
 
         var result = sut.step(start.sessionId(), null);
 
@@ -154,7 +154,7 @@ class CrawlSessionServiceTest {
         when(documents.listDocuments())
                 .thenReturn(List.of(new DocumentSummary("d0", 1, Map.<String, Object>of(SOURCE, ROOT))));
         when(async.submitParsed(any())).thenReturn("d1");
-        var start = sut.start(ROOT, 5, 50, true);
+        var start = sut.start(ROOT, 5, 50, true, false);
         var result = sut.step(start.sessionId(), null, true);
         assertThat(result.ingested()).isTrue();
         assertThat(result.documentId()).isEqualTo("d1");
@@ -166,7 +166,7 @@ class CrawlSessionServiceTest {
         pages.put(ROOT, page(ROOT, ROOT + "/a", ROOT + "/a", "https://other.com/x"));
         pages.put(ROOT + "/a", page(ROOT + "/a"));
         when(async.submitParsed(any())).thenReturn("d1");
-        var start = sut.start(ROOT, 5, 50, true);
+        var start = sut.start(ROOT, 5, 50, true, false);
         var result = sut.step(start.sessionId(), null);
         assertThat(result.skippedLinks()).isEqualTo(2);
         assertThat(result.initialRemaining()).isEqualTo(1);
@@ -177,7 +177,7 @@ class CrawlSessionServiceTest {
         pages.put(ROOT, page(ROOT, ROOT + "/a", ROOT + "/b", ROOT + "/c"));
         pages.put(ROOT + "/a", page(ROOT + "/a"));
         when(async.submitParsed(any())).thenReturn("d1");
-        var start = sut.start(ROOT, 5, 2, true);
+        var start = sut.start(ROOT, 5, 2, true, false);
         var rootStep = sut.step(start.sessionId(), null);
         assertThat(rootStep.initialRemaining()).isEqualTo(1);
         var secondStep = sut.step(start.sessionId(), null);
@@ -191,7 +191,7 @@ class CrawlSessionServiceTest {
         pages.put(ROOT + "/a", page(ROOT + "/a", ROOT + "/a/x"));
         pages.put(ROOT + "/a/x", page(ROOT + "/a/x"));
         when(async.submitParsed(any())).thenReturn("d1");
-        var start = sut.start(ROOT, 5, 50, true);
+        var start = sut.start(ROOT, 5, 50, true, false);
         assertThat(sut.step(start.sessionId(), null).initialRemaining()).isEqualTo(1);
         var childStep = sut.step(start.sessionId(), null);
         assertThat(childStep.initialRemaining()).isZero();
@@ -203,7 +203,7 @@ class CrawlSessionServiceTest {
         pages.put(ROOT, page(ROOT, ROOT + "/bad", ROOT + "/good"));
         pages.put(ROOT + "/good", page(ROOT + "/good"));
         when(async.submitParsed(any())).thenReturn("d1");
-        var start = sut.start(ROOT, 5, 50, true);
+        var start = sut.start(ROOT, 5, 50, true, false);
         var result = sut.step(start.sessionId(), null);
         assertThat(result.nextPage().url()).isEqualTo(ROOT + "/good");
         assertThat(result.skippedLinks()).isEqualTo(1);
@@ -213,7 +213,7 @@ class CrawlSessionServiceTest {
     void stepWithoutPageLeftThrowsNoPage() {
         pages.put(ROOT, page(ROOT));
         when(async.submitParsed(any())).thenReturn("d1");
-        var start = sut.start(ROOT, 5, 1, true);
+        var start = sut.start(ROOT, 5, 1, true, false);
         assertThat(sut.step(start.sessionId(), null).hasMore()).isFalse();
         assertThatThrownBy(() -> sut.step(start.sessionId(), null))
                 .isInstanceOf(CrawlSessionService.NoPageException.class);
@@ -222,7 +222,7 @@ class CrawlSessionServiceTest {
     @Test
     void cancelRemovesSession() {
         pages.put(ROOT, page(ROOT));
-        var start = sut.start(ROOT, 5, 50, true);
+        var start = sut.start(ROOT, 5, 50, true, false);
         assertThat(sut.cancel(start.sessionId())).isTrue();
         assertThat(sut.cancel(start.sessionId())).isFalse();
         assertThatThrownBy(() -> sut.step(start.sessionId(), null))
@@ -240,7 +240,7 @@ class CrawlSessionServiceTest {
         pages.put(ROOT, page(ROOT));
         when(async.submitParsed(any())).thenReturn("d1");
         var service = new CrawlSessionService(fetcher, async, null);
-        var start = service.start(ROOT, 5, 50, true);
+        var start = service.start(ROOT, 5, 50, true, false);
         assertThat(service.step(start.sessionId(), null).ingested()).isTrue();
     }
 

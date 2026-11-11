@@ -8,6 +8,7 @@ import com.rag.common.core.services.DocumentParser;
 import com.rag.common.core.services.EmbeddingModelPort;
 import com.rag.common.core.services.TextSplitter;
 import com.rag.common.core.tracing.TracePropagation;
+import com.rag.common.ingestion.testfixture.TestAsyncIngestionServices;
 import io.micrometer.tracing.test.simple.SimpleTracer;
 import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
@@ -51,7 +52,7 @@ class AsyncIngestionServiceTest {
         when(splitter.split(any())).thenReturn(List.of(chunk));
         when(embeddingModel.embed(List.of("hello world")))
                 .thenReturn(List.of(new float[]{1.0f, 0.0f}));
-        var service = new AsyncIngestionService(delegate);
+        var service = TestAsyncIngestionServices.of(delegate);
         var id = service.submit(new Document("d1", "", Map.of(MetadataKeys.RAW_BYTES, new byte[]{1})));
         var status = await(service, id);
         assertThat(status.state()).isEqualTo("COMPLETED");
@@ -62,7 +63,7 @@ class AsyncIngestionServiceTest {
     void marksFailedWhenIngestionThrows() {
         var delegate = mock(IngestionService.class);
         when(delegate.ingest(any())).thenThrow(new IllegalStateException("boom"));
-        var service = new AsyncIngestionService(delegate);
+        var service = TestAsyncIngestionServices.of(delegate);
         var id = service.submit(new Document("d1", "content", Map.of()));
         var status = await(service, id);
         assertThat(status.state()).isEqualTo("FAILED");
@@ -73,8 +74,8 @@ class AsyncIngestionServiceTest {
     void reportsEmptyExtractionMessageDirectly() {
         var delegate = mock(IngestionService.class);
         when(delegate.ingest(any()))
-                .thenThrow(new IngestionService.EmptyExtractionException(new Document("d1", "  ", Map.of())));
-        var service = new AsyncIngestionService(delegate, Executors.newSingleThreadExecutor());
+                .thenThrow(new IngestionService.EmptyExtractionException("d1"));
+        var service = TestAsyncIngestionServices.withExecutor(delegate, Executors.newSingleThreadExecutor());
         var id = service.submit(new Document("d1", "  ", Map.of()));
         var status = await(service, id);
         assertThat(status.state()).isEqualTo("FAILED");
@@ -86,7 +87,7 @@ class AsyncIngestionServiceTest {
         var delegate = mock(IngestionService.class);
         when(delegate.ingest(any())).thenReturn(new IngestionService.IngestionResult("d1", 0));
         AtomicReference<Runnable> captured = new AtomicReference<>();
-        var service = new AsyncIngestionService(delegate, capturingExecutor(captured));
+        var service = TestAsyncIngestionServices.withExecutor(delegate, capturingExecutor(captured));
         var id = service.submit(new Document("d1", "content", Map.of()));
         assertThat(service.status(id).state()).isEqualTo("PENDING");
         captured.get().run();
@@ -105,10 +106,10 @@ class AsyncIngestionServiceTest {
             release.await();
             return null;
         }).when(store).checkAvailable();
-        var service = new AsyncIngestionService(delegate, store, null);
+        var service = TestAsyncIngestionServices.withPreflight(delegate, store);
         var id = service.submit(new Document("d1", "content", Map.of()));
-        org.awaitility.Awaitility.await().atMost(5, TimeUnit.SECONDS).until(() -> service.running() == 1);
-        assertThat(service.status(id).state()).isEqualTo("RUNNING");
+        org.awaitility.Awaitility.await().atMost(5, TimeUnit.SECONDS)
+                .until(() -> AsyncIngestionService.STATE_RUNNING.equals(service.status(id).state()));
         release.countDown();
         var status = await(service, id);
         assertThat(status.state()).isEqualTo("COMPLETED");
@@ -119,7 +120,7 @@ class AsyncIngestionServiceTest {
     void evictsTheOldestFinishedJobsWhenTheRegistryIsFull() {
         var delegate = mock(IngestionService.class);
         when(delegate.ingest(any())).thenReturn(new IngestionService.IngestionResult("d", 0));
-        var service = new AsyncIngestionService(delegate, directExecutor());
+        var service = TestAsyncIngestionServices.withExecutor(delegate, directExecutor());
         int total = AsyncIngestionService.MAX_RETAINED_JOBS + 5;
         for (int i = 0; i < total; i++) {
             service.submit(new Document("doc-" + i, "content", Map.of()));
@@ -203,7 +204,7 @@ class AsyncIngestionServiceTest {
         var store = mock(VectorStorePort.class);
         doThrow(new IllegalStateException("Vector store not available: DataAccessResourceFailureException: Connection refused"))
                 .when(store).checkAvailable();
-        var service = new AsyncIngestionService(delegate, store, null);
+        var service = TestAsyncIngestionServices.withPreflight(delegate, store);
         var id = service.submit(new Document("d1", "content", Map.of()));
         var status = await(service, id);
         assertThat(status.state()).isEqualTo("FAILED");
@@ -213,7 +214,7 @@ class AsyncIngestionServiceTest {
 
     @Test
     void reportsFailedForUnknownJob() {
-        var service = new AsyncIngestionService(mock(IngestionService.class));
+        var service = TestAsyncIngestionServices.of(mock(IngestionService.class));
         var status = service.status("nope");
         assertThat(status.state()).isEqualTo("FAILED");
         assertThat(status.message()).contains("No such ingestion job");
@@ -232,7 +233,7 @@ class AsyncIngestionServiceTest {
         });
         ExecutorService executor = Executors.newSingleThreadExecutor();
         try {
-            var service = new AsyncIngestionService(delegate, null, executor, tracer);
+            var service = TestAsyncIngestionServices.withTracer(delegate, executor, tracer);
             var span = tracer.nextSpan().name("test-ingest").start();
             try (var _ = tracer.withSpan(span)) {
                 service.submit(new Document("d1", "", Map.of(MetadataKeys.RAW_BYTES, new byte[]{1})));
