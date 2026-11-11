@@ -14,7 +14,7 @@ import static org.mockito.Mockito.when;
 class ModuleLifecycleManagerTest {
 
     private final ModuleLifecycleManager.ProcessStarter starter = mock(ModuleLifecycleManager.ProcessStarter.class);
-    private final ModuleLifecycleManager sut = new ModuleLifecycleManager(starter);
+    private final ModuleLifecycleManager sut = new ModuleLifecycleManager("", starter);
     private final Module module = new Module("rag-basic", "http://localhost:8081");
 
     @Test

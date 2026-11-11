@@ -46,10 +46,6 @@ public class RemoteChatModelPort implements ChatModelPort, StreamingChatModelPor
     private final ObjectMapper objectMapper;
     private final Tracer tracer;
 
-    public RemoteChatModelPort(ProviderHttpClient httpClient, ObjectMapper objectMapper) {
-        this(httpClient, objectMapper, null);
-    }
-
     public RemoteChatModelPort(ProviderHttpClient httpClient, ObjectMapper objectMapper, Tracer tracer) {
         this.httpClient = httpClient;
         this.objectMapper = objectMapper;

@@ -41,17 +41,11 @@ public class ProviderClientFactory {
     private static final Logger log = LoggerFactory.getLogger(ProviderClientFactory.class);
 
     private static final int MAX_CACHED_CLIENTS = 64;
-    private static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(10);
-    private static final Duration DEFAULT_READ_TIMEOUT = Duration.ofSeconds(240);
 
     private final Map<ClientKey, ChatModel> chatModels = new ConcurrentHashMap<>();
     private final Map<ClientKey, EmbeddingModel> embeddingModels = new ConcurrentHashMap<>();
     private final Duration connTimeout;
     private final Duration readTimeout;
-
-    public ProviderClientFactory() {
-        this(DEFAULT_CONNECT_TIMEOUT, DEFAULT_READ_TIMEOUT);
-    }
 
     public ProviderClientFactory(Duration connTimeout, Duration readTimeout) {
         this.connTimeout = requirePositive(connTimeout, "connectTimeout");

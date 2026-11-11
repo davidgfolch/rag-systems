@@ -16,7 +16,7 @@ class ProviderHttpSettingsTest {
 
         assertThat(settings.connectTimeout()).isEqualTo(ProviderHttpSettings.DEFAULT_CONNECT_TIMEOUT);
         assertThat(settings.requestTimeout()).isEqualTo(ProviderHttpSettings.DEFAULT_REQUEST_TIMEOUT);
-        assertThat(settings.retryPolicy().retries()).isFalse();
+        assertThat(settings.retryPolicy().maxAttempts()).isEqualTo(1);
     }
 
     @Test

@@ -1,11 +1,13 @@
 package com.rag.tui.ui;
 
+import com.rag.common.core.util.WebUrls;
 import com.rag.tui.client.ModuleHealthClient;
 import com.rag.tui.client.RagApiClient;
 import com.rag.tui.launcher.ModuleRegistry;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Optional;
 
 import static com.rag.tui.testfixture.TestDocumentSummaries.withHash;
 import static com.rag.tui.testfixture.TestDocumentSummaries.withId;
@@ -66,55 +68,59 @@ class DuplicateFinderTest {
     void shouldReturnEmptyWhenNoModuleHasMatchingSource() {
         when(healthClient.isUp(BASIC_URL)).thenReturn(true);
         when(apiClient.listDocuments(BASIC_URL)).thenReturn(List.of(withSource("d1", "old", "https://x.com/page")));
-        assertThat(sut.findBySource("https://y.com/other")).isEmpty();
+        assertThat(findBySource("https://y.com/other")).isEmpty();
     }
 
     @Test
     void shouldReturnMatchWhenUriEqualsIgnoringFragmentAndTrailingSlash() {
         when(healthClient.isUp(BASIC_URL)).thenReturn(true);
         when(apiClient.listDocuments(BASIC_URL)).thenReturn(List.of(withSource("d1", "old", "https://x.com/page/")));
-        assertThat(sut.findBySource("https://x.com/page#top")).isPresent();
+        assertThat(findBySource("https://x.com/page#top")).isPresent();
     }
 
     @Test
     void shouldReturnMatchWhenUriDiffersOnlyByScheme() {
         when(healthClient.isUp(BASIC_URL)).thenReturn(true);
         when(apiClient.listDocuments(BASIC_URL)).thenReturn(List.of(withSource("d1", "old", "http://x.com/page")));
-        assertThat(sut.findBySource("https://x.com/page")).isPresent();
+        assertThat(findBySource("https://x.com/page")).isPresent();
     }
 
     @Test
     void shouldNotMatchWhenPathDiffers() {
         when(healthClient.isUp(BASIC_URL)).thenReturn(true);
         when(apiClient.listDocuments(BASIC_URL)).thenReturn(List.of(withSource("d1", "old", "https://x.com/page")));
-        assertThat(sut.findBySource("https://x.com/other")).isEmpty();
+        assertThat(findBySource("https://x.com/other")).isEmpty();
     }
 
     @Test
     void shouldNotMatchWhenHostDiffers() {
         when(healthClient.isUp(BASIC_URL)).thenReturn(true);
         when(apiClient.listDocuments(BASIC_URL)).thenReturn(List.of(withSource("d1", "old", "https://x.com/page")));
-        assertThat(sut.findBySource("https://y.com/page")).isEmpty();
+        assertThat(findBySource("https://y.com/page")).isEmpty();
     }
 
     @Test
     void shouldNotMatchWhenSourceMetadataMissing() {
         when(healthClient.isUp(BASIC_URL)).thenReturn(true);
         when(apiClient.listDocuments(BASIC_URL)).thenReturn(List.of(withId("d1")));
-        assertThat(sut.findBySource("https://x.com/page")).isEmpty();
+        assertThat(findBySource("https://x.com/page")).isEmpty();
     }
 
     @Test
     void shouldNotTreatFileDocumentAsUrlDuplicateWhenSourceIsLocalPath() {
         when(healthClient.isUp(BASIC_URL)).thenReturn(true);
         when(apiClient.listDocuments(BASIC_URL)).thenReturn(List.of(withSource("d1", "note", "docs/report.pdf")));
-        assertThat(sut.findBySource("https://x.com/docs/report.pdf")).isEmpty();
+        assertThat(findBySource("https://x.com/docs/report.pdf")).isEmpty();
     }
 
     @Test
     void shouldReturnEmptyForUnparseableStoredSource() {
         when(healthClient.isUp(BASIC_URL)).thenReturn(true);
         when(apiClient.listDocuments(BASIC_URL)).thenReturn(List.of(withSource("d1", "old", "::::not a uri:::")));
-        assertThat(sut.findBySource("https://x.com/page")).isEmpty();
+        assertThat(findBySource("https://x.com/page")).isEmpty();
+    }
+
+    private Optional<DuplicateFinder.Match> findBySource(String rawUrl) {
+        return Optional.ofNullable(sut.sourceIndex().get(WebUrls.key(rawUrl)));
     }
 }

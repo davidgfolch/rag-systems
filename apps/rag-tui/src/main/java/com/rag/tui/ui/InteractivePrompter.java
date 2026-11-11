@@ -38,7 +38,7 @@ public class InteractivePrompter implements Prompter {
     private int frameRows;
 
     public InteractivePrompter(Terminal terminal, CompletionCandidates completion) {
-        this(new TerminalPickSource(terminal, true), new TerminalPickSource(terminal, false), text -> {
+        this(new TerminalPickSource(terminal), new TerminalPickSource(terminal, false), text -> {
             terminal.writer().write(text);
             terminal.flush();
         }, Math.max(1, terminal.getHeight() - 1 - FRAME_CHROME_ROWS), completion);
@@ -46,10 +46,6 @@ public class InteractivePrompter implements Prompter {
         // only reach us after Enter and keys are printed twice (Windows consoles
         // deliver key events either way, which is why this only broke on Linux).
         terminal.enterRawMode();
-    }
-
-    InteractivePrompter(PickSource pickSource, Consumer<String> renderSink, int rows) {
-        this(pickSource, pickSource, renderSink, rows, (line, cursor) -> List.of());
     }
 
     InteractivePrompter(PickSource pickSource, Consumer<String> renderSink, int rows,

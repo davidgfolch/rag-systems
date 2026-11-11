@@ -15,6 +15,7 @@ class SitemapUrlDiscoveryTest {
 
     private static final String START = "https://example.com/docs/";
     private static final String ROBOTS = "https://example.com/robots.txt";
+    private static final Duration DISCOVERY_TIMEOUT = Duration.ofSeconds(2);
 
     private final Map<String, String> pages = new HashMap<>();
     private final UrlContentLoader loader = url -> Optional.ofNullable(pages.get(url))
@@ -29,7 +30,7 @@ class SitemapUrlDiscoveryTest {
                 "https://example.com/other/c",
                 "https://example.com/docs/logo.png"));
 
-        var urls = new SitemapUrlDiscovery(loader, 100).discover(START);
+        var urls = new SitemapUrlDiscovery(loader, 100, DISCOVERY_TIMEOUT).discover(START);
 
         assertThat(urls).containsExactlyInAnyOrder(
                 "https://example.com/docs/a", "https://example.com/docs/b");
@@ -42,7 +43,7 @@ class SitemapUrlDiscoveryTest {
                 "https://example.com/child.xml"));
         pages.put("https://example.com/child.xml", urlset("https://example.com/docs/deep"));
 
-        var urls = new SitemapUrlDiscovery(loader, 100).discover(START);
+        var urls = new SitemapUrlDiscovery(loader, 100, DISCOVERY_TIMEOUT).discover(START);
 
         assertThat(urls).containsExactly("https://example.com/docs/deep");
     }
@@ -51,7 +52,7 @@ class SitemapUrlDiscoveryTest {
     void usesConventionalSitemapLocationsWhenRobotsHasNoDirective() {
         pages.put("https://example.com/docs/sitemap.xml", urlset("https://example.com/docs/a"));
 
-        var urls = new SitemapUrlDiscovery(loader, 100).discover(START);
+        var urls = new SitemapUrlDiscovery(loader, 100, DISCOVERY_TIMEOUT).discover(START);
 
         assertThat(urls).containsExactly("https://example.com/docs/a");
     }
@@ -62,7 +63,7 @@ class SitemapUrlDiscoveryTest {
         pages.put("https://example.com/sitemap.xml", urlset(
                 "https://example.com/docs/private/x", "https://example.com/docs/public"));
 
-        var urls = new SitemapUrlDiscovery(loader, 100).discover(START);
+        var urls = new SitemapUrlDiscovery(loader, 100, DISCOVERY_TIMEOUT).discover(START);
 
         assertThat(urls).containsExactly("https://example.com/docs/public");
     }
@@ -72,7 +73,7 @@ class SitemapUrlDiscoveryTest {
         pages.put("https://example.com/docs/sitemap.xml", urlset(
                 "https://example.com/docs/3.0/a", "https://example.com/docs/3.1/a"));
 
-        var urls = new SitemapUrlDiscovery(loader, 100).discover(START);
+        var urls = new SitemapUrlDiscovery(loader, 100, DISCOVERY_TIMEOUT).discover(START);
 
         assertThat(urls).singleElement().asString().contains("/docs/3.0/a").doesNotContain("3.1");
     }
@@ -81,7 +82,7 @@ class SitemapUrlDiscoveryTest {
     void ignoresMalformedSitemaps() {
         pages.put("https://example.com/docs/sitemap.xml", "not xml at all");
 
-        assertThat(new SitemapUrlDiscovery(loader, 100).discover(START)).isEmpty();
+        assertThat(new SitemapUrlDiscovery(loader, 100, DISCOVERY_TIMEOUT).discover(START)).isEmpty();
     }
 
     @Test
@@ -89,7 +90,7 @@ class SitemapUrlDiscoveryTest {
         pages.put("https://example.com/docs/sitemap.xml", urlset(
                 "https://example.com/docs/a", "https://example.com/docs/b", "https://example.com/docs/c"));
 
-        assertThat(new SitemapUrlDiscovery(loader, 2).discover(START)).hasSizeLessThanOrEqualTo(2);
+        assertThat(new SitemapUrlDiscovery(loader, 2, DISCOVERY_TIMEOUT).discover(START)).hasSizeLessThanOrEqualTo(2);
     }
 
     @Test

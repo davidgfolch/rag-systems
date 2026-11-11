@@ -18,7 +18,6 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -40,9 +39,6 @@ public class AsyncIngestionService {
 
     static final int MAX_RETAINED_JOBS = 1000;
     private static final Duration JOB_TTL = Duration.ofHours(1);
-    public static final int DEFAULT_MAX_CONCURRENT = 2;
-    public static final Duration DEFAULT_QUEUE_WAIT = Duration.ofMinutes(5);
-    private static final String LIMITER_NAME = "ingestion";
     private static final String SATURATION_MESSAGE =
             "Ingestion capacity exhausted after waiting %d ms (max concurrent %d)";
 
@@ -52,23 +48,6 @@ public class AsyncIngestionService {
     private final Tracer tracer;
     private final ConcurrencyLimiter limiter;
     private final Map<String, Job> jobs = new ConcurrentHashMap<>();
-    private final AtomicInteger running = new AtomicInteger();
-
-    public AsyncIngestionService(IngestionService delegate) {
-        this(delegate, null, null, null);
-    }
-
-    public AsyncIngestionService(IngestionService delegate, ExecutorService executor) {
-        this(delegate, null, executor, null);
-    }
-
-    public AsyncIngestionService(IngestionService delegate, VectorStorePort preflight, ExecutorService executor) {
-        this(delegate, preflight, executor, null);
-    }
-
-    public AsyncIngestionService(IngestionService delegate, VectorStorePort preflight, ExecutorService executor, Tracer tracer) {
-        this(delegate, preflight, executor, tracer, defaultLimiter());
-    }
 
     public AsyncIngestionService(IngestionService delegate, VectorStorePort preflight, ExecutorService executor,
                                  Tracer tracer, ConcurrencyLimiter limiter) {
@@ -77,10 +56,6 @@ public class AsyncIngestionService {
         this.executor = executor != null ? executor : Executors.newVirtualThreadPerTaskExecutor();
         this.tracer = tracer;
         this.limiter = Objects.requireNonNull(limiter, "limiter must not be null");
-    }
-
-    private static ConcurrencyLimiter defaultLimiter() {
-        return new ConcurrencyLimiter(LIMITER_NAME, DEFAULT_MAX_CONCURRENT, DEFAULT_QUEUE_WAIT);
     }
 
     /**
@@ -168,7 +143,6 @@ public class AsyncIngestionService {
 
     private void run(Job job, Supplier<IngestionService.IngestionResult> ingestion) {
         job.state = STATE_RUNNING;
-        running.incrementAndGet();
         try {
             if (preflight != null) {
                 log.info("Async ingestion preflight: vector store availability check for document {}", job.documentId);
@@ -183,7 +157,6 @@ public class AsyncIngestionService {
             log.error("Async ingestion failed for document {}", job.documentId, e);
         } finally {
             job.finishedAt = System.nanoTime();
-            running.decrementAndGet();
             limiter.exit();
         }
     }
@@ -193,10 +166,6 @@ public class AsyncIngestionService {
             return e.getMessage();
         }
         return e.getClass().getSimpleName() + ": " + e.getMessage();
-    }
-
-    public int running() {
-        return running.get();
     }
 
     private static final class Job {

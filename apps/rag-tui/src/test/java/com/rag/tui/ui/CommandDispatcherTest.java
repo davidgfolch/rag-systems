@@ -66,7 +66,7 @@ class CommandDispatcherTest extends AbstractCommandDispatcherTest {
         return new CommandDispatcher(modules, lifecycle,
                 new CommandDispatcher.RagClients(apiClient, chatGateway, memoryClient, fileLoader, healthClient,
                         providerClient),
-                new CommandDispatcher.Settings(10_000, 4, 60), commandRegistry, prompter);
+                new CommandDispatcher.Settings(10_000, 4, 60), commandRegistry, prompter, null);
     }
 
     @Test

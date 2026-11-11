@@ -46,11 +46,6 @@ public class ChatGateway {
     private final AtomicReference<WebSocketSession> active = new AtomicReference<>();
 
     public ChatGateway(ModuleRegistry registry, WebSocketClient webSocketClient, ObjectMapper objectMapper,
-                       long timeoutSeconds) {
-        this(registry, webSocketClient, objectMapper, timeoutSeconds, null);
-    }
-
-    public ChatGateway(ModuleRegistry registry, WebSocketClient webSocketClient, ObjectMapper objectMapper,
                        long timeoutSeconds, Tracer tracer) {
         this.registry = registry;
         this.webSocketClient = webSocketClient;

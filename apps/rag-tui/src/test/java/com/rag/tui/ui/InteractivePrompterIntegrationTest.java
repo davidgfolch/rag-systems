@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class InteractivePrompterIntegrationTest {
 
+    private static final CompletionCandidates NO_COMPLETION = (line, cursor) -> List.of();
     private static final List<Prompter.Choice> CHOICES = List.of(
             new Prompter.Choice("OpenAI", "openai"),
             new Prompter.Choice("OpenRouter", "openrouter"),
@@ -31,7 +32,7 @@ class InteractivePrompterIntegrationTest {
         var sink = new StringBuilder();
         var sut = new InteractivePrompter(
                 keys(typeChar('o'), typeChar('p'), key(ENTER)),
-                sink::append, 8);
+                sink::append, 8, NO_COMPLETION);
         var result = sut.pick("Provider", CHOICES);
         assertThat(result).hasValue("openai");
         assertThat(sink).contains("[filter: op]");
@@ -42,7 +43,7 @@ class InteractivePrompterIntegrationTest {
         var sink = new StringBuilder();
         var sut = new InteractivePrompter(
                 keys(typeChar('o'), key(DOWN), key(ENTER)),
-                sink::append, 8);
+                sink::append, 8, NO_COMPLETION);
         var result = sut.pick("Provider", CHOICES);
         assertThat(result).hasValue("openrouter");
         assertThat(sink).contains("> OpenRouter");
@@ -51,7 +52,7 @@ class InteractivePrompterIntegrationTest {
     @Test
     void drawsTheListBeforeWaitingForTheFirstKey() {
         var frames = new java.util.ArrayList<String>();
-        var sut = new InteractivePrompter(keys(key(ENTER)), frames::add, 8);
+        var sut = new InteractivePrompter(keys(key(ENTER)), frames::add, 8, NO_COMPLETION);
         assertThat(sut.pick("Provider", CHOICES)).hasValue("openai");
         assertThat(frames.get(0)).contains("[filter: ]", "> OpenAI", "OpenRouter", "Anthropic");
     }
@@ -59,7 +60,7 @@ class InteractivePrompterIntegrationTest {
     @Test
     void repaintsTheFrameInPlaceSoTheListDoesNotScrollAway() {
         var sink = new StringBuilder();
-        var sut = new InteractivePrompter(keys(typeChar('o'), key(ESC)), sink::append, 8);
+        var sut = new InteractivePrompter(keys(typeChar('o'), key(ESC)), sink::append, 8, NO_COMPLETION);
         sut.pick("Provider", CHOICES);
         // First frame: title, hint and three choices.
         assertThat(sink.toString()).contains("\r\u001B[5A\u001B[J");
@@ -68,28 +69,28 @@ class InteractivePrompterIntegrationTest {
     @Test
     void explainsWhenTheFilterMatchesNothing() {
         var sink = new StringBuilder();
-        var sut = new InteractivePrompter(keys(typeChar('z')), sink::append, 8);
+        var sut = new InteractivePrompter(keys(typeChar('z')), sink::append, 8, NO_COMPLETION);
         assertThat(sut.pick("Provider", CHOICES)).isEmpty();
         assertThat(sink.toString()).contains("no matches for 'z'");
     }
 
     @Test
     void escapeCancelsSelection() {
-        var sut = new InteractivePrompter(keys(key(ESC)), s -> { }, 8);
+        var sut = new InteractivePrompter(keys(key(ESC)), s -> { }, 8, NO_COMPLETION);
         var result = sut.pick("Provider", CHOICES);
         assertThat(result).isEmpty();
     }
 
     @Test
     void returnsEmptyWhenNoChoices() {
-        var sut = new InteractivePrompter(keys(key(ENTER)), s -> { }, 8);
+        var sut = new InteractivePrompter(keys(key(ENTER)), s -> { }, 8, NO_COMPLETION);
         var result = sut.pick("Provider", List.of());
         assertThat(result).isEmpty();
     }
 
     @Test
     void abortsWhenSourceEndsMidSelection() {
-        var sut = new InteractivePrompter(keys(typeChar('a')), s -> { }, 8);
+        var sut = new InteractivePrompter(keys(typeChar('a')), s -> { }, 8, NO_COMPLETION);
         var result = sut.pick("Provider", CHOICES);
         assertThat(result).isEmpty();
     }
@@ -98,7 +99,7 @@ class InteractivePrompterIntegrationTest {
     void recallsPreviousSubmissionViaArrowUpOnNextPrompt() {
         var sut = new InteractivePrompter(
                 keys(typeChar('h'), typeChar('i'), key(ENTER), key(UP), key(ENTER)),
-                s -> { }, 8);
+                s -> { }, 8, NO_COMPLETION);
         assertThat(sut.prompt("> ")).isEqualTo("hi");
         assertThat(sut.prompt("> ")).isEqualTo("hi");
     }
@@ -106,7 +107,7 @@ class InteractivePrompterIntegrationTest {
     @Test
     void keepsSubmittedLineVisibleAndClearsOnlyPopupAreaOnSubmit() {
         var sink = new StringBuilder();
-        var sut = new InteractivePrompter(keys(typeChar('h'), typeChar('i'), key(ENTER)), sink::append, 8);
+        var sut = new InteractivePrompter(keys(typeChar('h'), typeChar('i'), key(ENTER)), sink::append, 8, NO_COMPLETION);
         assertThat(sut.prompt("> ")).isEqualTo("hi");
         assertThat(sink).contains("hi");
         assertThat(sink.toString()).endsWith("\u001B[J\r\n");
@@ -118,42 +119,42 @@ class InteractivePrompterIntegrationTest {
         var sink = new StringBuilder();
         var sut = new InteractivePrompter(
                 keys(key(LEFT), key(RIGHT), typeChar('o'), key(ENTER)),
-                sink::append, 8);
+                sink::append, 8, NO_COMPLETION);
         var result = sut.pick("Provider", CHOICES);
         assertThat(result).hasValue("openai");
     }
 
     @Test
     void overrideDecisionEnterOverridesThisPage() {
-        var sut = new InteractivePrompter(keys(key(ENTER)), s -> { }, 8);
+        var sut = new InteractivePrompter(keys(key(ENTER)), s -> { }, 8, NO_COMPLETION);
         assertThat(sut.overrideDecision("Override? "))
                 .isEqualTo(Prompter.OverrideDecision.OVERRIDE);
     }
 
     @Test
     void overrideDecisionEscapeIgnoresThisPage() {
-        var sut = new InteractivePrompter(keys(key(ESC)), s -> { }, 8);
+        var sut = new InteractivePrompter(keys(key(ESC)), s -> { }, 8, NO_COMPLETION);
         assertThat(sut.overrideDecision("Override? "))
                 .isEqualTo(Prompter.OverrideDecision.SKIP);
     }
 
     @Test
     void overrideDecisionYOverridesTheRest() {
-        var sut = new InteractivePrompter(keys(typeChar('y'), key(ENTER)), s -> { }, 8);
+        var sut = new InteractivePrompter(keys(typeChar('y'), key(ENTER)), s -> { }, 8, NO_COMPLETION);
         assertThat(sut.overrideDecision("Override? "))
                 .isEqualTo(Prompter.OverrideDecision.OVERRIDE_ALL);
     }
 
     @Test
     void overrideDecisionNNoIgnoresTheRest() {
-        var sut = new InteractivePrompter(keys(typeChar('n'), key(ENTER)), s -> { }, 8);
+        var sut = new InteractivePrompter(keys(typeChar('n'), key(ENTER)), s -> { }, 8, NO_COMPLETION);
         assertThat(sut.overrideDecision("Override? "))
                 .isEqualTo(Prompter.OverrideDecision.SKIP_ALL);
     }
 
     @Test
     void overrideDecisionEofSkipsTheRest() {
-        var sut = new InteractivePrompter(keys(), s -> { }, 8);
+        var sut = new InteractivePrompter(keys(), s -> { }, 8, NO_COMPLETION);
         assertThat(sut.overrideDecision("Override? "))
                 .isEqualTo(Prompter.OverrideDecision.SKIP_ALL);
     }

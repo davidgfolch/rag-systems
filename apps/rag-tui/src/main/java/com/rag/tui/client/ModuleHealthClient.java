@@ -21,18 +21,13 @@ public class ModuleHealthClient {
     private static final long POLL_MILLIS = 500;
     private static final long PROGRESS_MILLIS = 5_000;
     private static final int MAX_CACHED_CLIENTS = 16;
+    private static final String HEALTH_PATH = "/actuator/health";
 
     private final RestClient.Builder builder;
-    private final String healthPath;
     private final Map<String, RestClient> clients = new ConcurrentHashMap<>();
 
     public ModuleHealthClient(RestClient.Builder builder) {
-        this(builder, "/actuator/health");
-    }
-
-    public ModuleHealthClient(RestClient.Builder builder, String healthPath) {
         this.builder = builder;
-        this.healthPath = healthPath;
     }
 
     /**
@@ -64,7 +59,7 @@ public class ModuleHealthClient {
 
     public boolean isUp(String baseUrl) {
         try {
-            client(baseUrl).get().uri(healthPath).retrieve().toBodilessEntity();
+            client(baseUrl).get().uri(HEALTH_PATH).retrieve().toBodilessEntity();
             return true;
         } catch (RestClientException e) {
             log.debug("Health probe failed for {}: {}", baseUrl, e.getMessage());

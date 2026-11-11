@@ -1,6 +1,7 @@
 package com.rag.common.retrieval.store;
 
 import com.rag.common.core.domain.Chunk;
+import com.rag.common.core.resilience.RetryObserver;
 import com.rag.common.core.resilience.RetryPolicy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,6 +31,7 @@ class PgVectorWriterRetryTest {
     private static final Duration FAST = Duration.ofMillis(1);
     private static final RetryPolicy FAST_RETRY = new RetryPolicy(3, FAST, FAST, 2.0, 0);
     private static final String TABLE = "\"s\".\"t\"";
+    private static final int EXPECTED_QUERY_TIMEOUT = 30;
 
     private final DataSource dataSource = mock(DataSource.class);
     private final Connection connection = mock(Connection.class);
@@ -115,11 +117,12 @@ class PgVectorWriterRetryTest {
         var captor = ArgumentCaptor.forClass(Integer.class);
         verify(statement).setQueryTimeout(captor.capture());
         verify(indexStatement).setQueryTimeout(captor.capture());
-        assertThat(captor.getAllValues()).containsOnly(30);
+        assertThat(captor.getAllValues()).containsOnly(EXPECTED_QUERY_TIMEOUT);
     }
 
     private PgVectorWriter writer() {
-        return new PgVectorWriter(dataSource, TABLE, "idx", FAST_RETRY, 30);
+        return new PgVectorWriter(dataSource, TABLE, "idx", FAST_RETRY, EXPECTED_QUERY_TIMEOUT,
+                RetryObserver.NOOP);
     }
 
     private static SQLException sqlException(String sqlState) {

@@ -1,6 +1,7 @@
 package com.rag.common.ingestion.web;
 
 import com.rag.common.core.resilience.RetryPolicy;
+import com.rag.common.ingestion.testfixture.TestWebCrawlerClients;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.test.web.client.MockRestServiceServer;
@@ -33,7 +34,7 @@ class WebCrawlerClientRetryTest {
     void shouldRetryTransientServerErrorThenSucceed() {
         var builder = restClientBuilder();
         var server = MockRestServiceServer.bindTo(builder).build();
-        var sut = new WebCrawlerClient(builder.build(), FAST_RETRY);
+        var sut = TestWebCrawlerClients.retrying(builder.build(), FAST_RETRY);
         server.expect(requestTo(FETCH_URL)).andRespond(withStatus(SERVICE_UNAVAILABLE));
         server.expect(requestTo(FETCH_URL)).andExpect(method(POST))
                 .andRespond(withSuccess("""
@@ -50,7 +51,7 @@ class WebCrawlerClientRetryTest {
     void shouldGiveUpAfterRetriesAreExhausted() {
         var builder = restClientBuilder();
         var server = MockRestServiceServer.bindTo(builder).build();
-        var sut = new WebCrawlerClient(builder.build(), FAST_RETRY);
+        var sut = TestWebCrawlerClients.retrying(builder.build(), FAST_RETRY);
         server.expect(requestTo(FETCH_URL)).andRespond(withStatus(SERVICE_UNAVAILABLE));
         server.expect(requestTo(FETCH_URL)).andRespond(withStatus(SERVICE_UNAVAILABLE));
         server.expect(requestTo(FETCH_URL)).andRespond(withStatus(SERVICE_UNAVAILABLE));
@@ -65,7 +66,7 @@ class WebCrawlerClientRetryTest {
     void shouldNotRetryClientErrors() {
         var builder = restClientBuilder();
         var server = MockRestServiceServer.bindTo(builder).build();
-        var sut = new WebCrawlerClient(builder.build(), FAST_RETRY);
+        var sut = TestWebCrawlerClients.retrying(builder.build(), FAST_RETRY);
         server.expect(requestTo(FETCH_URL)).andRespond(withStatus(BAD_REQUEST));
 
         assertThatThrownBy(() -> sut.fetch("https://example.com"))
@@ -78,8 +79,7 @@ class WebCrawlerClientRetryTest {
     void shouldRetryDiscoveryCalls() {
         var builder = restClientBuilder();
         var server = MockRestServiceServer.bindTo(builder).build();
-        var sut = new WebCrawlerClient(builder.build(), FAST_RETRY);
-        server.expect(requestTo(BASE_URL + "/api/discover")).andRespond(withStatus(TOO_MANY_REQUESTS));
+        var sut = TestWebCrawlerClients.retrying(builder.build(), FAST_RETRY);
         server.expect(requestTo(BASE_URL + "/api/discover"))
                 .andRespond(withSuccess("{\"urls\":[\"https://example.com/a\"]}", APPLICATION_JSON));
 
@@ -95,10 +95,10 @@ class WebCrawlerClientRetryTest {
     }
 
     @Test
-    void legacyConstructorShouldNotRetry() {
+    void shouldNotRetryWhenPolicyDisablesRetries() {
         var builder = restClientBuilder();
         var server = MockRestServiceServer.bindTo(builder).build();
-        var sut = new WebCrawlerClient(builder.build());
+        var sut = TestWebCrawlerClients.noRetry(builder.build());
         server.expect(requestTo(FETCH_URL)).andRespond(withStatus(SERVICE_UNAVAILABLE));
 
         assertThatThrownBy(() -> sut.fetch("https://example.com"))

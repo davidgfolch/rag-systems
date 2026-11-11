@@ -37,11 +37,6 @@ public class CommandCompletion implements CompletionCandidates {
     private volatile long cachedAtMs;
 
     public CommandCompletion(CommandRegistry commandRegistry, ModuleRegistry moduleRegistry,
-                             ProviderClient providerClient) {
-        this(commandRegistry, moduleRegistry, providerClient, null);
-    }
-
-    public CommandCompletion(CommandRegistry commandRegistry, ModuleRegistry moduleRegistry,
                              ProviderClient providerClient, RagApiClient apiClient) {
         this.commandRegistry = commandRegistry;
         this.moduleRegistry = moduleRegistry;

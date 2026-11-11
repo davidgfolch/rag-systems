@@ -33,7 +33,7 @@ class AsyncIngestionServiceConcurrencyTest {
         var captured = new AtomicReference<Runnable>();
         when(delegate.ingest(any())).thenReturn(new IngestionService.IngestionResult("d1", 0));
         var service = new AsyncIngestionService(delegate, null, capturingExecutor(captured), null,
-                new ConcurrencyLimiter("test", 1, SHORT_WAIT));
+                new ConcurrencyLimiter("test", 1, SHORT_WAIT, null));
         var first = service.submit(new Document("d1", "content", Map.of()));
         assertThat(service.status(first).state()).isEqualTo(STATE_PENDING);
 
@@ -51,7 +51,7 @@ class AsyncIngestionServiceConcurrencyTest {
     void shouldReleasePermitWhenIngestionCompletes() {
         when(delegate.ingest(any())).thenReturn(new IngestionService.IngestionResult("d", 0));
         var service = new AsyncIngestionService(delegate, null, directExecutor(), null,
-                new ConcurrencyLimiter("test", 1, SHORT_WAIT));
+                new ConcurrencyLimiter("test", 1, SHORT_WAIT, null));
 
         var first = service.submit(new Document("d1", "content", Map.of()));
         var second = service.submit(new Document("d2", "content", Map.of()));
@@ -64,7 +64,7 @@ class AsyncIngestionServiceConcurrencyTest {
     void shouldReleasePermitWhenIngestionFails() {
         when(delegate.ingest(any())).thenThrow(new IllegalStateException("boom"));
         var service = new AsyncIngestionService(delegate, null, directExecutor(), null,
-                new ConcurrencyLimiter("test", 1, SHORT_WAIT));
+                new ConcurrencyLimiter("test", 1, SHORT_WAIT, null));
 
         var first = service.submit(new Document("d1", "content", Map.of()));
         var second = service.submit(new Document("d2", "content", Map.of()));

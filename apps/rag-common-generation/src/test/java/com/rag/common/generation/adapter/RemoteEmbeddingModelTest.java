@@ -1,6 +1,7 @@
 package com.rag.common.generation.adapter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rag.common.generation.testfixture.TestProviderHttpClients;
 import com.rag.contract.constants.ApiPaths;
 import com.rag.contract.provider.ProviderStatusDTO;
 import com.sun.net.httpserver.HttpExchange;
@@ -40,9 +41,9 @@ class RemoteEmbeddingModelTest {
     void setUp() throws IOException {
         server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
         server.start();
-        var client = new ProviderHttpClient("http://localhost:" + server.getAddress().getPort(),
+        var client = TestProviderHttpClients.of("http://localhost:" + server.getAddress().getPort(),
                 new ObjectMapper());
-        model = new RemoteEmbeddingModel(client);
+        model = new RemoteEmbeddingModel(client, 768);
         server.createContext(ApiPaths.PROVIDER, exchange -> {
             providerStatusCalls.incrementAndGet();
             respond(exchange, 200, "application/json", STATUS_JSON);
@@ -92,7 +93,7 @@ class RemoteEmbeddingModelTest {
             lastEmbedBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
             respond(exchange, 200, "application/json", "{\"embeddings\":[[1.0,2.0,3.0]]}");
         });
-        var client = new ProviderHttpClient("http://localhost:" + server.getAddress().getPort(),
+        var client = TestProviderHttpClients.of("http://localhost:" + server.getAddress().getPort(),
                 new ObjectMapper());
         var sut = new RemoteEmbeddingModel(client, 0, "mxbai-embed-large");
         assertThat(sut.embed(new Document("text"))).containsExactly(1.0f, 2.0f, 3.0f);
@@ -115,7 +116,7 @@ class RemoteEmbeddingModelTest {
     void shouldFallBackToDefaultDimensionWhenProviderUnreachableAndRetryLater() throws IOException {
         var down = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
         down.start();
-        var client = new ProviderHttpClient("http://localhost:" + down.getAddress().getPort(),
+        var client = TestProviderHttpClients.of("http://localhost:" + down.getAddress().getPort(),
                 new ObjectMapper());
         var sut = new RemoteEmbeddingModel(client, 512);
         assertThat(sut.dimensions()).isEqualTo(512);
@@ -150,7 +151,7 @@ class RemoteEmbeddingModelTest {
         });
         srv.createContext(ApiPaths.EMBED, exchange ->
                 respond(exchange, 200, "application/json", "{\"embeddings\":[[0.0,1.0]]}"));
-        var client = new ProviderHttpClient("http://localhost:" + srv.getAddress().getPort(),
+        var client = TestProviderHttpClients.of("http://localhost:" + srv.getAddress().getPort(),
                 new ObjectMapper());
         var sut = new RemoteEmbeddingModel(client, 512);
         var res = sut.call(new EmbeddingRequest(List.of("a"), null));

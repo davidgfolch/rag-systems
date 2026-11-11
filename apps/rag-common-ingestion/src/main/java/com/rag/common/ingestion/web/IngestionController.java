@@ -60,10 +60,6 @@ public class IngestionController {
     private final AsyncIngestionService asyncIngestionService;
     private final DocumentStorePort documentStore;
 
-    public IngestionController(IngestionService ingestionService, WebPageFetcher webPageFetcher) {
-        this(ingestionService, webPageFetcher, null, null);
-    }
-
     @Autowired
     public IngestionController(IngestionService ingestionService, WebPageFetcher webPageFetcher,
                                AsyncIngestionService asyncIngestionService, DocumentStorePort documentStore) {

@@ -21,6 +21,7 @@ Enforce the architecture rules defined in `.claude/rules/architecture-guidelines
 7. **Minimal root**: Root holds only the files needed for the GitHub landing page and the build (enforced by `rag-common-core` `ArchitectureTest.repoRootContainsOnlyAllowedEntries`).
 8. **Docs/scripts placement**: All `.md` in `docs/`, all `.bat`/`.sh`/`.ps1` in `scripts/`; only `README.md` allowed at root (enforced by `.noDocsOrScriptsAtRoot`).
 9. **Portability**: Every operational script has a `.sh` + `.bat`/`.ps1` twin (enforced by `.scriptsArePortable`).
+10. **No test-only / dead production members**: every non-private member declared in `src/main` must be referenced by production sources. Source-walked across all modules by `TestOnlyMembersArchitectureTest` + `MemberUsageScanner` (a per-module ArchUnit classpath cannot see sibling-module callers); unjustified violations fail the suite.
 
 ## How to Run
 
@@ -44,6 +45,7 @@ The class-based modules use `ClassFileImporter` (layer/interface rules). The `ra
 - `noDocsOrScriptsAtRoot` - docs live in `docs/`, scripts in `scripts/`
 - `scriptsArePortable` - every script has a Windows (`.bat`/`.ps1`) + Unix (`.sh`) pair
 - `FileLengthArchitectureTest` - cross-module file-length gate: unified color-coded report (WARNING ≥200, ALERT ≥300, FAULT ≥400), fails on any ALERT/FAULT
+- `TestOnlyMembersArchitectureTest` - cross-module source gate: fails on members referenced only by tests (test scaffolding in `src/main`) or by nothing (dead code); justified test seams go in its `ALLOWLIST`
 
 ## Definition of Done
 

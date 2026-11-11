@@ -1,5 +1,6 @@
 package com.rag.webcrawler.services.fetching;
 
+import com.rag.common.core.resilience.RetryObserver;
 import com.rag.common.core.resilience.RetryPolicy;
 import org.jsoup.Connection;
 import org.jsoup.HttpStatusException;
@@ -30,7 +31,7 @@ class JsoupWebPageFetcherResilienceTest {
         var connection = mock(Connection.class);
         when(connection.get()).thenThrow(new SocketTimeoutException("timeout"))
                 .thenReturn(Jsoup.parse("<html><head><title>Retried</title></head><body>ok</body></html>", URL));
-        var sut = new JsoupWebPageFetcher(connection, TIMEOUT, FAST_RETRY);
+        var sut = new JsoupWebPageFetcher(connection, TIMEOUT, FAST_RETRY, RetryObserver.NOOP);
 
         var page = sut.fetch(URL);
 
@@ -44,7 +45,7 @@ class JsoupWebPageFetcherResilienceTest {
         var connection = mock(Connection.class);
         when(connection.get()).thenThrow(new HttpStatusException("busy", 503, URL))
                 .thenReturn(Jsoup.parse("<html><head><title>AfterRetry</title></head></html>", URL));
-        var sut = new JsoupWebPageFetcher(connection, TIMEOUT, FAST_RETRY);
+        var sut = new JsoupWebPageFetcher(connection, TIMEOUT, FAST_RETRY, RetryObserver.NOOP);
 
         assertThat(sut.fetch(URL).getTitle()).isEqualTo("AfterRetry");
         verify(connection, times(2)).get();
@@ -54,7 +55,7 @@ class JsoupWebPageFetcherResilienceTest {
     void shouldNotRetryPermanentHttpStatus() throws Exception {
         var connection = mock(Connection.class);
         when(connection.get()).thenThrow(new HttpStatusException("missing", 404, URL));
-        var sut = new JsoupWebPageFetcher(connection, TIMEOUT, FAST_RETRY);
+        var sut = new JsoupWebPageFetcher(connection, TIMEOUT, FAST_RETRY, RetryObserver.NOOP);
 
         assertThatThrownBy(() -> sut.fetch(URL))
                 .isInstanceOf(JsoupWebPageFetcher.WebFetchException.class)
@@ -74,10 +75,10 @@ class JsoupWebPageFetcherResilienceTest {
     @Test
     void shouldRejectNonPositiveTimeout() {
         var policy = RetryPolicy.noRetry();
-        assertThatThrownBy(() -> new JsoupWebPageFetcher((Duration) null, policy))
+        assertThatThrownBy(() -> new JsoupWebPageFetcher((Duration) null, policy, RetryObserver.NOOP))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("timeout");
-        assertThatThrownBy(() -> new JsoupWebPageFetcher(Duration.ZERO, policy))
+        assertThatThrownBy(() -> new JsoupWebPageFetcher(Duration.ZERO, policy, RetryObserver.NOOP))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("timeout");
     }

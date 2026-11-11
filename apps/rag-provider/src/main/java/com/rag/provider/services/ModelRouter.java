@@ -103,10 +103,6 @@ public class ModelRouter {
         return state.activeEmbedding();
     }
 
-    public String provider() {
-        return state.activeChat().providerId();
-    }
-
     public ChatModel chatModel() {
         return state.chatModel();
     }

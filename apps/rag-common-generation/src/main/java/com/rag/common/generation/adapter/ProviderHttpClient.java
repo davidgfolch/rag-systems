@@ -23,8 +23,7 @@ import java.time.Duration;
  * {@link Tracer} is available the current span is propagated as a W3C
  * {@code traceparent} header so rag-provider keeps the same trace id.
  *
- * <p>Timeouts and retries come from {@link ProviderHttpSettings}; the legacy
- * constructors keep the historical 30-second, no-retry behaviour.
+ * <p>Timeouts and retries come from {@link ProviderHttpSettings}.
  */
 public class ProviderHttpClient {
 
@@ -44,36 +43,9 @@ public class ProviderHttpClient {
     private final ProviderHttpSettings settings;
     private final RetryExecutor retry;
 
-    public ProviderHttpClient(String baseUrl, ObjectMapper objectMapper) {
-        this(baseUrl, objectMapper, null);
-    }
-
-    public ProviderHttpClient(String baseUrl, ObjectMapper objectMapper, Tracer tracer) {
-        this(baseUrl, objectMapper, tracer, ProviderHttpSettings.defaults());
-    }
-
-    public ProviderHttpClient(String baseUrl, HttpClient httpClient, ObjectMapper objectMapper) {
-        this(baseUrl, httpClient, objectMapper, null);
-    }
-
-    public ProviderHttpClient(String baseUrl, HttpClient httpClient, ObjectMapper objectMapper, Tracer tracer) {
-        this(baseUrl, httpClient, objectMapper, tracer, ProviderHttpSettings.defaults());
-    }
-
-    public ProviderHttpClient(String baseUrl, ObjectMapper objectMapper, Tracer tracer,
-                              ProviderHttpSettings settings) {
-        this(baseUrl, defaultClient(settings.connectTimeout()), objectMapper, tracer, settings,
-                RetryObserver.NOOP);
-    }
-
     public ProviderHttpClient(String baseUrl, ObjectMapper objectMapper, Tracer tracer,
                               ProviderHttpSettings settings, RetryObserver observer) {
         this(baseUrl, defaultClient(settings.connectTimeout()), objectMapper, tracer, settings, observer);
-    }
-
-    public ProviderHttpClient(String baseUrl, HttpClient httpClient, ObjectMapper objectMapper,
-                              Tracer tracer, ProviderHttpSettings settings) {
-        this(baseUrl, httpClient, objectMapper, tracer, settings, RetryObserver.NOOP);
     }
 
     public ProviderHttpClient(String baseUrl, HttpClient httpClient, ObjectMapper objectMapper,
@@ -84,7 +56,7 @@ public class ProviderHttpClient {
         this.tracer = tracer;
         this.settings = settings;
         this.retry = new RetryExecutor(ProviderHttpRetry.policy(settings), ProviderHttpRetry::isRetryable,
-                observer);
+                observer, Thread::sleep);
     }
 
     public <T> T postJson(String path, Object body, Class<T> responseType) {

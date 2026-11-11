@@ -1,5 +1,7 @@
 package com.rag.common.app.pipeline;
 
+import com.rag.common.core.resilience.RetryObserver;
+
 import com.rag.contract.pipeline.PipelineVariantDTO;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.embedding.EmbeddingModel;
@@ -24,7 +26,8 @@ class VariantStoreFactoryTest {
     private final EmbeddingModel model = mock(EmbeddingModel.class);
     private final Function<PipelineVariantDTO, EmbeddingModel> models = _ -> model;
     private final VariantStoreFactory sut = new VariantStoreFactory(
-            provider(jdbc), provider(mock(DataSource.class)), models, model, "rag_basic");
+            provider(jdbc), provider(mock(DataSource.class)), models, model, "rag_basic",
+            RetryObserver.NOOP);
 
     private static PipelineVariantDTO variant() {
         return new PipelineVariantDTO("v2", "rag-basic", "RECURSIVE", "nomic-embed-text", 768, 512, 64);
@@ -68,7 +71,8 @@ class VariantStoreFactoryTest {
     @Test
     void aModuleWithoutPostgresKeepsVariantsInMemory() {
         var withoutPostgres = new VariantStoreFactory(
-                withoutJdbc(), provider(mock(DataSource.class)), models, model, null);
+                withoutJdbc(), provider(mock(DataSource.class)), models, model, null,
+                RetryObserver.NOOP);
 
         assertThat(withoutPostgres.repository()).isNull();
         assertThatCode(() -> withoutPostgres.drop(variant())).doesNotThrowAnyException();

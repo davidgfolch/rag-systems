@@ -1,6 +1,7 @@
 package com.rag.common.retrieval.store;
 
 import com.rag.common.core.domain.Chunk;
+import com.rag.common.retrieval.testfixture.TestPgVectorStoreAdapters;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.ai.document.Document;
@@ -18,7 +19,7 @@ import static org.mockito.Mockito.when;
 class PgVectorStoreAdapterDeduplicationTest {
 
     private final VectorStore delegate = mock(VectorStore.class);
-    private final PgVectorStoreAdapter adapter = new PgVectorStoreAdapter(delegate);
+    private final PgVectorStoreAdapter adapter = TestPgVectorStoreAdapters.inMemory(delegate);
 
     @Test
     void collapsesDuplicateContentAndKeepsTheHighestRankedOccurrence() {

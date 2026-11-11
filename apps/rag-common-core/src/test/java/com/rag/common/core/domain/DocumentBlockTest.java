@@ -13,8 +13,8 @@ class DocumentBlockTest {
     void exposesTheImmediateHeading() {
         var block = new DocumentBlock(BlockType.PARAGRAPH, "text", List.of("Guide", "Setup"),
                 SourceLocation.NONE, Map.of());
-        assertThat(block.heading()).isEqualTo("Setup");
-        assertThat(new DocumentBlock(BlockType.PARAGRAPH, "text").heading()).isNull();
+        assertThat(block.sectionPath().getLast()).isEqualTo("Setup");
+        assertThat(new DocumentBlock(BlockType.PARAGRAPH, "text").sectionPath()).isEmpty();
     }
 
     @Test

@@ -63,12 +63,6 @@ public class CommandDispatcher {
         this.tracer = tracer;
     }
 
-    public CommandDispatcher(ModuleRegistry registry, ModuleLifecycleManager lifecycle,
-                             RagClients clients, Settings settings, CommandRegistry commandRegistry,
-                             Prompter prompter) {
-        this(registry, lifecycle, clients, settings, commandRegistry, prompter, null);
-    }
-
     public String handle(String input, Consumer<String> tokenSink) {
         Span span = tracer == null ? null : tracer.nextSpan().name(SPAN_COMMAND).start();
         try {

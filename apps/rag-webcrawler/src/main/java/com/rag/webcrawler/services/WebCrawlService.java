@@ -30,14 +30,9 @@ public class WebCrawlService implements AutoCloseable {
     private final ExecutorService fetchExecutor;
 
     public WebCrawlService(WebPageFetcher fetcher, LinkPrioritizer linkPrioritizer) {
-        this(fetcher, linkPrioritizer, Executors.newVirtualThreadPerTaskExecutor());
-    }
-
-    public WebCrawlService(WebPageFetcher fetcher, LinkPrioritizer linkPrioritizer,
-                           ExecutorService fetchExecutor) {
         this.fetcher = fetcher;
         this.linkPrioritizer = linkPrioritizer;
-        this.fetchExecutor = fetchExecutor;
+        this.fetchExecutor = Executors.newVirtualThreadPerTaskExecutor();
     }
 
     public PageDTO fetch(String url) {

@@ -46,8 +46,4 @@ public class ToolRegistry {
     public AgentTool fallback() {
         return fallback;
     }
-
-    public List<String> names() {
-        return List.copyOf(byName.keySet());
-    }
 }

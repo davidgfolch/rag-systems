@@ -49,6 +49,24 @@ the **same test structure** but **different inputs/assertions**. Use:
 **Do NOT parameterize** when: each case has genuinely different setup/teardown,
 when there is only one case, or when parameterization would hurt readability.
 
+## 4c. Keep Test Convenience Out of Production
+
+A production member must be referenced by production code. When a test needs a
+convenience call that production never makes (a shorter overload, a defaulted
+constructor, a derived accessor), do **not** add it to `src/main`:
+
+- Put the convenience in a `private` helper inside the test class, delegating
+to the production signature, e.g.
+  `private List<Chunk> retrieve(String q, int k) { return service.retrieve(q, k, null, Map.of()); }`.
+- Or add a factory to the module's `Test*` fixture in `testfixture/` when two or
+  more test classes need it.
+- Construct the SUT through its production constructor. The only allowed test
+  seam is one injectable constructor (fake transport, fake clock/process
+  starter) documented in `TestOnlyMembersArchitectureTest`'s `ALLOWLIST`.
+
+`TestOnlyMembersArchitectureTest` (rag-common-core) fails on any test-only or
+unreferenced production member, so a test-only addition is caught by the suite.
+
 ## 5. Test Types
 - **Unit tests**: Focused on single service/class with mocked dependencies.
 - **Integration tests**: Use TestContainers (PgVector, PostgreSQL address). Tag with `@Tag("integration")`.

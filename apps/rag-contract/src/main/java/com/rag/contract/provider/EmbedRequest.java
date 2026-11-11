@@ -8,8 +8,4 @@ import java.util.List;
  * model id lets one module embed a pipeline variant with its own model.
  */
 public record EmbedRequest(String model, List<String> texts) {
-
-    public EmbedRequest(List<String> texts) {
-        this(null, texts);
-    }
 }

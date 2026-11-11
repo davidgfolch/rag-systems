@@ -20,11 +20,11 @@ class AgentDomainTest {
     }
 
     @Test
-    void toolResultCopiesChunksAndGuardsContent() {
+    void toolResultDefaultsNullTextAndChunks() {
         var result = new ToolResult(null, List.of(list("a").get(0)));
         assertThat(result.text()).isEmpty();
-        assertThat(result.hasContent()).isTrue();
-        assertThat(new ToolResult("", null).hasContent()).isFalse();
+        assertThat(result.chunks()).isNotEmpty();
+        assertThat(new ToolResult("", null).chunks()).isEmpty();
     }
 
     @Test
@@ -38,10 +38,10 @@ class AgentDomainTest {
     void agentTraceCopiesListsAndDefaultsContext() {
         var sources = list("a");
         var steps = List.of(new AgentStep("p", "d"));
-        var trace = new AgentTrace(null, sources, steps);
+        var trace = new AgentTrace(null, sources, steps, "");
         assertThat(trace.context()).isEmpty();
-        assertThat(trace.hasSources()).isTrue();
-        assertThat(new AgentTrace(null, List.of(), List.of(), null).hasSources()).isFalse();
+        assertThat(trace.sources()).isNotEmpty();
+        assertThat(new AgentTrace(null, List.of(), List.of(), null).context()).isEmpty();
         assertThat(new AgentTrace("ans", List.of(), List.of(), "ctx").answer()).isEqualTo("ans");
     }
 

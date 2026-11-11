@@ -1,5 +1,6 @@
 package com.rag.common.ingestion.web;
 
+import com.rag.common.core.resilience.RetryObserver;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.client.RestClient;
@@ -29,7 +30,7 @@ class WebCrawlerClientFactoryTest {
         server.start();
         try {
             var baseUrl = "http://127.0.0.1:" + server.getAddress().getPort();
-            var sut = WebCrawlerClient.create(RestClient.builder(), baseUrl);
+            var sut = WebCrawlerClient.create(RestClient.builder(), baseUrl, RetryObserver.NOOP);
 
             var page = sut.fetch("https://example.com");
 
