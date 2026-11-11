@@ -23,10 +23,10 @@ class AgenticQueryControllerTest {
     @Test
     void queryReturnsRetrievedChunks() {
         when(retrievalService.retrieve("q", 5)).thenReturn(list("a", "b"));
-        var response = controller.query(new QueryRequest().question("q"));
-        assertThat(response.getQuestion()).isEqualTo("q");
-        assertThat(response.getResults()).hasSize(2);
-        assertThat(response.getResults().get(0).getId()).isEqualTo("chunk-0");
+        var res = controller.query(new QueryRequest().question("q"));
+        assertThat(res.getQuestion()).isEqualTo("q");
+        assertThat(res.getResults()).hasSize(2);
+        assertThat(res.getResults().getFirst().getId()).isEqualTo("chunk-0");
     }
 
     @Test
@@ -46,19 +46,19 @@ class AgenticQueryControllerTest {
         var steps = List.of(new AgentStep("tool:search", "snippet"));
         when(chatService.ask("q", 5)).thenReturn(
                 new AgenticChatService.AgentQueryResult("answer", list("a"), steps));
-        var response = controller.agenticQuery(new AgentQueryRequest("q", null));
-        assertThat(response.answer()).isEqualTo("answer");
-        assertThat(response.sources()).hasSize(1);
-        assertThat(response.sources().get(0).getContent()).isEqualTo("a");
-        assertThat(response.steps()).isEqualTo(steps);
+        var res = controller.agenticQuery(new AgentQueryRequest("q", null));
+        assertThat(res.answer()).isEqualTo("answer");
+        assertThat(res.sources()).hasSize(1);
+        assertThat(res.sources().getFirst().getContent()).isEqualTo("a");
+        assertThat(res.steps()).isEqualTo(steps);
     }
 
     @Test
     void agenticQueryUsesProvidedTopK() {
         when(chatService.ask("q", 3)).thenReturn(
                 new AgenticChatService.AgentQueryResult("answer", list("a"), List.of()));
-        var response = controller.agenticQuery(new AgentQueryRequest("q", 3));
+        var res = controller.agenticQuery(new AgentQueryRequest("q", 3));
         verify(chatService).ask("q", 3);
-        assertThat(response.answer()).isEqualTo("answer");
+        assertThat(res.answer()).isEqualTo("answer");
     }
 }

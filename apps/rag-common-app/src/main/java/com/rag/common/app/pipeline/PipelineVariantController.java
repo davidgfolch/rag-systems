@@ -1,7 +1,6 @@
 package com.rag.common.app.pipeline;
 
 import com.rag.contract.pipeline.PipelineVariantDTO;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,6 +16,7 @@ import static com.rag.contract.constants.ApiPaths.MODULE_VARIANTS;
 import static com.rag.contract.constants.ApiPaths.MODULE_VARIANTS_ACTIVE;
 import static com.rag.contract.constants.ApiPaths.VARIANT_ACTIVATE;
 import static com.rag.contract.constants.ApiPaths.VARIANT_BY_ID;
+import static org.springframework.http.HttpStatus.CREATED;
 
 /**
  * Module-level variant switcher. A module can list, register and activate its
@@ -55,12 +55,12 @@ public class PipelineVariantController {
 
     @PostMapping(MODULE_VARIANTS)
     public ResponseEntity<PipelineVariantDTO> add(@PathVariable String module,
-                                                  @RequestBody PipelineVariantDTO request) {
+                                                  @RequestBody PipelineVariantDTO req) {
         if (moduleMismatch(module)) {
             return notFound();
         }
         try {
-            return ResponseEntity.status(HttpStatus.CREATED).body(store.add(request));
+            return ResponseEntity.status(CREATED).body(store.add(req));
         } catch (IllegalArgumentException _) {
             return ResponseEntity.badRequest().build();
         }
@@ -69,12 +69,12 @@ public class PipelineVariantController {
     @PutMapping(VARIANT_BY_ID)
     public ResponseEntity<PipelineVariantDTO> update(@PathVariable String module,
                                                      @PathVariable String variantId,
-                                                     @RequestBody PipelineVariantDTO request) {
+                                                     @RequestBody PipelineVariantDTO req) {
         if (moduleMismatch(module) || store.find(variantId).isEmpty()) {
             return notFound();
         }
         try {
-            return ResponseEntity.ok(store.update(variantId, request));
+            return ResponseEntity.ok(store.update(variantId, req));
         } catch (IllegalArgumentException _) {
             return ResponseEntity.badRequest().build();
         }

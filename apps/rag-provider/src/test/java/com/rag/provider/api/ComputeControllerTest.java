@@ -9,7 +9,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import reactor.core.publisher.Flux;
@@ -24,6 +23,7 @@ import static com.rag.contract.constants.FrameTypes.ERROR;
 import static com.rag.contract.constants.FrameTypes.TOKEN;
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -50,7 +50,7 @@ class ComputeControllerTest {
     void shouldCompleteNonStreaming() throws Exception {
         when(chatService.complete("hi")).thenReturn("Hello!");
         mockMvc.perform(post(COMPLETE)
-                        .contentType(MediaType.APPLICATION_JSON)
+                        .contentType(APPLICATION_JSON)
                         .content("{\"prompt\":\"hi\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.answer").value("Hello!"));
@@ -61,7 +61,7 @@ class ComputeControllerTest {
         when(embeddingService.embed(List.of("a", "b"), null)).thenReturn(
                 List.of(List.of(0.1f), List.of(0.2f)));
         mockMvc.perform(post(EMBED)
-                        .contentType(MediaType.APPLICATION_JSON)
+                        .contentType(APPLICATION_JSON)
                         .content("{\"texts\":[\"a\",\"b\"]}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.embeddings[0][0]").value(0.1))
@@ -73,7 +73,7 @@ class ComputeControllerTest {
         when(embeddingService.embed(List.of("a"), null))
                 .thenThrow(new ProviderBusyException("capacity exhausted"));
         mockMvc.perform(post(EMBED)
-                        .contentType(MediaType.APPLICATION_JSON)
+                        .contentType(APPLICATION_JSON)
                         .content("{\"texts\":[\"a\"]}"))
                 .andExpect(status().isTooManyRequests())
                 .andExpect(header().string(HttpHeaders.RETRY_AFTER, "5"))
@@ -84,7 +84,7 @@ class ComputeControllerTest {
     void shouldStreamTokensThenDone() throws Exception {
         when(chatService.stream("hi")).thenReturn(Flux.just("Hel", "lo"));
         var mvcResult = mockMvc.perform(post(CHAT_STREAM)
-                        .contentType(MediaType.APPLICATION_JSON)
+                        .contentType(APPLICATION_JSON)
                         .content("{\"prompt\":\"hi\"}"))
                 .andExpect(request().asyncStarted())
                 .andReturn();
@@ -99,7 +99,7 @@ class ComputeControllerTest {
         when(embeddingService.embed(List.of("a"), "mxbai-embed-large"))
                 .thenReturn(List.of(List.of(0.3f)));
         mockMvc.perform(post(EMBED)
-                        .contentType(MediaType.APPLICATION_JSON)
+                        .contentType(APPLICATION_JSON)
                         .content("{\"model\":\"mxbai-embed-large\",\"texts\":[\"a\"]}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.embeddings[0][0]").value(0.3));
@@ -109,7 +109,7 @@ class ComputeControllerTest {
     void shouldEmbedEmptyTextList() throws Exception {
         when(embeddingService.embed(List.of(), null)).thenReturn(List.of());
         mockMvc.perform(post(EMBED)
-                        .contentType(MediaType.APPLICATION_JSON)
+                        .contentType(APPLICATION_JSON)
                         .content("{\"texts\":[]}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.embeddings").isEmpty());
@@ -119,7 +119,7 @@ class ComputeControllerTest {
     void shouldStreamErrorFrameOnFailure() throws Exception {
         when(chatService.stream("boom")).thenReturn(Flux.error(new IllegalStateException("down")));
         var mvcResult = mockMvc.perform(post(CHAT_STREAM)
-                        .contentType(MediaType.APPLICATION_JSON)
+                        .contentType(APPLICATION_JSON)
                         .content("{\"prompt\":\"boom\"}"))
                 .andExpect(request().asyncStarted())
                 .andReturn();

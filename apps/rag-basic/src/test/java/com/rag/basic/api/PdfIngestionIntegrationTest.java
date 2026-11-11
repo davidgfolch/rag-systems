@@ -14,7 +14,6 @@ import com.rag.common.ingestion.web.IngestionController;
 import com.rag.common.ingestion.parsing.TikaDocumentParser;
 import com.rag.contract.model.IngestResponse;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockMultipartFile;
 
@@ -26,6 +25,7 @@ import static com.rag.common.core.testfixture.TestControllerAssertions.assertEnt
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 /**
  * End-to-end integration test of the file-ingestion pipeline exactly as the
@@ -49,11 +49,7 @@ class PdfIngestionIntegrationTest {
 
     @Test
     void ingestsTextPdfIntoChunksAndRetrievesThem() throws Exception {
-        var pdfBytes = textPdf("""
-                Learning Domain-Driven Design
-                This book explains how to apply domain-driven design to software
-                systems. It covers tactical patterns such as aggregates, value
-                objects, and domain services, alongside strategic design.""");
+        var pdfBytes = textPdf();
         ResponseEntity<IngestResponse> res = controller.ingestFile(
                 new MockMultipartFile("file", "book.pdf", "application/pdf", pdfBytes),
                 Map.of("sourceType", "file", "fileName", "book.pdf"));
@@ -71,7 +67,7 @@ class PdfIngestionIntegrationTest {
         ResponseEntity<IngestResponse> res = controller.ingestFile(
                 new MockMultipartFile("file", "empty.pdf", "application/pdf", new byte[0]),
                 Map.of());
-        assertThat(res.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(res.getStatusCode()).isEqualTo(BAD_REQUEST);
     }
 
     @Test
@@ -107,9 +103,13 @@ class PdfIngestionIntegrationTest {
         return pdf.getBytes(StandardCharsets.ISO_8859_1);
     }
 
-    private static byte[] textPdf(String body) {
-        String escaped = body.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)");
-        String stream = "BT /F1 12 Tf 72 720 Td (" + escaped + ") Tj ET\n";
+    private static byte[] textPdf() {
+        String escapedBody = """
+                Learning Domain-Driven Design
+                This book explains how to apply domain-driven design to software
+                systems. It covers tactical patterns such as aggregates, value
+                objects, and domain services, alongside strategic design.""".replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)");
+        String stream = "BT /F1 12 Tf 72 720 Td (" + escapedBody + ") Tj ET\n";
         String pdf = "%PDF-1.4\n"
                 + "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n"
                 + "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n"

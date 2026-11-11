@@ -6,9 +6,6 @@ import com.rag.contract.model.DocumentSummaryDTO;
 import com.rag.tui.launcher.ModuleRegistry;
 import com.rag.tui.testfixture.TestModules;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
@@ -17,6 +14,10 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.http.HttpMethod.*;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.http.MediaType.MULTIPART_FORM_DATA;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -41,12 +42,11 @@ class RagApiClientTest {
     @Test
     void ingestsContent() {
         server.expect(requestTo(TestModules.BASIC_URL + INGEST))
-                .andExpect(method(HttpMethod.POST))
-                .andRespond(withSuccess("{\"documentId\":\"d1\",\"chunkCount\":2}",
-                        MediaType.APPLICATION_JSON));
-        IngestResponse response = sut.ingest("text", Map.of("k", "v"));
-        assertThat(response.getDocumentId()).isEqualTo("d1");
-        assertThat(response.getChunkCount()).isEqualTo(2);
+                .andExpect(method(POST))
+                .andRespond(withSuccess("{\"documentId\":\"d1\",\"chunkCount\":2}", APPLICATION_JSON));
+        IngestResponse res = sut.ingest("text", Map.of("k", "v"));
+        assertThat(res.getDocumentId()).isEqualTo("d1");
+        assertThat(res.getChunkCount()).isEqualTo(2);
         server.verify();
     }
 
@@ -54,56 +54,54 @@ class RagApiClientTest {
     void ingestsFileViaMultipart() {
         byte[] bytes = new byte[]{1, 2, 3};
         server.expect(requestTo(TestModules.BASIC_URL + INGEST_FILE))
-                .andExpect(method(HttpMethod.POST))
-                .andExpect(content().contentTypeCompatibleWith(MediaType.MULTIPART_FORM_DATA))
-                .andRespond(withSuccess("{\"documentId\":\"d1\",\"chunkCount\":5}",
-                        MediaType.APPLICATION_JSON));
-        IngestResponse response = sut.ingestFile(bytes, "doc.pdf", Map.of("sourceType", "file"));
-        assertThat(response.getDocumentId()).isEqualTo("d1");
-        assertThat(response.getChunkCount()).isEqualTo(5);
+                .andExpect(method(POST))
+                .andExpect(content().contentTypeCompatibleWith(MULTIPART_FORM_DATA))
+                .andRespond(withSuccess("{\"documentId\":\"d1\",\"chunkCount\":5}", APPLICATION_JSON));
+        IngestResponse res = sut.ingestFile(bytes, "doc.pdf", Map.of("sourceType", "file"));
+        assertThat(res.getDocumentId()).isEqualTo("d1");
+        assertThat(res.getChunkCount()).isEqualTo(5);
         server.verify();
     }
 
     @Test
     void ingestsUrl() {
         server.expect(requestTo(TestModules.BASIC_URL + INGEST_URL))
-                .andExpect(method(HttpMethod.POST))
-                .andRespond(withSuccess("{\"documentId\":\"d1\",\"chunkCount\":3}",
-                        MediaType.APPLICATION_JSON));
-        IngestResponse response = sut.ingestUrl("https://example.com");
-        assertThat(response.getDocumentId()).isEqualTo("d1");
+                .andExpect(method(POST))
+                .andRespond(withSuccess("{\"documentId\":\"d1\",\"chunkCount\":3}", APPLICATION_JSON));
+        IngestResponse res = sut.ingestUrl("https://example.com");
+        assertThat(res.getDocumentId()).isEqualTo("d1");
         server.verify();
     }
 
     @Test
     void queriesActiveModule() {
         server.expect(requestTo(TestModules.BASIC_URL + QUERY))
-                .andExpect(method(HttpMethod.POST))
-                .andRespond(withSuccess("{\"question\":\"q\",\"results\":[]}",
-                        MediaType.APPLICATION_JSON));
-        QueryResponse response = sut.query("q", 5);
-        assertThat(response.getQuestion()).isEqualTo("q");
+                .andExpect(method(POST))
+                .andRespond(withSuccess("{\"question\":\"q\",\"results\":[]}", APPLICATION_JSON));
+        QueryResponse res = sut.query("q", 5);
+        assertThat(res.getQuestion()).isEqualTo("q");
         server.verify();
     }
 
     @Test
     void listsDocumentsFromExplicitBaseUrl() {
         server.expect(requestTo(TestModules.BASIC_URL + DOCUMENTS))
-                .andExpect(method(HttpMethod.GET))
+                .andExpect(method(GET))
                 .andRespond(withSuccess("[{\"documentId\":\"d1\",\"chunkCount\":3,\"metadata\":{\"fileName\":\"n.txt\"}}]",
-                        MediaType.APPLICATION_JSON));
+                        APPLICATION_JSON));
         List<DocumentSummaryDTO> documents = sut.listDocuments(TestModules.BASIC_URL);
         assertThat(documents).hasSize(1);
-        assertThat(documents.get(0).getDocumentId()).isEqualTo("d1");
-        assertThat(documents.get(0).getChunkCount()).isEqualTo(3);
-        assertThat(documents.get(0).getMetadata()).containsEntry("fileName", "n.txt");
+        DocumentSummaryDTO doc = documents.getFirst();
+        assertThat(doc.getDocumentId()).isEqualTo("d1");
+        assertThat(doc.getChunkCount()).isEqualTo(3);
+        assertThat(doc.getMetadata()).containsEntry("fileName", "n.txt");
         server.verify();
     }
 
     @Test
     void deletesDocumentOnActiveModule() {
         server.expect(requestTo(TestModules.BASIC_URL + DOCUMENTS + "/d1"))
-                .andExpect(method(HttpMethod.DELETE))
+                .andExpect(method(DELETE))
                 .andRespond(withNoContent());
         sut.deleteDocument("d1");
         server.verify();
@@ -112,7 +110,7 @@ class RagApiClientTest {
     @Test
     void deletesDocumentFromExplicitBaseUrl() {
         server.expect(requestTo(TestModules.BASIC_URL + DOCUMENTS + "/d1"))
-                .andExpect(method(HttpMethod.DELETE))
+                .andExpect(method(DELETE))
                 .andRespond(withNoContent());
         sut.deleteDocument(TestModules.BASIC_URL, "d1");
         server.verify();
@@ -121,8 +119,8 @@ class RagApiClientTest {
     @Test
     void listDocumentsReturnsEmptyWhenModuleHasNoDocumentApi() {
         server.expect(requestTo(TestModules.PROVIDER_URL + DOCUMENTS))
-                .andExpect(method(HttpMethod.GET))
-                .andRespond(withStatus(HttpStatus.NOT_FOUND));
+                .andExpect(method(GET))
+                .andRespond(withStatus(NOT_FOUND));
         List<DocumentSummaryDTO> documents = sut.listDocuments(TestModules.PROVIDER_URL);
         assertThat(documents).isEmpty();
         server.verify();

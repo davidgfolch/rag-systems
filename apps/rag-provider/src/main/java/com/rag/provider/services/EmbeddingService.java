@@ -95,9 +95,9 @@ public class EmbeddingService {
                     + limiter.maxConcurrent() + ")");
         }
         try {
-            var response = retry.call("embed " + texts.size() + " texts",
+            var res = retry.call("embed " + texts.size() + " texts",
                     () -> router.embeddingModelFor(model).call(new EmbeddingRequest(texts, null)));
-            return response.getResults().stream().map(Embedding::getOutput)
+            return res.getResults().stream().map(Embedding::getOutput)
                     .map(FloatConversions::toFloatList).toList();
         } finally {
             limiter.exit();

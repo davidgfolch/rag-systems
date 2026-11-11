@@ -4,12 +4,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.rag.provider.services.ProviderBusyException;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
+
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.TOO_MANY_REQUESTS;
 
 /**
  * Maps invalid provider requests to HTTP 400 and saturation to HTTP 429 with a
@@ -23,7 +25,7 @@ public class ApiExceptionHandler {
     private static final long MIN_RETRY_AFTER_SECONDS = 1;
 
     @ExceptionHandler(IllegalArgumentException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ResponseStatus(BAD_REQUEST)
     @ResponseBody
     String handleBadRequest(IllegalArgumentException e) {
         log.warn("Bad provider request rejected: {}", e.getMessage());
@@ -35,7 +37,7 @@ public class ApiExceptionHandler {
     ResponseEntity<String> handleBusy(ProviderBusyException e) {
         var seconds = Math.max(MIN_RETRY_AFTER_SECONDS, e.retryAfter().toSeconds());
         log.warn("Provider request rejected as busy (retry after {}s): {}", seconds, e.getMessage());
-        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+        return ResponseEntity.status(TOO_MANY_REQUESTS)
                 .header(HttpHeaders.RETRY_AFTER, Long.toString(seconds))
                 .body(e.getMessage());
     }

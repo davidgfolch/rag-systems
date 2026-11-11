@@ -27,10 +27,10 @@ class QueryControllerTest {
     @Test
     void returnsRetrievedChunks() {
         when(service.retrieve("q", 3, Map.of())).thenReturn(List.of(chunk()));
-        QueryResponse response = controller.query(new QueryRequest().question("q").topK(3));
-        assertThat(response.getQuestion()).isEqualTo("q");
-        assertThat(response.getResults()).hasSize(1);
-        ChunkResult result = response.getResults().get(0);
+        QueryResponse res = controller.query(new QueryRequest().question("q").topK(3));
+        assertThat(res.getQuestion()).isEqualTo("q");
+        assertThat(res.getResults()).hasSize(1);
+        ChunkResult result = res.getResults().getFirst();
         assertThat(result.getId()).isEqualTo("c1");
         assertThat(result.getDocumentId()).isEqualTo("d1");
         assertThat(result.getContent()).isEqualTo("content");
@@ -52,17 +52,17 @@ class QueryControllerTest {
     @Test
     void returnsEmptyResultsWhenNoMatches() {
         when(service.retrieve("q", 5, Map.of())).thenReturn(List.of());
-        QueryResponse response = controller.query(new QueryRequest().question("q"));
-        assertThat(response.getResults()).isEmpty();
+        QueryResponse res = controller.query(new QueryRequest().question("q"));
+        assertThat(res.getResults()).isEmpty();
     }
 
     @Test
     void advancedQueryAppliesMetadataFilter() {
         when(service.retrieve("q", 5, Map.of("source", "web"))).thenReturn(List.of(chunk()));
-        QueryResponse response = controller.advancedQuery(
+        QueryResponse res = controller.advancedQuery(
                 new AdvancedQueryRequest("q", 5, null, Map.of("source", "web")));
-        assertThat(response.getQuestion()).isEqualTo("q");
-        assertThat(response.getResults()).hasSize(1);
+        assertThat(res.getQuestion()).isEqualTo("q");
+        assertThat(res.getResults()).hasSize(1);
     }
 
     @Test

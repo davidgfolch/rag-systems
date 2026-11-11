@@ -7,7 +7,6 @@ import com.rag.contract.model.CrawlStepRequest;
 import com.rag.contract.model.CrawlStepResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -21,6 +20,7 @@ import org.springframework.web.client.RestClientException;
 import java.util.Objects;
 
 import static com.rag.contract.constants.ApiPaths.CRAWL;
+import static org.springframework.http.HttpStatus.*;
 
 /**
  * REST surface for the interactive URL crawl. Kept separate from
@@ -40,16 +40,16 @@ public class CrawlController {
     }
 
     @PostMapping
-    public ResponseEntity<CrawlStartResponse> start(@RequestBody CrawlStartRequest request) {
-        if (Objects.toString(request.getUrl(), "").isBlank()) {
+    public ResponseEntity<CrawlStartResponse> start(@RequestBody CrawlStartRequest req) {
+        if (Objects.toString(req.getUrl(), "").isBlank()) {
             return ResponseEntity.badRequest().build();
         }
-        var result = crawlSessionService.start(request.getUrl().toString(),
-                intOr(request.getMaxInitialLinks(), CrawlSessionService.DEFAULT_MAX_INITIAL_LINKS),
-                intOr(request.getMaxPages(), CrawlSessionService.DEFAULT_MAX_PAGES),
-                request.getSameHostOnly() == null || request.getSameHostOnly(),
-                request.getDiscover() == null || request.getDiscover());
-        return ResponseEntity.status(HttpStatus.CREATED).body(new CrawlStartResponse()
+        var result = crawlSessionService.start(req.getUrl().toString(),
+                intOr(req.getMaxInitialLinks(), CrawlSessionService.DEFAULT_MAX_INITIAL_LINKS),
+                intOr(req.getMaxPages(), CrawlSessionService.DEFAULT_MAX_PAGES),
+                req.getSameHostOnly() == null || req.getSameHostOnly(),
+                req.getDiscover() == null || req.getDiscover());
+        return ResponseEntity.status(CREATED).body(new CrawlStartResponse()
                 .sessionId(result.sessionId())
                 .page(pageDto(result.page()))
                 .initialRemaining(result.initialRemaining())
@@ -59,11 +59,11 @@ public class CrawlController {
 
     @PostMapping("/{sessionId}/step")
     public ResponseEntity<CrawlStepResponse> step(@PathVariable String sessionId,
-                                                  @RequestBody(required = false) CrawlStepRequest request) {
-        var result = request == null
+                                                  @RequestBody(required = false) CrawlStepRequest req) {
+        var result = req == null
                 ? crawlSessionService.step(sessionId, null)
-                : crawlSessionService.step(sessionId, request.getQuestion(),
-                        Boolean.TRUE.equals(request.getOverride()));
+                : crawlSessionService.step(sessionId, req.getQuestion(),
+                        Boolean.TRUE.equals(req.getOverride()));
         return ResponseEntity.ok(new CrawlStepResponse()
                 .sessionId(result.sessionId())
                 .documentId(result.documentId())
@@ -84,18 +84,18 @@ public class CrawlController {
 
     @ExceptionHandler(CrawlSessionService.SessionNotFoundException.class)
     public ResponseEntity<String> handleUnknownSession(CrawlSessionService.SessionNotFoundException e) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        return ResponseEntity.status(NOT_FOUND).body(e.getMessage());
     }
 
     @ExceptionHandler(CrawlSessionService.NoPageException.class)
     public ResponseEntity<String> handleNoPage(CrawlSessionService.NoPageException e) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
+        return ResponseEntity.status(CONFLICT).body(e.getMessage());
     }
 
     @ExceptionHandler(RestClientException.class)
     public ResponseEntity<String> handleFetchFailure(RestClientException e) {
         log.warn("Crawl page fetch failed: {}", e.getMessage());
-        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body("Could not fetch page: " + e.getMessage());
+        return ResponseEntity.status(BAD_GATEWAY).body("Could not fetch page: " + e.getMessage());
     }
 
     private static int intOr(Integer value, int fallback) {

@@ -44,10 +44,10 @@ class RagApiClientIntegrationTest {
     @Test
     void ingestsFileBytesOverMultipartHttp() {
         byte[] bytes = new byte[]{1, 2, 3, 0, -1};
-        IngestResponse response = sut.ingestFile(bytes, "x.pdf",
+        IngestResponse res = sut.ingestFile(bytes, "x.pdf",
                 Map.of("sourceType", "file", "source", "x.pdf", "fileName", "x.pdf"));
-        assertThat(response.getDocumentId()).isEqualTo("i-1");
-        assertThat(response.getChunkCount()).isEqualTo(2);
+        assertThat(res.getDocumentId()).isEqualTo("i-1");
+        assertThat(res.getChunkCount()).isEqualTo(2);
         assertThat(stub.lastIngestContentType()).startsWith("multipart/form-data");
         String body = new String(stub.lastIngestBody(), StandardCharsets.UTF_8);
         assertThat(body).contains("x.pdf");

@@ -3,6 +3,7 @@ package com.rag.common.generation.adapter;
 import com.rag.common.core.services.EmbeddingModelPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.embedding.Embedding;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.embedding.EmbeddingRequest;
 
@@ -34,9 +35,9 @@ public class SpringAiEmbeddingModel implements EmbeddingModelPort {
 
     @Override
     public List<float[]> embed(List<String> texts) {
-        var response = delegate.call(new EmbeddingRequest(texts, null));
-        var vectors = response.getResults().stream()
-                .map(e -> e.getOutput())
+        var res = delegate.call(new EmbeddingRequest(texts, null));
+        var vectors = res.getResults().stream()
+                .map(Embedding::getOutput)
                 .toList();
         log.debug("Batch embedded {} texts -> {} vectors", texts.size(), vectors.size());
         return vectors;

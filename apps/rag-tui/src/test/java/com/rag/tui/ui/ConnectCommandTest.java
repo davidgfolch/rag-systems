@@ -10,7 +10,6 @@ import com.rag.contract.provider.ProviderStatusDTO;
 import com.rag.tui.client.ProviderClient;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.ResourceAccessException;
 
@@ -36,6 +35,7 @@ import static com.rag.tui.testfixture.TestModelCatalogs.LOCAL_CHAT;
 import static com.rag.tui.testfixture.TestModelCatalogs.LOCAL_EMBED;
 import static com.rag.tui.testfixture.TestModelCatalogs.PROVIDER_OLLAMA;
 import static com.rag.tui.testfixture.TestModelCatalogs.SOURCE;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 class ConnectCommandTest {
 
@@ -94,7 +94,7 @@ class ConnectCommandTest {
 
     @Test
     void reportsProviderRejectionInsteadOfModuleUnreachable() {
-        doThrow(HttpClientErrorException.create(HttpStatus.BAD_REQUEST, "Bad Request", HttpHeaders.EMPTY,
+        doThrow(HttpClientErrorException.create(BAD_REQUEST, "Bad Request", HttpHeaders.EMPTY,
                 "Model 'openrouter/free' is not allowed by provider 'openrouter'".getBytes(StandardCharsets.UTF_8), null))
                 .when(client).switchChat("openrouter", "openrouter/free");
         var result = sut.execute("chat openrouter openrouter/free");
@@ -106,7 +106,7 @@ class ConnectCommandTest {
 
     @Test
     void configuresUnknownProviderThenRetriesSwitch() {
-        doThrow(HttpClientErrorException.create(HttpStatus.BAD_REQUEST, "Bad Request", HttpHeaders.EMPTY,
+        doThrow(HttpClientErrorException.create(BAD_REQUEST, "Bad Request", HttpHeaders.EMPTY,
                 "Unknown provider: openrouter. Available providers: [ollama, openai]".getBytes(StandardCharsets.UTF_8), null))
                 .doNothing()
                 .when(client).switchChat("openrouter", "openrouter/free");
@@ -123,7 +123,7 @@ class ConnectCommandTest {
 
     @Test
     void abortsSwitchWhenProviderSetupCancelled() {
-        doThrow(HttpClientErrorException.create(HttpStatus.BAD_REQUEST, "Bad Request", HttpHeaders.EMPTY,
+        doThrow(HttpClientErrorException.create(BAD_REQUEST, "Bad Request", HttpHeaders.EMPTY,
                 "Unknown provider: openrouter".getBytes(StandardCharsets.UTF_8), null))
                 .when(client).switchChat("openrouter", "openrouter/free");
         when(prompter.pick(anyString(), anyList())).thenReturn(Optional.empty());

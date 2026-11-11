@@ -24,25 +24,25 @@ class PipelineVariantControllerTest {
 
     @Test
     void addRegistersVariantUnderGeneratedId() {
-        var response = sut.add(BASIC, request(ChunkingStrategy.RECURSIVE.name(), 512, 128));
-        assertThat(response.getStatusCode().value()).isEqualTo(201);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().variantId()).isEqualTo("v1");
-        assertThat(response.getBody().module()).isEqualTo(BASIC);
+        var res = sut.add(BASIC, request(ChunkingStrategy.RECURSIVE.name(), 512, 128));
+        assertThat(res.getStatusCode().value()).isEqualTo(201);
+        assertThat(res.getBody()).isNotNull();
+        assertThat(res.getBody().variantId()).isEqualTo("v1");
+        assertThat(res.getBody().module()).isEqualTo(BASIC);
         assertThat(sut.list(BASIC).getBody()).hasSize(1);
     }
 
     @Test
     void addRejectsUnknownStrategy() {
-        var response = sut.add(BASIC, request("unknown", 512, 128));
-        assertThat(response.getStatusCode().value()).isEqualTo(400);
+        var res = sut.add(BASIC, request("unknown", 512, 128));
+        assertThat(res.getStatusCode().value()).isEqualTo(400);
         assertThat(store.variants()).isEmpty();
     }
 
     @Test
     void addRejectsAnInvalidChunkWindow() {
-        var response = sut.add(BASIC, request("FIXED", 512, 512));
-        assertThat(response.getStatusCode().value()).isEqualTo(400);
+        var res = sut.add(BASIC, request("FIXED", 512, 512));
+        assertThat(res.getStatusCode().value()).isEqualTo(400);
         assertThat(store.variants()).isEmpty();
     }
 
@@ -57,8 +57,8 @@ class PipelineVariantControllerTest {
         sut.add(BASIC, request("RECURSIVE", 512, 128));
         var second = sut.add(BASIC, request("TOKEN", 256, 64)).getBody();
         assertThat(second).isNotNull();
-        var response = sut.activate(BASIC, second.variantId());
-        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        var res = sut.activate(BASIC, second.variantId());
+        assertThat(res.getStatusCode().value()).isEqualTo(200);
         assertThat(sut.active(BASIC).getBody()).isNotNull();
         assertThat(sut.active(BASIC).getBody().variantId()).isEqualTo(second.variantId());
         assertThat(sut.activate(BASIC, "nope").getStatusCode().value()).isEqualTo(404);

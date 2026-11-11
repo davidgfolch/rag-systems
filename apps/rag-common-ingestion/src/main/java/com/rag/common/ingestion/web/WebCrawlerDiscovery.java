@@ -24,11 +24,11 @@ public final class WebCrawlerDiscovery {
 
     public static List<String> discover(RestClient restClient, String url) {
         log.info("Discovering crawl URLs for {} via webcrawler", url);
-        var response = restClient.post()
+        var res = restClient.post()
                 .uri(DISCOVER)
                 .body(new DiscoverRequest(URI.create(url)))
                 .retrieve()
                 .body(DiscoverResponse.class);
-        return response == null ? List.of() : response.getUrls();
+        return res == null ? List.of() : res.getUrls();
     }
 }

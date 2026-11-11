@@ -34,20 +34,20 @@ public class AgenticQueryController {
     }
 
     @PostMapping
-    public QueryResponse query(@RequestBody QueryRequest request) {
-        int topK = request.getTopK() != null ? request.getTopK() : DEFAULT_TOP_K;
-        log.info("Query: topK={}, questionLength={}", topK, request.getQuestion().length());
-        var results = retrievalService.retrieve(request.getQuestion(), topK).stream()
+    public QueryResponse query(@RequestBody QueryRequest req) {
+        int topK = req.getTopK() != null ? req.getTopK() : DEFAULT_TOP_K;
+        log.info("Query: topK={}, questionLength={}", topK, req.getQuestion().length());
+        var results = retrievalService.retrieve(req.getQuestion(), topK).stream()
                 .map(this::chunkResult)
                 .toList();
-        return new QueryResponse(request.getQuestion()).results(results);
+        return new QueryResponse(req.getQuestion()).results(results);
     }
 
     @PostMapping("/agentic")
-    public AgentQueryResponse agenticQuery(@RequestBody AgentQueryRequest request) {
-        int topK = request.topK() != null ? request.topK() : DEFAULT_TOP_K;
-        log.info("Agentic query: topK={}, questionLength={}", topK, request.question().length());
-        var result = chatService.ask(request.question(), topK);
+    public AgentQueryResponse agenticQuery(@RequestBody AgentQueryRequest req) {
+        int topK = req.topK() != null ? req.topK() : DEFAULT_TOP_K;
+        log.info("Agentic query: topK={}, questionLength={}", topK, req.question().length());
+        var result = chatService.ask(req.question(), topK);
         var sources = result.sources().stream().map(this::chunkResult).toList();
         return new AgentQueryResponse(result.answer(), sources, result.steps());
     }

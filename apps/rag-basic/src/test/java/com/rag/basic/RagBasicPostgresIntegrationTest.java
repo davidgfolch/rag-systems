@@ -15,11 +15,11 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
-import org.springframework.http.MediaType;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -57,7 +57,7 @@ class RagBasicPostgresIntegrationTest {
     @Test
     void shouldIngestToPgVectorAndRetrieveRelevantChunks() throws Exception {
         mockMvc.perform(post("/api/documents/ingest")
-                        .contentType(MediaType.APPLICATION_JSON)
+                        .contentType(APPLICATION_JSON)
                         .content("""
                                 {
                                     "content": "Domain-Driven Design focuses on \
@@ -73,7 +73,7 @@ class RagBasicPostgresIntegrationTest {
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$[0].title").value("DDD Overview"));
         mockMvc.perform(post("/api/query")
-                        .contentType(MediaType.APPLICATION_JSON)
+                        .contentType(APPLICATION_JSON)
                         .content("""
                                 {"question": "domain-driven design strategic modeling", "topK": 3}"""))
                 .andExpect(status().isOk())
@@ -100,8 +100,8 @@ class RagBasicPostgresIntegrationTest {
     private static final class CharHashEmbeddingModel implements EmbeddingModel {
 
         @Override
-        public EmbeddingResponse call(EmbeddingRequest request) {
-            var results = request.getInstructions().stream()
+        public EmbeddingResponse call(EmbeddingRequest req) {
+            var results = req.getInstructions().stream()
                     .map(text -> new Embedding(embedText(text), 0))
                     .toList();
             return new EmbeddingResponse(results);

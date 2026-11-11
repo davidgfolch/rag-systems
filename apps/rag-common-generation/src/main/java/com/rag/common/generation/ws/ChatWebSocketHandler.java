@@ -67,12 +67,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         TracePropagation.runWithSpan(tracer, handshakeSpan(session), () -> handleRequest(session, request));
     }
 
-    private void handleRequest(WebSocketSession session, ChatRequest request) {
-        if (CANCEL.equals(request.type())) {
-            cancel(request.conversationId());
-            send(session, new ChatResponse(DONE, "", request.conversationId()));
-        } else if (ASK.equals(request.type()) && request.question() != null) {
-            ask(session, request);
+    private void handleRequest(WebSocketSession session, ChatRequest req) {
+        if (CANCEL.equals(req.type())) {
+            cancel(req.conversationId());
+            send(session, new ChatResponse(DONE, "", req.conversationId()));
+        } else if (ASK.equals(req.type()) && req.question() != null) {
+            ask(session, req);
         }
     }
 
@@ -80,40 +80,41 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         return session.getAttributes().get(SPAN_ATTRIBUTE) instanceof Span span ? span : null;
     }
 
-    private void ask(WebSocketSession session, ChatRequest request) {
-        cancel(request.conversationId());
-        conversationBySession.put(session.getId(), request.conversationId());
+    private void ask(WebSocketSession session, ChatRequest req) {
+        String conversationId = req.conversationId();
+        cancel(conversationId);
+        conversationBySession.put(session.getId(), conversationId);
         StringBuilder answer = new StringBuilder();
-        int topK = request.topK() == null ? 5 : request.topK();
-        log.info("Ask request: conversationId={}, topK={}", request.conversationId(), topK);
+        int topK = req.topK() == null ? 5 : req.topK();
+        log.info("Ask request: conversationId={}, topK={}", conversationId, topK);
         AtomicBoolean finished = new AtomicBoolean();
         AtomicReference<Disposable> ref = new AtomicReference<>();
-        Disposable disposable = answerStreamer.askStream(request.question(), topK)
+        Disposable disposable = answerStreamer.askStream(req.question(), topK)
                 .doOnNext(answer::append)
                 .doOnCancel(() -> finished.set(true))
                 .subscribe(
-                        token -> send(session, new ChatResponse(TOKEN, token, request.conversationId())),
+                        token -> send(session, new ChatResponse(TOKEN, token, conversationId)),
                         error -> {
                             finished.set(true);
                             log.error("Stream error: conversationId={}, error={}",
-                                    request.conversationId(), error.getMessage(), error);
-                            send(session, new ChatResponse(ERROR, error.getMessage(), request.conversationId()));
-                            removeStream(request.conversationId(), ref);
+                                    conversationId, error.getMessage(), error);
+                            send(session, new ChatResponse(ERROR, error.getMessage(), conversationId));
+                            removeStream(conversationId, ref);
                         },
                         () -> {
                             if (finished.compareAndSet(false, true)) {
                                 log.info("Stream complete: conversationId={}, answerLength={}",
-                                        request.conversationId(), answer.length());
-                                send(session, new ChatResponse(DONE, answer.toString(), request.conversationId()));
+                                        conversationId, answer.length());
+                                send(session, new ChatResponse(DONE, answer.toString(), conversationId));
                             } else {
-                                log.info("Stream cancelled: conversationId={}", request.conversationId());
+                                log.info("Stream cancelled: conversationId={}", conversationId);
                             }
-                            removeStream(request.conversationId(), ref);
+                            removeStream(conversationId, ref);
                         });
         ref.set(disposable);
-        streams.put(request.conversationId(), disposable);
+        streams.put(conversationId, disposable);
         if (disposable.isDisposed()) {
-            streams.remove(request.conversationId(), disposable);
+            streams.remove(conversationId, disposable);
         }
     }
 
@@ -147,18 +148,18 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    private void send(WebSocketSession session, ChatResponse response) {
+    private void send(WebSocketSession session, ChatResponse res) {
         try {
             var target = sessions.getOrDefault(session.getId(), session);
-            target.sendMessage(new TextMessage(toJson(response)));
+            target.sendMessage(new TextMessage(toJson(res)));
         } catch (Exception exception) {
             throw new UncheckedIOException(new IOException(exception));
         }
     }
 
-    private String toJson(ChatResponse response) {
+    private String toJson(ChatResponse res) {
         try {
-            return objectMapper.writeValueAsString(response);
+            return objectMapper.writeValueAsString(res);
         } catch (JsonProcessingException e) {
             throw new UncheckedIOException(e);
         }

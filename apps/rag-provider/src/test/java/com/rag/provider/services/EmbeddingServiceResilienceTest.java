@@ -11,7 +11,6 @@ import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.embedding.EmbeddingRequest;
 import org.springframework.ai.embedding.EmbeddingResponse;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
@@ -27,6 +26,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
 
 @ExtendWith(MockitoExtension.class)
 class EmbeddingServiceResilienceTest {
@@ -58,8 +59,7 @@ class EmbeddingServiceResilienceTest {
     @Test
     void shouldNotRetryClientErrors() {
         when(router.embeddingModelFor(null)).thenReturn(embeddingModel);
-        var failure = HttpClientErrorException.create(HttpStatus.BAD_REQUEST, "bad",
-                HttpHeaders.EMPTY, new byte[0], null);
+        var failure = HttpClientErrorException.create(BAD_REQUEST, "bad", HttpHeaders.EMPTY, new byte[0], null);
         when(embeddingModel.call(any(EmbeddingRequest.class))).thenThrow(failure);
 
         assertThatThrownBy(() -> service(new ConcurrencyLimiter("test", 1, SHORT_WAIT)).embed(List.of("a")))
@@ -104,9 +104,9 @@ class EmbeddingServiceResilienceTest {
     void shouldClassifyTransientFailures() {
         assertThat(EmbeddingService.isRetryable(new ResourceAccessException("timeout"))).isTrue();
         assertThat(EmbeddingService.isRetryable(HttpServerErrorException.create(
-                HttpStatus.SERVICE_UNAVAILABLE, "busy", HttpHeaders.EMPTY, new byte[0], null))).isTrue();
+                SERVICE_UNAVAILABLE, "busy", HttpHeaders.EMPTY, new byte[0], null))).isTrue();
         assertThat(EmbeddingService.isRetryable(HttpClientErrorException.create(
-                HttpStatus.BAD_REQUEST, "bad", HttpHeaders.EMPTY, new byte[0], null))).isFalse();
+                BAD_REQUEST, "bad", HttpHeaders.EMPTY, new byte[0], null))).isFalse();
         assertThat(EmbeddingService.isRetryable(new IllegalStateException("io", new IOException("reset")))).isTrue();
         assertThat(EmbeddingService.isRetryable(new IllegalStateException("logic"))).isFalse();
     }

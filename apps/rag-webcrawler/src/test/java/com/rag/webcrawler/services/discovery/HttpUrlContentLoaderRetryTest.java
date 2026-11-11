@@ -77,10 +77,10 @@ class HttpUrlContentLoaderRetryTest {
     @Test
     void shouldRetryTransientTransportFailure() throws Exception {
         var client = mock(HttpClient.class);
-        var response = response(200, "ok".getBytes(StandardCharsets.UTF_8));
+        var res = response(200, "ok".getBytes(StandardCharsets.UTF_8));
         when(client.send(any(HttpRequest.class), bodyHandler()))
                 .thenThrow(new ConnectException("refused"))
-                .thenReturn(response);
+                .thenReturn(res);
         var sut = new HttpUrlContentLoader(client, FAST_RETRY);
 
         assertThat(sut.load(baseUrl + "/robots.txt"))
@@ -119,10 +119,10 @@ class HttpUrlContentLoaderRetryTest {
 
     @SuppressWarnings("unchecked")
     private static HttpResponse<byte[]> response(int status, byte[] body) {
-        HttpResponse<byte[]> response = mock(HttpResponse.class);
-        when(response.statusCode()).thenReturn(status);
-        when(response.body()).thenReturn(body);
-        return response;
+        HttpResponse<byte[]> res = mock(HttpResponse.class);
+        when(res.statusCode()).thenReturn(status);
+        when(res.body()).thenReturn(body);
+        return res;
     }
 
     private static void respond(HttpExchange exchange, int status, String body) throws IOException {

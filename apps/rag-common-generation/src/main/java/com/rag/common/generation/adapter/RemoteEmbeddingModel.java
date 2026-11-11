@@ -49,11 +49,11 @@ public class RemoteEmbeddingModel implements EmbeddingModel {
 
     @Override
     public EmbeddingResponse call(EmbeddingRequest request) {
-        var response = httpClient.postJson(EMBED,
+        var res = httpClient.postJson(EMBED,
                 new EmbedRequest(modelId, request.getInstructions()), EmbedResponse.class);
-        var results = new java.util.ArrayList<Embedding>(response.embeddings().size());
-        for (int i = 0; i < response.embeddings().size(); i++) {
-            var vector = FloatConversions.toFloatArray(response.embeddings().get(i));
+        var results = new java.util.ArrayList<Embedding>(res.embeddings().size());
+        for (int i = 0; i < res.embeddings().size(); i++) {
+            var vector = FloatConversions.toFloatArray(res.embeddings().get(i));
             results.add(new Embedding(vector, i));
             cacheDimension(vector.length);
             cacheProviderDimension();
@@ -65,9 +65,9 @@ public class RemoteEmbeddingModel implements EmbeddingModel {
 
     @Override
     public float[] embed(Document document) {
-        var response = httpClient.postJson(EMBED,
+        var res = httpClient.postJson(EMBED,
                 new EmbedRequest(modelId, List.of(document.getText())), EmbedResponse.class);
-        var vector = FloatConversions.toFloatArray(response.embeddings().get(0));
+        var vector = FloatConversions.toFloatArray(res.embeddings().getFirst());
         cacheDimension(vector.length);
         cacheProviderDimension();
         return vector;

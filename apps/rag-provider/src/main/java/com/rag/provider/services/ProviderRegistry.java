@@ -51,9 +51,9 @@ public class ProviderRegistry {
         return Optional.ofNullable(profiles.get(id));
     }
 
-    public ProviderProfile save(ConfigureProviderRequest request) {
-        var profile = new ProviderProfile(request.providerId(), toType(request.type()),
-                request.displayName(), request.baseUrl(), request.apiKey());
+    public ProviderProfile save(ConfigureProviderRequest req) {
+        var profile = new ProviderProfile(req.providerId(), toType(req.type()), req.displayName(),
+                req.baseUrl(), req.apiKey());
         profiles.put(profile.id(), profile);
         store.save(new ArrayList<>(profiles.values()));
         log.info("Saved provider profile '{}' as {}", profile.id(), profile.type());

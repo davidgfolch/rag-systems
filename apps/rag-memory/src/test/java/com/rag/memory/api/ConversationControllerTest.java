@@ -4,7 +4,6 @@ import com.rag.contract.model.ChatMessageDTO;
 import com.rag.contract.model.ConversationDTO;
 import com.rag.memory.services.ConversationService;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.util.List;
@@ -13,6 +12,7 @@ import static com.rag.common.core.testfixture.TestControllerAssertions.assertEnt
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 class ConversationControllerTest {
 
@@ -53,7 +53,7 @@ class ConversationControllerTest {
     void mapsIllegalArgumentToNotFound() {
         ApiExceptionHandler handler = new ApiExceptionHandler();
         ResponseEntity<String> result = handler.handleIllegalArgument(new IllegalArgumentException("Unknown conversation"));
-        assertThat(result.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(result.getStatusCode()).isEqualTo(NOT_FOUND);
         assertThat(result.getBody()).isEqualTo("Unknown conversation");
     }
 }

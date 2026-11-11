@@ -123,13 +123,13 @@ class ProviderHttpClientRetryTest {
     @Test
     void shouldRetryTransportTimeoutThenSucceed() throws Exception {
         var httpClient = mock(HttpClient.class);
-        var response = mock(HttpResponse.class);
-        when(response.statusCode()).thenReturn(200);
-        when(response.body()).thenReturn(ANSWER_JSON);
+        var res = mock(HttpResponse.class);
+        when(res.statusCode()).thenReturn(200);
+        when(res.body()).thenReturn(ANSWER_JSON);
         when(httpClient.send(any(HttpRequest.class),
                 org.mockito.ArgumentMatchers.<HttpResponse.BodyHandler<String>>any()))
                 .thenThrow(new HttpTimeoutException("timeout"))
-                .thenReturn(response);
+                .thenReturn(res);
         var retrying = new ProviderHttpClient("http://localhost:1", httpClient,
                 new ObjectMapper(), null, FAST_RETRY);
 

@@ -14,8 +14,8 @@ import com.rag.contract.model.IngestResponse;
 import com.rag.contract.model.IngestStatusDTO;
 import com.rag.contract.model.IngestUrlRequest;
 import com.rag.contract.model.PageDTO;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockMultipartFile;
 
@@ -37,6 +37,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.HttpStatus.*;
 
 class IngestionControllerTest {
 
@@ -47,25 +48,22 @@ class IngestionControllerTest {
     @Test
     void ingestsValidRequest() {
         when(service.ingest(any())).thenReturn(new IngestionService.IngestionResult("d1", 5));
-        ResponseEntity<IngestResponse> response =
-                controller.ingest(new IngestRequest().content("some content"));
-        assertDocumentCreated(response, "d1", 5);
+        ResponseEntity<IngestResponse> res = controller.ingest(new IngestRequest().content("some content"));
+        assertDocumentCreated(res, "d1", 5);
     }
 
     @Test
     void rejectsBlankContent() {
-        ResponseEntity<IngestResponse> response =
-                controller.ingest(new IngestRequest().content("   "));
-        assertBadRequestAndNotIngested(response, service);
+        ResponseEntity<IngestResponse> res = controller.ingest(new IngestRequest().content("   "));
+        assertBadRequestAndNotIngested(res, service);
     }
 
     @Test
     void ingestsBinaryContentViaRawMetadata() {
         when(service.ingest(any())).thenReturn(new IngestionService.IngestionResult("d1", 7));
-        ResponseEntity<IngestResponse> response =
-                controller.ingest(new IngestRequest().content("")
-                        .metadata(Map.of(MetadataKeys.RAW, Base64.getEncoder().encodeToString(new byte[]{0x25, 0x50, 0x44, 0x46}))));
-        assertDocumentCreated(response, "d1", 7);
+        ResponseEntity<IngestResponse> res = controller.ingest(new IngestRequest().content("")
+                .metadata(Map.of(MetadataKeys.RAW, Base64.getEncoder().encodeToString(new byte[]{0x25, 0x50, 0x44, 0x46}))));
+        assertDocumentCreated(res, "d1", 7);
     }
 
     @Test
@@ -73,26 +71,24 @@ class IngestionControllerTest {
         when(service.ingest(any())).thenReturn(new IngestionService.IngestionResult("d1", 7));
         MockMultipartFile file = new MockMultipartFile("file", "doc.pdf", "application/pdf",
                 new byte[]{0x25, 0x50, 0x44, 0x46});
-        ResponseEntity<IngestResponse> response =
-                controller.ingestFile(file, Map.of(MetadataKeys.SOURCE, "x.pdf"));
-        assertDocumentCreated(response, "d1", 7);
+        ResponseEntity<IngestResponse> res = controller.ingestFile(file, Map.of(MetadataKeys.SOURCE, "x.pdf"));
+        assertDocumentCreated(res, "d1", 7);
     }
 
     @Test
     void rejectsEmptyMultipartFile() throws Exception {
         MockMultipartFile file = new MockMultipartFile("file", "empty.pdf", "application/pdf", new byte[0]);
-        ResponseEntity<IngestResponse> response =
-                controller.ingestFile(file, Map.of());
-        assertBadRequestAndNotIngested(response, service);
+        ResponseEntity<IngestResponse> res = controller.ingestFile(file, Map.of());
+        assertBadRequestAndNotIngested(res, service);
     }
 
     @Test
     void ingestFileStoresContentHashComputedFromRawBytesWhenClientOmitsIt() throws Exception {
         when(service.ingest(any())).thenReturn(new IngestionService.IngestionResult("d1", 7));
         byte[] bytes = {0x25, 0x50, 0x44, 0x46};
-        ResponseEntity<IngestResponse> response =
-                controller.ingestFile(new MockMultipartFile("file", "doc.pdf", "application/pdf", bytes), null);
-        assertDocumentCreated(response, "d1", 7);
+        var file = new MockMultipartFile("file", "doc.pdf", "application/pdf", bytes);
+        ResponseEntity<IngestResponse> res = controller.ingestFile(file, null);
+        assertDocumentCreated(res, "d1", 7);
         var expected = sha256(bytes);
         verify(service).ingest(argThat(d -> expected.equals(d.getMetadata().get(MetadataKeys.CONTENT_HASH))));
     }
@@ -104,10 +100,10 @@ class IngestionControllerTest {
                 new AsyncIngestionService(service), null);
         byte[] bytes = {0x25, 0x50, 0x44, 0x46};
         MockMultipartFile file = new MockMultipartFile("file", "doc.pdf", "application/pdf", bytes);
-        var response = asyncController.ingestFileAsync(file,
+        var res = asyncController.ingestFileAsync(file,
                 Map.of(MetadataKeys.CONTENT_HASH, "0000000000000000000000000000000000000000000000000000000000000000"));
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
-        awaitState(asyncController, response.getBody().getDocumentId());
+        assertThat(res.getStatusCode()).isEqualTo(ACCEPTED);
+        awaitState(asyncController, res.getBody().getDocumentId());
         var expected = sha256(bytes);
         verify(service).ingest(argThat(d -> expected.equals(d.getMetadata().get(MetadataKeys.CONTENT_HASH))));
     }
@@ -118,9 +114,8 @@ class IngestionControllerTest {
 
     @Test
     void rejectsEmptyContentWithoutRawMetadata() {
-        ResponseEntity<IngestResponse> response =
-                controller.ingest(new IngestRequest().content(""));
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        ResponseEntity<IngestResponse> res = controller.ingest(new IngestRequest().content(""));
+        assertThat(res.getStatusCode()).isEqualTo(BAD_REQUEST);
         verify(service, never()).ingest(any());
     }
 
@@ -129,16 +124,15 @@ class IngestionControllerTest {
         PageDTO page = new PageDTO().url("https://example.com").title("Example").text("page text");
         when(webPageFetcher.fetch("https://example.com")).thenReturn(page);
         when(service.ingestParsed(any())).thenReturn(new IngestionService.IngestionResult("d2", 3));
-        ResponseEntity<IngestResponse> response =
+        ResponseEntity<IngestResponse> res =
                 controller.ingestUrl(new IngestUrlRequest().url(URI.create("https://example.com")));
-        assertDocumentCreated(response, "d2", 3);
+        assertDocumentCreated(res, "d2", 3);
     }
 
     @Test
     void rejectsBlankUrl() {
-        ResponseEntity<IngestResponse> response =
-                controller.ingestUrl(new IngestUrlRequest().url(URI.create("")));
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        ResponseEntity<IngestResponse> res = controller.ingestUrl(new IngestUrlRequest().url(URI.create("")));
+        assertThat(res.getStatusCode()).isEqualTo(BAD_REQUEST);
         verify(service, never()).ingestParsed(any());
     }
 
@@ -149,11 +143,11 @@ class IngestionControllerTest {
                 new AsyncIngestionService(service), null);
         MockMultipartFile file = new MockMultipartFile("file", "doc.pdf", "application/pdf",
                 new byte[]{0x25, 0x50, 0x44, 0x46});
-        ResponseEntity<IngestJobResponse> response =
+        ResponseEntity<IngestJobResponse> res =
                 asyncController.ingestFileAsync(file, Map.of(MetadataKeys.SOURCE, "x.pdf"));
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
-        assertThat(response.getBody().getDocumentId()).isNotBlank();
-        String documentId = response.getBody().getDocumentId();
+        assertThat(res.getStatusCode()).isEqualTo(ACCEPTED);
+        assertThat(res.getBody().getDocumentId()).isNotBlank();
+        String documentId = res.getBody().getDocumentId();
         assertThat(awaitState(asyncController, documentId)).isEqualTo(AsyncIngestionService.STATE_COMPLETED);
     }
 
@@ -162,18 +156,17 @@ class IngestionControllerTest {
         IngestionController asyncController = new IngestionController(service, webPageFetcher,
                 new AsyncIngestionService(service), null);
         MockMultipartFile file = new MockMultipartFile("file", "empty.pdf", "application/pdf", new byte[0]);
-        ResponseEntity<IngestJobResponse> response =
-                asyncController.ingestFileAsync(file, Map.of());
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        ResponseEntity<IngestJobResponse> res = asyncController.ingestFileAsync(file, Map.of());
+        assertThat(res.getStatusCode()).isEqualTo(BAD_REQUEST);
         verify(service, never()).ingest(any());
     }
 
     @Test
     void mapsCapacityExhaustionToServiceUnavailable() {
-        ResponseEntity<String> response =
+        ResponseEntity<String> res =
                 controller.handleCapacityExceeded(new CapacityExceededException("capacity exhausted"));
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
-        assertThat(response.getBody()).isEqualTo("capacity exhausted");
+        assertThat(res.getStatusCode()).isEqualTo(SERVICE_UNAVAILABLE);
+        assertThat(res.getBody()).isEqualTo("capacity exhausted");
     }
 
     private static String awaitState(IngestionController asyncController, String documentId) {
@@ -193,10 +186,10 @@ class IngestionControllerTest {
         when(documentStore.listDocuments()).thenReturn(List.of(
                 new DocumentSummary("d1", 3, Map.of(MetadataKeys.FILE_NAME, "note.txt", MetadataKeys.TITLE, "note.txt"))));
         IngestionController listController = new IngestionController(service, webPageFetcher, null, documentStore);
-        ResponseEntity<List<DocumentSummaryDTO>> response = listController.listDocuments();
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).hasSize(1);
-        DocumentSummaryDTO dto = response.getBody().get(0);
+        ResponseEntity<List<DocumentSummaryDTO>> res = listController.listDocuments();
+        assertThat(res.getStatusCode()).isEqualTo(OK);
+        assertThat(res.getBody()).hasSize(1);
+        DocumentSummaryDTO dto = res.getBody().getFirst();
         assertThat(dto.getDocumentId()).isEqualTo("d1");
         assertThat(dto.getTitle()).isEqualTo("note.txt");
         assertThat(dto.getChunkCount()).isEqualTo(3);
@@ -207,35 +200,35 @@ class IngestionControllerTest {
     void deletesDocumentViaDocumentStore() {
         DocumentStorePort documentStore = mock(DocumentStorePort.class);
         IngestionController deleteController = new IngestionController(service, webPageFetcher, null, documentStore);
-        ResponseEntity<Void> response = deleteController.deleteDocument("d1");
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        ResponseEntity<Void> res = deleteController.deleteDocument("d1");
+        assertThat(res.getStatusCode()).isEqualTo(NO_CONTENT);
         verify(documentStore).delete("d1");
     }
 
     @Test
     void deleteReturnsUnavailableWhenDocumentStoreMissing() {
-        ResponseEntity<Void> response = controller.deleteDocument("d1");
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        ResponseEntity<Void> res = controller.deleteDocument("d1");
+        assertThat(res.getStatusCode()).isEqualTo(SERVICE_UNAVAILABLE);
     }
 
     @Test
     void listDocumentsReturnsUnavailableWhenDocumentStoreMissing() {
-        ResponseEntity<List<DocumentSummaryDTO>> response = controller.listDocuments();
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        ResponseEntity<List<DocumentSummaryDTO>> res = controller.listDocuments();
+        assertThat(res.getStatusCode()).isEqualTo(SERVICE_UNAVAILABLE);
     }
 
     @Test
     void ingestFileAsyncReturnsUnavailableWhenAsyncMissing() throws Exception {
         MockMultipartFile file = new MockMultipartFile("file", "doc.pdf", "application/pdf", new byte[]{1});
-        ResponseEntity<IngestJobResponse> response = controller.ingestFileAsync(file, null);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        ResponseEntity<IngestJobResponse> res = controller.ingestFileAsync(file, null);
+        assertThat(res.getStatusCode()).isEqualTo(SERVICE_UNAVAILABLE);
         verify(service, never()).ingest(any());
     }
 
     @Test
     void ingestStatusReturnsUnavailableWhenAsyncMissing() {
-        ResponseEntity<IngestStatusDTO> response = controller.ingestStatus("d1");
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        ResponseEntity<IngestStatusDTO> res = controller.ingestStatus("d1");
+        assertThat(res.getStatusCode()).isEqualTo(SERVICE_UNAVAILABLE);
     }
 
     @Test
@@ -244,8 +237,8 @@ class IngestionControllerTest {
         when(async.status("gone")).thenReturn(new AsyncIngestionService.JobStatus(
                 "gone", AsyncIngestionService.STATE_FAILED, 0, "No such ingestion job"));
         IngestionController asyncController = new IngestionController(service, webPageFetcher, async, null);
-        ResponseEntity<IngestStatusDTO> response = asyncController.ingestStatus("gone");
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        ResponseEntity<IngestStatusDTO> res = asyncController.ingestStatus("gone");
+        assertThat(res.getStatusCode()).isEqualTo(NOT_FOUND);
     }
 
     @Test
@@ -254,16 +247,17 @@ class IngestionControllerTest {
         when(documentStore.listDocuments()).thenReturn(List.of(
                 new DocumentSummary("d1", 2, Map.of(MetadataKeys.FILE_NAME, "note.txt"))));
         IngestionController listController = new IngestionController(service, webPageFetcher, null, documentStore);
-        ResponseEntity<List<DocumentSummaryDTO>> response = listController.listDocuments();
-        assertThat(response.getBody().get(0).getTitle()).isNull();
-        assertThat(response.getBody().get(0).getDocumentId()).isEqualTo("d1");
+        ResponseEntity<List<DocumentSummaryDTO>> res = listController.listDocuments();
+        Assertions.assertNotNull(res.getBody());
+        assertThat(res.getBody().getFirst().getTitle()).isNull();
+        assertThat(res.getBody().getFirst().getDocumentId()).isEqualTo("d1");
     }
 
     @Test
     void mapsEmptyExtractionToUnprocessableEntity() {
         var exception = new IngestionService.EmptyExtractionException(new Document("d1", "", Map.of()));
-        ResponseEntity<String> response = controller.handleEmptyExtraction(exception);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
-        assertThat(response.getBody()).contains("d1");
+        ResponseEntity<String> res = controller.handleEmptyExtraction(exception);
+        assertThat(res.getStatusCode()).isEqualTo(UNPROCESSABLE_ENTITY);
+        assertThat(res.getBody()).contains("d1");
     }
 }

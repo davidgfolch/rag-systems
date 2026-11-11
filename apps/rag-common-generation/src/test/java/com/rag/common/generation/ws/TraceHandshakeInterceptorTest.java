@@ -17,8 +17,8 @@ import static org.mockito.Mockito.when;
 class TraceHandshakeInterceptorTest {
 
     private final Tracer tracer = mock(Tracer.class);
-    private final ServerHttpRequest request = mock(ServerHttpRequest.class);
-    private final ServerHttpResponse response = mock(ServerHttpResponse.class);
+    private final ServerHttpRequest req = mock(ServerHttpRequest.class);
+    private final ServerHttpResponse res = mock(ServerHttpResponse.class);
     private final WebSocketHandler wsHandler = mock(WebSocketHandler.class);
     private final TraceHandshakeInterceptor interceptor = new TraceHandshakeInterceptor(tracer);
 
@@ -28,7 +28,7 @@ class TraceHandshakeInterceptorTest {
         when(tracer.currentSpan()).thenReturn(span);
         Map<String, Object> attributes = new HashMap<>();
 
-        boolean proceed = interceptor.beforeHandshake(request, response, wsHandler, attributes);
+        boolean proceed = interceptor.beforeHandshake(req, res, wsHandler, attributes);
 
         assertThat(proceed).isTrue();
         assertThat(attributes)
@@ -40,7 +40,7 @@ class TraceHandshakeInterceptorTest {
         when(tracer.currentSpan()).thenReturn(null);
         Map<String, Object> attributes = new HashMap<>();
 
-        boolean proceed = interceptor.beforeHandshake(request, response, wsHandler, attributes);
+        boolean proceed = interceptor.beforeHandshake(req, res, wsHandler, attributes);
 
         assertThat(proceed).isTrue();
         assertThat(attributes).doesNotContainKey(ChatWebSocketHandler.SPAN_ATTRIBUTE);
@@ -48,13 +48,13 @@ class TraceHandshakeInterceptorTest {
 
     @Test
     void afterHandshakeDoesNotInterfereWithSubsequentHandshakes() {
-        interceptor.afterHandshake(request, response, wsHandler, null);
-        interceptor.afterHandshake(request, response, wsHandler, new IllegalStateException("boom"));
+        interceptor.afterHandshake(req, res, wsHandler, null);
+        interceptor.afterHandshake(req, res, wsHandler, new IllegalStateException("boom"));
 
         Span span = mock(Span.class);
         when(tracer.currentSpan()).thenReturn(span);
         Map<String, Object> attributes = new HashMap<>();
-        boolean proceed = interceptor.beforeHandshake(request, response, wsHandler, attributes);
+        boolean proceed = interceptor.beforeHandshake(req, res, wsHandler, attributes);
 
         assertThat(proceed).isTrue();
         assertThat(attributes).containsEntry(ChatWebSocketHandler.SPAN_ATTRIBUTE, span);
