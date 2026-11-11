@@ -14,7 +14,6 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClientResponseException;
 
 import java.io.IOException;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -28,30 +27,12 @@ import java.util.Objects;
  */
 public class EmbeddingService {
 
-    public static final int DEFAULT_EMBED_BATCH_SIZE = 32;
-    public static final int DEFAULT_MAX_CONCURRENT = 2;
-    public static final Duration DEFAULT_QUEUE_WAIT = Duration.ofSeconds(180);
-
     private static final Logger log = LoggerFactory.getLogger(EmbeddingService.class);
-    private static final String LIMITER_NAME = "provider-embedding";
 
     private final ModelRouter router;
     private final int maxEmbeddingBatchSize;
     private final ConcurrencyLimiter limiter;
     private final RetryExecutor retry;
-
-    public EmbeddingService(ModelRouter router) {
-        this(router, DEFAULT_EMBED_BATCH_SIZE);
-    }
-
-    public EmbeddingService(ModelRouter router, int maxEmbeddingBatchSize) {
-        this(router, maxEmbeddingBatchSize, defaultLimiter(), RetryPolicy.defaults());
-    }
-
-    public EmbeddingService(ModelRouter router, int maxEmbeddingBatchSize,
-                            ConcurrencyLimiter limiter, RetryPolicy retryPolicy) {
-        this(router, maxEmbeddingBatchSize, limiter, retryPolicy, RetryObserver.NOOP);
-    }
 
     public EmbeddingService(ModelRouter router, int maxEmbeddingBatchSize,
                             ConcurrencyLimiter limiter, RetryPolicy retryPolicy, RetryObserver observer) {
@@ -60,14 +41,6 @@ public class EmbeddingService {
         this.limiter = Objects.requireNonNull(limiter, "limiter must not be null");
         this.retry = new RetryExecutor(Objects.requireNonNull(retryPolicy, "retryPolicy must not be null"),
                 EmbeddingService::isRetryable, observer, Thread::sleep);
-    }
-
-    public static ConcurrencyLimiter defaultLimiter() {
-        return new ConcurrencyLimiter(LIMITER_NAME, DEFAULT_MAX_CONCURRENT, DEFAULT_QUEUE_WAIT);
-    }
-
-    public List<List<Float>> embed(List<String> texts) {
-        return embed(texts, null);
     }
 
     /**

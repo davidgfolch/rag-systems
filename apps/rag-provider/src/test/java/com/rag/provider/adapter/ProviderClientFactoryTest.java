@@ -15,7 +15,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ProviderClientFactoryTest {
 
-    private final ProviderClientFactory factory = new ProviderClientFactory();
+    private static final Duration ONE_SECOND = Duration.ofSeconds(1);
+
+    private final ProviderClientFactory factory = new ProviderClientFactory(ONE_SECOND, ONE_SECOND);
 
     @Test
     void shouldBuildOllamaClients() {
@@ -43,11 +45,10 @@ class ProviderClientFactoryTest {
 
     @Test
     void shouldRejectNonPositiveTimeouts() {
-        var oneSecond = Duration.ofSeconds(1);
-        assertThatThrownBy(() -> new ProviderClientFactory(Duration.ZERO, oneSecond))
+        assertThatThrownBy(() -> new ProviderClientFactory(Duration.ZERO, ONE_SECOND))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("connectTimeout");
-        assertThatThrownBy(() -> new ProviderClientFactory(oneSecond, Duration.ZERO))
+        assertThatThrownBy(() -> new ProviderClientFactory(ONE_SECOND, Duration.ZERO))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("readTimeout");
     }

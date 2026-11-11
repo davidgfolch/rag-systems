@@ -1,5 +1,6 @@
 package com.rag.provider.services;
 
+import com.rag.provider.testfixture.TestEmbeddingServices;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -30,7 +31,7 @@ class EmbeddingServiceTest {
         when(router.embeddingModelFor(null)).thenReturn(embeddingModel);
         when(embeddingModel.call(any(EmbeddingRequest.class))).thenReturn(
                 new EmbeddingResponse(List.of(new Embedding(new float[]{1f, 2f}, 0))));
-        var vectors = new EmbeddingService(router).embed(List.of("a", "b"));
+        var vectors = TestEmbeddingServices.of(router).embed(List.of("a", "b"), null);
         assertThat(vectors).containsExactly(List.of(1f, 2f));
     }
 
@@ -45,7 +46,7 @@ class EmbeddingServiceTest {
             }
             return new EmbeddingResponse(embeddings);
         });
-        var vectors = new EmbeddingService(router, 2).embed(List.of("a", "b", "c"));
+        var vectors = TestEmbeddingServices.withBatchSize(router, 2).embed(List.of("a", "b", "c"), null);
         verify(embeddingModel, times(2)).call(any(EmbeddingRequest.class));
         assertThat(vectors).containsExactly(
                 List.of(2f, 0f), List.of(2f, 1f), List.of(1f, 0f));
@@ -53,7 +54,7 @@ class EmbeddingServiceTest {
 
     @Test
     void shouldRejectNonPositiveBatchSize() {
-        assertThatThrownBy(() -> new EmbeddingService(router, 0))
+        assertThatThrownBy(() -> TestEmbeddingServices.withBatchSize(router, 0))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("embedding batch size must be positive");
     }
