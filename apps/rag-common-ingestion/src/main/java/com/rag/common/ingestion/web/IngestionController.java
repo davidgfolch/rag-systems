@@ -15,8 +15,6 @@ import com.rag.contract.model.IngestUrlRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -42,6 +40,9 @@ import static com.rag.common.core.domain.MetadataKeys.RAW_BYTES;
 import static com.rag.common.core.domain.MetadataKeys.SOURCE_TYPE;
 import static com.rag.common.core.domain.MetadataKeys.TITLE;
 import static com.rag.common.core.util.Hashes.sha256Hex;
+import static org.springframework.http.HttpStatus.CREATED;
+import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
+import static org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE;
 
 /**
  * REST endpoints for ingesting documents (raw content, multipart file or via
@@ -75,7 +76,7 @@ public class IngestionController {
     @GetMapping
     public ResponseEntity<List<DocumentSummaryDTO>> listDocuments() {
         if (documentStore == null) {
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+            return ResponseEntity.status(SERVICE_UNAVAILABLE).build();
         }
         var documents = documentStore.listDocuments().stream()
                 .map(this::toDocumentSummary)
@@ -86,7 +87,7 @@ public class IngestionController {
     @DeleteMapping("/{documentId}")
     public ResponseEntity<Void> deleteDocument(@PathVariable String documentId) {
         if (documentStore == null) {
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+            return ResponseEntity.status(SERVICE_UNAVAILABLE).build();
         }
         log.info("Delete request for document {}", documentId);
         documentStore.delete(documentId);
@@ -94,20 +95,20 @@ public class IngestionController {
     }
 
     @PostMapping("/ingest")
-    public ResponseEntity<IngestResponse> ingest(@RequestBody IngestRequest request) {
-        if (request.getContent().isBlank() && !hasRawBytes(request)) {
+    public ResponseEntity<IngestResponse> ingest(@RequestBody IngestRequest req) {
+        if (req.getContent().isBlank() && !hasRawBytes(req)) {
             return ResponseEntity.badRequest().build();
         }
         Map<String, Object> metadata = new HashMap<>();
-        if (request.getMetadata() != null) {
-            metadata.putAll(request.getMetadata());
+        if (req.getMetadata() != null) {
+            metadata.putAll(req.getMetadata());
         }
         metadata.putIfAbsent(TITLE, "Untitled document");
-        var document = new Document(UUID.randomUUID().toString(), request.getContent(), metadata);
+        var document = new Document(UUID.randomUUID().toString(), req.getContent(), metadata);
         return created(ingestionService.ingest(document));
     }
 
-    @PostMapping(value = "/ingest-file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/ingest-file", consumes = MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<IngestResponse> ingestFile(
             @RequestPart("file") MultipartFile file,
             @RequestPart(value = "fileInfo", required = false) Map<String, Object> fileInfo) throws IOException {
@@ -136,13 +137,13 @@ public class IngestionController {
         return created(result);
     }
 
-    @PostMapping(value = "/ingest-file-async", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping(value = "/ingest-file-async", consumes = MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<IngestJobResponse> ingestFileAsync(
             @RequestPart("file") MultipartFile file,
             @RequestPart(value = "fileInfo", required = false) Map<String, Object> fileInfo) throws IOException {
         var original = file.getOriginalFilename();
         if (asyncIngestionService == null) {
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+            return ResponseEntity.status(SERVICE_UNAVAILABLE).build();
         }
         if (file.isEmpty()) {
             log.warn("Ingest-file-async rejected: '{}' is empty ({} bytes)", original, file.getSize());
@@ -168,7 +169,7 @@ public class IngestionController {
     @GetMapping("/ingest-status/{documentId}")
     public ResponseEntity<IngestStatusDTO> ingestStatus(@PathVariable String documentId) {
         if (asyncIngestionService == null) {
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+            return ResponseEntity.status(SERVICE_UNAVAILABLE).build();
         }
         var status = asyncIngestionService.status(documentId);
         if (AsyncIngestionService.STATE_FAILED.equals(status.state())
@@ -182,8 +183,8 @@ public class IngestionController {
                 .message(status.message()));
     }
 
-    private boolean hasRawBytes(IngestRequest request) {
-        return request.getMetadata() != null && request.getMetadata().get(RAW) != null;
+    private boolean hasRawBytes(IngestRequest req) {
+        return req.getMetadata() != null && req.getMetadata().get(RAW) != null;
     }
 
     private DocumentSummaryDTO toDocumentSummary(DocumentSummary summary) {
@@ -196,18 +197,18 @@ public class IngestionController {
     }
 
     @PostMapping("/ingest-url")
-    public ResponseEntity<IngestResponse> ingestUrl(@RequestBody IngestUrlRequest request) {
-        if (request.getUrl().toString().isBlank()) {
+    public ResponseEntity<IngestResponse> ingestUrl(@RequestBody IngestUrlRequest req) {
+        if (req.getUrl().toString().isBlank()) {
             return ResponseEntity.badRequest().build();
         }
-        var page = webPageFetcher.fetch(request.getUrl().toString());
+        var page = webPageFetcher.fetch(req.getUrl().toString());
         var documentId = UUID.randomUUID().toString();
         return created(ingestionService.ingestParsed(PageDocumentMapper.toParsedDocument(documentId, page)));
     }
 
     private ResponseEntity<IngestResponse> created(IngestionService.IngestionResult result) {
-        var response = new IngestResponse().documentId(result.documentId()).chunkCount(result.chunkCount());
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        var res = new IngestResponse().documentId(result.documentId()).chunkCount(result.chunkCount());
+        return ResponseEntity.status(CREATED).body(res);
     }
 
     @ExceptionHandler(IngestionService.EmptyExtractionException.class)
@@ -218,6 +219,6 @@ public class IngestionController {
     @ExceptionHandler(CapacityExceededException.class)
     public ResponseEntity<String> handleCapacityExceeded(CapacityExceededException e) {
         log.warn("Async ingestion rejected because capacity is exhausted: {}", e.getMessage());
-        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(e.getMessage());
+        return ResponseEntity.status(SERVICE_UNAVAILABLE).body(e.getMessage());
     }
 }

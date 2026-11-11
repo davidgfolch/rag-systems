@@ -20,7 +20,6 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.web.client.RestClient;
 
@@ -30,11 +29,12 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static java.time.Duration.ofSeconds;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.http.MediaType.MULTIPART_FORM_DATA;
 
 /**
  * Reproduces the reported bug: {@code add-file} / {@code add-folder} dedup does
@@ -61,6 +61,8 @@ class AsyncFileDedupReproductionTest {
 
     private static final int DIM = 64;
     private static final String MARKER_KEY = "marker";
+    public static final String MARKER_ONE = "marker-one";
+    public static final String MARKER_TWO = "marker-two";
 
     @LocalServerPort
     private int port;
@@ -72,27 +74,27 @@ class AsyncFileDedupReproductionTest {
     @Test
     void contentHashSurvivesAsyncIngestIntoPgVectorMetadata() {
         String text = "first note content";
-        var documentId = submit(getTuiStyleBody(text, "report.txt", "client-sent-hash-one", "marker-one"));
+        var documentId = submit(getTuiStyleBody(text, "report.txt", "client-sent-hash-one", MARKER_ONE));
 
         await().atMost(ofSeconds(15)).until(() -> state(documentId) == IngestStatusDTO.StateEnum.COMPLETED);
 
-        var summary = summaryFor("marker-one");
+        var summary = summaries().stream().filter(d -> MARKER_ONE.equals(marker(d))).findFirst();
         assertThat(summary).isPresent();
         assertThat(summary.get().getMetadata())
                 .containsEntry(MetadataKeys.CONTENT_HASH, sha256(text))
                 .doesNotContainEntry(MetadataKeys.CONTENT_HASH, "client-sent-hash-one");
-        assertThat(marker(summary.get())).isEqualTo("marker-one");
+        assertThat(marker(summary.get())).isEqualTo(MARKER_ONE);
     }
 
     @Test
     void identicalBytesUploadedTwiceReproduceDuplicatedDocuments() {
         String text = "repeated identical content";
-        submit(getTuiStyleBody(text, "dup.txt", "client-sent-hash-two", "marker-two"));
-        submit(getTuiStyleBody(text, "dup.txt", "client-sent-hash-two", "marker-two"));
+        submit(getTuiStyleBody(text, "dup.txt", "client-sent-hash-two", MARKER_TWO));
+        submit(getTuiStyleBody(text, "dup.txt", "client-sent-hash-two", MARKER_TWO));
 
-        await().atMost(ofSeconds(15)).until(() -> summariesFor("marker-two").size() >= 2);
+        await().atMost(ofSeconds(15)).until(() -> summariesFilter().size() >= 2);
 
-        var duplicates = summariesFor("marker-two");
+        var duplicates = summariesFilter();
         assertThat(duplicates).hasSize(2)
                 .allSatisfy(d -> assertThat(d.getMetadata())
                         .containsEntry(MetadataKeys.CONTENT_HASH, sha256(text)));
@@ -108,15 +110,15 @@ class AsyncFileDedupReproductionTest {
     }
 
     private String submit(org.springframework.util.MultiValueMap<String, Object> body) {
-        var response = client().post()
+        var res = client().post()
                 .uri("/api/documents/ingest-file-async")
-                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .contentType(MULTIPART_FORM_DATA)
                 .body(body)
                 .retrieve()
                 .body(IngestJobResponse.class);
-        assertThat(response).isNotNull();
-        assertThat(response.getDocumentId()).isNotBlank();
-        return response.getDocumentId();
+        assertThat(res).isNotNull();
+        assertThat(res.getDocumentId()).isNotBlank();
+        return res.getDocumentId();
     }
 
     private IngestStatusDTO.StateEnum state(String documentId) {
@@ -135,15 +137,9 @@ class AsyncFileDedupReproductionTest {
         return result == null ? List.of() : List.of(result);
     }
 
-    private Optional<DocumentSummaryDTO> summaryFor(String markerValue) {
+    private List<DocumentSummaryDTO> summariesFilter() {
         return summaries().stream()
-                .filter(d -> markerValue.equals(marker(d)))
-                .findFirst();
-    }
-
-    private List<DocumentSummaryDTO> summariesFor(String markerValue) {
-        return summaries().stream()
-                .filter(d -> markerValue.equals(marker(d)))
+                .filter(d -> MARKER_TWO.equals(marker(d)))
                 .toList();
     }
 
@@ -168,7 +164,7 @@ class AsyncFileDedupReproductionTest {
             }
         });
         var jsonHeaders = new HttpHeaders();
-        jsonHeaders.setContentType(MediaType.APPLICATION_JSON);
+        jsonHeaders.setContentType(APPLICATION_JSON);
         body.add("fileInfo", new HttpEntity<>(Map.of(
                 MetadataKeys.SOURCE_TYPE, "file",
                 MetadataKeys.FILE_NAME, fileName,
@@ -190,8 +186,8 @@ class AsyncFileDedupReproductionTest {
     private static final class CharHashEmbeddingModel implements EmbeddingModel {
 
         @Override
-        public EmbeddingResponse call(EmbeddingRequest request) {
-            var results = request.getInstructions().stream()
+        public EmbeddingResponse call(EmbeddingRequest req) {
+            var results = req.getInstructions().stream()
                     .map(text -> new Embedding(embedText(text), 0))
                     .toList();
             return new EmbeddingResponse(results);

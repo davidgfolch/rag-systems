@@ -8,7 +8,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -18,6 +17,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -77,7 +77,7 @@ class RagAdvancedApplicationContextTest {
     @Test
     void shouldIngestTextAndRetrieveRelevantChunks() throws Exception {
         mockMvc.perform(post("/api/documents/ingest")
-                        .contentType(MediaType.APPLICATION_JSON)
+                        .contentType(APPLICATION_JSON)
                         .content("""
                                 {
                                     "content": "Azure virtual machines scale out \
@@ -93,7 +93,7 @@ class RagAdvancedApplicationContextTest {
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$[0].title").value("Azure VM Overview"));
         mockMvc.perform(post("/api/query")
-                        .contentType(MediaType.APPLICATION_JSON)
+                        .contentType(APPLICATION_JSON)
                         .content("""
                                 {"question": "azure virtual machines", "topK": 3}"""))
                 .andExpect(status().isOk())
@@ -101,7 +101,7 @@ class RagAdvancedApplicationContextTest {
                 .andExpect(jsonPath("$.results.length()").value(1))
                 .andExpect(jsonPath("$.results[0].content").isNotEmpty());
         mockMvc.perform(post("/api/query/advanced")
-                        .contentType(MediaType.APPLICATION_JSON)
+                        .contentType(APPLICATION_JSON)
                         .content("""
                                 {"question": "azure virtual machines", "topK": 3,
                                  "metadata": {"title": "Azure VM Overview"}}"""))

@@ -9,7 +9,6 @@ import com.rag.provider.services.ChatService;
 import com.rag.provider.services.EmbeddingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,6 +20,7 @@ import static com.rag.contract.constants.ApiPaths.EMBED;
 import static com.rag.contract.constants.FrameTypes.DONE;
 import static com.rag.contract.constants.FrameTypes.ERROR;
 import static com.rag.contract.constants.FrameTypes.TOKEN;
+import static org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE;
 
 /**
  * Model-level compute endpoints consumed by the RAG modules' remote bridges.
@@ -41,31 +41,31 @@ public class ComputeController {
     }
 
     @PostMapping(COMPLETE)
-    public CompleteResponse complete(@RequestBody CompleteRequest request) {
-        var answer = chatService.complete(request.prompt());
-        log.info("Completion served: promptLength={}, answerLength={}", request.prompt().length(), answer.length());
+    public CompleteResponse complete(@RequestBody CompleteRequest req) {
+        var answer = chatService.complete(req.prompt());
+        log.info("Completion served: promptLength={}, answerLength={}", req.prompt().length(), answer.length());
         return new CompleteResponse(answer);
     }
 
     @PostMapping(EMBED)
-    public EmbedResponse embed(@RequestBody EmbedRequest request) {
-        var vectors = embeddingService.embed(request.texts(), request.model());
+    public EmbedResponse embed(@RequestBody EmbedRequest req) {
+        var vectors = embeddingService.embed(req.texts(), req.model());
         log.info("Embedding served: texts={}, dimension={}",
-                vectors.size(), vectors.isEmpty() ? 0 : vectors.get(0).size());
+                vectors.size(), vectors.isEmpty() ? 0 : vectors.getFirst().size());
         return new EmbedResponse(vectors);
     }
 
-    @PostMapping(value = CHAT_STREAM, produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter stream(@RequestBody CompleteRequest request) {
+    @PostMapping(value = CHAT_STREAM, produces = TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter stream(@RequestBody CompleteRequest req) {
         var emitter = new SseEmitter(0L);
-        log.info("Chat stream started: promptLength={}", request.prompt().length());
-        var subscription = chatService.stream(request.prompt()).subscribe(
+        log.info("Chat stream started: promptLength={}", req.prompt().length());
+        var subscription = chatService.stream(req.prompt()).subscribe(
                 token -> send(emitter, new ChatResponse(TOKEN, token, null)),
                 error -> fail(emitter, error),
                 () -> {
                     send(emitter, new ChatResponse(DONE, null, null));
                     emitter.complete();
-                    log.info("Chat stream completed: promptLength={}", request.prompt().length());
+                    log.info("Chat stream completed: promptLength={}", req.prompt().length());
                 });
         emitter.onCompletion(subscription::dispose);
         emitter.onTimeout(() -> {
@@ -73,7 +73,7 @@ public class ComputeController {
             subscription.dispose();
             emitter.complete();
         });
-        emitter.onError(error -> subscription.dispose());
+        emitter.onError(_ -> subscription.dispose());
         return emitter;
     }
 

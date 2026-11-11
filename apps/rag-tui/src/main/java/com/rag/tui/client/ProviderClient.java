@@ -56,10 +56,9 @@ public class ProviderClient {
         postSwitch(PROVIDER_EMBEDDING, providerId, model);
     }
 
-    public ProviderStatusDTO configure(ConfigureProviderRequest request) {
-        log.info("Provider profile configure requested: providerId={}", request.providerId());
-        return rest.post().uri(PROVIDER_CONFIGURE)
-                .body(request).retrieve().body(ProviderStatusDTO.class);
+    public ProviderStatusDTO configure(ConfigureProviderRequest req) {
+        log.info("Provider profile configure requested: providerId={}", req.providerId());
+        return rest.post().uri(PROVIDER_CONFIGURE).body(req).retrieve().body(ProviderStatusDTO.class);
     }
 
     private void postSwitch(String path, String providerId, String model) {

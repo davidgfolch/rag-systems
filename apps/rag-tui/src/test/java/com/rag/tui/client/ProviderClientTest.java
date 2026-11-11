@@ -1,8 +1,6 @@
 package com.rag.tui.client;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
@@ -17,6 +15,9 @@ import static com.rag.tui.testfixture.TestModelCatalogs.LOCAL_CHAT;
 import static com.rag.tui.testfixture.TestModelCatalogs.LOCAL_EMBED;
 import static com.rag.tui.testfixture.TestModelCatalogs.PROVIDER_OLLAMA;
 import static com.rag.tui.testfixture.TestModelCatalogs.SOURCE;
+import static org.springframework.http.HttpMethod.GET;
+import static org.springframework.http.HttpMethod.POST;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -49,8 +50,8 @@ class ProviderClientTest {
     @Test
     void returnsProviderStatus() {
         server.expect(requestTo(BASE + PROVIDER))
-                .andExpect(method(HttpMethod.GET))
-                .andRespond(withSuccess(STATUS_JSON, MediaType.APPLICATION_JSON));
+                .andExpect(method(GET))
+                .andRespond(withSuccess(STATUS_JSON, APPLICATION_JSON));
         var status = sut.status();
         assertThat(status.chat().providerId()).isEqualTo(PROVIDER_OLLAMA);
         assertThat(status.chat().model()).isEqualTo(LOCAL_CHAT);
@@ -62,8 +63,8 @@ class ProviderClientTest {
     @Test
     void returnsCatalog() {
         server.expect(requestTo(BASE + CATALOG))
-                .andExpect(method(HttpMethod.GET))
-                .andRespond(withSuccess(CATALOG_JSON, MediaType.APPLICATION_JSON));
+                .andExpect(method(GET))
+                .andRespond(withSuccess(CATALOG_JSON, APPLICATION_JSON));
         var catalog = sut.catalog();
         assertThat(catalog.models()).hasSize(1);
         assertThat(catalog.source()).isEqualTo(SOURCE);
@@ -77,8 +78,8 @@ class ProviderClientTest {
     @Test
     void refreshesCatalog() {
         server.expect(requestTo(BASE + CATALOG_REFRESH))
-                .andExpect(method(HttpMethod.POST))
-                .andRespond(withSuccess(CATALOG_JSON, MediaType.APPLICATION_JSON));
+                .andExpect(method(POST))
+                .andRespond(withSuccess(CATALOG_JSON, APPLICATION_JSON));
         var catalog = sut.refreshCatalog();
         assertThat(catalog.models()).hasSize(1);
         server.verify();
@@ -87,7 +88,7 @@ class ProviderClientTest {
     @Test
     void switchesChatModel() {
         server.expect(requestTo(BASE + PROVIDER_CHAT))
-                .andExpect(method(HttpMethod.POST))
+                .andExpect(method(POST))
                 .andExpect(content().json("{\"providerId\":\"ollama\",\"model\":\"phi4\"}"))
                 .andRespond(withNoContent());
         sut.switchChat(PROVIDER_OLLAMA, LOCAL_CHAT);
@@ -97,7 +98,7 @@ class ProviderClientTest {
     @Test
     void switchesEmbeddingModel() {
         server.expect(requestTo(BASE + PROVIDER_EMBEDDING))
-                .andExpect(method(HttpMethod.POST))
+                .andExpect(method(POST))
                 .andExpect(content().json("{\"providerId\":\"openai\",\"model\":\"text-embedding-3-small\"}"))
                 .andRespond(withNoContent());
         sut.switchEmbedding("openai", "text-embedding-3-small");

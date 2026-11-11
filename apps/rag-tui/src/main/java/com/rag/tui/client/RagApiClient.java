@@ -20,7 +20,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
@@ -46,6 +45,8 @@ import static com.rag.contract.constants.ApiPaths.MODULE_VARIANTS_ACTIVE;
 import static com.rag.contract.constants.ApiPaths.QUERY;
 import static com.rag.contract.constants.ApiPaths.moduleVariants;
 import static com.rag.contract.constants.ApiPaths.variantActivate;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.http.MediaType.MULTIPART_FORM_DATA;
 
 /**
  * REST client for the active rag-* module: ingestion and query endpoints,
@@ -84,7 +85,7 @@ public class RagApiClient {
     public IngestResponse ingestFile(byte[] bytes, String fileName, Map<String, Object> metadata) {
         return client()
                 .post().uri(INGEST_FILE)
-                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .contentType(MULTIPART_FORM_DATA)
                 .body(buildBody(bytes, fileName, metadata))
                 .retrieve().body(IngestResponse.class);
     }
@@ -99,7 +100,7 @@ public class RagApiClient {
             }
         });
         var jsonHeaders = new HttpHeaders();
-        jsonHeaders.setContentType(MediaType.APPLICATION_JSON);
+        jsonHeaders.setContentType(APPLICATION_JSON);
         body.add("fileInfo", new HttpEntity<>(metadata, jsonHeaders));
         return body;
     }
@@ -111,7 +112,7 @@ public class RagApiClient {
     public IngestJobResponse submitIngestFile(byte[] bytes, String fileName, Map<String, Object> metadata) {
         return client()
                 .post().uri(INGEST_FILE_ASYNC)
-                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .contentType(MULTIPART_FORM_DATA)
                 .body(buildBody(bytes, fileName, metadata))
                 .retrieve().body(IngestJobResponse.class);
     }

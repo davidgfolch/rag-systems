@@ -132,8 +132,8 @@ public class ProviderHttpClient {
 
     private <T> T send(HttpRequest request, Class<T> responseType) {
         try {
-            var response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            return parse(response, responseType);
+            var res = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            return parse(res, responseType);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw ProviderTransportException.interrupted(e);
@@ -150,13 +150,13 @@ public class ProviderHttpClient {
                 .build();
         try {
             log.debug("Opening provider stream at {}", path);
-            var response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
-            if (response.statusCode() >= ERROR_STATUS_MIN) {
-                closeQuietly(response.body());
-                throw new ProviderHttpException(response.statusCode(),
-                        "Provider stream failed: HTTP " + response.statusCode(), retryAfter(response));
+            var res = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
+            if (res.statusCode() >= ERROR_STATUS_MIN) {
+                closeQuietly(res.body());
+                throw new ProviderHttpException(res.statusCode(),
+                        "Provider stream failed: HTTP " + res.statusCode(), retryAfter(res));
             }
-            return response.body();
+            return res.body();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw ProviderTransportException.interrupted(e);
@@ -184,14 +184,14 @@ public class ProviderHttpClient {
         return builder;
     }
 
-    private <T> T parse(HttpResponse<String> response, Class<T> responseType) {
-        if (response.statusCode() >= ERROR_STATUS_MIN) {
-            throw new ProviderHttpException(response.statusCode(),
-                    "Provider request failed: HTTP " + response.statusCode() + " -> " + response.body(),
-                    retryAfter(response));
+    private <T> T parse(HttpResponse<String> res, Class<T> responseType) {
+        if (res.statusCode() >= ERROR_STATUS_MIN) {
+            throw new ProviderHttpException(res.statusCode(),
+                    "Provider request failed: HTTP " + res.statusCode() + " -> " + res.body(),
+                    retryAfter(res));
         }
         try {
-            return objectMapper.readValue(response.body(), responseType);
+            return objectMapper.readValue(res.body(), responseType);
         } catch (IOException e) {
             throw new IllegalStateException("Failed to parse provider response: " + e.getMessage(), e);
         }
@@ -219,8 +219,8 @@ public class ProviderHttpClient {
         }
     }
 
-    private static Duration retryAfter(HttpResponse<?> response) {
-        return response.headers().firstValue(RETRY_AFTER_HEADER)
+    private static Duration retryAfter(HttpResponse<?> res) {
+        return res.headers().firstValue(RETRY_AFTER_HEADER)
                 .flatMap(RetryAfter::parse)
                 .orElse(null);
     }

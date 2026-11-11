@@ -20,9 +20,9 @@ class RankLinksControllerTest {
     void ranksLinksForQuestion() {
         var links = List.of("https://ex.com/a", "https://ex.com/b");
         when(service.rankLinks(links, "q")).thenReturn(List.of("https://ex.com/b", "https://ex.com/a"));
-        var response = sut.rank(new RankLinksRequest().links(links).question("q"));
-        assertThat(response.getStatusCode().is2xxSuccessful()).isTrue();
-        assertThat(response.getBody().getLinks())
+        var res = sut.rank(new RankLinksRequest().links(links).question("q"));
+        assertThat(res.getStatusCode().is2xxSuccessful()).isTrue();
+        assertThat(res.getBody().getLinks())
                 .containsExactly("https://ex.com/b", "https://ex.com/a");
         verify(service).rankLinks(links, "q");
     }
@@ -30,7 +30,7 @@ class RankLinksControllerTest {
     @Test
     void returnsEmptyListWhenServiceHasNothing() {
         when(service.rankLinks(null, null)).thenReturn(List.of());
-        var response = sut.rank(new RankLinksRequest());
-        assertThat(response.getBody().getLinks()).isEmpty();
+        var res = sut.rank(new RankLinksRequest());
+        assertThat(res.getBody().getLinks()).isEmpty();
     }
 }

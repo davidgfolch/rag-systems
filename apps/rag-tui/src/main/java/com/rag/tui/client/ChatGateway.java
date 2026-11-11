@@ -63,7 +63,7 @@ public class ChatGateway {
         Module module = registry.active();
         String conversationId = "tui-" + System.currentTimeMillis();
         CountDownLatch done = new CountDownLatch(1);
-        var answer = new AtomicReference<String>("");
+        var answer = new AtomicReference<>("");
         var error = new AtomicReference<String>();
 
         WebSocketSession session = connect(module, done, answer, error, onToken);
@@ -88,18 +88,18 @@ public class ChatGateway {
         WebSocketHandler handler = new TextWebSocketHandler() {
             @Override
             protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-                ChatResponse response = objectMapper.readValue(message.getPayload(), ChatResponse.class);
-                switch (response.type()) {
-                    case TOKEN -> onToken.accept(response.content());
+                ChatResponse res = objectMapper.readValue(message.getPayload(), ChatResponse.class);
+                switch (res.type()) {
+                    case TOKEN -> onToken.accept(res.content());
                     case DONE -> {
-                        answer.set(response.content());
+                        answer.set(res.content());
                         done.countDown();
                     }
                     case ERROR -> {
-                        error.set(response.content());
+                        error.set(res.content());
                         done.countDown();
                     }
-                    default -> log.debug("Unknown chat event type '{}'", response.type());
+                    default -> log.debug("Unknown chat event type '{}'", res.type());
                 }
             }
         };

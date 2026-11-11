@@ -94,12 +94,12 @@ public class WebCrawlerClient implements WebPageFetcher {
         if (links == null || links.isEmpty()) return List.of();
         log.debug("Ranking {} links via webcrawler (question={})", links.size(), question);
         var body = new RankLinksRequest(links).question(question);
-        var response = retry.call("rank " + links.size() + " links", () -> restClient.post()
+        var res = retry.call("rank " + links.size() + " links", () -> restClient.post()
                 .uri(RANK_LINKS)
                 .body(body)
                 .retrieve()
                 .body(RankLinksResponse.class));
-        return Optional.ofNullable(response).map(RankLinksResponse::getLinks).orElseGet(List::of);
+        return Optional.ofNullable(res).map(RankLinksResponse::getLinks).orElseGet(List::of);
     }
 
     @Override

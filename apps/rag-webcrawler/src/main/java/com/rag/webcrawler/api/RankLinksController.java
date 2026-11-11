@@ -30,9 +30,9 @@ public class RankLinksController {
     }
 
     @PostMapping
-    public ResponseEntity<RankLinksResponse> rank(@RequestBody RankLinksRequest request) {
-        log.info("Rank-links request for {} candidates", request.getLinks().size());
-        var ranked = webCrawlService.rankLinks(request.getLinks(), request.getQuestion());
+    public ResponseEntity<RankLinksResponse> rank(@RequestBody RankLinksRequest req) {
+        log.info("Rank-links request for {} candidates", req.getLinks().size());
+        var ranked = webCrawlService.rankLinks(req.getLinks(), req.getQuestion());
         return ResponseEntity.ok(new RankLinksResponse().links(ranked));
     }
 }

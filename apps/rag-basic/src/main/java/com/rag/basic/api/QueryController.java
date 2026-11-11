@@ -30,18 +30,18 @@ public class QueryController {
     }
 
     @PostMapping
-    public QueryResponse query(@RequestBody QueryRequest request) {
-        int topK = request.getTopK() == null ? 5 : request.getTopK();
-        String documentId = request.getDocumentId();
+    public QueryResponse query(@RequestBody QueryRequest req) {
+        int topK = req.getTopK() == null ? 5 : req.getTopK();
+        String documentId = req.getDocumentId();
         log.info("Query: topK={}, documentId={}", topK, documentId);
         List<Chunk> chunks = documentId == null
-                ? retrievalService.retrieve(request.getQuestion(), topK)
-                : retrievalService.retrieve(request.getQuestion(), topK, documentId);
+                ? retrievalService.retrieve(req.getQuestion(), topK)
+                : retrievalService.retrieve(req.getQuestion(), topK, documentId);
         var results = chunks.stream()
                 .map(QueryController::toResult)
                 .toList();
         log.info("Query returned {} results", results.size());
-        return new QueryResponse(request.getQuestion()).results(results);
+        return new QueryResponse(req.getQuestion()).results(results);
     }
 
     private static ChunkResult toResult(Chunk chunk) {

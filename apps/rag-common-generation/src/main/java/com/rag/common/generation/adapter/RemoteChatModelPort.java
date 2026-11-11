@@ -58,10 +58,10 @@ public class RemoteChatModelPort implements ChatModelPort, StreamingChatModelPor
 
     @Override
     public String complete(String prompt) {
-        var response = httpClient.postJson(COMPLETE, new CompleteRequest(prompt), CompleteResponse.class);
+        var res = httpClient.postJson(COMPLETE, new CompleteRequest(prompt), CompleteResponse.class);
         log.info("Remote chat completion received: promptLength={}, answerLength={}",
-                prompt.length(), response.answer() == null ? 0 : response.answer().length());
-        return response.answer();
+                prompt.length(), res.answer() == null ? 0 : res.answer().length());
+        return res.answer();
     }
 
     @Override

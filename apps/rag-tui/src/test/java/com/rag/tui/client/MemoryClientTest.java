@@ -3,8 +3,6 @@ package com.rag.tui.client;
 import com.rag.contract.model.ConversationDTO;
 import com.rag.contract.model.ChatMessageDTO;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
@@ -13,6 +11,8 @@ import java.util.List;
 
 import static com.rag.contract.constants.ApiPaths.CONVERSATIONS;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.http.HttpMethod.GET;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
@@ -30,19 +30,18 @@ class MemoryClientTest {
     @Test
     void listsConversations() {
         server.expect(requestTo(MEMORY_BASE_URL + CONVERSATIONS))
-                .andExpect(method(HttpMethod.GET))
-                .andRespond(withSuccess("[{\"id\":\"c1\",\"title\":\"t1\"}]",
-                        MediaType.APPLICATION_JSON));
+                .andExpect(method(GET))
+                .andRespond(withSuccess("[{\"id\":\"c1\",\"title\":\"t1\"}]", APPLICATION_JSON));
         List<ConversationDTO> conversations = sut.conversations();
         assertThat(conversations).hasSize(1);
-        assertThat(conversations.get(0).getId()).isEqualTo("c1");
+        assertThat(conversations.getFirst().getId()).isEqualTo("c1");
         server.verify();
     }
 
     @Test
     void returnsEmptyWhenNoConversations() {
         server.expect(requestTo(MEMORY_BASE_URL + CONVERSATIONS))
-                .andRespond(withSuccess("null", MediaType.APPLICATION_JSON));
+                .andRespond(withSuccess("null", APPLICATION_JSON));
         assertThat(sut.conversations()).isEmpty();
         server.verify();
     }
@@ -50,13 +49,13 @@ class MemoryClientTest {
     @Test
     void listsMessagesForConversation() {
         server.expect(requestTo(MEMORY_BASE_URL + CONVERSATIONS + "/c1/messages"))
-                .andExpect(method(HttpMethod.GET))
+                .andExpect(method(GET))
                 .andRespond(withSuccess(
                         "[{\"id\":\"m1\",\"content\":\"hi\",\"role\":\"user\",\"conversationId\":\"c1\"}]",
-                        MediaType.APPLICATION_JSON));
+                        APPLICATION_JSON));
         List<ChatMessageDTO> messages = sut.messages("c1");
         assertThat(messages).hasSize(1);
-        assertThat(messages.get(0).getContent()).isEqualTo("hi");
+        assertThat(messages.getFirst().getContent()).isEqualTo("hi");
         server.verify();
     }
 }

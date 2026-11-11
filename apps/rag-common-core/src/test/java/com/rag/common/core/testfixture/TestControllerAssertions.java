@@ -1,19 +1,19 @@
 package com.rag.common.core.testfixture;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.util.function.Consumer;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.http.HttpStatus.CREATED;
 
 public final class TestControllerAssertions {
 
     private TestControllerAssertions() {
     }
 
-    public static <T> void assertEntityCreated(ResponseEntity<T> response, Consumer<T> bodyAssertions) {
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        bodyAssertions.accept(response.getBody());
+    public static <T> void assertEntityCreated(ResponseEntity<T> res, Consumer<T> bodyAssertions) {
+        assertThat(res.getStatusCode()).isEqualTo(CREATED);
+        bodyAssertions.accept(res.getBody());
     }
 }

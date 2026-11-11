@@ -10,7 +10,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -22,6 +21,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -59,7 +59,7 @@ class ProviderControllerTest {
     void shouldSwitchChatModel() throws Exception {
         when(catalogService.isKnown("ollama", "qwen3")).thenReturn(true);
         mockMvc.perform(post(PROVIDER_CHAT)
-                        .contentType(MediaType.APPLICATION_JSON)
+                        .contentType(APPLICATION_JSON)
                         .content("{\"providerId\":\"ollama\",\"model\":\"qwen3\"}"))
                 .andExpect(status().isNoContent());
         verify(router).switchChat(new ModelSpecDTO("ollama", "qwen3"));
@@ -69,7 +69,7 @@ class ProviderControllerTest {
     void shouldStillSwitchChatModelNotInCatalog() throws Exception {
         when(catalogService.isKnown("ollama", "custom-model")).thenReturn(false);
         mockMvc.perform(post(PROVIDER_CHAT)
-                        .contentType(MediaType.APPLICATION_JSON)
+                        .contentType(APPLICATION_JSON)
                         .content("{\"providerId\":\"ollama\",\"model\":\"custom-model\"}"))
                 .andExpect(status().isNoContent());
         verify(router).switchChat(new ModelSpecDTO("ollama", "custom-model"));
@@ -79,7 +79,7 @@ class ProviderControllerTest {
     void shouldStillSwitchEmbeddingModelNotInCatalog() throws Exception {
         when(catalogService.isKnown("ollama", "local-embed")).thenReturn(false);
         mockMvc.perform(post(PROVIDER_EMBEDDING)
-                        .contentType(MediaType.APPLICATION_JSON)
+                        .contentType(APPLICATION_JSON)
                         .content("{\"providerId\":\"ollama\",\"model\":\"local-embed\"}"))
                 .andExpect(status().isNoContent());
         verify(router).switchEmbedding(new ModelSpecDTO("ollama", "local-embed"));
@@ -89,7 +89,7 @@ class ProviderControllerTest {
     void shouldSwitchEmbeddingModel() throws Exception {
         when(catalogService.isKnown("ollama", "nomic-embed-text")).thenReturn(true);
         mockMvc.perform(post(PROVIDER_EMBEDDING)
-                        .contentType(MediaType.APPLICATION_JSON)
+                        .contentType(APPLICATION_JSON)
                         .content("{\"providerId\":\"ollama\",\"model\":\"nomic-embed-text\"}"))
                 .andExpect(status().isNoContent());
         verify(router).switchEmbedding(new ModelSpecDTO("ollama", "nomic-embed-text"));
@@ -102,7 +102,7 @@ class ProviderControllerTest {
                 new ModelSpecDTO("ollama", "nomic-embed-text"),
                 "glhf", -1));
         mockMvc.perform(post(PROVIDER_CONFIGURE)
-                        .contentType(MediaType.APPLICATION_JSON)
+                        .contentType(APPLICATION_JSON)
                         .content("{\"providerId\":\"glhf\",\"type\":\"OPENAI_COMPATIBLE\"," +
                                 "\"displayName\":\"GLHF\",\"baseUrl\":\"https://glhf.chat\",\"apiKey\":\"k\"}"))
                 .andExpect(status().isOk())
@@ -116,7 +116,7 @@ class ProviderControllerTest {
         doThrow(new IllegalArgumentException("Unknown provider: nope"))
                 .when(router).switchChat(any(ModelSpecDTO.class));
         mockMvc.perform(post(PROVIDER_CHAT)
-                        .contentType(MediaType.APPLICATION_JSON)
+                        .contentType(APPLICATION_JSON)
                         .content("{\"providerId\":\"nope\",\"model\":\"x\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string("Unknown provider: nope"));

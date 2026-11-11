@@ -7,7 +7,7 @@
 SELECT metadata->>'documentId'      AS document_id,
        count(*)                     AS chunk_count,
        (array_agg(metadata ORDER BY metadata->>'chunkIndex'))[1] AS first_meta
-FROM rag_basic.chunks
+FROM rag_agentic.chunks
 WHERE metadata->>'documentId' IS NOT NULL
 GROUP BY metadata->>'documentId'
 ORDER BY chunk_count DESC, document_id;
@@ -15,8 +15,9 @@ ORDER BY chunk_count DESC, document_id;
 -- 2. Same grouping but with the sample file name from the first chunk's metadata
 SELECT metadata->>'documentId'        AS document_id,
        count(*)                       AS chunk_count,
-       (array_agg(metadata ORDER BY metadata->>'chunkIndex'))[1]->>'file_name' AS sample_file_name
-FROM rag_basic.chunks
+       (array_agg(metadata ORDER BY metadata->>'chunkIndex'))[1]->>'title' AS title,
+       (array_agg(metadata ORDER BY metadata->>'chunkIndex'))[1]->>'source' AS source
+FROM rag_agentic.chunks
 GROUP BY metadata->>'documentId'
 ORDER BY chunk_count DESC, document_id;
 

@@ -126,13 +126,13 @@ public class PgVectorStoreAdapter implements VectorStorePort {
     }
 
     private List<Chunk> search(String query, int topK, String documentId) {
-        var request = SearchRequest.builder()
+        var req = SearchRequest.builder()
                 .query(query)
                 .topK(ContentDeduplicator.fetchSize(topK));
         if (documentId != null) {
-            request.filterExpression("documentId == '%s'".formatted(documentId));
+            req.filterExpression("documentId == '%s'".formatted(documentId));
         }
-        var hits = delegate.similaritySearch(request.build()).stream()
+        var hits = delegate.similaritySearch(req.build()).stream()
                 .map(this::toChunk)
                 .toList();
         var distinct = ContentDeduplicator.distinct(hits, topK);

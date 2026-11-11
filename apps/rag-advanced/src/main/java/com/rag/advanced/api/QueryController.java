@@ -34,17 +34,17 @@ public class QueryController {
     }
 
     @PostMapping
-    public QueryResponse query(@RequestBody QueryRequest request) {
-        int topK = request.getTopK() != null ? request.getTopK() : DEFAULT_TOP_K;
-        log.info("Query: topK={}, documentId={}", topK, request.getDocumentId());
-        return response(request.getQuestion(), retrieve(request.getQuestion(), topK, request.getDocumentId(), Map.of()));
+    public QueryResponse query(@RequestBody QueryRequest req) {
+        int topK = req.getTopK() != null ? req.getTopK() : DEFAULT_TOP_K;
+        log.info("Query: topK={}, documentId={}", topK, req.getDocumentId());
+        return response(req.getQuestion(), retrieve(req.getQuestion(), topK, req.getDocumentId(), Map.of()));
     }
 
     @PostMapping("/advanced")
-    public QueryResponse advancedQuery(@RequestBody AdvancedQueryRequest request) {
-        int topK = request.topK() != null ? request.topK() : DEFAULT_TOP_K;
-        log.info("Advanced query: topK={}, documentId={}, metadata={}", topK, request.documentId(), request.metadata());
-        return response(request.question(), retrieve(request.question(), topK, request.documentId(), request.metadata()));
+    public QueryResponse advancedQuery(@RequestBody AdvancedQueryRequest req) {
+        int topK = req.topK() != null ? req.topK() : DEFAULT_TOP_K;
+        log.info("Advanced query: topK={}, documentId={}, metadata={}", topK, req.documentId(), req.metadata());
+        return response(req.question(), retrieve(req.question(), topK, req.documentId(), req.metadata()));
     }
 
     private List<Chunk> retrieve(String question, int topK, String documentId, Map<String, Object> metadata) {

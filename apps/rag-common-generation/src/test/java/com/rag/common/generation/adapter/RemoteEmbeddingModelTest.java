@@ -65,9 +65,9 @@ class RemoteEmbeddingModelTest {
         server.createContext(ApiPaths.EMBED,
                 exchange -> respond(exchange, 200, "application/json",
                         "{\"embeddings\":[[0.0,1.0],[2.0,3.0]]}"));
-        var response = model.call(new EmbeddingRequest(List.of("a", "b"), null));
-        assertThat(response.getResults()).hasSize(2);
-        assertThat(response.getResult().getOutput()).containsExactly(0.0f, 1.0f);
+        var res = model.call(new EmbeddingRequest(List.of("a", "b"), null));
+        assertThat(res.getResults()).hasSize(2);
+        assertThat(res.getResult().getOutput()).containsExactly(0.0f, 1.0f);
     }
 
     @Test
@@ -153,8 +153,8 @@ class RemoteEmbeddingModelTest {
         var client = new ProviderHttpClient("http://localhost:" + srv.getAddress().getPort(),
                 new ObjectMapper());
         var sut = new RemoteEmbeddingModel(client, 512);
-        var response = sut.call(new EmbeddingRequest(List.of("a"), null));
-        assertThat(response.getResult().getOutput()).containsExactly(0.0f, 1.0f);
+        var res = sut.call(new EmbeddingRequest(List.of("a"), null));
+        assertThat(res.getResult().getOutput()).containsExactly(0.0f, 1.0f);
         sut.call(new EmbeddingRequest(List.of("a"), null));
         assertThat(sut.dimensions()).isEqualTo(768);
         srv.stop(0);

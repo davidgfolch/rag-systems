@@ -33,12 +33,13 @@ public class DiscoverController {
     }
 
     @PostMapping
-    public ResponseEntity<DiscoverResponse> discover(@RequestBody DiscoverRequest request) {
-        if (Objects.toString(request.getUrl(), "").isBlank()) return ResponseEntity.badRequest().build();
-        var urls = request.getMaxUrls() == null
-                ? discovery.discover(request.getUrl().toString())
-                : discovery.discover(request.getUrl().toString(), request.getMaxUrls());
-        log.info("Discovery request for {} returned {} URLs", request.getUrl(), urls.size());
+    public ResponseEntity<DiscoverResponse> discover(@RequestBody DiscoverRequest req) {
+        var url = req.getUrl();
+        if (Objects.toString(url, "").isBlank()) return ResponseEntity.badRequest().build();
+        var urls = req.getMaxUrls() == null
+                ? discovery.discover(url.toString())
+                : discovery.discover(url.toString(), req.getMaxUrls());
+        log.info("Discovery request for {} returned {} URLs", url, urls.size());
         return ResponseEntity.ok(new DiscoverResponse().urls(urls));
     }
 
