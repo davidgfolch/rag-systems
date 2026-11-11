@@ -17,12 +17,4 @@ public record AgentTrace(String answer, List<Chunk> sources, List<AgentStep> ste
         steps = List.copyOf(steps);
         context = context == null ? "" : context;
     }
-
-    public AgentTrace(String answer, List<Chunk> sources, List<AgentStep> steps) {
-        this(answer, sources, steps, "");
-    }
-
-    public boolean hasSources() {
-        return !sources.isEmpty();
-    }
 }

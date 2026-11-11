@@ -26,7 +26,7 @@ class AgenticChatServiceTest {
     @Test
     void askRunsLoopAndExposesAnswerSourcesAndSteps() {
         var steps = List.of(new AgentStep("tool:search", "snippet"));
-        when(loop.run("q", 5)).thenReturn(new AgentTrace("answer", list("a", "b"), steps));
+        when(loop.run("q", 5)).thenReturn(new AgentTrace("answer", list("a", "b"), steps, ""));
         var result = sut.ask("q", 5);
         assertThat(result.answer()).isEqualTo("answer");
         assertThat(result.sources()).hasSize(2);

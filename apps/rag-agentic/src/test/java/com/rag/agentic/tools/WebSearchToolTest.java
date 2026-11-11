@@ -27,6 +27,6 @@ class WebSearchToolTest {
     @Test
     void returnsEmptyWhenNoUrl() {
         var result = sut.execute(new ToolCall("web_search", "", "", "", 0));
-        assertThat(result.hasContent()).isFalse();
+        assertThat(result.chunks()).isEmpty();
     }
 }

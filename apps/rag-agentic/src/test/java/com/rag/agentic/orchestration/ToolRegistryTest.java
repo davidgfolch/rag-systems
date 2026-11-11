@@ -45,8 +45,9 @@ class ToolRegistryTest {
     }
 
     @Test
-    void exposesFallbackAndNames() {
+    void exposesFallbackAndRegisteredTools() {
         assertThat(sut.fallback()).isSameAs(fallback);
-        assertThat(sut.names()).contains("search", "web_search");
+        assertThat(sut.find("search")).isPresent();
+        assertThat(sut.find("web_search")).isPresent();
     }
 }
