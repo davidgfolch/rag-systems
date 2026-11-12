@@ -8,11 +8,11 @@ import com.rag.tui.launcher.Module;
 import com.rag.tui.launcher.ModuleRegistry;
 import com.rag.tui.client.ProviderClient;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 
 /**
  * Provides auto-completion candidates based on the current command context:
@@ -95,9 +95,7 @@ public class CommandCompletion implements CompletionCandidates {
     }
 
     private List<String> connectFirst() {
-        var combined = new ArrayList<>(CONNECT_SUBS);
-        combined.addAll(providerIds());
-        return combined;
+        return Stream.concat(CONNECT_SUBS.stream(), providerIds().stream()).toList();
     }
 
     /** Completes {@code variant <id>} from the active module and {@code variant add <strategy>}. */
@@ -106,10 +104,7 @@ public class CommandCompletion implements CompletionCandidates {
             return prefixFilter(commandNames(), token);
         }
         if (pos == 2) {
-            var candidates = new ArrayList<String>();
-            candidates.add(ADD);
-            candidates.addAll(variantIds());
-            return prefixFilter(candidates, token);
+            return prefixFilter(Stream.concat(Stream.of(ADD), variantIds().stream()).toList(), token);
         }
         if (pos == 3 && ADD.equalsIgnoreCase(tokens.get(1))) {
             return prefixFilter(strategyNames(), token);
@@ -136,11 +131,7 @@ public class CommandCompletion implements CompletionCandidates {
 
     /** Splits the typed prefix into a List; empty tokens are dropped. */
     static List<String> split(String prefix) {
-        var tokens = new ArrayList<String>();
-        for (String raw : prefix.split(" ")) {
-            if (!raw.isEmpty()) tokens.add(raw);
-        }
-        return tokens;
+        return Arrays.stream(prefix.split(" ")).filter(raw -> !raw.isEmpty()).toList();
     }
 
     /** The not-yet-finished token (after the last space), possibly empty. */

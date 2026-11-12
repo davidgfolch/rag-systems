@@ -6,6 +6,8 @@ import com.rag.tui.client.RagApiClient;
 import com.rag.tui.launcher.Module;
 import com.rag.tui.launcher.ModuleRegistry;
 
+import java.util.stream.Collectors;
+
 public class DocumentLister {
 
     public static final String NO_DOCUMENTS = "No rag-* modules contains documents";
@@ -46,14 +48,12 @@ public class DocumentLister {
         sb.append(" ").append(m.name()).append(" (").append(m.baseUrl()).append("):\n");
         int maxChunksLength = docs.stream().map(DocumentSummaryDTO::getChunkCount).max(Integer::compareTo)
                 .map(String::valueOf).map(String::length).orElse(0);
-        for (DocumentSummaryDTO doc : docs) {
-            appendDocumentSummary(sb, doc, maxChunksLength);
-        }
+        sb.append(docs.stream().map(doc -> documentSummary(doc, maxChunksLength)).collect(Collectors.joining()));
         return true;
     }
 
-    private static void appendDocumentSummary(StringBuilder sb, DocumentSummaryDTO doc, int maxChunksLength) {
-        sb.append("   - ");
+    private static String documentSummary(DocumentSummaryDTO doc, int maxChunksLength) {
+        var sb = new StringBuilder("   - ");
         if (doc.getChunkCount() != null) {
             var chunkCount = String.valueOf(doc.getChunkCount());
             sb.append(" (")
@@ -66,5 +66,6 @@ public class DocumentLister {
             sb.append(" ").append(doc.getCreatedAt());
         sb.append(" ").append(doc.getTitle());
         sb.append("\n");
+        return sb.toString();
     }
 }

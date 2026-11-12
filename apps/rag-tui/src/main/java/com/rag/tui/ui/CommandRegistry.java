@@ -4,12 +4,13 @@ import com.rag.tui.help.ChatHelpText;
 import com.rag.tui.help.DocumentHelpText;
 import com.rag.tui.help.SessionHelpText;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class CommandRegistry {
 
@@ -44,6 +45,8 @@ public class CommandRegistry {
     );
     private static final Map<String, List<String>> GROUPS = groups();
     private static final Map<String, String> DETAILS = details();
+    private static final Map<String, CommandDescriptor> BY_NAME = COMMANDS.stream()
+            .collect(Collectors.toMap(CommandDescriptor::name, command -> command));
 
     private static Map<String, List<String>> groups() {
         var groups = new LinkedHashMap<String, List<String>>();
@@ -70,9 +73,7 @@ public class CommandRegistry {
     }
 
     public Optional<CommandDescriptor> findByName(String name) {
-        return COMMANDS.stream()
-                .filter(c -> c.name().equalsIgnoreCase(name))
-                .findFirst();
+        return Optional.ofNullable(BY_NAME.get(name.toLowerCase(Locale.ROOT)));
     }
 
     public List<CommandDescriptor> filter(String prefix) {
@@ -124,19 +125,17 @@ public class CommandRegistry {
     }
 
     private static List<HelpRow> helpRows() {
-        var rows = new ArrayList<HelpRow>();
-        for (var group : GROUPS.entrySet()) {
-            for (String name : group.getValue()) {
-                var command = COMMANDS.stream().filter(c -> c.name().equals(name)).findFirst().orElseThrow();
-                if (CONNECT.equals(name)) {
-                    CONNECT_HELP.forEach(sub ->
-                            rows.add(new HelpRow(group.getKey(), label(sub), sub.description())));
-                } else {
-                    rows.add(new HelpRow(group.getKey(), label(command), command.description()));
-                }
-            }
+        return GROUPS.entrySet().stream()
+                .flatMap(group -> group.getValue().stream()
+                        .flatMap(name -> rows(group.getKey(), name, BY_NAME.get(name))))
+                .toList();
+    }
+
+    private static Stream<HelpRow> rows(String group, String name, CommandDescriptor command) {
+        if (CONNECT.equals(name)) {
+            return CONNECT_HELP.stream().map(sub -> new HelpRow(group, label(sub), sub.description()));
         }
-        return rows;
+        return Stream.of(new HelpRow(group, label(command), command.description()));
     }
 
     private static String label(CommandDescriptor command) {

@@ -10,6 +10,8 @@ import com.rag.tui.launcher.ModuleRegistry;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static com.rag.common.core.domain.MetadataKeys.CONTENT_HASH;
 import static com.rag.common.core.domain.MetadataKeys.SOURCE;
@@ -43,15 +45,9 @@ public class DuplicateFinder {
      */
     public Optional<Match> findByContentHash(String contentHash) {
         if (contentHash == null) return Optional.empty();
-        for (Module module : registry.modules()) {
-            if (!healthClient.isUp(module.baseUrl())) continue;
-            var match = apiClient.listDocuments(module.baseUrl()).stream()
-                    .filter(d -> contentHash.equals(metadataValue(d, CONTENT_HASH)))
-                    .findFirst()
-                    .map(d -> new Match(d.getDocumentId(), module.name(), module.baseUrl()));
-            if (match.isPresent()) return match;
-        }
-        return Optional.empty();
+        return reachableModules()
+                .flatMap(module -> matches(module, contentHash))
+                .findFirst();
     }
 
     /**
@@ -60,22 +56,36 @@ public class DuplicateFinder {
      * frontier without listing documents again per page.
      */
     public Map<String, Match> sourceIndex() {
-        var index = new LinkedHashMap<String, Match>();
-        for (Module module : registry.modules()) {
-            if (!healthClient.isUp(module.baseUrl())) continue;
-            for (var doc : apiClient.listDocuments(module.baseUrl())) {
-                var key = WebUrls.key(metadataValue(doc, SOURCE));
-                if (key != null) {
-                    index.putIfAbsent(key, new Match(doc.getDocumentId(), module.name(), module.baseUrl()));
-                }
-            }
-        }
-        return index;
+        return reachableModules()
+                .flatMap(this::indexedDocuments)
+                .filter(entry -> entry.key() != null)
+                .collect(Collectors.toMap(SourceEntry::key, SourceEntry::match,
+                        (first, _) -> first, LinkedHashMap::new));
+    }
+
+    private Stream<Match> matches(Module module, String contentHash) {
+        return apiClient.listDocuments(module.baseUrl()).stream()
+                .filter(doc -> contentHash.equals(metadataValue(doc, CONTENT_HASH)))
+                .map(doc -> new Match(doc.getDocumentId(), module.name(), module.baseUrl()));
+    }
+
+    private Stream<SourceEntry> indexedDocuments(Module module) {
+        return apiClient.listDocuments(module.baseUrl()).stream()
+                .map(doc -> new SourceEntry(WebUrls.key(metadataValue(doc, SOURCE)),
+                        new Match(doc.getDocumentId(), module.name(), module.baseUrl())));
+    }
+
+    private Stream<Module> reachableModules() {
+        return registry.modules().stream().filter(module -> healthClient.isUp(module.baseUrl()));
     }
 
     private static String metadataValue(DocumentSummaryDTO doc, String key) {
         Map<String, Object> metadata = doc.getMetadata();
         Object value = metadata == null ? null : metadata.get(key);
         return value == null ? null : value.toString();
+    }
+
+    /** A document's source key paired with the module it was found on. */
+    private record SourceEntry(String key, Match match) {
     }
 }

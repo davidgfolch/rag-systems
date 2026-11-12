@@ -101,8 +101,8 @@ final class MemberDeclarationParser {
                 i = skipLiteral(text, i);
             } else if (c == '(') {
                 depth++;
-            } else if (c == ')') {
-                if (--depth == 0) return i;
+            } else if (c == ')' && --depth == 0) {
+                return i;
             }
         }
         return -1;
