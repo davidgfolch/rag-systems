@@ -6,6 +6,7 @@ import org.jsoup.nodes.Element;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Walks a fetched page and emits ordered structural blocks, so the ingestion
@@ -125,12 +126,12 @@ final class PageBlockExtractor {
     }
 
     private static String tableText(Element table) {
-        var rows = new ArrayList<String>();
-        for (var row : table.select(TAG_ROW)) {
-            var cells = row.children().stream().map(Element::text).map(String::trim).toList();
-            rows.add(String.join(CELL_SEPARATOR, cells));
-        }
-        return String.join(LINE_SEPARATOR, rows);
+        return table.select(TAG_ROW).stream()
+                .map(row -> row.children().stream()
+                        .map(Element::text)
+                        .map(String::trim)
+                        .collect(Collectors.joining(CELL_SEPARATOR)))
+                .collect(Collectors.joining(LINE_SEPARATOR));
     }
 
     private static String safeSelector(Element element) {

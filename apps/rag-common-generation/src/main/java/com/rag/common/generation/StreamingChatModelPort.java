@@ -10,6 +10,7 @@ import reactor.core.publisher.Flux;
  * module depends on Project Reactor. Implementations wrap different providers
  * (Ollama, OpenAI), selected via configuration profiles.
  */
+@FunctionalInterface
 public interface StreamingChatModelPort {
 
     /**

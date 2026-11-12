@@ -35,12 +35,12 @@ public class InMemoryVectorStore implements VectorStorePort {
 
     @Override
     public void add(List<Chunk> chunks) {
-        for (Chunk chunk : chunks) {
+        chunks.forEach(chunk -> {
             if (chunk.getEmbedding() == null) {
                 throw new IllegalArgumentException("Chunk " + chunk.getId() + " has no embedding");
             }
             chunksById.put(chunk.getId(), chunk);
-        }
+        });
         log.debug("In-memory store now holds {} chunks", chunksById.size());
     }
 

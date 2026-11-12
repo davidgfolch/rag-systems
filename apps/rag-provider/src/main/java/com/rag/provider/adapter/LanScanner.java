@@ -18,6 +18,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.function.Supplier;
+import java.util.stream.IntStream;
 
 /**
  * Discovers hosts that accept TCP connections on the Ollama port. The scan
@@ -58,19 +59,17 @@ public class LanScanner {
     }
 
     List<String> scanHosts(List<String> hosts, int port) {
-        var found = new ArrayList<String>();
-        if (hosts == null || hosts.isEmpty()) return found;
+        if (hosts == null || hosts.isEmpty()) return List.of();
         var permits = new Semaphore(MAX_CONCURRENT);
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
-            var futures = new ArrayList<Future<Boolean>>(hosts.size());
-            for (var host : hosts) {
-                futures.add(executor.submit(() -> connect(host, port, permits)));
-            }
-            for (var i = 0; i < hosts.size(); i++) {
-                if (await(futures.get(i))) found.add(hosts.get(i));
-            }
+            var futures = hosts.stream()
+                    .map(host -> executor.submit(() -> connect(host, port, permits)))
+                    .toList();
+            return IntStream.range(0, hosts.size())
+                    .filter(i -> await(futures.get(i)))
+                    .mapToObj(hosts::get)
+                    .toList();
         }
-        return found;
     }
 
     private boolean connect(String host, int port, Semaphore permits) {
