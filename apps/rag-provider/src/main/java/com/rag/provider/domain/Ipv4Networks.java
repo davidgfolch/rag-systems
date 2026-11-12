@@ -1,7 +1,10 @@
 package com.rag.provider.domain;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.LongStream;
 
 /**
  * Pure IPv4 helpers for LAN discovery: derives the candidate subnets from a
@@ -28,15 +31,15 @@ public final class Ipv4Networks {
 
     /** Local /24, adjacent /24s, common home LANs and the configured extras, deduplicated. */
     public static List<String> localSubnets(String localIp, List<String> extra) {
-        var subnets = new ArrayList<String>();
+        var subnets = new LinkedHashSet<String>();
         if (localIp != null && !localIp.isBlank()) {
             addLocalSubnets(subnets, localIp);
         }
-        COMMON_LAN_SUBNETS.forEach(subnet -> addUnique(subnets, subnet));
+        subnets.addAll(COMMON_LAN_SUBNETS);
         if (extra != null) {
-            extra.forEach(subnet -> addUnique(subnets, subnet));
+            subnets.addAll(extra);
         }
-        return subnets;
+        return List.copyOf(subnets);
     }
 
     /** Expands every CIDR into hosts, stopping at {@code maxHosts} (0 means the absolute safety cap). */
@@ -67,21 +70,17 @@ public final class Ipv4Networks {
         return getHosts(maxHosts, prefix, base);
     }
 
-    private static ArrayList<String> getHosts(int maxHosts, int prefix, long base) {
+    private static List<String> getHosts(int maxHosts, int prefix, long base) {
         var mask = prefix == 0 ? 0L : (0xFFFFFFFFL << (IPV4_BITS - prefix)) & 0xFFFFFFFFL;
         var network = base & mask;
         var broadcast = network | ~mask & 0xFFFFFFFFL;
         var first = prefix <= PREFIX_30 ? network + ADJACENT : network;
         var last = prefix <= PREFIX_30 ? broadcast - ADJACENT : broadcast;
         var limit = maxHosts > 0 ? Math.min(last, first + maxHosts - 1) : last;
-        var hosts = new ArrayList<String>();
-        for (var ip = first; ip <= limit; ip++) {
-            hosts.add(fromLong(ip));
-        }
-        return hosts;
+        return LongStream.rangeClosed(first, limit).mapToObj(Ipv4Networks::fromLong).toList();
     }
 
-    private static void addLocalSubnets(List<String> subnets, String localIp) {
+    private static void addLocalSubnets(Set<String> subnets, String localIp) {
         long value;
         try {
             value = toLong(localIp);
@@ -89,21 +88,17 @@ public final class Ipv4Networks {
             return;
         }
         var parts = localIp.strip().split(OCTET_SEPARATOR);
-        addUnique(subnets, String.format(SUBNET_FORMAT, parts[0], parts[1], parts[2], PREFIX_24));
+        subnets.add(String.format(SUBNET_FORMAT, parts[0], parts[1], parts[2], PREFIX_24));
         var third = (int) (value >>> BITS_PER_OCTET & MAX_OCTET);
         addAdjacent(subnets, parts, third, -ADJACENT);
         addAdjacent(subnets, parts, third, ADJACENT);
     }
 
-    private static void addAdjacent(List<String> subnets, String[] parts, int third, int offset) {
+    private static void addAdjacent(Set<String> subnets, String[] parts, int third, int offset) {
         var adjacent = third + offset;
         if (adjacent >= 0 && adjacent <= MAX_OCTET) {
-            addUnique(subnets, String.format(SUBNET_FORMAT, parts[0], parts[1], adjacent, PREFIX_24));
+            subnets.add(String.format(SUBNET_FORMAT, parts[0], parts[1], adjacent, PREFIX_24));
         }
-    }
-
-    private static void addUnique(List<String> subnets, String subnet) {
-        if (!subnets.contains(subnet)) subnets.add(subnet);
     }
 
     private static long toLong(String ip) {

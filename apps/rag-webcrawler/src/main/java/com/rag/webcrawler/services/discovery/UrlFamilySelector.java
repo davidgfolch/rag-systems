@@ -1,12 +1,12 @@
 package com.rag.webcrawler.services.discovery;
 
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Collapses the same document published under several release channels
@@ -25,21 +25,21 @@ public final class UrlFamilySelector {
     public List<String> select(List<String> urls, String startUrl) {
         if (urls == null || urls.isEmpty()) return List.of();
         var startKey = canonicalKey(startUrl);
-        Map<String, List<String>> families = new LinkedHashMap<>();
-        for (var url : urls) {
-            var key = familyKey(url);
-            if (key != null) families.computeIfAbsent(key, _ -> new ArrayList<>()).add(url);
-        }
-        var selected = new ArrayList<String>(families.size());
-        for (var family : families.values()) selected.add(representative(family, startKey));
-        return selected;
+        return urls.stream()
+                .map(url -> new Family(familyKey(url), url))
+                .filter(family -> family.key() != null)
+                .collect(Collectors.groupingBy(Family::key, LinkedHashMap::new,
+                        Collectors.mapping(Family::url, Collectors.toList())))
+                .values().stream()
+                .map(family -> representative(family, startKey))
+                .toList();
     }
 
     private static String representative(List<String> family, String startKey) {
-        for (var url : family) {
-            if (startKey != null && startKey.equals(canonicalKey(url))) return url;
-        }
-        return family.stream().min(UrlFamilySelector::compare).orElse(family.getFirst());
+        return family.stream()
+                .filter(url -> startKey != null && startKey.equals(canonicalKey(url)))
+                .findFirst()
+                .orElseGet(() -> family.stream().min(UrlFamilySelector::compare).orElse(family.getFirst()));
     }
 
     private static int compare(String left, String right) {
@@ -52,10 +52,9 @@ public final class UrlFamilySelector {
     private static String familyKey(String url) {
         var uri = uriOf(url);
         if (uri == null) return null;
-        var parts = new ArrayList<String>();
-        for (var segment : pathOf(url).split(SLASH)) {
-            if (!segment.isEmpty() && !isReleaseSegment(segment)) parts.add(segment);
-        }
+        var parts = Stream.of(pathOf(url).split(SLASH))
+                .filter(segment -> !segment.isEmpty() && !isReleaseSegment(segment))
+                .toList();
         return uri.getAuthority() + SLASH + String.join(SLASH, parts);
     }
 
@@ -83,5 +82,9 @@ public final class UrlFamilySelector {
         } catch (IllegalArgumentException _) {
             return null;
         }
+    }
+
+    /** A URL paired with the release-masked key of the family it belongs to. */
+    private record Family(String key, String url) {
     }
 }
