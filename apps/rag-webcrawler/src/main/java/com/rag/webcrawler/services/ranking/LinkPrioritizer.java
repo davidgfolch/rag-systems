@@ -6,6 +6,7 @@ import java.util.List;
  * Strategy interface for ranking which outbound links are worth loading,
  * given an optional user question.
  */
+@FunctionalInterface
 public interface LinkPrioritizer {
 
     List<String> prioritize(List<String> links, String question);

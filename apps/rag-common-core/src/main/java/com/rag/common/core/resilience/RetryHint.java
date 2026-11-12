@@ -9,6 +9,7 @@ import java.util.Optional;
  * honours the hint when it is longer than the computed backoff, clamped to
  * {@link RetryPolicy#maxBackoff()}.
  */
+@FunctionalInterface
 public interface RetryHint {
 
     /** Requested wait before retrying, or empty when the failure carries none. */

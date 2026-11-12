@@ -2,12 +2,13 @@ package com.rag.advanced.retrieval;
 
 import com.rag.common.core.domain.Chunk;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * BM25-style lexical scorer evaluated over a candidate set (no external corpus).
@@ -29,23 +30,19 @@ public final class LexicalScorer {
         if (queryTerms.isEmpty() || candidates.isEmpty()) {
             return new double[candidates.size()];
         }
-        var termFreqs = new ArrayList<Map<String, Integer>>(candidates.size());
-        var docLengths = new int[candidates.size()];
-        var docFrequency = new HashMap<String, Integer>();
-        int totalTokens = 0;
-        for (int i = 0; i < candidates.size(); i++) {
-            var counts = counts(tokenize(candidates.get(i).getContent()));
-            termFreqs.add(counts);
-            docLengths[i] = counts.values().stream().mapToInt(Integer::intValue).sum();
-            totalTokens += docLengths[i];
-            counts.keySet().forEach(term -> docFrequency.merge(term, 1, Integer::sum));
-        }
-        double avgDocLength = totalTokens / (double) candidates.size();
-        var scores = new double[candidates.size()];
-        for (int i = 0; i < candidates.size(); i++) {
-            scores[i] = bm25(queryTerms, termFreqs.get(i), docLengths[i], avgDocLength, docFrequency, candidates.size());
-        }
-        return scores;
+        var docs = candidates.stream()
+                .map(chunk -> counts(tokenize(chunk.getContent())))
+                .map(termFreqs -> new DocStats(termFreqs, totalTokens(termFreqs)))
+                .toList();
+        var totalTokens = docs.stream().mapToInt(DocStats::length).sum();
+        var docFrequency = docs.stream()
+                .flatMap(doc -> doc.termFreqs().keySet().stream())
+                .collect(Collectors.toMap(term -> term, _ -> 1, Integer::sum));
+        var avgDocLength = totalTokens / (double) docs.size();
+        return docs.stream()
+                .mapToDouble(doc -> bm25(queryTerms, doc.termFreqs(), doc.length(),
+                        avgDocLength, docFrequency, docs.size()))
+                .toArray();
     }
 
     private static double bm25(Set<String> queryTerms, Map<String, Integer> termFreq, int docLength,
@@ -65,12 +62,10 @@ public final class LexicalScorer {
     }
 
     private static List<String> tokenize(String text) {
-        var matcher = TOKEN_PATTERN.matcher(text == null ? "" : text.toLowerCase());
-        var tokens = new ArrayList<String>();
-        while (matcher.find()) {
-            tokens.add(matcher.group());
-        }
-        return tokens;
+        return TOKEN_PATTERN.matcher(text == null ? "" : text.toLowerCase())
+                .results()
+                .map(MatchResult::group)
+                .toList();
     }
 
     private static Set<String> unique(List<String> tokens) {
@@ -81,5 +76,13 @@ public final class LexicalScorer {
         var counts = new HashMap<String, Integer>();
         tokens.forEach(token -> counts.merge(token, 1, Integer::sum));
         return counts;
+    }
+
+    private static int totalTokens(Map<String, Integer> termFreqs) {
+        return termFreqs.values().stream().mapToInt(Integer::intValue).sum();
+    }
+
+    /** One candidate's term frequencies and token length. */
+    private record DocStats(Map<String, Integer> termFreqs, int length) {
     }
 }

@@ -240,6 +240,7 @@ public class InteractivePrompter implements Prompter {
         renderSink.accept(sb.toString());
     }
 
+    @FunctionalInterface
     interface PickSource {
         Key read() throws IOException;
     }
