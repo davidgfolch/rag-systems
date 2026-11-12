@@ -1,8 +1,10 @@
 package com.rag.basic.api;
 
 import com.rag.basic.services.RetrievalService;
-import com.rag.common.ingestion.web.WebCrawlerClient;
 import com.rag.common.core.domain.Chunk;
+import com.rag.common.core.resilience.RetryObserver;
+import com.rag.common.core.resilience.RetryPolicy;
+import com.rag.common.ingestion.web.WebCrawlerClient;
 import com.rag.common.retrieval.store.InMemoryVectorStore;
 import com.rag.common.core.services.DocumentParser;
 import com.rag.common.core.services.EmbeddingModelPort;
@@ -42,10 +44,11 @@ class PdfIngestionIntegrationTest {
     private final DocumentParser parser = new TikaDocumentParser();
     private final TextSplitter splitter = new RecursiveCharacterChunker(120, 24);
     private final IngestionService ingestionService =
-            new IngestionService(parser, splitter, stubEmbedding, store);
+            new IngestionService(parser, splitter, stubEmbedding, store,
+                    IngestionService.DEFAULT_EMBED_BATCH_SIZE);
     private final RetrievalService retrievalService = new RetrievalService(store);
-    private final IngestionController controller =
-            new IngestionController(ingestionService, new WebCrawlerClient(null)::fetch);
+    private final IngestionController controller = new IngestionController(ingestionService,
+            new WebCrawlerClient(null, RetryPolicy.noRetry(), RetryObserver.NOOP)::fetch, null, null);
 
     @Test
     void ingestsTextPdfIntoChunksAndRetrievesThem() throws Exception {
@@ -108,7 +111,7 @@ class PdfIngestionIntegrationTest {
                 Learning Domain-Driven Design
                 This book explains how to apply domain-driven design to software
                 systems. It covers tactical patterns such as aggregates, value
-                objects, and domain services, alongside strategic design.""";
+                objects, and domain services, alongside strategic design.""".replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)");
         String stream = "BT /F1 12 Tf 72 720 Td (" + escapedBody + ") Tj ET\n";
         String pdf = "%PDF-1.4\n"
                 + "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n"

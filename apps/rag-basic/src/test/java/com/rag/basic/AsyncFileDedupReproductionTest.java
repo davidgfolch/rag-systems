@@ -163,13 +163,13 @@ class AsyncFileDedupReproductionTest {
                 return fileName;
             }
         });
-        var headers = new HttpHeaders();
-        headers.setContentType(APPLICATION_JSON);
+        var jsonHeaders = new HttpHeaders();
+        jsonHeaders.setContentType(APPLICATION_JSON);
         body.add("fileInfo", new HttpEntity<>(Map.of(
                 MetadataKeys.SOURCE_TYPE, "file",
                 MetadataKeys.FILE_NAME, fileName,
                 MetadataKeys.CONTENT_HASH, contentHash,
-                MARKER_KEY, marker), headers));
+                MARKER_KEY, marker), jsonHeaders));
         return body;
     }
 

@@ -25,19 +25,19 @@ class AdvancedRetrievalServiceTest {
     void returnsCandidatesWhenNotEnoughToRerank() {
         var result = new Chunk("c1", "d1", "content", 0, Map.of());
         when(vectorStore.similaritySearch("query", CANDIDATE_COUNT_FOR_TOP_5)).thenReturn(List.of(result));
-        assertThat(service.retrieve("query", 5)).containsExactly(result);
+        assertThat(retrieve("query", 5)).containsExactly(result);
     }
 
     @Test
     void returnsEmptyWhenNoMatches() {
         when(vectorStore.similaritySearch("query", CANDIDATE_COUNT_FOR_TOP_5)).thenReturn(List.of());
-        assertThat(service.retrieve("query", 5)).isEmpty();
+        assertThat(retrieve("query", 5)).isEmpty();
     }
 
     @Test
     void delegatesDocumentScopedQuery() {
         when(vectorStore.similaritySearch("query", CANDIDATE_COUNT_FOR_TOP_5, "d1")).thenReturn(List.of());
-        assertThat(service.retrieve("query", 5, "d1")).isEmpty();
+        assertThat(retrieve("query", 5, "d1")).isEmpty();
     }
 
     @Test
@@ -55,7 +55,7 @@ class AdvancedRetrievalServiceTest {
         var weak = new Chunk("c", "d1", "conductor", 2, Map.of());
         var weaker = new Chunk("d", "d1", "conductor", 3, Map.of());
         when(vectorStore.similaritySearch("conductor", 4)).thenReturn(List.of(vectorBest, lexicalBest, weak, weaker));
-        assertThat(service.retrieve("conductor", 1)).extracting(Chunk::getId).containsExactly("b");
+        assertThat(retrieve("conductor", 1)).extracting(Chunk::getId).containsExactly("b");
     }
 
     @Test
@@ -63,7 +63,7 @@ class AdvancedRetrievalServiceTest {
         var first = new Chunk("a", "d1", "conductor", 0, Map.of());
         var second = new Chunk("b", "d1", "noise noise noise", 1, Map.of());
         when(vectorStore.similaritySearch("conductor", 8)).thenReturn(List.of(first, second));
-        assertThat(service.retrieve("conductor", 2)).extracting(Chunk::getId).containsExactly("a", "b");
+        assertThat(retrieve("conductor", 2)).extracting(Chunk::getId).containsExactly("a", "b");
     }
 
     @Test
@@ -76,5 +76,13 @@ class AdvancedRetrievalServiceTest {
     void listsDocumentsViaVectorStore() {
         when(vectorStore.listDocuments()).thenReturn(List.of(new DocumentSummary("d1", 2, Map.of())));
         assertThat(service.listDocuments()).hasSize(1);
+    }
+
+    private List<Chunk> retrieve(String query, int topK) {
+        return service.retrieve(query, topK, null, Map.of());
+    }
+
+    private List<Chunk> retrieve(String query, int topK, String documentId) {
+        return service.retrieve(query, topK, documentId, Map.of());
     }
 }

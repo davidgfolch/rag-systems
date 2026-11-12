@@ -29,7 +29,8 @@ class IngestionServiceTest {
     private final VectorStorePort vectorStore = mock(VectorStorePort.class);
 
     private final IngestionService service =
-            new IngestionService(parser, splitter, embeddingModel, vectorStore);
+            new IngestionService(parser, splitter, embeddingModel, vectorStore,
+                    IngestionService.DEFAULT_EMBED_BATCH_SIZE);
 
     @Test
     void ingestsDocumentEndToEnd() {

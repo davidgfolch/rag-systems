@@ -31,7 +31,6 @@ class SearchToolTest {
         verify(vectorStore).similaritySearch("query", 5);
         assertThat(result.chunks()).hasSize(2);
         assertThat(result.text()).contains("alpha", "beta");
-        assertThat(result.hasContent()).isTrue();
     }
 
     @Test
@@ -45,7 +44,7 @@ class SearchToolTest {
     void returnsEmptyWhenQueryMissing() {
         var result = sut.execute(new ToolCall("search", "", "", "", 5));
         assertThat(result.chunks()).isEmpty();
-        assertThat(result.hasContent()).isFalse();
+        assertThat(result.text()).isEmpty();
     }
 
     @Test

@@ -45,9 +45,9 @@ class InteractiveShellIntegrationTest {
         stub = new StubModuleServer();
         var registry = new ModuleRegistry(
                 List.of(new Module("rag-basic", stub.baseUrl())), "rag-basic");
-        var apiClient = new RagApiClient(registry, RestClient.builder());
+        var apiClient = new RagApiClient(registry, RestClient.builder(), RestClient.builder());
         var chatGateway = new ChatGateway(registry,
-                new StandardWebSocketClient(), new ObjectMapper(), 60);
+                new StandardWebSocketClient(), new ObjectMapper(), 60, null);
         var memoryClient = new MemoryClient(
                 RestClient.builder().baseUrl(stub.baseUrl()).build());
         dispatcher = new CommandDispatcher(registry, mock(ModuleLifecycleManager.class),
@@ -55,7 +55,7 @@ class InteractiveShellIntegrationTest {
                         new FileDocumentLoader(), new ModuleHealthClient(RestClient.builder()),
                         new ProviderClient(stub.baseUrl(), RestClient.builder())),
                 new CommandDispatcher.Settings(5_000, 4, 60), new CommandRegistry(),
-                new NoopPrompter(new StringReader("")));
+                new NoopPrompter(new StringReader("")), null);
     }
 
     @AfterEach

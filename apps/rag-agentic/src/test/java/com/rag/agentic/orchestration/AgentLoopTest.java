@@ -56,7 +56,7 @@ class AgentLoopTest {
         assertThat(captor.getValue().query()).isEqualTo("What is RAG");
         assertThat(trace.steps()).hasSize(1);
         assertThat(trace.steps().getFirst().label()).isEqualTo("tool:search");
-        assertThat(trace.hasSources()).isTrue();
+        assertThat(trace.sources()).isNotEmpty();
     }
 
     @Test
@@ -89,7 +89,7 @@ class AgentLoopTest {
         var trace = loop.collect("What is RAG?", 5);
         verify(searchTool, times(2)).execute(any());
         assertThat(trace.steps()).hasSize(2);
-        assertThat(trace.hasSources()).isFalse();
+        assertThat(trace.sources()).isEmpty();
     }
 
     @Test

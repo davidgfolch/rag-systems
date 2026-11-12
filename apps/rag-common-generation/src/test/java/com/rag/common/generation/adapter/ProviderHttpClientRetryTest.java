@@ -1,6 +1,7 @@
 package com.rag.common.generation.adapter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rag.common.core.resilience.RetryObserver;
 import com.rag.common.core.resilience.RetryPolicy;
 import com.rag.contract.constants.ApiPaths;
 import com.rag.contract.provider.CompleteRequest;
@@ -131,7 +132,7 @@ class ProviderHttpClientRetryTest {
                 .thenThrow(new HttpTimeoutException("timeout"))
                 .thenReturn(res);
         var retrying = new ProviderHttpClient("http://localhost:1", httpClient,
-                new ObjectMapper(), null, FAST_RETRY);
+                new ObjectMapper(), null, FAST_RETRY, RetryObserver.NOOP);
 
         var answer = retrying.postJson(ApiPaths.COMPLETE,
                 new CompleteRequest("hi"), CompleteResponse.class);
@@ -145,7 +146,7 @@ class ProviderHttpClientRetryTest {
         when(httpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
                 .thenThrow(new InterruptedException("halt"));
         var retrying = new ProviderHttpClient("http://localhost:1", httpClient,
-                new ObjectMapper(), null, FAST_RETRY);
+                new ObjectMapper(), null, FAST_RETRY, RetryObserver.NOOP);
 
         assertThatThrownBy(() -> retrying.get(ApiPaths.PROVIDER, ProviderStatusDTO.class))
                 .isInstanceOf(IllegalStateException.class)
@@ -156,7 +157,7 @@ class ProviderHttpClientRetryTest {
 
     private ProviderHttpClient resilientClient() {
         return new ProviderHttpClient("http://localhost:" + server.getAddress().getPort(),
-                new ObjectMapper(), null, FAST_RETRY);
+                new ObjectMapper(), null, FAST_RETRY, RetryObserver.NOOP);
     }
 
     private static void respond(HttpExchange exchange, int code, String contentType, String body)

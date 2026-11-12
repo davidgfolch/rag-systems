@@ -91,6 +91,7 @@ api/          - REST controllers (only in runnable modules)
 11. **Scripts Placement**: All `.bat`/`.sh`/`.ps1` live in `scripts/`; `mvnw`/`mvnw.cmd` are the exception
 12. **Portability**: Every operational script has both a Windows (`.bat`/`.ps1`) and Unix (`.sh`) variant
 13. **Functional Java**: Prefer functional style (`java.util.function.*`,  streams, `Optional` composition, immutable values, pure helpers) over imperative loops and mutable accumulators when readable.
+14. **No test-only production members**: production members must be referenced by production code; test convenience lives in a private test helper or a `Test*` fixture. Enforced cross-module by `TestOnlyMembersArchitectureTest` (one documented seam ctor per class may be allowlisted)
 
 ## Configuration Profiles
 

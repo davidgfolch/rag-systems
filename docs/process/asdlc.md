@@ -194,20 +194,38 @@ These rules are enforced by the architecture tests:
 `rag-memory` `ArchitectureTest` (entities) and `rag-contract` `DtoNamingTest`
 (DTOs).
 
+### 5. Production code must serve production
+
+A member declared under `src/main` (public, protected or package-private)
+must be referenced by production code. Members used only by tests are test
+scaffolding and belong in test scope: a private helper in the test class or a
+`Test*` fixture in the module's `testfixture` package. Members referenced
+nowhere are dead and must be deleted.
+
+- Test-seam constructors (fake transports, fake process starters, scripted key
+  sources) are the one deliberate exception: keep exactly one seam next to the
+  production constructor, document it in the architecture test's `ALLOWLIST`,
+  and never add convenience overloads just for tests.
+- This is enforced cross-module by
+  `rag-common-core/.../TestOnlyMembersArchitectureTest`, which walks all
+  `apps/*/src` trees (a per-module ArchUnit classpath cannot see callers in
+  sibling modules) and fails on both test-only and orphaned members.
+
 ## Enforcement
 
-| Rule                                                             | Where enforced                                                                                     |
-|------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|
-| Feature branch required (bypassable on `main` with explicit ask) | This document                                                                                      |
-| Tests + SonarQube after every change                             | This document, `.claude/rules/architecture-guidelines.md`, Stop-gate hook                          |
-| Tests always run after implementation                            | Stop-gate hooks: `.claude/settings.json` (Claude Code), `.opencode/plugin/sdlc-gate.ts` (opencode) |
-| Auto-merge green PRs + conflict resolution                       | `scripts/dev.bat`/`dev.sh` `auto-merge`                                                            |
-| Modern Java / no verbose constructors                            | This document, review checklist                                                                    |
-| `var` when type is clear                                         | This document                                                                                      |
-| Imports instead of inline fully-qualified names                  | `.claude/skills/rules/SKILL.md`                                                                    |
-| Common abbreviated names (`req`, `res`, `conn`, `ds`, ...)       | `.claude/skills/rules/SKILL.md`                                                                    |
-| `Entity`/`DTO` bean suffixes                                     | `rag-memory/.../ArchitectureTest`, `rag-contract/.../DtoNamingTest`                                |
-| No magic literals in production code                             | This document, `.claude/rules/architecture-guidelines.md`, `rag-common-core/.../ArchitectureTest`  |
-| Shared test fixtures                                             | `.claude/skills/test-implementer/SKILL.md`, `.claude/rules/architecture-guidelines.md`             |
-| Parameterized tests where applicable                             | `.claude/skills/test-implementer/SKILL.md`, `.claude/rules/architecture-guidelines.md`             |
-| Compact test style (no blank lines inside method bodies)         | `.claude/skills/rules/SKILL.md`, this document                                                     |
+| Rule | Where enforced |
+|------|----------------|
+| Feature branch required (bypassable on `main` with explicit ask) | This document |
+| Tests + SonarQube after every change | This document, `.claude/rules/architecture-guidelines.md`, Stop-gate hook |
+| Tests always run after implementation | Stop-gate hooks: `.claude/settings.json` (Claude Code), `.opencode/plugin/sdlc-gate.ts` (opencode) |
+| Auto-merge green PRs + conflict resolution | `scripts/dev.bat`/`dev.sh` `auto-merge` |
+| Modern Java / no verbose constructors | This document, review checklist |
+| `var` when type is clear | This document |
+| Imports instead of inline fully-qualified names | `.claude/skills/rules/SKILL.md` |
+| Common abbreviated names (`req`, `res`, `conn`, `ds`, ...) | `.claude/skills/rules/SKILL.md` |
+| `Entity`/`DTO` bean suffixes | `rag-memory/.../ArchitectureTest`, `rag-contract/.../DtoNamingTest` |
+| No magic literals in production code | This document, `.claude/rules/architecture-guidelines.md`, `rag-common-core/.../ArchitectureTest` |
+| Shared test fixtures | `.claude/skills/test-implementer/SKILL.md`, `.claude/rules/architecture-guidelines.md` |
+| Parameterized tests where applicable | `.claude/skills/test-implementer/SKILL.md`, `.claude/rules/architecture-guidelines.md` |
+| Compact test style (no blank lines inside method bodies) | `.claude/skills/rules/SKILL.md`, this document |
+| Production members must be production-referenced (no test-only/dead members) | `rag-common-core/.../TestOnlyMembersArchitectureTest`, this document, `.claude/rules/architecture-guidelines.md` |

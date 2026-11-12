@@ -35,7 +35,7 @@ class CrawlDuplicateGuardIntegrationTest {
         stub = new StubModuleServer();
         var registry = new ModuleRegistry(
                 List.of(TestModules.withUrl(stub.baseUrl())), TestModules.BASIC);
-        apiClient = new RagApiClient(registry, RestClient.builder());
+        apiClient = new RagApiClient(registry, RestClient.builder(), RestClient.builder());
     }
 
     @AfterEach

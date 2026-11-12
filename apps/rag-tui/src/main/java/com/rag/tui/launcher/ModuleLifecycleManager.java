@@ -22,20 +22,20 @@ public class ModuleLifecycleManager {
     private final Map<String, Process> running = new ConcurrentHashMap<>();
 
     public ModuleLifecycleManager(String projectDir) {
-        this(Path.of(projectDir), command -> new ProcessBuilder(command)
+        this(projectDir, defaultStarter(projectDir));
+    }
+
+    public ModuleLifecycleManager(String projectDir, ProcessStarter starter) {
+        this.projectDir = projectDir == null ? null : Path.of(projectDir);
+        this.starter = starter;
+    }
+
+    private static ProcessStarter defaultStarter(String projectDir) {
+        return command -> new ProcessBuilder(command)
                 .directory(new File(projectDir))
                 .redirectErrorStream(true)
                 .redirectOutput(ProcessBuilder.Redirect.INHERIT)
-                .start());
-    }
-
-    ModuleLifecycleManager(ProcessStarter starter) {
-        this(null, starter);
-    }
-
-    private ModuleLifecycleManager(Path projectDir, ProcessStarter starter) {
-        this.projectDir = projectDir;
-        this.starter = starter;
+                .start();
     }
 
     public boolean start(Module module) {

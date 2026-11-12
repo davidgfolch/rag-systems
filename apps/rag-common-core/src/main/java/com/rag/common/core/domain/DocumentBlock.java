@@ -22,11 +22,6 @@ public record DocumentBlock(BlockType type, String content, List<String> section
         this(type, content, List.of(), SourceLocation.NONE, Map.of());
     }
 
-    /** The immediate heading that introduces this block, or {@code null} at the root. */
-    public String heading() {
-        return sectionPath.isEmpty() ? null : sectionPath.getLast();
-    }
-
     public boolean isBlank() {
         return content == null || content.isBlank();
     }

@@ -42,7 +42,7 @@ class DocumentSearchToolTest {
     @Test
     void returnsEmptyWhenQueryMissing() {
         var result = sut.execute(new ToolCall("document_search", "", "doc-1", "", 5));
-        assertThat(result.hasContent()).isFalse();
+        assertThat(result.chunks()).isEmpty();
         verify(vectorStore, never()).similaritySearch(org.mockito.ArgumentMatchers.anyString(),
                 org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyString());
     }

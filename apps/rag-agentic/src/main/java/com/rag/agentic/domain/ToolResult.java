@@ -14,8 +14,4 @@ public record ToolResult(String text, List<Chunk> chunks) {
         text = text == null ? "" : text;
         chunks = chunks == null ? List.of() : List.copyOf(chunks);
     }
-
-    public boolean hasContent() {
-        return !text.isBlank() || !chunks.isEmpty();
-    }
 }

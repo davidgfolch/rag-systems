@@ -39,12 +39,6 @@ public class VariantStoreFactory implements VariantStores {
 
     public VariantStoreFactory(ObjectProvider<JdbcTemplate> jdbcTemplate, ObjectProvider<DataSource> dataSource,
                                Function<PipelineVariantDTO, EmbeddingModel> embeddingModels,
-                               EmbeddingModel defaultEmbeddingModel, String schemaOverride) {
-        this(jdbcTemplate, dataSource, embeddingModels, defaultEmbeddingModel, schemaOverride, RetryObserver.NOOP);
-    }
-
-    public VariantStoreFactory(ObjectProvider<JdbcTemplate> jdbcTemplate, ObjectProvider<DataSource> dataSource,
-                               Function<PipelineVariantDTO, EmbeddingModel> embeddingModels,
                                EmbeddingModel defaultEmbeddingModel, String schemaOverride,
                                RetryObserver retryObserver) {
         this.jdbcTemplate = jdbcTemplate;

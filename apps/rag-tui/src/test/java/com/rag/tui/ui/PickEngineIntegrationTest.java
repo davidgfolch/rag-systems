@@ -17,6 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class PickEngineIntegrationTest {
 
+    private static final CompletionCandidates NO_COMPLETION = (line, cursor) -> List.of();
     private static final List<Prompter.Choice> CHOICES = List.of(
             new Prompter.Choice("OpenAI", "openai"),
             new Prompter.Choice("OpenRouter", "openrouter"),
@@ -27,7 +28,7 @@ class PickEngineIntegrationTest {
         var sink = new StringBuilder();
         var sut = new InteractivePrompter(
                 keys(typeChar('o'), key(DOWN), key(ENTER)),
-                sink::append, 8);
+                sink::append, 8, NO_COMPLETION);
         var result = sut.pick("Provider", CHOICES);
         assertThat(result).hasValue("openrouter");
         assertThat(sink).contains("> OpenRouter");

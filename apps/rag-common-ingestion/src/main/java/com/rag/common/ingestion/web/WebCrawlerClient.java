@@ -31,9 +31,7 @@ import static com.rag.contract.constants.ApiPaths.RANK_LINKS;
  * answers on live page text.
  *
  * <p>Calls are retried on transient failures (timeouts, connection resets,
- * 408/425/429 and 5xx) with the configured {@link RetryPolicy}. The legacy
- * single-argument constructor keeps the historical no-retry behaviour so
- * existing callers and tests are unaffected.
+ * 408/425/429 and 5xx) with the configured {@link RetryPolicy}.
  */
 public class WebCrawlerClient implements WebPageFetcher {
 
@@ -45,18 +43,10 @@ public class WebCrawlerClient implements WebPageFetcher {
     private final RestClient restClient;
     private final RetryExecutor retry;
 
-    public WebCrawlerClient(RestClient restClient) {
-        this(restClient, RetryPolicy.noRetry());
-    }
-
-    public WebCrawlerClient(RestClient restClient, RetryPolicy retryPolicy) {
-        this(restClient, retryPolicy, RetryObserver.NOOP);
-    }
-
     public WebCrawlerClient(RestClient restClient, RetryPolicy retryPolicy, RetryObserver observer) {
         this.restClient = restClient;
         this.retry = new RetryExecutor(Objects.requireNonNull(retryPolicy, "retryPolicy must not be null"),
-                WebCrawlerClient::isRetryable, observer);
+                WebCrawlerClient::isRetryable, observer, Thread::sleep);
     }
 
     /**
@@ -64,10 +54,6 @@ public class WebCrawlerClient implements WebPageFetcher {
      * The supplied builder (Spring Boot's auto-configured one) is cloned so the
      * shared bean is left untouched.
      */
-    public static WebCrawlerClient create(RestClient.Builder builder, String baseUrl) {
-        return create(builder, baseUrl, RetryObserver.NOOP);
-    }
-
     public static WebCrawlerClient create(RestClient.Builder builder, String baseUrl, RetryObserver observer) {
         var requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(toMillis(DEFAULT_CONNECT_TIMEOUT));

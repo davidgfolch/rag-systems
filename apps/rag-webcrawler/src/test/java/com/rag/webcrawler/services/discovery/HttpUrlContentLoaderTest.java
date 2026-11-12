@@ -1,5 +1,7 @@
 package com.rag.webcrawler.services.discovery;
 
+import com.rag.common.core.resilience.RetryObserver;
+import com.rag.common.core.resilience.RetryPolicy;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,7 +19,8 @@ class HttpUrlContentLoaderTest {
 
     private HttpServer server;
     private String baseUrl;
-    private final HttpUrlContentLoader sut = new HttpUrlContentLoader();
+    private final HttpUrlContentLoader sut =
+            new HttpUrlContentLoader(RetryPolicy.noRetry(), RetryObserver.NOOP);
 
     @BeforeEach
     void setUp() throws IOException {

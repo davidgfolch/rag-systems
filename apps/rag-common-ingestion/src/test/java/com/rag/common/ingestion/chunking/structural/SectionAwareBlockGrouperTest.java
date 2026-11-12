@@ -37,7 +37,7 @@ class SectionAwareBlockGrouperTest {
         assertThat(groups).hasSize(1);
         assertThat(groups.getFirst().sectionPath()).containsExactly("Guide");
         assertThat(groups.getFirst().text()).isEqualTo("Body text.");
-        assertThat(groups.getFirst().renderedText()).startsWith("Guide").contains("Body text.");
+        assertThat(groups.getFirst().context()).isEqualTo("Guide");
     }
 
     @Test

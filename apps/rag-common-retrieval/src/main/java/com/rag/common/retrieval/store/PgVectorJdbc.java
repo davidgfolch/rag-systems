@@ -50,15 +50,11 @@ final class PgVectorJdbc {
     private final RetryExecutor retry;
     private final int queryTimeoutSeconds;
 
-    PgVectorJdbc(DataSource dataSource, String table, RetryPolicy retryPolicy, int queryTimeoutSeconds) {
-        this(dataSource, table, retryPolicy, queryTimeoutSeconds, RetryObserver.NOOP);
-    }
-
     PgVectorJdbc(DataSource dataSource, String table, RetryPolicy retryPolicy, int queryTimeoutSeconds,
                  RetryObserver observer) {
         this.dataSource = dataSource;
         this.table = table;
-        this.retry = new RetryExecutor(retryPolicy, SqlRetry::isTransient, observer);
+        this.retry = new RetryExecutor(retryPolicy, SqlRetry::isTransient, observer, Thread::sleep);
         this.queryTimeoutSeconds = queryTimeoutSeconds;
     }
 

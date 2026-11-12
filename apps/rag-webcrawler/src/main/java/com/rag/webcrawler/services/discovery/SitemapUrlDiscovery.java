@@ -29,7 +29,6 @@ public class SitemapUrlDiscovery {
 
     static final int MAX_SITEMAPS = 25;
     static final int MAX_DEPTH = 2;
-    public static final Duration DEFAULT_DISCOVERY_TIMEOUT = Duration.ofSeconds(20);
     private static final String ROBOTS_PATH = "/robots.txt";
     private static final String SITEMAP = "sitemap.xml";
     private static final String SITEMAP_INDEX = "sitemap_index.xml";
@@ -43,10 +42,6 @@ public class SitemapUrlDiscovery {
     private final UrlContentLoader loader;
     private final int maxUrls;
     private final long timeoutNanos;
-
-    public SitemapUrlDiscovery(UrlContentLoader loader, int maxUrls) {
-        this(loader, maxUrls, DEFAULT_DISCOVERY_TIMEOUT);
-    }
 
     public SitemapUrlDiscovery(UrlContentLoader loader, int maxUrls, Duration timeout) {
         this.loader = loader;

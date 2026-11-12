@@ -45,10 +45,6 @@ public record RetryPolicy(int maxAttempts, Duration initialBackoff, Duration max
                 DEFAULT_MULTIPLIER, 0);
     }
 
-    public boolean retries() {
-        return maxAttempts > NO_RETRY_ATTEMPTS;
-    }
-
     /**
      * Delay before the retry that follows {@code failedAttempt} (1-based).
      * Jitter keeps the lower bound at {@code capped * (1 - jitter)}.

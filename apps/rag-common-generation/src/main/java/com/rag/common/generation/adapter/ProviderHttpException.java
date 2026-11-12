@@ -20,10 +20,6 @@ public class ProviderHttpException extends IllegalStateException implements Retr
     private final int statusCode;
     private final Duration retryAfter;
 
-    public ProviderHttpException(int statusCode, String message) {
-        this(statusCode, message, null);
-    }
-
     public ProviderHttpException(int statusCode, String message, Duration retryAfter) {
         super(message);
         this.statusCode = statusCode;

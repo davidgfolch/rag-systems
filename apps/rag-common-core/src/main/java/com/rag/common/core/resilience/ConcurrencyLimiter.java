@@ -35,10 +35,6 @@ public final class ConcurrencyLimiter {
     private final Timer waitTimer;
     private final Counter rejections;
 
-    public ConcurrencyLimiter(String name, int maxConcurrent, Duration waitTimeout) {
-        this(name, maxConcurrent, waitTimeout, null);
-    }
-
     public ConcurrencyLimiter(String name, int maxConcurrent, Duration waitTimeout, MeterRegistry registry) {
         if (maxConcurrent < 1) {
             throw new IllegalArgumentException("maxConcurrent must be at least 1");

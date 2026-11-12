@@ -33,10 +33,6 @@ public class VariantCommands {
     private final Prompter prompter;
     private final ProviderClient provider;
 
-    public VariantCommands(ModuleRegistry registry, RagApiClient api, Prompter prompter) {
-        this(registry, api, prompter, null);
-    }
-
     public VariantCommands(ModuleRegistry registry, RagApiClient api, Prompter prompter,
                            ProviderClient provider) {
         this.registry = registry;

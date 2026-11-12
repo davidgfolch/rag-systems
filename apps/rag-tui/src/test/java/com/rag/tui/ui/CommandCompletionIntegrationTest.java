@@ -31,7 +31,7 @@ class CommandCompletionIntegrationTest {
         var registry = new ModuleRegistry(List.of(new Module("rag-basic", "http://localhost:8081")), "rag-basic");
         sut = new CommandCompletion(new CommandRegistry(), registry,
                 new ProviderClient(server.baseUrl(), RestClient.builder()),
-                new RagApiClient(registry, RestClient.builder()));
+                new RagApiClient(registry, RestClient.builder(), RestClient.builder()));
     }
 
     @AfterEach

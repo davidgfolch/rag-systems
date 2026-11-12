@@ -32,7 +32,7 @@ class DocumentListerIntegrationTest {
         var registry = new ModuleRegistry(
                 List.of(TestModules.withUrl(stub.baseUrl())), TestModules.BASIC);
         sut = new DocumentLister(registry,
-                new RagApiClient(registry, RestClient.builder()),
+                new RagApiClient(registry, RestClient.builder(), RestClient.builder()),
                 new ModuleHealthClient(RestClient.builder()));
     }
 

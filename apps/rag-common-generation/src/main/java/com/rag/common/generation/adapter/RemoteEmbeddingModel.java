@@ -33,10 +33,6 @@ public class RemoteEmbeddingModel implements EmbeddingModel {
     private final String modelId;
     private volatile int cachedDimension = -1;
 
-    public RemoteEmbeddingModel(ProviderHttpClient httpClient) {
-        this(httpClient, 768, null);
-    }
-
     public RemoteEmbeddingModel(ProviderHttpClient httpClient, int fallbackDimension) {
         this(httpClient, fallbackDimension, null);
     }

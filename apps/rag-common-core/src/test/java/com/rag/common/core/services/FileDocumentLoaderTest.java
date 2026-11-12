@@ -58,17 +58,6 @@ class FileDocumentLoaderTest {
     }
 
     @Test
-    void wrapsMissingSha256AlgorithmIntoDocumentLoadException() {
-        try (var messageDigest = org.mockito.Mockito.mockStatic(java.security.MessageDigest.class)) {
-            messageDigest.when(() -> java.security.MessageDigest.getInstance("SHA-256"))
-                    .thenThrow(new java.security.NoSuchAlgorithmException("no sha-256"));
-            assertThatThrownBy(() -> FileDocumentLoader.contentHash(new byte[]{1}))
-                    .isInstanceOf(FileDocumentLoader.DocumentLoadException.class)
-                    .hasMessageContaining("SHA-256");
-        }
-    }
-
-    @Test
     void throwsWhenFileMissing() {
         assertThatThrownBy(() -> sut.load("C:/does/not/exist.txt"))
                 .isInstanceOf(FileDocumentLoader.DocumentLoadException.class);

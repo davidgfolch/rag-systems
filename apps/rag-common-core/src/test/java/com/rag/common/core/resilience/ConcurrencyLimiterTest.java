@@ -13,7 +13,7 @@ class ConcurrencyLimiterTest {
 
     @Test
     void shouldAdmitWorkUpToTheLimitAndRejectTheNextCaller() {
-        var limiter = new ConcurrencyLimiter("test", 1, SHORT_WAIT);
+        var limiter = new ConcurrencyLimiter("test", 1, SHORT_WAIT, null);
 
         assertThat(limiter.tryEnter()).isTrue();
         assertThat(limiter.inFlight()).isEqualTo(1);
@@ -27,7 +27,7 @@ class ConcurrencyLimiterTest {
 
     @Test
     void shouldRejectWhenWaitTimeoutExpires() {
-        var limiter = new ConcurrencyLimiter("test", 1, SHORT_WAIT);
+        var limiter = new ConcurrencyLimiter("test", 1, SHORT_WAIT, null);
         limiter.tryEnter();
 
         var started = System.nanoTime();
@@ -38,7 +38,7 @@ class ConcurrencyLimiterTest {
 
     @Test
     void shouldRestoreInterruptFlagWhenWaitingIsInterrupted() {
-        var limiter = new ConcurrencyLimiter("test", 1, Duration.ofSeconds(5));
+        var limiter = new ConcurrencyLimiter("test", 1, Duration.ofSeconds(5), null);
         limiter.tryEnter();
         try {
             Thread.currentThread().interrupt();
@@ -53,7 +53,7 @@ class ConcurrencyLimiterTest {
     @Test
     void shouldRejectInvalidConfiguration() {
         org.assertj.core.api.Assertions.assertThatThrownBy(
-                        () -> new ConcurrencyLimiter("test", 0, Duration.ZERO))
+                        () -> new ConcurrencyLimiter("test", 0, Duration.ZERO, null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

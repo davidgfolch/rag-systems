@@ -6,8 +6,6 @@ import com.rag.tui.client.ModuleHealthClient;
 import com.rag.tui.client.RagApiClient;
 import com.rag.tui.launcher.Module;
 import com.rag.tui.launcher.ModuleRegistry;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -24,8 +22,6 @@ import static com.rag.common.core.domain.MetadataKeys.SOURCE;
  * duplicate" rather than blocking ingestion.
  */
 public class DuplicateFinder {
-
-    private static final Logger log = LoggerFactory.getLogger(DuplicateFinder.class);
 
     private final ModuleRegistry registry;
     private final RagApiClient apiClient;
@@ -56,21 +52,6 @@ public class DuplicateFinder {
             if (match.isPresent()) return match;
         }
         return Optional.empty();
-    }
-
-    /**
-     * Returns the first document whose {@code source} metadata is the same web
-     * page as {@code rawUrl} (same host + path, ignoring scheme, fragment and
-     * trailing slash), or empty when none is ingested yet. Documents whose
-     * source is not an http(s) URI (e.g. local files) never match.
-     */
-    public Optional<Match> findBySource(String rawUrl) {
-        var target = WebUrls.key(rawUrl);
-        if (target == null) {
-            log.debug("Unparseable url '{}' treated as no duplicate", rawUrl);
-            return Optional.empty();
-        }
-        return Optional.ofNullable(sourceIndex().get(target));
     }
 
     /**

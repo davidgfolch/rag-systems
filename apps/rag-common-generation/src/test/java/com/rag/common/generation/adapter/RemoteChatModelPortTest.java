@@ -2,6 +2,7 @@ package com.rag.common.generation.adapter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rag.common.core.tracing.TracePropagation;
+import com.rag.common.generation.testfixture.TestProviderHttpClients;
 import com.rag.contract.constants.ApiPaths;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -34,8 +35,8 @@ class RemoteChatModelPortTest {
         server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
         server.start();
         var mapper = new ObjectMapper();
-        var client = new ProviderHttpClient("http://localhost:" + server.getAddress().getPort(), mapper);
-        port = new RemoteChatModelPort(client, mapper);
+        var client = TestProviderHttpClients.of("http://localhost:" + server.getAddress().getPort(), mapper);
+        port = new RemoteChatModelPort(client, mapper, null);
     }
 
     @AfterEach
@@ -136,8 +137,8 @@ class RemoteChatModelPortTest {
                     "data:{\"type\":\"done\",\"content\":null,\"conversationId\":null}\n\n");
         });
         var tracer = new SimpleTracer();
-        var tracedClient = new ProviderHttpClient("http://localhost:" + server.getAddress().getPort(),
-                new ObjectMapper(), tracer);
+        var tracedClient = TestProviderHttpClients.withTracer(
+                "http://localhost:" + server.getAddress().getPort(), new ObjectMapper(), tracer);
         var tracedPort = new RemoteChatModelPort(tracedClient, new ObjectMapper(), tracer);
         var span = tracer.nextSpan().name("test-stream").start();
         var context = (SimpleTraceContext) span.context();

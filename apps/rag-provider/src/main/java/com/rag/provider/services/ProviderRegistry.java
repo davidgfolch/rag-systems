@@ -27,10 +27,6 @@ public class ProviderRegistry {
     private final ProviderProfileStore store;
     private final Map<String, ProviderProfile> profiles = new LinkedHashMap<>();
 
-    public ProviderRegistry(List<ProviderProfile> defaults) {
-        this(defaults, ProviderProfileStore.NOOP);
-    }
-
     public ProviderRegistry(List<ProviderProfile> defaults, ProviderProfileStore store) {
         this.store = store;
         defaults.forEach(profile -> {

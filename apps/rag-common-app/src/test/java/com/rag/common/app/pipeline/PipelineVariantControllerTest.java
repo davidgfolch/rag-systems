@@ -14,8 +14,8 @@ class PipelineVariantControllerTest {
     private static final String BASIC = "rag-basic";
     private static final String ADVANCED = "rag-advanced";
 
-    private final VariantStore store = new VariantStore(BASIC, new FixedSizeChunker(256, 32),
-            mock(VariantStores.class), mock(VectorStorePort.class));
+    private final VariantStore store = new VariantStore(BASIC, new FixedSizeChunker(256, 32), null,
+            mock(VariantStores.class), mock(VectorStorePort.class), null);
     private final PipelineVariantController sut = new PipelineVariantController(store);
 
     private static PipelineVariantDTO request(String strategy, int size, int overlap) {

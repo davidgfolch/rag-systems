@@ -53,10 +53,10 @@ class CommandDispatcherIntegrationTest {
         registry = new ModuleRegistry(
                 List.of(TestModules.withUrl(stub.baseUrl())), TestModules.BASIC);
         lifecycle = mock(ModuleLifecycleManager.class);
-        RagApiClient apiClient = new RagApiClient(registry, RestClient.builder());
+        RagApiClient apiClient = new RagApiClient(registry, RestClient.builder(), RestClient.builder());
         ChatGateway chatGateway = new ChatGateway(
                 registry, new StandardWebSocketClient(),
-                new ObjectMapper(), 60);
+                new ObjectMapper(), 60, null);
         MemoryClient memoryClient = new MemoryClient(
                 RestClient.builder().baseUrl(stub.baseUrl()).build());
         clients = new CommandDispatcher.RagClients(apiClient, chatGateway, memoryClient,
@@ -64,7 +64,7 @@ class CommandDispatcherIntegrationTest {
                 new ProviderClient(stub.baseUrl(), RestClient.builder()));
         settings = new CommandDispatcher.Settings(5_000, 4, 60);
         sut = new CommandDispatcher(registry, lifecycle, clients, settings, new CommandRegistry(),
-                new NoopPrompter(new StringReader("")));
+                new NoopPrompter(new StringReader("")), null);
     }
 
     @AfterEach
@@ -111,7 +111,7 @@ class CommandDispatcherIntegrationTest {
                 + "\"title\":\"Guide\",\"ingested\":false,\"initialRemaining\":0,"
                 + "\"hasMore\":false,\"skippedLinks\":0}");
         sut = new CommandDispatcher(registry, lifecycle, clients, settings, new CommandRegistry(),
-                new NoopPrompter(new StringReader("\n")));
+                new NoopPrompter(new StringReader("\n")), null);
         var result = sut.handle("add-url https://example.com/guide", token -> {});
         assertThat(result).contains("Crawl finished", "1 page(s) skipped");
         assertThat(stub.lastDeletedDocumentId()).isNull();
@@ -134,15 +134,15 @@ class CommandDispatcherIntegrationTest {
         ModuleRegistry deadRegistry = new ModuleRegistry(
                 List.of(TestModules.withUrl("http://localhost:1")), TestModules.BASIC);
         ChatGateway chatGateway = new ChatGateway(
-                deadRegistry, new StandardWebSocketClient(), new ObjectMapper(), 60);
+                deadRegistry, new StandardWebSocketClient(), new ObjectMapper(), 60, null);
         CommandDispatcher dead = new CommandDispatcher(deadRegistry, lifecycle,
                 new CommandDispatcher.RagClients(
-                        new RagApiClient(deadRegistry, RestClient.builder()), chatGateway,
+                        new RagApiClient(deadRegistry, RestClient.builder(), RestClient.builder()), chatGateway,
                         mock(MemoryClient.class), new FileDocumentLoader(),
                         new ModuleHealthClient(RestClient.builder()),
                         new ProviderClient("http://localhost:1", RestClient.builder())),
                 new CommandDispatcher.Settings(1_000, 4, 60), new CommandRegistry(),
-                new NoopPrompter(new StringReader("")));
+                new NoopPrompter(new StringReader("")), null);
         var result = dead.handle("add-file " + testFile(), token -> {});
         assertThat(result).contains("Module unreachable");
     }

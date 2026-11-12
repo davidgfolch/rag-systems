@@ -33,14 +33,14 @@ class ProviderHttpRetryTest {
     @ValueSource(ints = {408, 425, 429, 500, 502, 503, 504})
     void shouldRetryTransientStatuses(int status) {
         assertThat(ProviderHttpRetry.isRetryable(
-                new ProviderHttpException(status, "transient"))).isTrue();
+                new ProviderHttpException(status, "transient", null))).isTrue();
     }
 
     @ParameterizedTest
     @ValueSource(ints = {400, 401, 404, 422})
     void shouldNotRetryClientErrors(int status) {
         assertThat(ProviderHttpRetry.isRetryable(
-                new ProviderHttpException(status, "permanent"))).isFalse();
+                new ProviderHttpException(status, "permanent", null))).isFalse();
     }
 
     @Test

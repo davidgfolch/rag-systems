@@ -5,6 +5,7 @@ import com.rag.contract.provider.ModelSpecDTO;
 import com.rag.provider.adapter.ProviderClientFactory;
 import com.rag.provider.domain.ModelSpec;
 import com.rag.provider.domain.ProviderProfile;
+import com.rag.provider.domain.ProviderProfileStore;
 import com.rag.provider.domain.ProviderType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,7 +43,7 @@ class ModelRouterTest {
     private ModelRouter newRouter() {
         var registry = new ProviderRegistry(List.of(
                 new ProviderProfile("ollama", ProviderType.OLLAMA, "Ollama",
-                        "http://localhost:11434", "")));
+                        "http://localhost:11434", "")), ProviderProfileStore.NOOP);
         return new ModelRouter(registry, factory, CHAT_SPEC, EMBED_SPEC);
     }
 

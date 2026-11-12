@@ -26,7 +26,8 @@ import static org.mockito.Mockito.when;
 class ChatWebSocketHandlerTest {
 
     private final AnswerStreamer answerStreamer = mock(AnswerStreamer.class);
-    private final ChatWebSocketHandler handler = new ChatWebSocketHandler(answerStreamer, new ObjectMapper());
+    private final ChatWebSocketHandler handler =
+            new ChatWebSocketHandler(answerStreamer, new ObjectMapper(), null);
     private final WebSocketSession session = mock(WebSocketSession.class);
     private final ArgumentCaptor<TextMessage> captor = ArgumentCaptor.captor();
 

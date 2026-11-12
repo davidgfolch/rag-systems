@@ -1,12 +1,12 @@
 package com.rag.common.ingestion.web;
 
-import com.rag.common.core.domain.Document;
 import com.rag.common.core.domain.DocumentSummary;
 import com.rag.common.core.domain.MetadataKeys;
 import com.rag.common.core.repositories.DocumentStorePort;
 import com.rag.common.core.resilience.CapacityExceededException;
 import com.rag.common.ingestion.AsyncIngestionService;
 import com.rag.common.ingestion.IngestionService;
+import com.rag.common.ingestion.testfixture.TestAsyncIngestionServices;
 import com.rag.contract.model.DocumentSummaryDTO;
 import com.rag.contract.model.IngestJobResponse;
 import com.rag.contract.model.IngestRequest;
@@ -43,7 +43,7 @@ class IngestionControllerTest {
 
     private final IngestionService service = mock(IngestionService.class);
     private final WebPageFetcher webPageFetcher = mock(WebPageFetcher.class);
-    private final IngestionController controller = new IngestionController(service, webPageFetcher);
+    private final IngestionController controller = new IngestionController(service, webPageFetcher, null, null);
 
     @Test
     void ingestsValidRequest() {
@@ -97,7 +97,7 @@ class IngestionControllerTest {
     void ingestFileAsyncStoresServerComputedContentHashOverClientValue() throws Exception {
         when(service.ingest(any())).thenReturn(new IngestionService.IngestionResult("j1", 7));
         IngestionController asyncController = new IngestionController(service, webPageFetcher,
-                new AsyncIngestionService(service), null);
+                TestAsyncIngestionServices.of(service), null);
         byte[] bytes = {0x25, 0x50, 0x44, 0x46};
         MockMultipartFile file = new MockMultipartFile("file", "doc.pdf", "application/pdf", bytes);
         var res = asyncController.ingestFileAsync(file,
@@ -140,7 +140,7 @@ class IngestionControllerTest {
     void submitsFileAsyncReturningAccepted() throws Exception {
         when(service.ingest(any())).thenReturn(new IngestionService.IngestionResult("j1", 7));
         IngestionController asyncController = new IngestionController(service, webPageFetcher,
-                new AsyncIngestionService(service), null);
+                TestAsyncIngestionServices.of(service), null);
         MockMultipartFile file = new MockMultipartFile("file", "doc.pdf", "application/pdf",
                 new byte[]{0x25, 0x50, 0x44, 0x46});
         ResponseEntity<IngestJobResponse> res =
@@ -154,7 +154,7 @@ class IngestionControllerTest {
     @Test
     void rejectsEmptyFileAsync() throws Exception {
         IngestionController asyncController = new IngestionController(service, webPageFetcher,
-                new AsyncIngestionService(service), null);
+                TestAsyncIngestionServices.of(service), null);
         MockMultipartFile file = new MockMultipartFile("file", "empty.pdf", "application/pdf", new byte[0]);
         ResponseEntity<IngestJobResponse> res = asyncController.ingestFileAsync(file, Map.of());
         assertThat(res.getStatusCode()).isEqualTo(BAD_REQUEST);
@@ -255,7 +255,7 @@ class IngestionControllerTest {
 
     @Test
     void mapsEmptyExtractionToUnprocessableEntity() {
-        var exception = new IngestionService.EmptyExtractionException(new Document("d1", "", Map.of()));
+        var exception = new IngestionService.EmptyExtractionException("d1");
         ResponseEntity<String> res = controller.handleEmptyExtraction(exception);
         assertThat(res.getStatusCode()).isEqualTo(UNPROCESSABLE_ENTITY);
         assertThat(res.getBody()).contains("d1");

@@ -17,7 +17,8 @@ class ProviderRegistryTest {
     @Test
     void shouldSeedDefaultsAndFindById() {
         var registry = new ProviderRegistry(List.of(
-                new ProviderProfile("ollama", ProviderType.OLLAMA, "Ollama", "http://localhost:11434", "")));
+                new ProviderProfile("ollama", ProviderType.OLLAMA, "Ollama", "http://localhost:11434", "")),
+                ProviderProfileStore.NOOP);
         assertThat(registry.find("ollama")).isPresent();
         assertThat(registry.find("nope")).isEmpty();
         assertThat(registry.all()).hasSize(1);
@@ -25,7 +26,7 @@ class ProviderRegistryTest {
 
     @Test
     void shouldSaveAndOverrideProfile() {
-        var registry = new ProviderRegistry(List.of());
+        var registry = new ProviderRegistry(List.of(), ProviderProfileStore.NOOP);
         registry.save(new ConfigureProviderRequest("glhf", "OPENAI_COMPATIBLE", "GLHF",
                 "https://glhf.chat", "k"));
         registry.save(new ConfigureProviderRequest("glhf", "OPENAI_COMPATIBLE", "GLHF v2",
@@ -37,14 +38,14 @@ class ProviderRegistryTest {
 
     @Test
     void shouldDefaultBlankTypeToOpenAiCompatible() {
-        var registry = new ProviderRegistry(List.of());
+        var registry = new ProviderRegistry(List.of(), ProviderProfileStore.NOOP);
         var saved = registry.save(new ConfigureProviderRequest("x", "  ", "X", "http://x", ""));
         assertThat(saved.type()).isEqualTo(ProviderType.OPENAI_COMPATIBLE);
     }
 
     @Test
     void shouldRejectUnknownType() {
-        var registry = new ProviderRegistry(List.of());
+        var registry = new ProviderRegistry(List.of(), ProviderProfileStore.NOOP);
         var request = new ConfigureProviderRequest("x", "bogus", "X", "http://x", "");
         assertThatThrownBy(() -> registry.save(request))
                 .isInstanceOf(IllegalArgumentException.class);

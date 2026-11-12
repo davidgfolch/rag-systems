@@ -2,6 +2,7 @@ package com.rag.common.retrieval.store;
 
 import com.rag.common.core.domain.Chunk;
 import com.rag.common.core.domain.MetadataKeys;
+import com.rag.common.retrieval.testfixture.TestPgVectorStoreAdapters;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.ai.document.Document;
@@ -28,7 +29,7 @@ import static org.mockito.Mockito.when;
 class PgVectorStoreAdapterTest {
 
     private final VectorStore delegate = mock(VectorStore.class);
-    private final PgVectorStoreAdapter adapter = new PgVectorStoreAdapter(delegate);
+    private final PgVectorStoreAdapter adapter = TestPgVectorStoreAdapters.inMemory(delegate);
 
     @Test
     void addsChunksAsSpringDocuments() {
@@ -176,7 +177,7 @@ class PgVectorStoreAdapterTest {
         when(conn.createStatement()).thenReturn(statement);
         when(statement.executeQuery("SELECT 1")).thenReturn(rs);
         when(rs.next()).thenReturn(true);
-        var pgAdapter = new PgVectorStoreAdapter(delegate, ds);
+        var pgAdapter = TestPgVectorStoreAdapters.of(delegate, ds);
         assertThatCode(pgAdapter::checkAvailable).doesNotThrowAnyException();
     }
 
@@ -190,7 +191,7 @@ class PgVectorStoreAdapterTest {
         when(conn.createStatement()).thenReturn(statement);
         when(statement.executeQuery("SELECT 1")).thenReturn(rs);
         when(rs.next()).thenReturn(false);
-        var pgAdapter = new PgVectorStoreAdapter(delegate, ds);
+        var pgAdapter = TestPgVectorStoreAdapters.of(delegate, ds);
         assertThatThrownBy(pgAdapter::checkAvailable)
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("did not respond to connectivity probe");
@@ -202,7 +203,7 @@ class PgVectorStoreAdapterTest {
         var sqlException = mock(SQLException.class);
         when(sqlException.getMessage()).thenReturn("Connection refused");
         when(ds.getConnection()).thenThrow(sqlException);
-        var pgAdapter = new PgVectorStoreAdapter(delegate, ds);
+        var pgAdapter = TestPgVectorStoreAdapters.of(delegate, ds);
         assertThatThrownBy(pgAdapter::checkAvailable)
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Vector store not available: SQLException: Connection refused")
@@ -275,10 +276,8 @@ class PgVectorStoreAdapterTest {
     }
 
     @Test
-    void supportsTwoAndThreeArgConstructors() {
+    void acceptsBlankSchemaInProductionConstructor() {
         var ds = mock(DataSource.class);
-        assertThatCode(() -> new PgVectorStoreAdapter(delegate, ds)).doesNotThrowAnyException();
-        assertThatCode(() -> new PgVectorStoreAdapter(delegate, ds, "chunks")).doesNotThrowAnyException();
         assertThatCode(() -> new PgVectorStoreAdapter(delegate, ds, "  ", "chunks")).doesNotThrowAnyException();
     }
 }

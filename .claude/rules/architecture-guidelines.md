@@ -70,6 +70,7 @@ Rules for all code in this repository. These enforce quality, maintainability, a
 7. **Performance**: Unit tests must run quickly (< 500ms).
 8. **Coverage**: Minimum 90% per module (enforced by JaCoCo).
 9. **Architecture test**: Every module has an `ArchitectureTest` enforcing the layer/dependency rules.
+10. **No test-only production members**: every non-private member declared in `src/main` must be referenced by production code. Convenience overloads and helpers used only by tests belong in the test class or a `Test*` fixture; a member referenced nowhere is dead and must be deleted. The only exception is one documented test-seam constructor beside the production constructor, registered in the `ALLOWLIST` of `rag-common-core` `TestOnlyMembersArchitectureTest` (cross-module source gate).
 
 ## Repository Organization Rules
 

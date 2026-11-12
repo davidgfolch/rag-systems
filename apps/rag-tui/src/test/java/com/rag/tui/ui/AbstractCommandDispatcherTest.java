@@ -47,7 +47,7 @@ abstract class AbstractCommandDispatcherTest {
     protected final CommandDispatcher sut = new CommandDispatcher(registry, lifecycle,
             new CommandDispatcher.RagClients(apiClient, chatGateway, memoryClient, fileLoader, healthClient,
                     providerClient),
-            new CommandDispatcher.Settings(10_000, 4, 60), commandRegistry, prompter);
+            new CommandDispatcher.Settings(10_000, 4, 60), commandRegistry, prompter, null);
 
     protected String handle(String input) {
         return sut.handle(input, token -> {});
