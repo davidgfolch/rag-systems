@@ -1,5 +1,6 @@
 package com.rag.webcrawler.services.discovery;
 
+import com.rag.common.core.util.WebUrls;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -9,7 +10,6 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.LinkedHashSet;
@@ -130,11 +130,6 @@ public class SitemapUrlDiscovery {
     }
 
     private static String pathOf(String url) {
-        try {
-            var path = URI.create(url).getPath();
-            return path == null || path.isEmpty() ? SLASH : path;
-        } catch (IllegalArgumentException _) {
-            return SLASH;
-        }
+        return WebUrls.parse(url).map(WebUrls::pathOf).orElse(SLASH);
     }
 }

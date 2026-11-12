@@ -4,6 +4,7 @@ import com.rag.common.core.resilience.RetryExecutor;
 import com.rag.common.core.resilience.RetryObserver;
 import com.rag.common.core.resilience.RetryPolicy;
 import com.rag.common.core.resilience.RetryableStatuses;
+import com.rag.common.core.util.WebUrls;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,8 +37,6 @@ public class HttpUrlContentLoader implements UrlContentLoader {
 
     private static final Duration TIMEOUT = Duration.ofSeconds(15);
     private static final String USER_AGENT = "rag-webcrawler/1.0";
-    private static final String HTTP = "http";
-    private static final String HTTPS = "https";
     private static final int SUCCESS_MIN = 200;
     private static final int SUCCESS_MAX = 300;
     private static final int GZIP_MAGIC_FIRST = 0x1f;
@@ -58,7 +57,7 @@ public class HttpUrlContentLoader implements UrlContentLoader {
 
     @Override
     public Optional<byte[]> load(String url) {
-        var uri = toUri(url);
+        var uri = WebUrls.parse(url);
         if (uri.isEmpty()) return Optional.empty();
         try {
             var res = retry.call("load " + url, () -> send(uri.get()));
@@ -116,19 +115,6 @@ public class HttpUrlContentLoader implements UrlContentLoader {
     private static HttpClient defaultClient() {
         return HttpClient.newBuilder().connectTimeout(TIMEOUT)
                 .followRedirects(HttpClient.Redirect.NORMAL).build();
-    }
-
-    private static Optional<URI> toUri(String url) {
-        try {
-            var uri = URI.create(url);
-            var scheme = uri.getScheme();
-            if (scheme == null || !(scheme.equalsIgnoreCase(HTTP) || scheme.equalsIgnoreCase(HTTPS))) {
-                return Optional.empty();
-            }
-            return Optional.of(uri);
-        } catch (IllegalArgumentException _) {
-            return Optional.empty();
-        }
     }
 
     private static byte[] decode(byte[] body) throws IOException {
