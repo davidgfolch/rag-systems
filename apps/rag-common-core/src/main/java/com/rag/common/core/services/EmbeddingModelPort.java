@@ -13,6 +13,7 @@ import java.util.List;
  * a 768-dimension embedding costs ~3 KB instead of ~12 KB and avoids the
  * per-element unboxing on every similarity computation.
  */
+@FunctionalInterface
 public interface EmbeddingModelPort {
 
     /**

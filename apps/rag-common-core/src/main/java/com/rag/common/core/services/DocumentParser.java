@@ -8,6 +8,7 @@ import com.rag.common.core.domain.ParsedDocument;
  * representation. Implementations keep the document hierarchy (sections,
  * tables, code, JSON records) instead of flattening it to text.
  */
+@FunctionalInterface
 public interface DocumentParser {
 
     /**

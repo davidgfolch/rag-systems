@@ -8,6 +8,7 @@ import java.util.List;
  * token context needs them, and should swallow transient failures by returning
  * an empty list.
  */
+@FunctionalInterface
 public interface CompletionCandidates {
 
     /** Candidates for the given current line and cursor position, or empty for none. */

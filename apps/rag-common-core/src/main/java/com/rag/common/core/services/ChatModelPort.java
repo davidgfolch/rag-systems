@@ -11,6 +11,7 @@ package com.rag.common.core.services;
  * {@code StreamingChatModelPort} so this core module stays free of reactive
  * (reactor-core) dependencies.
  */
+@FunctionalInterface
 public interface ChatModelPort {
 
     /**

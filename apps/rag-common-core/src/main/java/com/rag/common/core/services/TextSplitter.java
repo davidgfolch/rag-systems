@@ -11,6 +11,7 @@ import java.util.List;
  * <p>Implementations are swappable via configuration, enabling comparison of
  * fixed-size, recursive, semantic, and agentic chunking strategies.
  */
+@FunctionalInterface
 public interface TextSplitter {
 
     /**
