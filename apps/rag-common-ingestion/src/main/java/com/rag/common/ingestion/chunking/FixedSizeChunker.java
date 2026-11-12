@@ -6,14 +6,12 @@ import com.rag.common.core.services.TextSplitter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static com.rag.common.core.domain.MetadataKeys.END;
-import static com.rag.common.core.domain.MetadataKeys.RAW_BYTES;
 import static com.rag.common.core.domain.MetadataKeys.START;
 import static com.rag.common.core.domain.MetadataKeys.STRATEGY;
 
@@ -26,6 +24,7 @@ import static com.rag.common.core.domain.MetadataKeys.STRATEGY;
 public class FixedSizeChunker implements TextSplitter {
 
     private static final Logger log = LoggerFactory.getLogger(FixedSizeChunker.class);
+    private static final String STRATEGY_NAME = "fixed";
 
     private final int chunkSize;
     private final int overlap;
@@ -43,41 +42,20 @@ public class FixedSizeChunker implements TextSplitter {
         if (content == null || content.isBlank()) {
             return List.of();
         }
-
-        var baseMeta = documentMeta(document);
-        var chunks = new ArrayList<Chunk>();
-        int start = 0;
-        int index = 0;
-
-        while (start < content.length()) {
-            int end = Math.min(start + chunkSize, content.length());
-            var chunkContent = content.substring(start, end).trim();
-
-            if (!chunkContent.isEmpty()) {
-                var meta = new HashMap<>(baseMeta);
-                meta.put(STRATEGY, "fixed");
-                meta.put(START, start);
-                meta.put(END, end);
-                chunks.add(new Chunk(
-                        UUID.randomUUID().toString(),
-                        document.getId(),
-                        chunkContent,
-                        index++,
-                        Map.copyOf(meta)
-                ));
-            }
-
-            start += chunkSize - overlap;
-            if (start >= content.length()) break;
-        }
-
+        var chunks = ChunkerSupport.chunks(document, ChunkerSupport.documentMeta(document), windows(content).toList());
         log.debug("Fixed-size chunked document {} into {} chunks", document.getId(), chunks.size());
         return chunks;
     }
 
-    private static Map<String, Object> documentMeta(Document document) {
-        var meta = new HashMap<>(document.getMetadata());
-        meta.remove(RAW_BYTES);
-        return meta;
+    private Stream<ChunkerSupport.Draft> windows(String content) {
+        var step = chunkSize - overlap;
+        return IntStream.iterate(0, start -> start < content.length(), start -> start + step)
+                .mapToObj(start -> window(content, start));
+    }
+
+    private ChunkerSupport.Draft window(String content, int start) {
+        var end = Math.min(start + chunkSize, content.length());
+        return new ChunkerSupport.Draft(content.substring(start, end),
+                Map.of(STRATEGY, STRATEGY_NAME, START, start, END, end));
     }
 }
