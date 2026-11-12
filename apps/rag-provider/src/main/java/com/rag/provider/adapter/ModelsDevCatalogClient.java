@@ -13,9 +13,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import java.util.stream.StreamSupport;
 
 /**
  * Fetches the models.dev {@code api.json} catalog over HTTP and maps it onto
@@ -59,23 +58,21 @@ public class ModelsDevCatalogClient implements ModelCatalogPort {
 
     static List<ModelInfo> parse(ObjectMapper om, String json) throws JsonProcessingException {
         var root = om.readTree(json);
-        var models = new ArrayList<ModelInfo>();
-        for (Map.Entry<String, JsonNode> entry : root.properties()) {
-            collectModels(entry.getValue(), entry.getKey(), models);
-        }
-        return models;
+        return StreamSupport.stream(root.properties().spliterator(), false)
+                .flatMap(entry -> collectModels(entry.getValue(), entry.getKey()).stream())
+                .toList();
     }
 
-    private static void collectModels(JsonNode providerNode, String providerId, List<ModelInfo> out) {
+    private static List<ModelInfo> collectModels(JsonNode providerNode, String providerId) {
         var modelsNode = providerNode.path("models");
         if (!modelsNode.isObject()) {
-            return;
+            return List.of();
         }
-        String baseUrl = providerNode.path("api").asText(null);
-        String apiKeyEnv = firstEnvVar(providerNode.path("env"));
-        for (Map.Entry<String, JsonNode> modelEntry : modelsNode.properties()) {
-            out.add(model(providerId, modelEntry.getKey(), modelEntry.getValue(), baseUrl, apiKeyEnv));
-        }
+        var baseUrl = providerNode.path("api").asText(null);
+        var apiKeyEnv = firstEnvVar(providerNode.path("env"));
+        return StreamSupport.stream(modelsNode.properties().spliterator(), false)
+                .map(entry -> model(providerId, entry.getKey(), entry.getValue(), baseUrl, apiKeyEnv))
+                .toList();
     }
 
     private static String firstEnvVar(JsonNode env) {

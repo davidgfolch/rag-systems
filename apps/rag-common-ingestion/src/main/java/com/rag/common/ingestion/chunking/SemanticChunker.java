@@ -15,6 +15,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static com.rag.common.core.domain.MetadataKeys.MAX_CHUNK_SIZE;
 import static com.rag.common.core.domain.MetadataKeys.STRATEGY;
@@ -125,12 +127,11 @@ public class SemanticChunker implements TextSplitter {
             return result;
         }
         var threshold = percentile(distances, breakpointPercentile);
-        for (int i = 0; i < distances.length; i++) {
-            if (distances[i] >= threshold) {
-                result.add(i + 1);
-            }
-        }
-        return result;
+        return IntStream.range(0, distances.length)
+                .filter(i -> distances[i] >= threshold)
+                .map(i -> i + 1)
+                .boxed()
+                .collect(Collectors.toSet());
     }
 
     private List<float[]> embedAll(List<String> sentences) {
@@ -175,14 +176,10 @@ public class SemanticChunker implements TextSplitter {
     }
 
     private static List<String> sentences(String content) {
-        var result = new ArrayList<String>();
-        for (var part : SENTENCE_BOUNDARY.split(content)) {
-            var trimmed = part.trim();
-            if (!trimmed.isEmpty()) {
-                result.add(trimmed);
-            }
-        }
-        return result;
+        return SENTENCE_BOUNDARY.splitAsStream(content)
+                .map(String::trim)
+                .filter(sentence -> !sentence.isEmpty())
+                .toList();
     }
 
     private static float spread(float[] values) {

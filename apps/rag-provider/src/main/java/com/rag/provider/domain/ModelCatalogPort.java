@@ -7,6 +7,7 @@ import java.util.List;
  * module has no rag-common-* dependency, so the port deliberately lives in the
  * domain layer where the adapter can implement it (adapter &rarr; domain only).
  */
+@FunctionalInterface
 public interface ModelCatalogPort {
 
     /**

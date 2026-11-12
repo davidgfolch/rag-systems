@@ -13,6 +13,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.IntStream;
 
 /**
  * Two-stage retrieval: widen with a pure vector pass, then re-rank the
@@ -61,11 +62,9 @@ public class AdvancedRetrievalService implements DocumentStorePort {
 
     private static double[] fusedRrf(double[] lexicalScores) {
         var ranks = lexicalRanks(lexicalScores);
-        var out = new double[ranks.length];
-        for (int i = 0; i < ranks.length; i++) {
-            out[i] = weight(i) + weight(ranks[i]);
-        }
-        return out;
+        return IntStream.range(0, ranks.length)
+                .mapToDouble(i -> weight(i) + weight(ranks[i]))
+                .toArray();
     }
 
     private static int[] lexicalRanks(double[] scores) {
@@ -87,13 +86,12 @@ public class AdvancedRetrievalService implements DocumentStorePort {
     }
 
     private static List<Chunk> topByRrf(List<Chunk> matches, double[] fused, int topK) {
-        var order = new Integer[matches.size()];
-        for (int i = 0; i < order.length; i++) {
-            order[i] = i;
-        }
-        Arrays.sort(order, Comparator.comparingDouble((Integer i) -> -fused[i]).thenComparingInt(i -> i));
-        int limit = Math.min(topK, order.length);
-        return Arrays.stream(order).limit(limit).map(matches::get).toList();
+        return IntStream.range(0, matches.size())
+                .boxed()
+                .sorted(Comparator.comparingDouble((Integer i) -> -fused[i]).thenComparingInt(i -> i))
+                .limit(topK)
+                .map(matches::get)
+                .toList();
     }
 
     public List<DocumentSummary> listDocuments() {

@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Stream;
 
 /**
  * Embedding generation against the currently active embedding model.
@@ -85,12 +86,8 @@ public class EmbeddingService {
     }
 
     private static boolean hasIoCause(Throwable failure) {
-        for (Throwable cause = failure.getCause(); cause != null; cause = cause.getCause()) {
-            if (cause instanceof IOException) {
-                return true;
-            }
-        }
-        return false;
+        return Stream.iterate(failure.getCause(), Objects::nonNull, Throwable::getCause)
+                .anyMatch(IOException.class::isInstance);
     }
 
     private static int requirePositive(int value) {

@@ -54,10 +54,10 @@ public final class RobotsPolicy {
     }
 
     public boolean allows(String path) {
-        var match = "";
-        for (var rule : disallow) {
-            if (!rule.isEmpty() && path.startsWith(rule) && rule.length() > match.length()) match = rule;
-        }
-        return match.isEmpty();
+        return disallow.stream()
+                .filter(rule -> !rule.isEmpty() && path.startsWith(rule))
+                .mapToInt(String::length)
+                .max()
+                .isEmpty();
     }
 }

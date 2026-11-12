@@ -5,6 +5,7 @@ import com.rag.contract.model.PageDTO;
 /**
  * Strategy interface for fetching a web page and extracting its plain text.
  */
+@FunctionalInterface
 public interface WebPageFetcher {
 
     PageDTO fetch(String url);
