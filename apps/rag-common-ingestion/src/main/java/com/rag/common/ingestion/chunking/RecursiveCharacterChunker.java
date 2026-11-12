@@ -7,14 +7,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 
 import static com.rag.common.core.domain.MetadataKeys.MAX_CHUNK_SIZE;
-import static com.rag.common.core.domain.MetadataKeys.RAW_BYTES;
 import static com.rag.common.core.domain.MetadataKeys.STRATEGY;
 
 /**
@@ -29,6 +27,7 @@ public class RecursiveCharacterChunker implements TextSplitter {
     private static final Logger log = LoggerFactory.getLogger(RecursiveCharacterChunker.class);
 
     private static final String[] SEPARATORS = {"\n\n", "\n", ". ", "? ", "! ", " ", ""};
+    private static final String STRATEGY_NAME = "recursive";
 
     private final int maxChunkSize;
     private final int overlap;
@@ -49,32 +48,15 @@ public class RecursiveCharacterChunker implements TextSplitter {
         var rawChunks = new ArrayList<String>();
         splitRecursively(content, SEPARATORS, 0, rawChunks);
 
-        var baseMeta = documentMeta(document);
-        var result = new ArrayList<Chunk>();
-        int index = 0;
-        for (var chunkContent : rawChunks) {
-            if (chunkContent.isBlank()) continue;
-            var meta = new HashMap<>(baseMeta);
-            meta.put(STRATEGY, "recursive");
-            meta.put(MAX_CHUNK_SIZE, maxChunkSize);
-            result.add(new Chunk(
-                    UUID.randomUUID().toString(),
-                    document.getId(),
-                    chunkContent.trim(),
-                    index++,
-                    Map.copyOf(meta)
-            ));
-        }
-
-        var chunked = applyOverlap(result, document.getId(), baseMeta);
+        var baseMeta = ChunkerSupport.documentMeta(document);
+        var drafts = rawChunks.stream().map(this::draft).toList();
+        var chunked = withOverlap(ChunkerSupport.chunks(document, baseMeta, drafts), document, baseMeta);
         log.debug("Recursive-chunked document {} into {} chunks", document.getId(), chunked.size());
         return chunked;
     }
 
-    private static Map<String, Object> documentMeta(Document document) {
-        var meta = new HashMap<>(document.getMetadata());
-        meta.remove(RAW_BYTES);
-        return meta;
+    private ChunkerSupport.Draft draft(String text) {
+        return new ChunkerSupport.Draft(text, Map.of(STRATEGY, STRATEGY_NAME, MAX_CHUNK_SIZE, maxChunkSize));
     }
 
     private void splitRecursively(String text, String[] separators, int sepIndex, List<String> result) {
@@ -122,31 +104,20 @@ public class RecursiveCharacterChunker implements TextSplitter {
         }
     }
 
-    private List<Chunk> applyOverlap(List<Chunk> chunks, String documentId,
-                                     Map<String, Object> baseMeta) {
+    private List<Chunk> withOverlap(List<Chunk> chunks, Document document, Map<String, Object> baseMeta) {
         if (overlap <= 0 || chunks.size() <= 1) {
             return chunks;
         }
+        var drafts = IntStream.range(0, chunks.size()).mapToObj(i -> draft(withOverlapPrefix(chunks, i))).toList();
+        return ChunkerSupport.chunks(document, baseMeta, drafts);
+    }
 
-        var result = new ArrayList<Chunk>();
-        for (int i = 0; i < chunks.size(); i++) {
-            var content = chunks.get(i).getContent();
-            if (i > 0 && overlap > 0) {
-                var prevContent = chunks.get(i - 1).getContent();
-                var overlapSuffix = prevContent.substring(Math.max(0, prevContent.length() - overlap));
-                content = overlapSuffix + " " + content;
-            }
-            var meta = new HashMap<>(baseMeta);
-            meta.put("strategy", "recursive");
-            meta.put("maxChunkSize", maxChunkSize);
-            result.add(new Chunk(
-                    UUID.randomUUID().toString(),
-                    documentId,
-                    content,
-                    i,
-                    Map.copyOf(meta)
-            ));
+    private String withOverlapPrefix(List<Chunk> chunks, int index) {
+        var content = chunks.get(index).getContent();
+        if (index == 0) {
+            return content;
         }
-        return result;
+        var previous = chunks.get(index - 1).getContent();
+        return previous.substring(Math.max(0, previous.length() - overlap)) + " " + content;
     }
 }

@@ -9,33 +9,25 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 import java.util.regex.Pattern;
 
 import static com.rag.common.core.domain.MetadataKeys.MAX_CHUNK_SIZE;
-import static com.rag.common.core.domain.MetadataKeys.RAW_BYTES;
 import static com.rag.common.core.domain.MetadataKeys.STRATEGY;
 
 /**
- * Semantic chunker. Splits a document into sentences, embeds them, and starts a
- * new chunk where the cosine distance between neighbouring sentences reaches
- * the configured percentile of the document's own distances — a topic shift.
+ * Semantic chunker. Embeds each sentence, measures the distance between adjacent
+ * sentence vectors and places a chunk boundary wherever the distance crosses a
+ * percentile threshold, so chunks follow topic shifts instead of fixed lengths.
  *
- * <p>{@code maxChunkSize} and {@code overlap} stay as an upper-bound safety
- * net: a group of sentences that would outgrow the window is cut anyway, and a
- * single oversized sentence is hard-split. Boundaries come from the document
- * itself, so a text with a uniform distance profile is not cut into one chunk
- * per sentence.
- *
- * <p>Sentences are embedded once per document before the chunks are embedded
- * for storage, so ingesting with this chunker costs roughly one extra
- * embedding per sentence.
+ * <p>Embeddings are computed with the configured provider rather than a local
+ * model, so this chunker is only as portable as the active embedding profile.
+ * Chunk contents are later re-embedded (with overlap and trimming) for storage,
+ * so ingesting with this chunker costs roughly one extra embedding per sentence.
  */
 public class SemanticChunker implements TextSplitter {
 
@@ -80,24 +72,14 @@ public class SemanticChunker implements TextSplitter {
             return List.of();
         }
 
-        var baseMeta = documentMeta(document);
-        var groups = groupByTopicShift(content);
-        var chunks = new ArrayList<Chunk>();
-        for (int i = 0; i < groups.size(); i++) {
-            var meta = new HashMap<>(baseMeta);
-            meta.put(STRATEGY, STRATEGY_NAME);
-            meta.put(MAX_CHUNK_SIZE, maxChunkSize);
-            chunks.add(new Chunk(
-                    UUID.randomUUID().toString(),
-                    document.getId(),
-                    groups.get(i).trim(),
-                    i,
-                    Map.copyOf(meta)
-            ));
-        }
-
+        var drafts = groupByTopicShift(content).stream().map(this::draft).toList();
+        var chunks = ChunkerSupport.chunks(document, ChunkerSupport.documentMeta(document), drafts);
         log.debug("Semantic-chunked document {} into {} chunks", document.getId(), chunks.size());
         return chunks;
+    }
+
+    private ChunkerSupport.Draft draft(String text) {
+        return new ChunkerSupport.Draft(text, Map.of(STRATEGY, STRATEGY_NAME, MAX_CHUNK_SIZE, maxChunkSize));
     }
 
     private List<String> groupByTopicShift(String content) {
@@ -233,11 +215,5 @@ public class SemanticChunker implements TextSplitter {
             return 0f;
         }
         return (float) (dot / (Math.sqrt(normA) * Math.sqrt(normB)));
-    }
-
-    private static Map<String, Object> documentMeta(Document document) {
-        var meta = new HashMap<>(document.getMetadata());
-        meta.remove(RAW_BYTES);
-        return meta;
     }
 }
