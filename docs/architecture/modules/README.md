@@ -2,11 +2,11 @@
 
 This section explains **what each retrieval variant does and how it works**, as implemented in the code. It complements the [module READMEs](../../../README.md#modules--strategy), which cover setup, ports and operational commands, and the [architecture overview](../overview.md), which covers the shared layering.
 
-| Module | Port | What makes it different | Deep dive |
-|--------|------|-------------------------|-----------|
-| **rag-basic** | 8081 | Baseline: one vector similarity search, no re-ranking or filters | [rag-basic](rag-basic.md) |
+| Module           | Port | What makes it different                                                                                                    | Deep dive                       |
+|------------------|------|----------------------------------------------------------------------------------------------------------------------------|---------------------------------|
+| **rag-basic**    | 8081 | Baseline: one vector similarity search, no re-ranking or filters                                                           | [rag-basic](rag-basic.md)       |
 | **rag-advanced** | 8082 | Widens the vector pass, then fuses vector order with a BM25-style lexical pass (RRF) and supports exact metadata filtering | [rag-advanced](rag-advanced.md) |
-| **rag-agentic** | 8083 | A bounded agent loop plans sub-queries, chooses tools, reflects on sufficiency and then answers | [rag-agentic](rag-agentic.md) |
+| **rag-agentic**  | 8083 | A bounded agent loop plans sub-queries, chooses tools, reflects on sufficiency and then answers                            | [rag-agentic](rag-agentic.md)   |
 
 ## They share one pipeline
 
@@ -34,15 +34,15 @@ rag-common-core         Chunk/Document domain + ports (VectorStorePort, ChatMode
 Document → DocumentParser → ParsedDocument → ActiveDocumentChunker → EmbeddingModelPort → VectorStorePort
 ```
 
-| Concern | Implementation |
-|---------|----------------|
-| Parsing | Format-aware by default (`PDF`, `DOCX`, `HTML`, `Markdown`, `JSON`, text); `rag.parsing.mode=auto\|tika\|plain` |
-| Chunking | `ActiveDocumentChunker` wraps the active variant's `TextSplitter` in a structural dispatcher |
-| Embedding | Batched by `rag.embedding.batch-size` (default 100 in module config) through `ActiveEmbeddingModelPort` |
-| Stores | PgVector schema per module; `simple` selects `InMemoryVectorStore` |
+| Concern       | Implementation                                                                                                                    |
+|---------------|-----------------------------------------------------------------------------------------------------------------------------------|
+| Parsing       | Format-aware by default (`PDF`, `DOCX`, `HTML`, `Markdown`, `JSON`, text); `rag.parsing.mode=auto\|tika\|plain`                   |
+| Chunking      | `ActiveDocumentChunker` wraps the active variant's `TextSplitter` in a structural dispatcher                                      |
+| Embedding     | Batched by `rag.embedding.batch-size` (default 100 in module config) through `ActiveEmbeddingModelPort`                           |
+| Stores        | PgVector schema per module; `simple` selects `InMemoryVectorStore`                                                                |
 | Deduplication | `PgVectorStoreAdapter` over-fetches up to 4× for deduplication (multiplier stops above 256) and collapses identical chunk content |
-| Async | `ingest-file-async` runs on virtual threads with a job map + `rag.ingestion.max-concurrent` limiter |
-| URL ingestion | The module calls `rag-webcrawler` through `WebCrawlerClient`; crawl sessions are orchestrated by `CrawlSessionService` |
+| Async         | `ingest-file-async` runs on virtual threads with a job map + `rag.ingestion.max-concurrent` limiter                               |
+| URL ingestion | The module calls `rag-webcrawler` through `WebCrawlerClient`; crawl sessions are orchestrated by `CrawlSessionService`            |
 
 ### Shared pipeline variants
 
@@ -55,15 +55,15 @@ A **variant** bundles a chunking strategy + window + embedding model with its ow
 
 `ActiveVectorStore`, `ActiveDocumentChunker` and `ActiveEmbeddingModelPort` resolve the active variant on every call. See [ADR-0015](../decision-records/adr-0015-pipeline-variants.md).
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| `GET` | `/api/modules/{module}/variants` | List variants |
-| `GET` | `/api/modules/{module}/variants/active` | Active variant (`204` when none) |
-| `GET` | `/api/modules/{module}/variants/{variantId}` | Get one variant |
-| `POST` | `/api/modules/{module}/variants` | Register a variant |
-| `PUT` | `/api/modules/{module}/variants/{variantId}` | Update (new window/model) |
-| `POST` | `/api/modules/{module}/variants/{variantId}/activate` | Activate |
-| `DELETE` | `/api/modules/{module}/variants/{variantId}` | Remove and drop its table |
+| Method   | Path                                                  | Purpose                          |
+|----------|-------------------------------------------------------|----------------------------------|
+| `GET`    | `/api/modules/{module}/variants`                      | List variants                    |
+| `GET`    | `/api/modules/{module}/variants/active`               | Active variant (`204` when none) |
+| `GET`    | `/api/modules/{module}/variants/{variantId}`          | Get one variant                  |
+| `POST`   | `/api/modules/{module}/variants`                      | Register a variant               |
+| `PUT`    | `/api/modules/{module}/variants/{variantId}`          | Update (new window/model)        |
+| `POST`   | `/api/modules/{module}/variants/{variantId}/activate` | Activate                         |
+| `DELETE` | `/api/modules/{module}/variants/{variantId}`          | Remove and drop its table        |
 
 ### Shared chat and streaming
 
@@ -79,11 +79,11 @@ A **variant** bundles a chunking strategy + window + embedding model with its ow
 
 ## Choosing a variant
 
-| Question | Start with |
-|----------|------------|
-| Do you need the simplest possible RAG, fast and cheap? | rag-basic |
-| Do keyword-heavy queries or exact terms matter? | rag-advanced |
-| Do you need multi-hop questions or data spread across sources? | rag-agentic |
-| Are you benchmarking retrieval quality per technique? | Run all three on the same corpus and compare (`/api/query`) |
+| Question                                                       | Start with                                                  |
+|----------------------------------------------------------------|-------------------------------------------------------------|
+| Do you need the simplest possible RAG, fast and cheap?         | rag-basic                                                   |
+| Do keyword-heavy queries or exact terms matter?                | rag-advanced                                                |
+| Do you need multi-hop questions or data spread across sources? | rag-agentic                                                 |
+| Are you benchmarking retrieval quality per technique?          | Run all three on the same corpus and compare (`/api/query`) |
 
 See also [Trade-offs](../../comparison/trade-offs.md), [Performance Metrics](../../comparison/performance-metrics.md) and [Getting Started](../../guides/getting-started.md).

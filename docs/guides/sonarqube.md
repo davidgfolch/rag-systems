@@ -15,12 +15,12 @@ Analysis is local-first and runs against a **SonarQube Community Build 26.8** co
 
 ## Stack
 
-| Component | Role |
-|-----------|------|
-| SonarQube 26.8 (Community Build) | Analysis server + dashboard |
-| `sonar-maven-plugin` | Runs scanner as part of the Maven build |
-| JaCoCo | Test coverage report consumed by SonarQube |
-| `scripts/sonar.{bat,sh}` | Lifecycle wrapper (start, scan, stop) |
+| Component                        | Role                                       |
+|----------------------------------|--------------------------------------------|
+| SonarQube 26.8 (Community Build) | Analysis server + dashboard                |
+| `sonar-maven-plugin`             | Runs scanner as part of the Maven build    |
+| JaCoCo                           | Test coverage report consumed by SonarQube |
+| `scripts/sonar.{bat,sh}`         | Lifecycle wrapper (start, scan, stop)      |
 
 ## Architecture (how analysis flows)
 
@@ -56,14 +56,14 @@ JVM memory is capped (`-Xmx1g`) so the container runs comfortably on a local mac
 
 Root-level properties used by the scanner:
 
-| Property | Value | Notes |
-|----------|-------|-------|
-| `sonar.projectKey` | `rag-systems` | Used by non-Maven scans; Maven scan uses `com.rag:rag-systems` from the POM |
-| `sonar.exclusions` | `**/target/**` | Excludes build output |
-| `sonar.scanner.skipJreProvisioning` | `true` | Skips JRE auto-provisioning (project already uses Java 25) |
-| `sonar.coverage.jacoco.xmlReportPaths` | `**/target/site/jacoco/jacoco.xml` | JaCoCo report location |
-| `sonar.junit.reportPaths` | `**/target/surefire-reports` | Test report location |
-| `sonar.host.url` | `http://localhost:9000` | Local server |
+| Property                               | Value                              | Notes                                                                       |
+|----------------------------------------|------------------------------------|-----------------------------------------------------------------------------|
+| `sonar.projectKey`                     | `rag-systems`                      | Used by non-Maven scans; Maven scan uses `com.rag:rag-systems` from the POM |
+| `sonar.exclusions`                     | `**/target/**`                     | Excludes build output                                                       |
+| `sonar.scanner.skipJreProvisioning`    | `true`                             | Skips JRE auto-provisioning (project already uses Java 25)                  |
+| `sonar.coverage.jacoco.xmlReportPaths` | `**/target/site/jacoco/jacoco.xml` | JaCoCo report location                                                      |
+| `sonar.junit.reportPaths`              | `**/target/surefire-reports`       | Test report location                                                        |
+| `sonar.host.url`                       | `http://localhost:9000`            | Local server                                                                |
 
 > **Note:** The Maven plugin does **not** reliably read `sonar.host.url`, `sonar.projectKey`, or the JaCoCo paths from this file. The wrapper scripts pass the required settings explicitly as `-D` arguments.
 
@@ -142,12 +142,12 @@ Or start the server, wait until it is ready, bootstrap password + token, and sca
 
 After a successful scan, both scripts fetch the quality gate status and key metrics from the SonarQube API (via `scripts/sonar-export.ps1` on Windows, `scripts/sonar-export.sh` on Linux/Mac) and update the **SonarQube → Latest Results** section in `README.md`:
 
-| Metric | Value |
-|--------|-------|
-| Quality Gate | `OK` |
-| Bugs / Vulnerabilities / Security Hotspots | Counts |
-| Code Smells | Count |
-| Coverage / Duplication | Percentages |
+| Metric                                     | Value       |
+|--------------------------------------------|-------------|
+| Quality Gate                               | `OK`        |
+| Bugs / Vulnerabilities / Security Hotspots | Counts      |
+| Code Smells                                | Count       |
+| Coverage / Duplication                     | Percentages |
 
 If `jq` (Linux/Mac) is missing or the analysis is not yet available on the server, the export script warns and leaves the README unchanged. The `<!-- SONARQUBE_RESULTS_START/END -->` markers in `README.md` define the auto-updated block — keep them intact.
 
@@ -168,8 +168,8 @@ If `jq` (Linux/Mac) is missing or the analysis is not yet available on the serve
 
 During every bootstrap run (`sonar-pw.{sh,bat}`), a custom quality gate **"RAG 90% Coverage"** is created. It is re-applied after each `scan`/`up-scan` (because the project only exists after the first analysis) and on every bootstrap, so it also updates already-bootstrapped servers. It enforces the same 90% overall coverage threshold that the JaCoCo build-time check uses, so SonarQube and the Maven build agree on the minimum:
 
-| Condition | Requirement |
-|-----------|-------------|
+| Condition         | Requirement                                           |
+|-------------------|-------------------------------------------------------|
 | `coverage` `<` 90 | Gate fails when overall line coverage drops below 90% |
 
 The `coverage` metric covers both new and existing code, aligning the SonarQube quality gate with the JaCoCo `INSTRUCTION` check (`minimum=0.90` in the parent POM) and the `sonar.coverage.exclusions` in `sonar-project.properties`. Because the gate measures **overall code**, refactoring a method (e.g., splitting a large method into helpers) can lower coverage until those branches are covered by tests.
@@ -189,25 +189,25 @@ The `coverage` metric covers both new and existing code, aligning the SonarQube 
 
 ### Common issues seen in this repo
 
-| Rule | Severity | Typical fix |
-|------|----------|-------------|
-| `java:S3776` (cognitive complexity) | Critical | Extract helper methods; reduce branching |
-| `java:S6068` (useless `eq()`) | Minor | Pass values directly instead of `eq(x)` |
-| `java:S1659` (multiple declarations) | Minor | Put each declaration on its own line |
-| `java:S1128` (unused import) | Minor | Remove the import |
-| `java:S6126` (String concat → text block) | Major | Use a text block |
-| `java:S5853` (split assertion) | Minor | Join assertions into one chain |
-| `java:S5778` (exception in lambda) | Major | Extract the throwing call out of the lambda |
-| `java:S5841` (empty-list assertion) | Minor | Precede with `isNotEmpty()` or use `noneSatisfy` |
+| Rule                                      | Severity | Typical fix                                      |
+|-------------------------------------------|----------|--------------------------------------------------|
+| `java:S3776` (cognitive complexity)       | Critical | Extract helper methods; reduce branching         |
+| `java:S6068` (useless `eq()`)             | Minor    | Pass values directly instead of `eq(x)`          |
+| `java:S1659` (multiple declarations)      | Minor    | Put each declaration on its own line             |
+| `java:S1128` (unused import)              | Minor    | Remove the import                                |
+| `java:S6126` (String concat → text block) | Major    | Use a text block                                 |
+| `java:S5853` (split assertion)            | Minor    | Join assertions into one chain                   |
+| `java:S5778` (exception in lambda)        | Major    | Extract the throwing call out of the lambda      |
+| `java:S5841` (empty-list assertion)       | Minor    | Precede with `isNotEmpty()` or use `noneSatisfy` |
 
 ## Troubleshooting
 
-| Symptom | Cause / fix |
-|---------|-------------|
-| Analysis hits `api.sonarcloud.io` / HTTP 403 | JRE provisioning skipped; pass `-Dsonar.scanner.skipJreProvisioning=true` |
-| Scan uses stale results | Old `target/` classes; run `mvn clean verify sonar:sonar` |
-| Container fails to start | `vm.max_map_count` not needed here (Docker Desktop); check `docker compose ... ps` and logs |
-| Quality gate still red after fixing | Coverage gate is on new code; add tests for the refactored/uncovered branches |
+| Symptom                                      | Cause / fix                                                                                 |
+|----------------------------------------------|---------------------------------------------------------------------------------------------|
+| Analysis hits `api.sonarcloud.io` / HTTP 403 | JRE provisioning skipped; pass `-Dsonar.scanner.skipJreProvisioning=true`                   |
+| Scan uses stale results                      | Old `target/` classes; run `mvn clean verify sonar:sonar`                                   |
+| Container fails to start                     | `vm.max_map_count` not needed here (Docker Desktop); check `docker compose ... ps` and logs |
+| Quality gate still red after fixing          | Coverage gate is on new code; add tests for the refactored/uncovered branches               |
 
 ## Related
 

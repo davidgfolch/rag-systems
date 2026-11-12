@@ -51,13 +51,13 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final Map<String, String> conversationBySession = new ConcurrentHashMap<>();
     private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
 
-    public ChatWebSocketHandler(AnswerStreamer answerStreamer, ObjectMapper objectMapper) {
-        this(answerStreamer, objectMapper, null);
+    public ChatWebSocketHandler(AnswerStreamer answerStreamer, ObjectMapper om) {
+        this(answerStreamer, om, null);
     }
 
-    public ChatWebSocketHandler(AnswerStreamer answerStreamer, ObjectMapper objectMapper, Tracer tracer) {
+    public ChatWebSocketHandler(AnswerStreamer answerStreamer, ObjectMapper om, Tracer tracer) {
         this.answerStreamer = answerStreamer;
-        this.objectMapper = objectMapper;
+        this.objectMapper = om;
         this.tracer = tracer;
     }
 

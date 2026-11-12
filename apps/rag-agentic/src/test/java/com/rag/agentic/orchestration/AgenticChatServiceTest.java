@@ -31,7 +31,7 @@ class AgenticChatServiceTest {
         assertThat(result.answer()).isEqualTo("answer");
         assertThat(result.sources()).hasSize(2);
         assertThat(result.steps()).isEqualTo(steps);
-        assertThat(result.sources().get(0).getId()).isEqualTo("chunk-0");
+        assertThat(result.sources().getFirst().getId()).isEqualTo("chunk-0");
     }
 
     @Test
@@ -40,7 +40,7 @@ class AgenticChatServiceTest {
         when(streamingModel.completeStream(anyString())).thenReturn(Flux.just("tok1", "tok2"));
         var flux = sut.askStream("q", 5);
         assertThat(flux.collectList().block()).containsExactly("tok1", "tok2");
-        ArgumentCaptor<String> prompt = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> prompt = ArgumentCaptor.captor();
         verify(streamingModel).completeStream(prompt.capture());
         assertThat(prompt.getValue()).contains("context text", "Question: q");
     }

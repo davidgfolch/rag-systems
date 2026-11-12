@@ -12,12 +12,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class ProviderProfileFileStoreTest {
 
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper om = new ObjectMapper();
 
     @Test
     void roundTripsProfilesWithSecrets() throws Exception {
         var file = Files.createTempDirectory("profiles").resolve("profiles.json");
-        var sut = new ProviderProfileFileStore(mapper, file);
+        var sut = new ProviderProfileFileStore(om, file);
         var profiles = List.of(
                 new ProviderProfile("glhf", ProviderType.OPENAI_COMPATIBLE, "GLHF",
                         "https://glhf.chat", "secret-key"),
@@ -31,14 +31,14 @@ class ProviderProfileFileStoreTest {
     @Test
     void loadsEmptyWhenFileMissing() throws Exception {
         var file = Files.createTempDirectory("profiles").resolve("missing.json");
-        var sut = new ProviderProfileFileStore(mapper, file);
+        var sut = new ProviderProfileFileStore(om, file);
         assertThat(sut.load()).isEmpty();
     }
 
     @Test
     void keepsProfilesWhenSaveFails() throws Exception {
         var directory = Files.createTempDirectory("profiles-blocked");
-        var sut = new ProviderProfileFileStore(mapper, directory);
+        var sut = new ProviderProfileFileStore(om, directory);
         var profiles = List.of(new ProviderProfile("glhf", ProviderType.OPENAI_COMPATIBLE,
                 "GLHF", "https://glhf.chat", "k"));
         sut.save(profiles);
@@ -49,7 +49,7 @@ class ProviderProfileFileStoreTest {
     void loadsEmptyOnCorruptJson() throws Exception {
         var file = Files.createTempDirectory("profiles").resolve("corrupt.json");
         Files.writeString(file, "{not json");
-        var sut = new ProviderProfileFileStore(mapper, file);
+        var sut = new ProviderProfileFileStore(om, file);
         assertThat(sut.load()).isEmpty();
     }
 }

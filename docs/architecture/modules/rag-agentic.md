@@ -8,15 +8,15 @@
 
 ## What it features
 
-| Feature | Component | Behaviour |
-|---------|-----------|-----------|
-| Query planning | `QueryPlanner` | Deterministic split of compound questions into sub-queries |
-| Tool selection | `AgentLoop` + `ToolCallParser` | Model returns a JSON array of tool calls; prose around it is tolerated |
-| Tools | `SearchTool`, `DocumentSearchTool`, `WebSearchTool` | Vector search, document-scoped search, live web fetch |
-| Fallback | `ToolRegistry` + `SearchTool` | Unknown tool names or unusable model output degrade to plain search |
-| Reflection | `ReflectionAgent` | Stops as soon as at least one vector source exists, or the budget is spent |
-| Trace | `AgentStep` list | Every tool step is returned to the caller for observability |
-| Answering | `AgenticChatService` | One-shot answer or streaming tokens over the gathered context |
+| Feature        | Component                                           | Behaviour                                                                  |
+|----------------|-----------------------------------------------------|----------------------------------------------------------------------------|
+| Query planning | `QueryPlanner`                                      | Deterministic split of compound questions into sub-queries                 |
+| Tool selection | `AgentLoop` + `ToolCallParser`                      | Model returns a JSON array of tool calls; prose around it is tolerated     |
+| Tools          | `SearchTool`, `DocumentSearchTool`, `WebSearchTool` | Vector search, document-scoped search, live web fetch                      |
+| Fallback       | `ToolRegistry` + `SearchTool`                       | Unknown tool names or unusable model output degrade to plain search        |
+| Reflection     | `ReflectionAgent`                                   | Stops as soon as at least one vector source exists, or the budget is spent |
+| Trace          | `AgentStep` list                                    | Every tool step is returned to the caller for observability                |
+| Answering      | `AgenticChatService`                                | One-shot answer or streaming tokens over the gathered context              |
 
 ## Code map
 

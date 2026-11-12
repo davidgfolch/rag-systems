@@ -15,7 +15,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 })
 public class RagAdvancedApplication {
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         SpringApplication.run(RagAdvancedApplication.class, args);
     }
 }

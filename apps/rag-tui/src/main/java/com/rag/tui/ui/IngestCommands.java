@@ -1,5 +1,6 @@
 package com.rag.tui.ui;
 
+import com.rag.common.core.services.FileDocumentLoader;
 import io.micrometer.tracing.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,6 +14,7 @@ import static com.rag.common.core.domain.MetadataKeys.FILE_NAME;
 import static com.rag.tui.ui.CommandDispatcher.orEmpty;
 import static com.rag.tui.ui.TerminalStyle.error;
 import static com.rag.tui.ui.TerminalStyle.success;
+import static java.util.Optional.ofNullable;
 
 /**
  * Handles the {@code add-file} and {@code add-folder} commands handed to it by
@@ -61,10 +63,9 @@ public class IngestCommands {
         }
         var duplicate = findByContentHash(file.metadata());
         if (duplicate.isPresent()) {
-            var chosen = promptOverride(duplicate.get(), "file with identical content");
+            var chosen = promptOverride(duplicate.get());
             if (chosen == null) return skipped(duplicate.get());
-            clients.apiClient().deleteDocument(chosen.baseUrl(), chosen.documentId());
-            log.info("Overriding duplicate document {} on {}", chosen.documentId(), chosen.moduleName());
+            deleteDocument(chosen);
         }
         if (!poller.markInFlight(contentHash)) {
             return success("Skipped '%s' - an ingestion with identical content is already in progress.%n"
@@ -76,6 +77,11 @@ public class IngestCommands {
                 .formatted(path, job.getDocumentId()));
     }
 
+    private void deleteDocument(DuplicateFinder.Match chosen) {
+        clients.apiClient().deleteDocument(chosen.baseUrl(), chosen.documentId());
+        log.info("Overriding duplicate document {} on {}", chosen.documentId(), chosen.moduleName());
+    }
+
     public String addFolder(String path, Consumer<String> tokenSink) {
         if (path.isEmpty()) {
             path = orEmpty(prompter.prompt("Folder path: "));
@@ -84,28 +90,25 @@ public class IngestCommands {
         var files = clients.fileLoader().loadFolder(path);
         if (files.isEmpty())
             return error("No ingestible files found in: " + path);
-        int skippedDuplicates = 0;
-        int submitted = 0;
-        for (var file : files) {
-            var contentHash = contentHashOf(file.metadata());
-            var duplicate = findByContentHash(file.metadata());
-            if (shouldSkip(duplicate, contentHash) || !poller.markInFlight(contentHash)) {
-                skippedDuplicates++;
-                continue;
-            }
-            var fileName = file.metadata().get(FILE_NAME).toString();
-            var job = clients.apiClient().submitIngestFile(file.bytes(), fileName, file.metadata());
-            poller.start(job.getDocumentId(), contentHash, tokenSink);
-            submitted++;
-        }
+        var submitted = files.stream().map(file -> submit(file, tokenSink)).filter(Boolean::booleanValue).count();
         return success("Submitted %d of %d files from '%s'; I'll report as each completes."
                 .formatted(submitted, files.size(), path)
-                + (skippedDuplicates > 0 ? " (" + skippedDuplicates + " duplicate(s) skipped)" : ""));
+                + (submitted < files.size() ? " (" + (files.size() - submitted) + " duplicate(s) skipped)" : ""));
+    }
+
+    private boolean submit(FileDocumentLoader.LoadedFile file, Consumer<String> tokenSink) {
+        var contentHash = contentHashOf(file.metadata());
+        if (shouldSkip(findByContentHash(file.metadata()).orElse(null), contentHash) || !poller.markInFlight(contentHash))
+            return false;
+        var fileName = file.metadata().get(FILE_NAME).toString();
+        var job = clients.apiClient().submitIngestFile(file.bytes(), fileName, file.metadata());
+        poller.start(job.getDocumentId(), contentHash, tokenSink);
+        return true;
     }
 
     private Optional<DuplicateFinder.Match> findByContentHash(Map<String, Object> metadata) {
         var hash = contentHashOf(metadata);
-        return hash == null ? Optional.<DuplicateFinder.Match>empty() : duplicates.findByContentHash(hash);
+        return hash == null ? Optional.empty() : duplicates.findByContentHash(hash);
     }
 
     private static String contentHashOf(Map<String, Object> metadata) {
@@ -113,28 +116,26 @@ public class IngestCommands {
         return value == null ? null : value.toString();
     }
 
-    private boolean shouldSkip(Optional<DuplicateFinder.Match> duplicate, String contentHash) {
+    private boolean shouldSkip(DuplicateFinder.Match duplicate, String contentHash) {
         if (poller.isInFlight(contentHash)) return true;
-        if (duplicate.isEmpty()) return false;
+        if (ofNullable(duplicate).isEmpty()) return false;
         if (shouldOverride(duplicate)) {
-            var chosen = duplicate.get();
-            clients.apiClient().deleteDocument(chosen.baseUrl(), chosen.documentId());
-            log.info("Overriding duplicate document {} on {}", chosen.documentId(), chosen.moduleName());
+            deleteDocument(duplicate);
             return false;
         }
         return true;
     }
 
-    private boolean shouldOverride(Optional<DuplicateFinder.Match> duplicate) {
-        if (duplicate.isEmpty()) return false;
+    private boolean shouldOverride(DuplicateFinder.Match duplicate) {
+        if (ofNullable(duplicate).isEmpty()) return false;
         return prompter.confirm("Duplicate file with identical content already ingested as document "
-                + duplicate.get().documentId() + " on " + duplicate.get().moduleName()
+                + duplicate.documentId() + " on " + duplicate.moduleName()
                 + ". Override? (y/N) ");
     }
 
-    private DuplicateFinder.Match promptOverride(DuplicateFinder.Match match, String description) {
+    private DuplicateFinder.Match promptOverride(DuplicateFinder.Match match) {
         return prompter.confirm("Duplicate %s already ingested as document %s on %s. Override? (y/N) "
-                .formatted(description, match.documentId(), match.moduleName())) ? match : null;
+                .formatted("file with identical content", match.documentId(), match.moduleName())) ? match : null;
     }
 
     private static String skipped(DuplicateFinder.Match match) {

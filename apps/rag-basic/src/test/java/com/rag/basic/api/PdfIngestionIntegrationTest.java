@@ -108,7 +108,7 @@ class PdfIngestionIntegrationTest {
                 Learning Domain-Driven Design
                 This book explains how to apply domain-driven design to software
                 systems. It covers tactical patterns such as aggregates, value
-                objects, and domain services, alongside strategic design.""".replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)");
+                objects, and domain services, alongside strategic design.""";
         String stream = "BT /F1 12 Tf 72 720 Td (" + escapedBody + ") Tj ET\n";
         String pdf = "%PDF-1.4\n"
                 + "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n"

@@ -24,13 +24,13 @@ The workflow uses a dedicated job instead of `paths-ignore` on purpose: a docs-o
 
 ## Workflow Jobs
 
-| Job | Purpose | Command |
-|-----|---------|---------|
-| `changes` | Decides whether code jobs must run | `git diff` against the push range / PR base |
-| `build` | Compiles and installs all modules, then caches the `com.rag` artifacts for the matrix | `./mvnw -B -DskipTests install` |
-| `architecture-tests` | Runs every ArchUnit suite, including the cross-module file-length gate | `./mvnw -B test -Dtest='*ArchitectureTest' -Dsurefire.failIfNoSpecifiedTests=false` |
-| `tests` | Runs each module's tests with JaCoCo coverage (≥ 90% gate) | `./mvnw -B -pl apps/<module> verify` |
-| `ci-ok` | Single aggregate status check required by branch protection | fails when any job failed or was cancelled |
+| Job                  | Purpose                                                                               | Command                                                                             |
+|----------------------|---------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------|
+| `changes`            | Decides whether code jobs must run                                                    | `git diff` against the push range / PR base                                         |
+| `build`              | Compiles and installs all modules, then caches the `com.rag` artifacts for the matrix | `./mvnw -B -DskipTests install`                                                     |
+| `architecture-tests` | Runs every ArchUnit suite, including the cross-module file-length gate                | `./mvnw -B test -Dtest='*ArchitectureTest' -Dsurefire.failIfNoSpecifiedTests=false` |
+| `tests`              | Runs each module's tests with JaCoCo coverage (≥ 90% gate)                            | `./mvnw -B -pl apps/<module> verify`                                                |
+| `ci-ok`              | Single aggregate status check required by branch protection                           | fails when any job failed or was cancelled                                          |
 
 The `tests` job uses a **matrix strategy** with `fail-fast: false` so one failing module does not cancel the others. Each module produces a coverage report uploaded as an artifact.
 
@@ -113,11 +113,11 @@ A badge is **green** when the run passes and **red** when it fails or is cancell
 
 The CI commands mirror the local scripts:
 
-| CI | Local |
-|----|-------|
+| CI                                       | Local                                                            |
+|------------------------------------------|------------------------------------------------------------------|
 | `./mvnw test -Dtest='*ArchitectureTest'` | `scripts\test.bat` (architecture suites run with the full suite) |
-| `./mvnw -pl apps/<module> verify` | `scripts\test.bat <module> --coverage` |
-| `./mvnw -DskipTests install` | `scripts\build.bat` |
+| `./mvnw -pl apps/<module> verify`        | `scripts\test.bat <module> --coverage`                           |
+| `./mvnw -DskipTests install`             | `scripts\build.bat`                                              |
 
 Run the same checks locally before pushing so CI stays green.
 
@@ -128,15 +128,15 @@ For isolated, parallel feature development use the `dev` scripts
 repo into a per-feature sibling folder, create a `feat/<name>` branch,
 propagate the auto-generated SonarQube token, and drive the full lifecycle:
 
-| `dev` command | Purpose | CI equivalent |
-|---------------|---------|---------------|
-| `dev new <name>` | Clone to `../rag-systems-<name>`, branch `feat/<name>` | — |
-| `dev test [module]` | Run tests | `tests` job |
-| `dev check [module]` | Tests + SonarQube scan | `tests` + quality gate |
-| `dev commit` / `dev push` | Stage all, commit, push branch | — |
-| `dev pr [title]` | Open PR vs `main` | — |
-| `dev merge` | Enable auto-merge, wait for `CI gate`, delete clone | `ci-ok` |
-| `dev cleanup <name\|path>` | Delete a sibling clone by name or path | — |
+| `dev` command              | Purpose                                                | CI equivalent          |
+|----------------------------|--------------------------------------------------------|------------------------|
+| `dev new <name>`           | Clone to `../rag-systems-<name>`, branch `feat/<name>` | —                      |
+| `dev test [module]`        | Run tests                                              | `tests` job            |
+| `dev check [module]`       | Tests + SonarQube scan                                 | `tests` + quality gate |
+| `dev commit` / `dev push`  | Stage all, commit, push branch                         | —                      |
+| `dev pr [title]`           | Open PR vs `main`                                      | —                      |
+| `dev merge`                | Enable auto-merge, wait for `CI gate`, delete clone    | `ci-ok`                |
+| `dev cleanup <name\|path>` | Delete a sibling clone by name or path                 | —                      |
 
 `dev merge` refuses to merge when any check on the pull request is failing or
 cancelled, and uses `gh pr merge --auto` so GitHub itself waits for the

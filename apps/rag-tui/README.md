@@ -10,24 +10,24 @@ rag-basic and friends expose REST APIs; rag-tui gives you a lightweight, interac
 
 rag-tui talks to other services at runtime — they must be reachable:
 
-| Service | Env var / default | Used for |
-|---------|-------------------|----------|
-| rag-provider | `RAG_PROVIDER_URL` (`http://localhost:8086`) | `connect` (model switching), status |
-| rag-basic / rag-advanced / ... | `RAG_BASIC_URL` (`8081`) ... | `add-file`/`add-url`/`ask`/`start`/`use` |
-| rag-memory | `RAG_MEMORY_URL` (`8084`) | conversation history |
-| rag-webcrawler | `RAG_WEBCRAWLER_URL` (`8085`) | `add-url` (module-orchestrated) |
+| Service                        | Env var / default                            | Used for                                 |
+|--------------------------------|----------------------------------------------|------------------------------------------|
+| rag-provider                   | `RAG_PROVIDER_URL` (`http://localhost:8086`) | `connect` (model switching), status      |
+| rag-basic / rag-advanced / ... | `RAG_BASIC_URL` (`8081`) ...                 | `add-file`/`add-url`/`ask`/`start`/`use` |
+| rag-memory                     | `RAG_MEMORY_URL` (`8084`)                    | conversation history                     |
+| rag-webcrawler                 | `RAG_WEBCRAWLER_URL` (`8085`)                | `add-url` (module-orchestrated)          |
 
 ## Features
 
-| Feature | Description |
-|---------|-------------|
-| `add-file <path>` | Ingest a local document (PDF, DOCX, TXT, HTML) via Tika; de-duplicated by SHA-256 content hash |
-| `add-url <url>` | Crawl a site from the URL: the active module fetches and ranks pages, the TUI asks one ranking question per crawl, and results are de-duplicated by domain + URI (`--all`, `--max-pages`, `--override-all`) |
-| `add-url-cancel` | Stop the crawl currently being driven (also accepted at crawl prompts) |
-| `ask <question>` | Retrieval-augmented answer with cited source chunks |
-| `connect` | Provider status; browse model catalog; switch chat/embedding provider+model at runtime (Ollama default, OpenRouter/OpenAI-compatible registerable) |
-| `variant` | List, create and switch the active module's pipeline variants; each variant owns its `variant_<id>` table in the module schema |
-| `help [<command>]` / `quit` | Grouped usage, per-command detail (arguments, recommended values) and exit |
+| Feature                     | Description                                                                                                                                                                                                 |
+|-----------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `add-file <path>`           | Ingest a local document (PDF, DOCX, TXT, HTML) via Tika; de-duplicated by SHA-256 content hash                                                                                                              |
+| `add-url <url>`             | Crawl a site from the URL: the active module fetches and ranks pages, the TUI asks one ranking question per crawl, and results are de-duplicated by domain + URI (`--all`, `--max-pages`, `--override-all`) |
+| `add-url-cancel`            | Stop the crawl currently being driven (also accepted at crawl prompts)                                                                                                                                      |
+| `ask <question>`            | Retrieval-augmented answer with cited source chunks                                                                                                                                                         |
+| `connect`                   | Provider status; browse model catalog; switch chat/embedding provider+model at runtime (Ollama default, OpenRouter/OpenAI-compatible registerable)                                                          |
+| `variant`                   | List, create and switch the active module's pipeline variants; each variant owns its `variant_<id>` table in the module schema                                                                              |
+| `help [<command>]` / `quit` | Grouped usage, per-command detail (arguments, recommended values) and exit                                                                                                                                  |
 
 ## Architecture
 
@@ -100,15 +100,15 @@ The seeded `boot` variant keeps the module's `chunks` table; every other variant
 
 Set via environment variables or `application.yml`:
 
-| Property | Default | Description |
-|----------|---------|-------------|
-| `rag.vector-store.type` | `in-memory` | `in-memory` or `pgvector` |
-| `rag.parsing.mode` | `tika` | `tika` or `plain` |
-| `rag.chunking.size` | `512` | Max chunk size (chars) |
-| `rag.chunking.overlap` | `64` | Chunk overlap |
-| `rag.chat.top-k` | `4` | Retrieval depth for `ask` |
-| `rag.http.read-timeout-seconds` | `60` | Read timeout for ordinary module calls |
-| `rag.http.crawl-read-timeout-seconds` | `600` | Read timeout for crawl start/step/cancel; must exceed `rag.ingestion.queue-wait` plus crawler timeouts |
+| Property                              | Default     | Description                                                                                            |
+|---------------------------------------|-------------|--------------------------------------------------------------------------------------------------------|
+| `rag.vector-store.type`               | `in-memory` | `in-memory` or `pgvector`                                                                              |
+| `rag.parsing.mode`                    | `tika`      | `tika` or `plain`                                                                                      |
+| `rag.chunking.size`                   | `512`       | Max chunk size (chars)                                                                                 |
+| `rag.chunking.overlap`                | `64`        | Chunk overlap                                                                                          |
+| `rag.chat.top-k`                      | `4`         | Retrieval depth for `ask`                                                                              |
+| `rag.http.read-timeout-seconds`       | `60`        | Read timeout for ordinary module calls                                                                 |
+| `rag.http.crawl-read-timeout-seconds` | `600`       | Read timeout for crawl start/step/cancel; must exceed `rag.ingestion.queue-wait` plus crawler timeouts |
 
 Profiles: `local` (Ollama) and `cloud` (OpenAI). See the root `application.yml` and `docs/guides/tui-ingestion.md`.
 

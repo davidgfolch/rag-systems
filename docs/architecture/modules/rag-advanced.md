@@ -8,14 +8,14 @@
 
 ## What it actually adds
 
-| Feature | Implemented as | Effect |
-|---------|----------------|--------|
-| Candidate widening | `topK × 4` vector hits before re-ranking | Gives the lexical pass room to promote good matches |
-| Lexical scoring | `LexicalScorer` — BM25-style over the candidate set | Rewards exact/rare term matches vectors blur |
-| Rank fusion | RRF over vector order + lexical order | Combines both signals without score normalization |
-| Metadata filtering | `MetadataFilter` — exact key/value match | Narrows candidates before fusion |
-| Document scoping | `documentId` filter in the store | Same as rag-basic |
-| Pipeline variants | Boot + runtime variants | Per-variant chunking, model and table |
+| Feature            | Implemented as                                      | Effect                                              |
+|--------------------|-----------------------------------------------------|-----------------------------------------------------|
+| Candidate widening | `topK × 4` vector hits before re-ranking            | Gives the lexical pass room to promote good matches |
+| Lexical scoring    | `LexicalScorer` — BM25-style over the candidate set | Rewards exact/rare term matches vectors blur        |
+| Rank fusion        | RRF over vector order + lexical order               | Combines both signals without score normalization   |
+| Metadata filtering | `MetadataFilter` — exact key/value match            | Narrows candidates before fusion                    |
+| Document scoping   | `documentId` filter in the store                    | Same as rag-basic                                   |
+| Pipeline variants  | Boot + runtime variants                             | Per-variant chunking, model and table               |
 
 **Not implemented (despite older README wording):** cross-encoder/LLM re-ranking, query transformation/expansion, and contextual compression. The implemented re-ranker is the lexical BM25 + RRF pass described below.
 

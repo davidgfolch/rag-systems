@@ -43,16 +43,16 @@ public class RemoteChatModelPort implements ChatModelPort, StreamingChatModelPor
     private static final String STREAM_FAILED = "Provider stream failed: ";
 
     private final ProviderHttpClient httpClient;
-    private final ObjectMapper objectMapper;
+    private final ObjectMapper om;
     private final Tracer tracer;
 
-    public RemoteChatModelPort(ProviderHttpClient httpClient, ObjectMapper objectMapper) {
-        this(httpClient, objectMapper, null);
+    public RemoteChatModelPort(ProviderHttpClient httpClient, ObjectMapper om) {
+        this(httpClient, om, null);
     }
 
-    public RemoteChatModelPort(ProviderHttpClient httpClient, ObjectMapper objectMapper, Tracer tracer) {
+    public RemoteChatModelPort(ProviderHttpClient httpClient, ObjectMapper om, Tracer tracer) {
         this.httpClient = httpClient;
-        this.objectMapper = objectMapper;
+        this.om = om;
         this.tracer = tracer;
     }
 
@@ -99,7 +99,7 @@ public class RemoteChatModelPort implements ChatModelPort, StreamingChatModelPor
     }
 
     private boolean consumeFrame(Sinks.Many<String> sink, String json) throws IOException {
-        var frame = objectMapper.readValue(json, ChatResponse.class);
+        var frame = om.readValue(json, ChatResponse.class);
         return switch (frame.type()) {
             case TOKEN -> {
                 if (frame.content() != null && sink.tryEmitNext(frame.content()).isFailure()) {

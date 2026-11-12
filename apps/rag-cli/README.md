@@ -10,12 +10,12 @@ Provide a simple way to test RAG queries interactively or in batches using a ter
 
 ## Features
 
-| Feature | Description |
-|---------|-------------|
+| Feature          | Description                                  |
+|------------------|----------------------------------------------|
 | Interactive mode | Type queries, get answers with source chunks |
-| Batch mode | Run a file of queries, output results |
-| Source display | Show which chunks informed each answer |
-| Profile support | local (Ollama) or cloud (OpenAI) |
+| Batch mode       | Run a file of queries, output results        |
+| Source display   | Show which chunks informed each answer       |
+| Profile support  | local (Ollama) or cloud (OpenAI)             |
 
 ## Running
 

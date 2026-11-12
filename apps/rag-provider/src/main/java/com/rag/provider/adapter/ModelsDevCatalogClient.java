@@ -15,6 +15,7 @@ import org.springframework.web.client.RestClientException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Fetches the models.dev {@code api.json} catalog over HTTP and maps it onto
@@ -28,12 +29,12 @@ public class ModelsDevCatalogClient implements ModelCatalogPort {
 
     private final String source;
     private final RestClient restClient;
-    private final ObjectMapper objectMapper;
+    private final ObjectMapper om;
 
-    public ModelsDevCatalogClient(String source, RestClient restClient, ObjectMapper objectMapper) {
+    public ModelsDevCatalogClient(String source, RestClient restClient, ObjectMapper om) {
         this.source = source;
         this.restClient = restClient;
-        this.objectMapper = objectMapper;
+        this.om = om;
     }
 
     @Override
@@ -48,7 +49,7 @@ public class ModelsDevCatalogClient implements ModelCatalogPort {
             return List.of();
         }
         try {
-            var models = parse(objectMapper, body);
+            var models = parse(om, body);
             log.info("Fetched {} models from {}", models.size(), source);
             return models;
         } catch (JsonProcessingException e) {
@@ -56,11 +57,10 @@ public class ModelsDevCatalogClient implements ModelCatalogPort {
         }
     }
 
-    static List<ModelInfo> parse(ObjectMapper objectMapper, String json) throws JsonProcessingException {
-        var root = objectMapper.readTree(json);
+    static List<ModelInfo> parse(ObjectMapper om, String json) throws JsonProcessingException {
+        var root = om.readTree(json);
         var models = new ArrayList<ModelInfo>();
-        for (var provider = root.fields(); provider.hasNext(); ) {
-            var entry = provider.next();
+        for (Map.Entry<String, JsonNode> entry : root.properties()) {
             collectModels(entry.getValue(), entry.getKey(), models);
         }
         return models;
@@ -73,14 +73,13 @@ public class ModelsDevCatalogClient implements ModelCatalogPort {
         }
         String baseUrl = providerNode.path("api").asText(null);
         String apiKeyEnv = firstEnvVar(providerNode.path("env"));
-        for (var entry = modelsNode.fields(); entry.hasNext(); ) {
-            var modelEntry = entry.next();
+        for (Map.Entry<String, JsonNode> modelEntry : modelsNode.properties()) {
             out.add(model(providerId, modelEntry.getKey(), modelEntry.getValue(), baseUrl, apiKeyEnv));
         }
     }
 
     private static String firstEnvVar(JsonNode env) {
-        return env.isArray() && env.size() > 0 ? env.get(0).asText(null) : null;
+        return env.isArray() && !env.isEmpty() ? env.get(0).asText(null) : null;
     }
 
     private static ModelInfo model(String providerId, String modelId, JsonNode node,

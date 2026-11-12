@@ -20,19 +20,19 @@ It is a plain HTTP service (no PostgreSQL, no provider dependency) — see [ADR-
 
 ## Quick access
 
-| Endpoint | URL |
-|----------|-----|
-| Base | <http://localhost:8085> |
-| Health | <http://localhost:8085/actuator/health> |
-| Metrics | <http://localhost:8085/actuator/prometheus> |
+| Endpoint | URL                                         |
+|----------|---------------------------------------------|
+| Base     | <http://localhost:8085>                     |
+| Health   | <http://localhost:8085/actuator/health>     |
+| Metrics  | <http://localhost:8085/actuator/prometheus> |
 
 ## HTTP API
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| `POST` | `/api/fetch` | Fetch a single page: `{"url": "https://..."}` → `PageDTO` (title, text, links) |
+| Method | Path               | Purpose                                                                                                  |
+|--------|--------------------|----------------------------------------------------------------------------------------------------------|
+| `POST` | `/api/fetch`       | Fetch a single page: `{"url": "https://..."}` → `PageDTO` (title, text, links)                           |
 | `POST` | `/api/fetch/links` | Fetch the top-K pages most relevant to a question: `{"url": "...", "question": "..."}` → `List<PageDTO>` |
-| `POST` | `/api/rank-links` | Rank candidate links without fetching: `{"links": [...], "question": "..."}` → `{"links": [...]}` |
+| `POST` | `/api/rank-links`  | Rank candidate links without fetching: `{"links": [...], "question": "..."}` → `{"links": [...]}`        |
 
 Example:
 
@@ -63,10 +63,10 @@ The link prioritizer is swappable via `CRAWLER_PRIORITIZER` (`deterministic` def
 
 ## Configuration
 
-| Property | Env var | Default | Description |
-|----------|---------|---------|-------------|
-| `server.port` | `RAG_WEBCRAWLER_PORT` | `8085` | HTTP port (must match the port in `RAG_WEBCRAWLER_URL`) |
-| `rag.crawler.prioritizer` | `CRAWLER_PRIORITIZER` | `deterministic` | Link ranking strategy (`deterministic`/`llm`) |
+| Property                  | Env var               | Default         | Description                                             |
+|---------------------------|-----------------------|-----------------|---------------------------------------------------------|
+| `server.port`             | `RAG_WEBCRAWLER_PORT` | `8085`          | HTTP port (must match the port in `RAG_WEBCRAWLER_URL`) |
+| `rag.crawler.prioritizer` | `CRAWLER_PRIORITIZER` | `deterministic` | Link ranking strategy (`deterministic`/`llm`)           |
 
 ## Testing
 

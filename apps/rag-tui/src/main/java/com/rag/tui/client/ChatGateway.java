@@ -40,21 +40,20 @@ public class ChatGateway {
 
     private final ModuleRegistry registry;
     private final WebSocketClient webSocketClient;
-    private final ObjectMapper objectMapper;
+    private final ObjectMapper om;
     private final long timeoutSeconds;
     private final Tracer tracer;
     private final AtomicReference<WebSocketSession> active = new AtomicReference<>();
 
-    public ChatGateway(ModuleRegistry registry, WebSocketClient webSocketClient, ObjectMapper objectMapper,
-                       long timeoutSeconds) {
-        this(registry, webSocketClient, objectMapper, timeoutSeconds, null);
+    public ChatGateway(ModuleRegistry registry, WebSocketClient webSocketClient, ObjectMapper om, long timeoutSeconds) {
+        this(registry, webSocketClient, om, timeoutSeconds, null);
     }
 
-    public ChatGateway(ModuleRegistry registry, WebSocketClient webSocketClient, ObjectMapper objectMapper,
+    public ChatGateway(ModuleRegistry registry, WebSocketClient webSocketClient, ObjectMapper om,
                        long timeoutSeconds, Tracer tracer) {
         this.registry = registry;
         this.webSocketClient = webSocketClient;
-        this.objectMapper = objectMapper;
+        this.om = om;
         this.timeoutSeconds = timeoutSeconds;
         this.tracer = tracer;
     }
@@ -88,7 +87,7 @@ public class ChatGateway {
         WebSocketHandler handler = new TextWebSocketHandler() {
             @Override
             protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-                ChatResponse res = objectMapper.readValue(message.getPayload(), ChatResponse.class);
+                ChatResponse res = om.readValue(message.getPayload(), ChatResponse.class);
                 switch (res.type()) {
                     case TOKEN -> onToken.accept(res.content());
                     case DONE -> {
@@ -127,7 +126,7 @@ public class ChatGateway {
     private void sendAsk(WebSocketSession session, String question, int topK, String conversationId) {
         ChatRequest ask = new ChatRequest(ASK, question, topK, conversationId);
         try {
-            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(ask)));
+            session.sendMessage(new TextMessage(om.writeValueAsString(ask)));
         } catch (IOException e) {
             throw new ChatException("Failed to send ask frame", e);
         }

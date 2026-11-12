@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rag.common.core.tracing.TracePropagation;
 import com.rag.tui.launcher.ModuleRegistry;
 import com.rag.tui.testfixture.TestModules;
-import io.micrometer.tracing.test.simple.SimpleTraceContext;
 import io.micrometer.tracing.test.simple.SimpleTracer;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.socket.TextMessage;
@@ -53,10 +52,9 @@ class ChatGatewayTest {
                 CompletableFuture.completedFuture(session));
         doNothing().when(session).sendMessage(any(TextMessage.class));
         runner = new Thread(() -> sut.ask("hello", 4, tokens::add));
-        runner.setUncaughtExceptionHandler((thread, error) -> runnerError = error);
+        runner.setUncaughtExceptionHandler((_, error) -> runnerError = error);
         runner.start();
-        ArgumentCaptor<WebSocketHandler> captor =
-                ArgumentCaptor.forClass(WebSocketHandler.class);
+        ArgumentCaptor<WebSocketHandler> captor = ArgumentCaptor.captor();
         verify(webSocketClient, timeout(2000)).execute(captor.capture(), anyString());
         handler = (TextWebSocketHandler) captor.getValue();
     }
@@ -107,21 +105,19 @@ class ChatGatewayTest {
     void attachesW3CTraceparentWhenSpanActive() throws Exception {
         var tracer = new SimpleTracer();
         var span = tracer.nextSpan().name("tui.command").start();
-        var context = (SimpleTraceContext) span.context();
+        var context = span.context();
         context.setTraceId(TRACE_ID);
         context.setSpanId(SPAN_ID);
         context.setSampled(true);
         var gateway = new ChatGateway(registry, webSocketClient, new ObjectMapper(), 60, tracer);
-        ArgumentCaptor<WebSocketHandler> handlerCaptor =
-                ArgumentCaptor.forClass(WebSocketHandler.class);
-        ArgumentCaptor<WebSocketHttpHeaders> headersCaptor =
-                ArgumentCaptor.forClass(WebSocketHttpHeaders.class);
+        ArgumentCaptor<WebSocketHandler> handlerCaptor = ArgumentCaptor.captor();
+        ArgumentCaptor<WebSocketHttpHeaders> headersCaptor = ArgumentCaptor.captor();
         when(webSocketClient.execute(handlerCaptor.capture(), headersCaptor.capture(), any(URI.class)))
                 .thenReturn(CompletableFuture.completedFuture(session));
         doNothing().when(session).sendMessage(any(TextMessage.class));
         runner = new Thread(() ->
-                TracePropagation.runWithSpan(tracer, span, () -> gateway.ask("hello", 4, t -> {})));
-        runner.setUncaughtExceptionHandler((thread, error) -> runnerError = error);
+                TracePropagation.runWithSpan(tracer, span, () -> gateway.ask("hello", 4, _ -> {})));
+        runner.setUncaughtExceptionHandler((_, error) -> runnerError = error);
         runner.start();
         verify(webSocketClient, timeout(2000)).execute(any(), any(WebSocketHttpHeaders.class), any(URI.class));
         assertThat(headersCaptor.getValue().getFirst(TracePropagation.TRACEPARENT_HEADER))
@@ -138,14 +134,13 @@ class ChatGatewayTest {
         var tracer = new SimpleTracer();
         var span = tracer.nextSpan().name("tui.command").start();
         var gateway = new ChatGateway(registry, webSocketClient, new ObjectMapper(), 60, tracer);
-        ArgumentCaptor<WebSocketHandler> handlerCaptor =
-                ArgumentCaptor.forClass(WebSocketHandler.class);
+        ArgumentCaptor<WebSocketHandler> handlerCaptor = ArgumentCaptor.captor();
         when(webSocketClient.execute(handlerCaptor.capture(), anyString()))
                 .thenReturn(CompletableFuture.completedFuture(session));
         doNothing().when(session).sendMessage(any(TextMessage.class));
         runner = new Thread(() ->
-                TracePropagation.runWithSpan(tracer, span, () -> gateway.ask("hello", 4, t -> {})));
-        runner.setUncaughtExceptionHandler((thread, error) -> runnerError = error);
+                TracePropagation.runWithSpan(tracer, span, () -> gateway.ask("hello", 4, _ -> {})));
+        runner.setUncaughtExceptionHandler((_, error) -> runnerError = error);
         runner.start();
         verify(webSocketClient, timeout(2000)).execute(any(), anyString());
         verify(webSocketClient, never()).execute(any(), any(WebSocketHttpHeaders.class), any(URI.class));

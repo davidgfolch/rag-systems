@@ -12,49 +12,49 @@ RAG systems have unique observability needs because answers depend on **retrieve
 
 ## Stack
 
-| Component | Role |
-|-----------|------|
-| Micrometer | Metrics + tracing facade (Spring Boot standard) |
-| OpenTelemetry | Distributed tracing (Micrometer bridge + OTLP exporter) |
-| Tempo | Trace storage and querying |
-| Loki | Log aggregation (loki4j pushes structured JSON) |
-| Prometheus | Metrics storage |
-| Grafana | Visualization, trace-to-log correlation |
-| SLF4J + Logback | Structured logging with `traceId`/`spanId` MDC keys |
+| Component       | Role                                                    |
+|-----------------|---------------------------------------------------------|
+| Micrometer      | Metrics + tracing facade (Spring Boot standard)         |
+| OpenTelemetry   | Distributed tracing (Micrometer bridge + OTLP exporter) |
+| Tempo           | Trace storage and querying                              |
+| Loki            | Log aggregation (loki4j pushes structured JSON)         |
+| Prometheus      | Metrics storage                                         |
+| Grafana         | Visualization, trace-to-log correlation                 |
+| SLF4J + Logback | Structured logging with `traceId`/`spanId` MDC keys     |
 
 ## Metrics Categories
 
 ### Ingestion
-| Metric | Type | Description |
-|--------|------|-------------|
-| `rag_ingestion_documents_processed_total` | Counter | Documents ingested |
-| `rag_ingestion_chunks_created_total` | Counter | Chunks created |
-| `rag_ingestion_duration_seconds` | Histogram | Ingestion time |
-| `rag_ingestion_errors_total` | Counter | Ingestion failures |
+| Metric                                    | Type      | Description        |
+|-------------------------------------------|-----------|--------------------|
+| `rag_ingestion_documents_processed_total` | Counter   | Documents ingested |
+| `rag_ingestion_chunks_created_total`      | Counter   | Chunks created     |
+| `rag_ingestion_duration_seconds`          | Histogram | Ingestion time     |
+| `rag_ingestion_errors_total`              | Counter   | Ingestion failures |
 
 ### Retrieval
-| Metric | Type | Description |
-|--------|------|-------------|
+| Metric                                | Type      | Description              |
+|---------------------------------------|-----------|--------------------------|
 | `rag_retrieval_query_latency_seconds` | Histogram | End-to-end query latency |
-| `rag_retrieval_vector_search_seconds` | Histogram | Vector search time |
-| `rag_retrieval_chunks_returned` | Histogram | Chunks per query |
-| `rag_retrieval_similarity_score` | Histogram | Score distribution |
+| `rag_retrieval_vector_search_seconds` | Histogram | Vector search time       |
+| `rag_retrieval_chunks_returned`       | Histogram | Chunks per query         |
+| `rag_retrieval_similarity_score`      | Histogram | Score distribution       |
 
 ### Generation
-| Metric | Type | Description |
-|--------|------|-------------|
-| `rag_generation_tokens_input` | Counter | Input tokens |
-| `rag_generation_tokens_output` | Counter | Output tokens |
-| `rag_generation_latency_seconds` | Histogram | LLM response time |
-| `rag_generation_cost_total` | Counter | Cost (provider-specific) |
+| Metric                           | Type      | Description              |
+|----------------------------------|-----------|--------------------------|
+| `rag_generation_tokens_input`    | Counter   | Input tokens             |
+| `rag_generation_tokens_output`   | Counter   | Output tokens            |
+| `rag_generation_latency_seconds` | Histogram | LLM response time        |
+| `rag_generation_cost_total`      | Counter   | Cost (provider-specific) |
 
 ### Quality (LLM-as-judge)
-| Metric | Type | Description |
-|--------|------|-------------|
-| `rag_quality_relevance_score` | Gauge | Answer relevance |
-| `rag_quality_faithfulness_score` | Gauge | Faithfulness to context |
-| `rag_quality_hallucination_detected_total` | Counter | Hallucination events |
-| `rag_quality_recall` | Gauge | Retrieval recall |
+| Metric                                     | Type    | Description             |
+|--------------------------------------------|---------|-------------------------|
+| `rag_quality_relevance_score`              | Gauge   | Answer relevance        |
+| `rag_quality_faithfulness_score`           | Gauge   | Faithfulness to context |
+| `rag_quality_hallucination_detected_total` | Counter | Hallucination events    |
+| `rag_quality_recall`                       | Gauge   | Retrieval recall        |
 
 ## Tracing
 

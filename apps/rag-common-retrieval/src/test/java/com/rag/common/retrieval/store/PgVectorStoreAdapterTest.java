@@ -98,7 +98,7 @@ class PgVectorStoreAdapterTest {
         assertThat(docs.get(0).metadata()).containsEntry(MetadataKeys.FILE_NAME, "note.txt");
         assertThat(docs.get(1).documentId()).isEqualTo("d2");
         assertThat(docs.get(1).metadata()).isEmpty();
-        var captor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> captor = ArgumentCaptor.captor();
         verify(conn).prepareStatement(captor.capture());
         assertThat(captor.getValue()).contains("\"rag_basic\".\"chunks\"");
     }
@@ -132,7 +132,7 @@ class PgVectorStoreAdapterTest {
         when(statement.executeUpdate()).thenReturn(3);
         var pgAdapter = new PgVectorStoreAdapter(delegate, ds, "rag_basic", "chunks");
         pgAdapter.delete("d1");
-        var captor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> captor = ArgumentCaptor.captor();
         verify(conn).prepareStatement(captor.capture());
         assertThat(captor.getValue())
                 .contains("DELETE FROM")

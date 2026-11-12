@@ -191,11 +191,11 @@ public class RagPipelineConfiguration {
     @Bean
     public ProviderHttpClient providerHttpClient(
             @Value("${rag.provider.url:http://localhost:8086}") String baseUrl,
-            ObjectMapper objectMapper,
+            ObjectMapper om,
             Tracer tracer,
             ProviderHttpSettings providerHttpSettings,
             ObjectProvider<MeterRegistry> meterRegistry) {
-        return new ProviderHttpClient(baseUrl, objectMapper, tracer, providerHttpSettings,
+        return new ProviderHttpClient(baseUrl, om, tracer, providerHttpSettings,
                 ResilienceMetrics.of(meterRegistry.getIfAvailable()).retryObserver("provider-http"));
     }
 
@@ -262,8 +262,8 @@ public class RagPipelineConfiguration {
 
     @Bean
     public RemoteChatModelPort remoteChatModelPort(
-            ProviderHttpClient providerHttpClient, ObjectMapper objectMapper, Tracer tracer) {
-        return new RemoteChatModelPort(providerHttpClient, objectMapper, tracer);
+            ProviderHttpClient providerHttpClient, ObjectMapper om, Tracer tracer) {
+        return new RemoteChatModelPort(providerHttpClient, om, tracer);
     }
 
     @Bean

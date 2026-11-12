@@ -36,7 +36,6 @@ public class CommandDispatcher {
     private final CommandRegistry commandRegistry;
     private final Prompter prompter;
     private final DocumentLister documentLister;
-    private final DuplicateFinder duplicates;
     private final IngestCommands ingest;
     private final CrawlCommands crawl;
     private final ModuleBootstrap bootstrap;
@@ -55,7 +54,7 @@ public class CommandDispatcher {
         this.commandRegistry = commandRegistry;
         this.prompter = prompter;
         this.documentLister = new DocumentLister(registry, clients.apiClient(), clients.healthClient());
-        this.duplicates = new DuplicateFinder(registry, clients.apiClient(), clients.healthClient());
+        DuplicateFinder duplicates = new DuplicateFinder(registry, clients.apiClient(), clients.healthClient());
         this.ingest = new IngestCommands(clients, prompter, duplicates, tracer);
         this.crawl = new CrawlCommands(clients, prompter, duplicates, tracer);
         this.bootstrap = new ModuleBootstrap(registry, lifecycle, clients.healthClient(), prompter);

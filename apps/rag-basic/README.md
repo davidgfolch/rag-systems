@@ -17,33 +17,33 @@ com.rag.basic
 
 The heavy lifting comes from the `rag-common-*` libraries, so this module only keeps its retrieval strategy:
 
-| Shared component | Source |
-|------------------|--------|
-| `IngestionController`, `IngestionService`, crawl | `rag-common-ingestion` |
-| `ChatService`, `ChatWebSocketHandler` | `rag-common-generation` |
-| Parser, chunker, variant store, chat wiring | `rag-common-app` |
-| `PgVectorStoreAdapter`, `InMemoryVectorStore` | `rag-common-retrieval` |
+| Shared component                                 | Source                  |
+|--------------------------------------------------|-------------------------|
+| `IngestionController`, `IngestionService`, crawl | `rag-common-ingestion`  |
+| `ChatService`, `ChatWebSocketHandler`            | `rag-common-generation` |
+| Parser, chunker, variant store, chat wiring      | `rag-common-app`        |
+| `PgVectorStoreAdapter`, `InMemoryVectorStore`    | `rag-common-retrieval`  |
 
 ## Chunking Strategies
 
-| Strategy | When to use |
-|----------|-------------|
-| Fixed-size sliding window | Homogeneous text, baseline |
-| Recursive character | Most cases, default |
-| Token-based | Match embedding model windows |
-| Semantic | High-value documents; more embedding calls (via a variant) |
+| Strategy                  | When to use                                                |
+|---------------------------|------------------------------------------------------------|
+| Fixed-size sliding window | Homogeneous text, baseline                                 |
+| Recursive character       | Most cases, default                                        |
+| Token-based               | Match embedding model windows                              |
+| Semantic                  | High-value documents; more embedding calls (via a variant) |
 
 ## Pipeline variants
 
 A **variant** bundles a chunking strategy + window with the embedding model label and its own vector table, so pipelines can be compared on one corpus without re-ingesting into the same table. rag-basic seeds a `boot` variant from `rag.chunking.*` that keeps the module's `chunks` table; variants registered at runtime own `variant_<id>` inside `rag_basic`.
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| `GET` | `/api/modules/rag-basic/variants` | List variants |
-| `GET` | `/api/modules/rag-basic/variants/active` | Active variant (`204` when none) |
-| `POST` | `/api/modules/rag-basic/variants` | Register a variant (strategy + window) |
-| `POST` | `/api/modules/rag-basic/variants/{id}/activate` | Switch without restarting the module |
-| `PUT` / `DELETE` | `/api/modules/rag-basic/variants/{id}` | Update / remove |
+| Method           | Path                                            | Purpose                                |
+|------------------|-------------------------------------------------|----------------------------------------|
+| `GET`            | `/api/modules/rag-basic/variants`               | List variants                          |
+| `GET`            | `/api/modules/rag-basic/variants/active`        | Active variant (`204` when none)       |
+| `POST`           | `/api/modules/rag-basic/variants`               | Register a variant (strategy + window) |
+| `POST`           | `/api/modules/rag-basic/variants/{id}/activate` | Switch without restarting the module   |
+| `PUT` / `DELETE` | `/api/modules/rag-basic/variants/{id}`          | Update / remove                        |
 
 A switch applies to the **next** ingestion and query. Each variant embeds with its own `embeddingModel` via rag-provider, so variants can use different dimensions side by side; `connect embedding` remains the fallback for the `boot` variant. Registry and active variant persist in `pipeline_variants`. See [ADR-0015](../../docs/architecture/decision-records/adr-0015-pipeline-variants.md).
 
@@ -73,27 +73,27 @@ Data is stored in the PostgreSQL schema `rag_basic` (start it with `.\scripts\do
 
 ## Quick access
 
-| Endpoint | URL |
-|----------|-----|
-| API base | <http://localhost:8081> |
-| Health | <http://localhost:8081/actuator/health> |
-| Prometheus metrics | <http://localhost:8081/actuator/prometheus> |
-| API reference | [rag-api.yaml](../rag-contract/src/main/resources/openapi/rag-api.yaml) |
+| Endpoint           | URL                                                                     |
+|--------------------|-------------------------------------------------------------------------|
+| API base           | <http://localhost:8081>                                                 |
+| Health             | <http://localhost:8081/actuator/health>                                 |
+| Prometheus metrics | <http://localhost:8081/actuator/prometheus>                             |
+| API reference      | [rag-api.yaml](../rag-contract/src/main/resources/openapi/rag-api.yaml) |
 
 There is no per-module Swagger UI — the contract is defined once in [rag-contract](../rag-contract/README.md).
 
 ## HTTP API
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| `POST` | `/api/documents/ingest-file` | Multipart ingest (`file` part) |
-| `POST` | `/api/documents/ingest-file-async` | Async ingest, returns a job id (poll `/api/documents/ingest-status/{id}`) |
-| `POST` | `/api/documents/ingest` | Ingest raw content `{"content": "...", "metadata": {...}}` |
-| `POST` | `/api/documents/ingest-url` | Ingest a web page via rag-webcrawler |
-| `GET` | `/api/documents` | List ingested documents |
-| `DELETE` | `/api/documents/{documentId}` | Remove a document |
-| `POST` | `/api/query` | `{"question":"...","topK":4,"documentId":"optional"}` → retrieved chunks |
-| `WS` | `/ws/chat` | Streaming chat (WebSocket frames) |
+| Method   | Path                               | Purpose                                                                   |
+|----------|------------------------------------|---------------------------------------------------------------------------|
+| `POST`   | `/api/documents/ingest-file`       | Multipart ingest (`file` part)                                            |
+| `POST`   | `/api/documents/ingest-file-async` | Async ingest, returns a job id (poll `/api/documents/ingest-status/{id}`) |
+| `POST`   | `/api/documents/ingest`            | Ingest raw content `{"content": "...", "metadata": {...}}`                |
+| `POST`   | `/api/documents/ingest-url`        | Ingest a web page via rag-webcrawler                                      |
+| `GET`    | `/api/documents`                   | List ingested documents                                                   |
+| `DELETE` | `/api/documents/{documentId}`      | Remove a document                                                         |
+| `POST`   | `/api/query`                       | `{"question":"...","topK":4,"documentId":"optional"}` → retrieved chunks  |
+| `WS`     | `/ws/chat`                         | Streaming chat (WebSocket frames)                                         |
 
 Examples:
 
@@ -115,17 +115,17 @@ curl -H "Content-Type: application/json" \
 
 Runtime knobs (all settable via env vars in `.env` / `.env.secrets`):
 
-| Property | Env var | Default | Description |
-|----------|---------|---------|-------------|
-| `server.port` | `RAG_BASIC_PORT` | `8081` | HTTP port (must match the port in `RAG_BASIC_URL`) |
-| `rag.provider.url` | `RAG_PROVIDER_URL` | `http://localhost:8086` | Provider hub |
-| `rag.vector-store.type` | `VECTOR_STORE_TYPE` | `pgvector` | `pgvector` or `simple` |
-| `rag.chunking.strategy` | - | `recursive` | `fixed`/`recursive`/`token` |
-| `rag.chunking.size` | `CHUNK_SIZE` | `512` | Max chunk size (chars) |
-| `rag.chunking.overlap` | `CHUNK_OVERLAP` | `128` | Chunk overlap |
-| `rag.embedding.batch-size` | `RAG_EMBED_BATCH_SIZE` | `100` | Embedding batch size |
-| `spring.ai.vectorstore.pgvector.schema-name` | `PGVECTOR_BASIC_SCHEMA` | `rag_basic` | PgVector schema (never shared with other modules) |
-| `SPRING_PROFILES_ACTIVE` | - | `local` | `local` (Ollama) or `cloud` (OpenAI) |
+| Property                                     | Env var                 | Default                 | Description                                        |
+|----------------------------------------------|-------------------------|-------------------------|----------------------------------------------------|
+| `server.port`                                | `RAG_BASIC_PORT`        | `8081`                  | HTTP port (must match the port in `RAG_BASIC_URL`) |
+| `rag.provider.url`                           | `RAG_PROVIDER_URL`      | `http://localhost:8086` | Provider hub                                       |
+| `rag.vector-store.type`                      | `VECTOR_STORE_TYPE`     | `pgvector`              | `pgvector` or `simple`                             |
+| `rag.chunking.strategy`                      | -                       | `recursive`             | `fixed`/`recursive`/`token`                        |
+| `rag.chunking.size`                          | `CHUNK_SIZE`            | `512`                   | Max chunk size (chars)                             |
+| `rag.chunking.overlap`                       | `CHUNK_OVERLAP`         | `128`                   | Chunk overlap                                      |
+| `rag.embedding.batch-size`                   | `RAG_EMBED_BATCH_SIZE`  | `100`                   | Embedding batch size                               |
+| `spring.ai.vectorstore.pgvector.schema-name` | `PGVECTOR_BASIC_SCHEMA` | `rag_basic`             | PgVector schema (never shared with other modules)  |
+| `SPRING_PROFILES_ACTIVE`                     | -                       | `local`                 | `local` (Ollama) or `cloud` (OpenAI)               |
 
 ## Performance Notes
 

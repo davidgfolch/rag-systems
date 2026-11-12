@@ -4,26 +4,26 @@ This document captures the key architectural trade-offs across the RAG implement
 
 ## Local vs Cloud Providers
 
-| Aspect | Local (Ollama) | Cloud (OpenAI/Claude) |
-|--------|----------------|------------------------|
-| **Cost** | Zero marginal | Per-token |
-| **Privacy** | Data stays local | Data leaves machine |
-| **Quality** | Good (small models) | Frontier (best) |
-| **Latency** | Slower on CPU | Fast |
-| **Offline** | Yes | No |
-| **Hardware** | Needs local compute | None |
+| Aspect       | Local (Ollama)                     | Cloud (OpenAI/Claude)         |
+|--------------|------------------------------------|-------------------------------|
+| **Cost**     | Zero marginal                      | Per-token                     |
+| **Privacy**  | Data stays local                   | Data leaves machine           |
+| **Quality**  | Good (small models)                | Frontier (best)               |
+| **Latency**  | Slower on CPU                      | Fast                          |
+| **Offline**  | Yes                                | No                            |
+| **Hardware** | Needs local compute                | None                          |
 | **Best for** | Learning, private data, low volume | Complex reasoning, production |
 
 **Hybrid approach**: local retrieval (nomic) + cloud generation (gpt-4o) balances cost and quality.
 
 ## Chunking Trade-offs
 
-| Strategy | Precision | Cost | When to use |
-|----------|-----------|------|-------------|
-| Fixed-size | Low (~71%)† | Lowest | Homogeneous, low-stakes |
-| Recursive | Good (~82%)† | Low | Default for most |
-| Semantic | Best (~91%)† | ~4.5x recursive embedding calls‡ | High-value documents |
-| Agentic | Best potential | High | Complex/varied docs |
+| Strategy   | Precision      | Cost                             | When to use             |
+|------------|----------------|----------------------------------|-------------------------|
+| Fixed-size | Low (~71%)†    | Lowest                           | Homogeneous, low-stakes |
+| Recursive  | Good (~82%)†   | Low                              | Default for most        |
+| Semantic   | Best (~91%)†   | ~4.5x recursive embedding calls‡ | High-value documents    |
+| Agentic    | Best potential | High                             | Complex/varied docs     |
 
 † **Precision figures are literature references.** Nothing in this repository measures retrieval precision yet (`rag-evaluation` is planned), so ~71/82/91% come from published chunking comparisons.
 
@@ -31,27 +31,27 @@ This document captures the key architectural trade-offs across the RAG implement
 
 ## Vector Store Trade-offs
 
-| Store | Persistence | Speed | Scale | Setup |
-|-------|-------------|-------|-------|-------|
-| SimpleVectorStore | None | Fastest | Small | None |
-| PgVector | Yes | Fast | Large | Docker |
+| Store             | Persistence | Speed   | Scale | Setup  |
+|-------------------|-------------|---------|-------|--------|
+| SimpleVectorStore | None        | Fastest | Small | None   |
+| PgVector          | Yes         | Fast    | Large | Docker |
 
 ## Simple vs Advanced vs Agentic RAG
 
-| Module | Retrieval quality | Complex reasoning | Complexity | Cost |
-|--------|-------------------|-------------------|------------|------|
-| rag-basic | Good | No | Low | Low |
-| rag-advanced | High (BM25+RRF, metadata filter) | No | Medium | Medium |
-| rag-agentic | High | Yes (multi-step) | High | High |
+| Module       | Retrieval quality                | Complex reasoning | Complexity | Cost   |
+|--------------|----------------------------------|-------------------|------------|--------|
+| rag-basic    | Good                             | No                | Low        | Low    |
+| rag-advanced | High (BM25+RRF, metadata filter) | No                | Medium     | Medium |
+| rag-agentic  | High                             | Yes (multi-step)  | High       | High   |
 
 ## Reactive/Parallel Trade-offs
 
-| Approach | Best for | Complexity |
-|----------|----------|------------|
-| Synchronous | Simple flows | Lowest |
-| Virtual threads | Blocking I/O (LLM calls) | Low |
-| Project Reactor | Composable async | Medium |
-| Parallel streams | CPU-bound chunking | Low |
+| Approach         | Best for                 | Complexity |
+|------------------|--------------------------|------------|
+| Synchronous      | Simple flows             | Lowest     |
+| Virtual threads  | Blocking I/O (LLM calls) | Low        |
+| Project Reactor  | Composable async         | Medium     |
+| Parallel streams | CPU-bound chunking       | Low        |
 
 Use reactive/parallel **only when the performance benefit is clear** (I/O-bound, independent tasks). Avoid over-engineering simple synchronous flows.
 

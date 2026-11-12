@@ -15,7 +15,7 @@ import org.springframework.ai.vectorstore.pgvector.autoconfigure.PgVectorStoreAu
 })
 public class RagBasicApplication {
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         SpringApplication.run(RagBasicApplication.class, args);
     }
 }

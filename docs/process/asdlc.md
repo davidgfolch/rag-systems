@@ -196,18 +196,18 @@ These rules are enforced by the architecture tests:
 
 ## Enforcement
 
-| Rule | Where enforced |
-|------|----------------|
-| Feature branch required (bypassable on `main` with explicit ask) | This document |
-| Tests + SonarQube after every change | This document, `.claude/rules/architecture-guidelines.md`, Stop-gate hook |
-| Tests always run after implementation | Stop-gate hooks: `.claude/settings.json` (Claude Code), `.opencode/plugin/sdlc-gate.ts` (opencode) |
-| Auto-merge green PRs + conflict resolution | `scripts/dev.bat`/`dev.sh` `auto-merge` |
-| Modern Java / no verbose constructors | This document, review checklist |
-| `var` when type is clear | This document |
-| Imports instead of inline fully-qualified names | `.claude/skills/rules/SKILL.md` |
-| Common abbreviated names (`req`, `res`, `conn`, `ds`, ...) | `.claude/skills/rules/SKILL.md` |
-| `Entity`/`DTO` bean suffixes | `rag-memory/.../ArchitectureTest`, `rag-contract/.../DtoNamingTest` |
-| No magic literals in production code | This document, `.claude/rules/architecture-guidelines.md`, `rag-common-core/.../ArchitectureTest` |
-| Shared test fixtures | `.claude/skills/test-implementer/SKILL.md`, `.claude/rules/architecture-guidelines.md` |
-| Parameterized tests where applicable | `.claude/skills/test-implementer/SKILL.md`, `.claude/rules/architecture-guidelines.md` |
-| Compact test style (no blank lines inside method bodies) | `.claude/skills/rules/SKILL.md`, this document |
+| Rule                                                             | Where enforced                                                                                     |
+|------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|
+| Feature branch required (bypassable on `main` with explicit ask) | This document                                                                                      |
+| Tests + SonarQube after every change                             | This document, `.claude/rules/architecture-guidelines.md`, Stop-gate hook                          |
+| Tests always run after implementation                            | Stop-gate hooks: `.claude/settings.json` (Claude Code), `.opencode/plugin/sdlc-gate.ts` (opencode) |
+| Auto-merge green PRs + conflict resolution                       | `scripts/dev.bat`/`dev.sh` `auto-merge`                                                            |
+| Modern Java / no verbose constructors                            | This document, review checklist                                                                    |
+| `var` when type is clear                                         | This document                                                                                      |
+| Imports instead of inline fully-qualified names                  | `.claude/skills/rules/SKILL.md`                                                                    |
+| Common abbreviated names (`req`, `res`, `conn`, `ds`, ...)       | `.claude/skills/rules/SKILL.md`                                                                    |
+| `Entity`/`DTO` bean suffixes                                     | `rag-memory/.../ArchitectureTest`, `rag-contract/.../DtoNamingTest`                                |
+| No magic literals in production code                             | This document, `.claude/rules/architecture-guidelines.md`, `rag-common-core/.../ArchitectureTest`  |
+| Shared test fixtures                                             | `.claude/skills/test-implementer/SKILL.md`, `.claude/rules/architecture-guidelines.md`             |
+| Parameterized tests where applicable                             | `.claude/skills/test-implementer/SKILL.md`, `.claude/rules/architecture-guidelines.md`             |
+| Compact test style (no blank lines inside method bodies)         | `.claude/skills/rules/SKILL.md`, this document                                                     |

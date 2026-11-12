@@ -51,12 +51,11 @@ class AgentLoopTest {
     void fallsBackToDeterministicSearchWhenModelOutputUnusable() {
         when(chatModel.complete(anyString())).thenReturn("");
         var trace = sut.collect("What is RAG?", 5);
-        ArgumentCaptor<com.rag.agentic.domain.ToolCall> captor =
-                ArgumentCaptor.forClass(com.rag.agentic.domain.ToolCall.class);
+        ArgumentCaptor<com.rag.agentic.domain.ToolCall> captor = ArgumentCaptor.captor();
         verify(searchTool).execute(captor.capture());
         assertThat(captor.getValue().query()).isEqualTo("What is RAG");
         assertThat(trace.steps()).hasSize(1);
-        assertThat(trace.steps().get(0).label()).isEqualTo("tool:search");
+        assertThat(trace.steps().getFirst().label()).isEqualTo("tool:search");
         assertThat(trace.hasSources()).isTrue();
     }
 
@@ -78,7 +77,7 @@ class AgentLoopTest {
         var trace = sut.collect("plan then deploy", 5);
         verify(searchTool).execute(any());
         assertThat(trace.steps()).hasSize(1);
-        assertThat(trace.steps().get(0).label()).isEqualTo("tool:search");
+        assertThat(trace.steps().getFirst().label()).isEqualTo("tool:search");
     }
 
     @Test

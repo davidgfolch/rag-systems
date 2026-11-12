@@ -11,12 +11,12 @@ RAG separates into layers with very different hardware demands. The heavy comput
 ### Embeddings (retrieval engine) - CPU-friendly
 Embedding models are tiny and run fast on CPU. **No GPU required.**
 
-| Model | Params | Memory | CPU Speed | Notes |
-|-------|--------|--------|-----------|-------|
-| `all-MiniLM-L6-v2` | ~22M | ~90MB | ~100+ chunks/sec | Smallest, fastest |
-| `nomic-embed-text` | 137M | ~300MB | ~580 chunks/sec | Great default, 8k context |
-| `mxbai-embed-large` | 335M | ~700MB | slower | Higher quality |
-| `bge-m3` | ~570M | ~1.2GB | noticeable | Multilingual |
+| Model               | Params | Memory | CPU Speed        | Notes                     |
+|---------------------|--------|--------|------------------|---------------------------|
+| `all-MiniLM-L6-v2`  | ~22M   | ~90MB  | ~100+ chunks/sec | Smallest, fastest         |
+| `nomic-embed-text`  | 137M   | ~300MB | ~580 chunks/sec  | Great default, 8k context |
+| `mxbai-embed-large` | 335M   | ~700MB | slower           | Higher quality            |
+| `bge-m3`            | ~570M  | ~1.2GB | noticeable       | Multilingual              |
 
 > CPU throughput: `nomic-embed-text-v2` dominates at ~580 chunks/sec, re-indexing a 5K-page corpus in ~9 min (vs ~55 min for slower models).
 
@@ -26,11 +26,11 @@ PgVector and in-memory stores run entirely on CPU. This stage is memory-bandwidt
 ### LLM Generation - the demanding part (optional to scale)
 This is the only layer that benefits significantly from a GPU.
 
-| Model | Size | CPU (16GB RAM) | GPU (8GB VRAM) |
-|-------|------|----------------|----------------|
-| Phi-4 / Qwen3 4B | ~4GB | Usable, slow | Fast |
-| Qwen3 8B (Q4_K_M) | 4-8GB | Too slow | Comfortable |
-| Qwen3-30B-A3B (MoE) | ~16GB | No | Excellent (needs 16GB) |
+| Model               | Size  | CPU (16GB RAM) | GPU (8GB VRAM)         |
+|---------------------|-------|----------------|------------------------|
+| Phi-4 / Qwen3 4B    | ~4GB  | Usable, slow   | Fast                   |
+| Qwen3 8B (Q4_K_M)   | 4-8GB | Too slow       | Comfortable            |
+| Qwen3-30B-A3B (MoE) | ~16GB | No             | Excellent (needs 16GB) |
 
 > On CPU, generation can be several seconds/token for 7B+ models. For a snappy local experience, use 3B-4B models on CPU, or any modest GPU.
 
@@ -51,11 +51,11 @@ This is the only layer that benefits significantly from a GPU.
 
 ## Ingestion vs Query Performance
 
-| Metric | CPU | GPU |
-|--------|-----|-----|
-| Indexing 5K pages (nomic) | ~9 min | ~1 min |
+| Metric                       | CPU             | GPU               |
+|------------------------------|-----------------|-------------------|
+| Indexing 5K pages (nomic)    | ~9 min          | ~1 min            |
 | Embedding throughput (nomic) | ~580 chunks/sec | ~4,800 chunks/sec |
-| Typical chunk per doc | 10-50 | - |
+| Typical chunk per doc        | 10-50           | -                 |
 
 - **Ingestion** is a one-time cost per document - acceptable to be slower on CPU
 - **Query** retrieval (embed + vector search) is fast on CPU; only generation is slow
@@ -78,12 +78,12 @@ See [Observability](../guides/observability.md) for metric collection.
 
 Measured by `ChunkingCostComparisonTest` over this repository's own `docs/` corpus (33 markdown files, ~150 KB, window 512/64; the token chunker runs 128/16 tokens) with a local hashing embedding model standing in for a provider. One "embedding call" is one text handed to the embedding port — a provider adapter may batch many texts into a single HTTP request. The timings are chunking on CPU and contain no network latency.
 
-| Strategy | Chunks | Chunks/doc | Embedding calls | vs recursive | Split time (33 docs) |
-|----------|--------|------------|-----------------|--------------|----------------------|
-| Fixed-size | ≈350 | ≈10.5 | ≈350 | 0.8x | 3-7 ms |
-| Recursive | ≈410 | ≈12.5 | ≈410 | 1.0x | 17-28 ms |
-| Token | ≈190 | ≈5.8 | ≈190 | 0.5x | 16-21 ms |
-| Semantic | ≈630 | ≈19.2 | ≈1,850 (≈1,220 sentences + ≈630 chunks) | ≈4.5x | 30-38 ms |
+| Strategy   | Chunks | Chunks/doc | Embedding calls                         | vs recursive | Split time (33 docs) |
+|------------|--------|------------|-----------------------------------------|--------------|----------------------|
+| Fixed-size | ≈350   | ≈10.5      | ≈350                                    | 0.8x         | 3-7 ms               |
+| Recursive  | ≈410   | ≈12.5      | ≈410                                    | 1.0x         | 17-28 ms             |
+| Token      | ≈190   | ≈5.8       | ≈190                                    | 0.5x         | 16-21 ms             |
+| Semantic   | ≈630   | ≈19.2      | ≈1,850 (≈1,220 sentences + ≈630 chunks) | ≈4.5x        | 30-38 ms             |
 
 `IngestionService` embeds each chunk once, so a strategy's ingestion cost is `chunks` — except semantic, which also embeds every sentence to find its boundaries (`sentences + chunks`). Semantic additionally produces more, smaller chunks than recursive (≈19 vs ≈12.5 per document), so the measured premium is **≈4.5x, not the often-quoted 8x**. The ratio holds at the default 512/128 window as well, because overlap changes chunk text, not sentence grouping. Ingestion is synchronous: for large documents use `AsyncIngestionService`.
 
@@ -91,11 +91,11 @@ Measured by `ChunkingCostComparisonTest` over this repository's own `docs/` corp
 
 ### Precision (literature, not measured here)
 
-| Strategy | Precision | Source |
-|----------|-----------|--------|
-| Fixed-size | ~71% | published chunking comparisons |
-| Recursive | ~82% | published chunking comparisons |
-| Semantic | ~91% | published chunking comparisons |
+| Strategy   | Precision | Source                         |
+|------------|-----------|--------------------------------|
+| Fixed-size | ~71%      | published chunking comparisons |
+| Recursive  | ~82%      | published chunking comparisons |
+| Semantic   | ~91%      | published chunking comparisons |
 
 > **No retrieval-precision run exists in this repository**: `rag-evaluation` is still planned, so these three figures are literature references, not measurements from here. Only the cost table above is measured ([PLAN.md Phase 8](../PLAN.md#phase-8-semantic-chunking-adr-0015-semantic-variant)).
 

@@ -16,7 +16,7 @@ import org.springframework.context.annotation.FilterType;
         type = FilterType.REGEX, pattern = "com\\.rag\\.tui\\.support\\..*"))
 public class RagTuiApplication {
 
-    public static void main(String[] args) {
+    static void main(String[] args) {
         SpringApplication.run(RagTuiApplication.class, args);
     }
 }

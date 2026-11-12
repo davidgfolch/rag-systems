@@ -24,24 +24,24 @@ com.rag.common.core
 
 ### Domain models
 
-| Type | Role |
-|------|------|
-| `Document` | Raw ingested source with `id`, `content` (or raw bytes in metadata), `metadata`, `createdAt` |
-| `Chunk` | A segmented piece of a document ready for embedding: `id`, `documentId`, `content`, `index`, `metadata`, mutable `embedding` |
-| `DocumentSummary` | Lightweight view (`documentId`, `metadata`, `chunkCount`) for listing documents |
-| `MetadataKeys` | Shared constants for the chunk/document metadata keys (`SOURCE`, `SOURCE_TYPE`, `TITLE`, `FILE_NAME`, `CONTENT_HASH`, `RAW`, ...) |
-| `FloatConversions` | Convert between `float[]` and `List<Float>` embeddings |
+| Type               | Role                                                                                                                              |
+|--------------------|-----------------------------------------------------------------------------------------------------------------------------------|
+| `Document`         | Raw ingested source with `id`, `content` (or raw bytes in metadata), `metadata`, `createdAt`                                      |
+| `Chunk`            | A segmented piece of a document ready for embedding: `id`, `documentId`, `content`, `index`, `metadata`, mutable `embedding`      |
+| `DocumentSummary`  | Lightweight view (`documentId`, `metadata`, `chunkCount`) for listing documents                                                   |
+| `MetadataKeys`     | Shared constants for the chunk/document metadata keys (`SOURCE`, `SOURCE_TYPE`, `TITLE`, `FILE_NAME`, `CONTENT_HASH`, `RAW`, ...) |
+| `FloatConversions` | Convert between `float[]` and `List<Float>` embeddings                                                                            |
 
 ### Strategy ports
 
-| Port | Contract target | Implementations |
-|------|-----------------|-----------------|
-| `ChatModelPort` | Chat completion (generate/summarize) | rag-common-generation |
-| `EmbeddingModelPort` | Text → vector embeddings | rag-common-generation |
-| `DocumentParser` | Raw bytes/content → text | rag-common-ingestion |
-| `TextSplitter` | Text → chunks | rag-common-ingestion |
-| `VectorStorePort` | Store/query chunk vectors | rag-common-retrieval |
-| `FileDocumentLoader` | Read local files/folders into `Document` objects | in-module |
+| Port                 | Contract target                                  | Implementations       |
+|----------------------|--------------------------------------------------|-----------------------|
+| `ChatModelPort`      | Chat completion (generate/summarize)             | rag-common-generation |
+| `EmbeddingModelPort` | Text → vector embeddings                         | rag-common-generation |
+| `DocumentParser`     | Raw bytes/content → text                         | rag-common-ingestion  |
+| `TextSplitter`       | Text → chunks                                    | rag-common-ingestion  |
+| `VectorStorePort`    | Store/query chunk vectors                        | rag-common-retrieval  |
+| `FileDocumentLoader` | Read local files/folders into `Document` objects | in-module             |
 
 Because the ports live here, a module can import the abstraction and let `config/` wire a concrete implementation — no hard dependencies on any provider or store.
 

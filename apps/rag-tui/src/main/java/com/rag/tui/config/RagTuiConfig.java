@@ -116,9 +116,9 @@ public class RagTuiConfig {
     }
 
     @Bean
-    public ChatGateway chatGateway(ModuleRegistry registry, ObjectMapper objectMapper, Tracer tracer,
+    public ChatGateway chatGateway(ModuleRegistry registry, ObjectMapper om, Tracer tracer,
                                    @Value("${rag.chat.timeout-seconds:180}") long chatTimeoutSeconds) {
-        return new ChatGateway(registry, new StandardWebSocketClient(), objectMapper, chatTimeoutSeconds, tracer);
+        return new ChatGateway(registry, new StandardWebSocketClient(), om, chatTimeoutSeconds, tracer);
     }
 
     @Bean
@@ -169,7 +169,7 @@ public class RagTuiConfig {
 
     @Bean
     public ApplicationRunner tuiRunner(CommandDispatcher dispatcher, Prompter prompter) {
-        return args -> new InteractiveShell(dispatcher, prompter,
+        return _ -> new InteractiveShell(dispatcher, prompter,
                 new OutputStreamWriter(System.out)).run(); // NOSONAR java:S106
     }
 }

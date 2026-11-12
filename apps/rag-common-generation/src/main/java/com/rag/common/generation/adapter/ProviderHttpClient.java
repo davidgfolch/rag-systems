@@ -44,47 +44,45 @@ public class ProviderHttpClient {
     private final ProviderHttpSettings settings;
     private final RetryExecutor retry;
 
-    public ProviderHttpClient(String baseUrl, ObjectMapper objectMapper) {
-        this(baseUrl, objectMapper, null);
+    public ProviderHttpClient(String baseUrl, ObjectMapper om) {
+        this(baseUrl, om, null);
     }
 
-    public ProviderHttpClient(String baseUrl, ObjectMapper objectMapper, Tracer tracer) {
-        this(baseUrl, objectMapper, tracer, ProviderHttpSettings.defaults());
+    public ProviderHttpClient(String baseUrl, ObjectMapper om, Tracer tracer) {
+        this(baseUrl, om, tracer, ProviderHttpSettings.defaults());
     }
 
-    public ProviderHttpClient(String baseUrl, HttpClient httpClient, ObjectMapper objectMapper) {
-        this(baseUrl, httpClient, objectMapper, null);
+    public ProviderHttpClient(String baseUrl, HttpClient httpClient, ObjectMapper om) {
+        this(baseUrl, httpClient, om, null);
     }
 
-    public ProviderHttpClient(String baseUrl, HttpClient httpClient, ObjectMapper objectMapper, Tracer tracer) {
-        this(baseUrl, httpClient, objectMapper, tracer, ProviderHttpSettings.defaults());
+    public ProviderHttpClient(String baseUrl, HttpClient httpClient, ObjectMapper om, Tracer tracer) {
+        this(baseUrl, httpClient, om, tracer, ProviderHttpSettings.defaults());
     }
 
-    public ProviderHttpClient(String baseUrl, ObjectMapper objectMapper, Tracer tracer,
-                              ProviderHttpSettings settings) {
-        this(baseUrl, defaultClient(settings.connectTimeout()), objectMapper, tracer, settings,
+    public ProviderHttpClient(String baseUrl, ObjectMapper om, Tracer tracer, ProviderHttpSettings settings) {
+        this(baseUrl, defaultClient(settings.connectTimeout()), om, tracer, settings,
                 RetryObserver.NOOP);
     }
 
-    public ProviderHttpClient(String baseUrl, ObjectMapper objectMapper, Tracer tracer,
+    public ProviderHttpClient(String baseUrl, ObjectMapper om, Tracer tracer,
                               ProviderHttpSettings settings, RetryObserver observer) {
-        this(baseUrl, defaultClient(settings.connectTimeout()), objectMapper, tracer, settings, observer);
+        this(baseUrl, defaultClient(settings.connectTimeout()), om, tracer, settings, observer);
     }
 
-    public ProviderHttpClient(String baseUrl, HttpClient httpClient, ObjectMapper objectMapper,
+    public ProviderHttpClient(String baseUrl, HttpClient httpClient, ObjectMapper om,
                               Tracer tracer, ProviderHttpSettings settings) {
-        this(baseUrl, httpClient, objectMapper, tracer, settings, RetryObserver.NOOP);
+        this(baseUrl, httpClient, om, tracer, settings, RetryObserver.NOOP);
     }
 
-    public ProviderHttpClient(String baseUrl, HttpClient httpClient, ObjectMapper objectMapper,
+    public ProviderHttpClient(String baseUrl, HttpClient httpClient, ObjectMapper om,
                               Tracer tracer, ProviderHttpSettings settings, RetryObserver observer) {
         this.baseUrl = trimSlash(baseUrl);
         this.httpClient = httpClient;
-        this.objectMapper = objectMapper;
+        this.objectMapper = om;
         this.tracer = tracer;
         this.settings = settings;
-        this.retry = new RetryExecutor(ProviderHttpRetry.policy(settings), ProviderHttpRetry::isRetryable,
-                observer);
+        this.retry = new RetryExecutor(ProviderHttpRetry.policy(settings), ProviderHttpRetry::isRetryable, observer);
     }
 
     public <T> T postJson(String path, Object body, Class<T> responseType) {

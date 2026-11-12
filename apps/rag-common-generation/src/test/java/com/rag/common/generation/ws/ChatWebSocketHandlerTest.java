@@ -28,7 +28,7 @@ class ChatWebSocketHandlerTest {
     private final AnswerStreamer answerStreamer = mock(AnswerStreamer.class);
     private final ChatWebSocketHandler handler = new ChatWebSocketHandler(answerStreamer, new ObjectMapper());
     private final WebSocketSession session = mock(WebSocketSession.class);
-    private final ArgumentCaptor<TextMessage> captor = ArgumentCaptor.forClass(TextMessage.class);
+    private final ArgumentCaptor<TextMessage> captor = ArgumentCaptor.captor();
 
     @BeforeEach
     void setUp() {
@@ -65,7 +65,7 @@ class ChatWebSocketHandlerTest {
         handler.handleTextMessage(session, new TextMessage("{\"type\":\"cancel\",\"conversationId\":\"c1\"}"));
         List<String> payloads = sentPayloads(1);
         assertThat(payloads).hasSize(1);
-        assertThat(payloads.get(0)).contains("\"type\":\"done\"", "\"content\":\"\"", "\"conversationId\":\"c1\"");
+        assertThat(payloads.getFirst()).contains("\"type\":\"done\"", "\"content\":\"\"", "\"conversationId\":\"c1\"");
     }
 
     @Test
@@ -81,7 +81,7 @@ class ChatWebSocketHandlerTest {
                 .thenReturn(Flux.error(new IllegalStateException("boom")));
         send("{\"type\":\"ask\",\"question\":\"hello\",\"conversationId\":\"c1\"}");
         List<String> payloads = sentPayloads(1);
-        assertThat(payloads.get(0)).contains("\"type\":\"error\"", "\"boom\"");
+        assertThat(payloads.getFirst()).contains("\"type\":\"error\"", "\"boom\"");
     }
 
     @Test

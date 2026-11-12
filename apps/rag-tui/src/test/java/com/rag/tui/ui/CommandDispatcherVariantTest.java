@@ -67,7 +67,7 @@ class CommandDispatcherVariantTest extends AbstractCommandDispatcherTest {
                 .thenReturn(variant("v3", "FIXED", 1024, 64));
         var result = handle("variant add FIXED 1024 64");
         assertThat(result).contains("Variant created on " + BASIC, "v3", "variant v3");
-        var captor = ArgumentCaptor.forClass(PipelineVariantDTO.class);
+        ArgumentCaptor<PipelineVariantDTO> captor = ArgumentCaptor.captor();
         verify(apiClient).createVariant(eq(BASIC), captor.capture());
         assertThat(captor.getValue().strategy()).isEqualTo("FIXED");
         assertThat(captor.getValue().chunkSize()).isEqualTo(1024);
@@ -84,7 +84,7 @@ class CommandDispatcherVariantTest extends AbstractCommandDispatcherTest {
         when(apiClient.createVariant(eq(BASIC), any(PipelineVariantDTO.class)))
                 .thenReturn(variant("v2", "TOKEN", 512, 128));
         assertThat(handle("variant add")).contains("Variant created on " + BASIC);
-        var captor = ArgumentCaptor.forClass(PipelineVariantDTO.class);
+        ArgumentCaptor<PipelineVariantDTO> captor = ArgumentCaptor.captor();
         verify(apiClient).createVariant(eq(BASIC), captor.capture());
         assertThat(captor.getValue().strategy()).isEqualTo("TOKEN");
         assertThat(captor.getValue().chunkSize()).isEqualTo(512);

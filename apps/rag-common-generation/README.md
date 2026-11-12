@@ -22,10 +22,10 @@ com.rag.common.generation
 
 ## Two wiring modes
 
-| Mode | Adapter | How it's configured |
-|------|---------|---------------------|
+| Mode                       | Adapter                                       | How it's configured                                                                                                                                    |
+|----------------------------|-----------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **Provider hub (default)** | `RemoteChatModelPort`, `RemoteEmbeddingModel` | `rag.provider.url` (env `RAG_PROVIDER_URL`, default `http://localhost:8086`). Modules talk to rag-provider; they add **no** provider SDK dependencies. |
-| **Direct Spring AI** | `SpringAiChatModel`, `SpringAiEmbeddingModel` | Spring AI auto-configuration for Ollama/OpenAI (used by rag-tui's `local`/`cloud` profiles). |
+| **Direct Spring AI**       | `SpringAiChatModel`, `SpringAiEmbeddingModel` | Spring AI auto-configuration for Ollama/OpenAI (used by rag-tui's `local`/`cloud` profiles).                                                           |
 
 `ProviderHttpClient` is a dependency-free JSON/SSE client (JDK `HttpClient`), so `rag-common-generation` needs no Spring Web dependency of its own. When a `Tracer` is present it forwards the current span as a W3C `traceparent` header so rag-provider keeps the same `traceId`.
 
@@ -35,10 +35,10 @@ Centralizing every provider client in [rag-provider](../rag-provider/README.md) 
 
 ## Configuration
 
-| Property | Env var | Default | Description |
-|----------|---------|---------|-------------|
-| `rag.provider.url` | `RAG_PROVIDER_URL` | `http://localhost:8086` | Provider hub base URL |
-| `rag.embedding.batch-size` | `RAG_EMBED_BATCH_SIZE` | `100` | Embedding batch size |
+| Property                   | Env var                | Default                 | Description           |
+|----------------------------|------------------------|-------------------------|-----------------------|
+| `rag.provider.url`         | `RAG_PROVIDER_URL`     | `http://localhost:8086` | Provider hub base URL |
+| `rag.embedding.batch-size` | `RAG_EMBED_BATCH_SIZE` | `100`                   | Embedding batch size  |
 
 ## Testing
 

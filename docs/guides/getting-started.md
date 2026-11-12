@@ -224,22 +224,22 @@ A token is only needed the first time (generate one at http://localhost:9000 →
 
 All operations are centralized in `scripts/` with Windows (`.bat`) and Linux/Mac (`.sh`) variants:
 
-| Script | Purpose | Examples |
-|--------|---------|----------|
-| `install` | Install dependencies | `.\scripts\install.bat` |
-| `build` | Build modules | `.\scripts\build.bat`, `.\scripts\build.bat rag-basic` |
-| `test` | Run tests | `.\scripts\test.bat --coverage`, `.\scripts\test.bat rag-basic` |
-| `run` | Run a module | `.\scripts\run.bat rag-basic --profile local`, `.\scripts\run.bat rag-tui --profile local` |
-| `docker` | Docker operations | `.\scripts\docker.bat up`, `.\scripts\docker.bat up-ollama`, `.\scripts\docker.bat up-obs`, `.\scripts\docker.bat up-sonar`, `.\scripts\docker.bat up-all` |
-| `sonar` | SonarQube analysis | `.\scripts\sonar.bat up-scan %SONAR_TOKEN%` |
+| Script    | Purpose              | Examples                                                                                                                                                   |
+|-----------|----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `install` | Install dependencies | `.\scripts\install.bat`                                                                                                                                    |
+| `build`   | Build modules        | `.\scripts\build.bat`, `.\scripts\build.bat rag-basic`                                                                                                     |
+| `test`    | Run tests            | `.\scripts\test.bat --coverage`, `.\scripts\test.bat rag-basic`                                                                                            |
+| `run`     | Run a module         | `.\scripts\run.bat rag-basic --profile local`, `.\scripts\run.bat rag-tui --profile local`                                                                 |
+| `docker`  | Docker operations    | `.\scripts\docker.bat up`, `.\scripts\docker.bat up-ollama`, `.\scripts\docker.bat up-obs`, `.\scripts\docker.bat up-sonar`, `.\scripts\docker.bat up-all` |
+| `sonar`   | SonarQube analysis   | `.\scripts\sonar.bat up-scan %SONAR_TOKEN%`                                                                                                                |
 
 ## Configuration Profiles
 
-| Profile | Description |
-|---------|-------------|
-| `local` | Ollama models (nomic-embed-text, phi4) - default, **preferred** |
-| `cloud` | OpenAI models (text-embedding-3-small, gpt-4o) |
-| `observability` | Enables OpenTelemetry, Prometheus, Grafana |
+| Profile         | Description                                                                                       |
+|-----------------|---------------------------------------------------------------------------------------------------|
+| `local`         | Ollama models (nomic-embed-text, phi4) - default, **preferred**                                   |
+| `cloud`         | OpenAI models (text-embedding-3-small, gpt-4o)                                                    |
+| `observability` | Enables OpenTelemetry, Prometheus, Grafana                                                        |
 | *(any runtime)* | OpenRouter / OpenAI-compatible providers registered via the TUI `connect` or the rag-provider API |
 
 Set via `SPRING_PROFILES_ACTIVE` env var or `--profile` script flag.

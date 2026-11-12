@@ -90,6 +90,7 @@ api/          - REST controllers (only in runnable modules)
 10. **Docs Placement**: All `.md` lives in `docs/`; `README.md` is the only root markdown
 11. **Scripts Placement**: All `.bat`/`.sh`/`.ps1` live in `scripts/`; `mvnw`/`mvnw.cmd` are the exception
 12. **Portability**: Every operational script has both a Windows (`.bat`/`.ps1`) and Unix (`.sh`) variant
+13. **Functional Java**: Prefer functional style (`java.util.function.*`,  streams, `Optional` composition, immutable values, pure helpers) over imperative loops and mutable accumulators when readable.
 
 ## Configuration Profiles
 

@@ -62,10 +62,10 @@ Each runnable module follows a strict layered architecture with **one-way depend
 ### Provider Abstraction (Critical)
 All provider connectivity is centralized in the **rag-provider** service: it owns the Ollama/OpenAI clients and exposes chat (`/api/complete`, `/api/chat/stream`), embedding (`/api/embed`), and model-switching (`/api/provider/*`) over HTTP. Downstream RAG modules used to hold direct provider dependencies; they now consume rag-provider through thin `rag-common-generation` bridges (`RemoteChatModelPort`, `RemoteEmbeddingModel`). Swapping between OpenAI, Ollama, and any OpenAI-compatible provider is a runtime call — no code or config-profile change needed.
 
-| Profile | Embeddings | LLM | Use case |
-|---------|-----------|-----|----------|
-| `local` | nomic-embed-text (Ollama) | phi4 / qwen3 (Ollama) | Development, privacy |
-| `cloud` | text-embedding-3-small | gpt-4o | Frontier-model comparison |
+| Profile | Embeddings                | LLM                   | Use case                  |
+|---------|---------------------------|-----------------------|---------------------------|
+| `local` | nomic-embed-text (Ollama) | phi4 / qwen3 (Ollama) | Development, privacy      |
+| `cloud` | text-embedding-3-small    | gpt-4o                | Frontier-model comparison |
 
 Model switching and embedding dimensions are managed by rag-provider's `ModelRouter`. Each module connects via `rag.provider.url` (default `http://localhost:8086`).
 
@@ -127,31 +127,31 @@ apps/
 
 ## Module Roles
 
-| Module | Responsibility |
-|--------|---------------|
-| rag-common-core | Shared domain models, strategy ports, tracing, file loader |
-| rag-common-ingestion | Chunking strategies, document parsers, ingestion services |
-| rag-common-retrieval | In-memory and PgVector store implementations |
-| rag-common-generation | Chat/embedding adapters and the generation service |
-| rag-provider | Centralized LLM/embedding clients, runtime model switching, provider profiles |
-| rag-basic | Baseline RAG: fixed/recursive chunking, similarity search |
-| rag-advanced | BM25+RRF hybrid retrieval, metadata filtering, variant chunking |
-| rag-agentic | Agents, tool calling, multi-step retrieval, self-reflection |
-| rag-evaluation | Metrics (precision, recall, MRR), benchmarking, comparison |
-| rag-observability | Tracing, metrics, structured logging, dashboards |
-| rag-cli | Interactive command-line testing of RAG queries |
-| rag-tui | Terminal UI for interactive file/URL ingestion and chat |
+| Module                | Responsibility                                                                |
+|-----------------------|-------------------------------------------------------------------------------|
+| rag-common-core       | Shared domain models, strategy ports, tracing, file loader                    |
+| rag-common-ingestion  | Chunking strategies, document parsers, ingestion services                     |
+| rag-common-retrieval  | In-memory and PgVector store implementations                                  |
+| rag-common-generation | Chat/embedding adapters and the generation service                            |
+| rag-provider          | Centralized LLM/embedding clients, runtime model switching, provider profiles |
+| rag-basic             | Baseline RAG: fixed/recursive chunking, similarity search                     |
+| rag-advanced          | BM25+RRF hybrid retrieval, metadata filtering, variant chunking               |
+| rag-agentic           | Agents, tool calling, multi-step retrieval, self-reflection                   |
+| rag-evaluation        | Metrics (precision, recall, MRR), benchmarking, comparison                    |
+| rag-observability     | Tracing, metrics, structured logging, dashboards                              |
+| rag-cli               | Interactive command-line testing of RAG queries                               |
+| rag-tui               | Terminal UI for interactive file/URL ingestion and chat                       |
 
 ## Module Comparison
 
-| Module | Chunking | Retrieval | Extras |
-|--------|----------|-----------|--------|
-| rag-basic | Recursive (fixed/token/semantic via variants) | Vector similarity | Baseline, document-scoped search |
-| rag-advanced | Variants (any strategy) | Vector + BM25 fused with RRF | Metadata filtering, candidate widening |
-| rag-agentic | Variants (any strategy) | Multi-step tool-driven retrieval | Query planning, self-reflection, web tool |
-| rag-evaluation | - | - | Metrics, benchmarking, comparison |
-| rag-provider | - | - | Chat/embed APIs, runtime model switching, model catalog |
-| rag-tui | Recursive, Tika | Vector similarity | Interactive add-file / add-url + chat |
+| Module         | Chunking                                      | Retrieval                        | Extras                                                  |
+|----------------|-----------------------------------------------|----------------------------------|---------------------------------------------------------|
+| rag-basic      | Recursive (fixed/token/semantic via variants) | Vector similarity                | Baseline, document-scoped search                        |
+| rag-advanced   | Variants (any strategy)                       | Vector + BM25 fused with RRF     | Metadata filtering, candidate widening                  |
+| rag-agentic    | Variants (any strategy)                       | Multi-step tool-driven retrieval | Query planning, self-reflection, web tool               |
+| rag-evaluation | -                                             | -                                | Metrics, benchmarking, comparison                       |
+| rag-provider   | -                                             | -                                | Chat/embed APIs, runtime model switching, model catalog |
+| rag-tui        | Recursive, Tika                               | Vector similarity                | Interactive add-file / add-url + chat                   |
 
 ## Local Machine Feasibility
 
