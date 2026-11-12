@@ -43,9 +43,9 @@ public class RagProviderConfig {
 
     @Bean
     public ProviderProfileStore providerProfileStore(
-            ObjectMapper objectMapper,
+            ObjectMapper om,
             @Value("${rag.provider.profiles-file:data/provider-profiles.json}") String profilesFile) {
-        return new ProviderProfileFileStore(objectMapper, Path.of(profilesFile));
+        return new ProviderProfileFileStore(om, Path.of(profilesFile));
     }
 
     @Bean
@@ -105,13 +105,13 @@ public class RagProviderConfig {
     @Bean
     public ModelCatalogPort modelCatalogPort(
             @Value("${rag.provider.catalog.url:https://models.dev/api.json}") String url,
-            ObjectMapper objectMapper) {
+            ObjectMapper om) {
         var http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
         var restClient = RestClient.builder()
                 .baseUrl(url)
                 .requestFactory(new JdkClientHttpRequestFactory(http))
                 .build();
-        return new ModelsDevCatalogClient(url, restClient, objectMapper);
+        return new ModelsDevCatalogClient(url, restClient, om);
     }
 
     @Bean

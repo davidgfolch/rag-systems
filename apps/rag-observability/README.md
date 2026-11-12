@@ -20,22 +20,22 @@ rag-observability
 └── pom.xml                             - Micrometer, OpenTelemetry, logstash-encoder, loki4j deps
 ```
 
-| Piece | Role |
-|-------|------|
+| Piece                    | Role                                                       |
+|--------------------------|------------------------------------------------------------|
 | Micrometer + OTel bridge | Metrics + distributed tracing, exported over OTLP to Tempo |
-| Prometheus registry | Scrapes `/actuator/prometheus` |
-| logstash-encoder | Structured JSON logs with `traceId`/`spanId` |
-| Loki4j appender | Pushes logs to Loki with `app`/`level` labels |
+| Prometheus registry      | Scrapes `/actuator/prometheus`                             |
+| logstash-encoder         | Structured JSON logs with `traceId`/`spanId`               |
+| Loki4j appender          | Pushes logs to Loki with `app`/`level` labels              |
 
 ## Quick access (when the stack is up)
 
-| Service | URL | Credentials |
-|---------|-----|-------------|
-| Grafana dashboards | <http://localhost:3000> | `admin` / `admin` |
-| Prometheus (metrics) | <http://localhost:9090> | - |
-| Tempo (traces) | <http://localhost:3200> | - |
-| Loki (logs) | <http://localhost:3100> | - |
-| Per-app metrics | `http://localhost:<port>/actuator/prometheus` | e.g. rag-basic `:8081` |
+| Service              | URL                                           | Credentials            |
+|----------------------|-----------------------------------------------|------------------------|
+| Grafana dashboards   | <http://localhost:3000>                       | `admin` / `admin`      |
+| Prometheus (metrics) | <http://localhost:9090>                       | -                      |
+| Tempo (traces)       | <http://localhost:3200>                       | -                      |
+| Loki (logs)          | <http://localhost:3100>                       | -                      |
+| Per-app metrics      | `http://localhost:<port>/actuator/prometheus` | e.g. rag-basic `:8081` |
 
 Ports auto-rotate if busy; `up-obs` prints the actual URLs on start.
 
@@ -43,13 +43,13 @@ Ports auto-rotate if busy; `up-obs` prints the actual URLs on start.
 
 Defined in [docs/guides/observability.md](../../docs/guides/observability.md) and read by the auto-loaded dashboards:
 
-| Category | Metric families | What they tell you |
-|----------|-----------------|--------------------|
-| Ingestion | `rag_ingestion_documents_processed_total`, `rag_ingestion_chunks_created_total`, `rag_ingestion_duration_seconds`, `rag_ingestion_errors_total` | How fast/how many docs become chunks |
-| Retrieval | `rag_retrieval_query_latency_seconds`, `rag_retrieval_vector_search_seconds`, `rag_retrieval_chunks_returned`, `rag_retrieval_similarity_score`, `rag_retrieval_query_total` | Whether search (not generation) is the bottleneck, and how good the matches look |
-| Generation | `rag_generation_tokens_total`, `rag_generation_tokens_input/output`, `rag_generation_latency_seconds`, `rag_generation_cost_total`, `rag_generation_errors_total` | Token spend and LLM latency/cost by provider |
-| Quality | `rag_quality_relevance_score`, `rag_quality_faithfulness_score`, `rag_quality_recall`, `rag_quality_hallucination_detected_total` | Whether the answer is grounded and the retrieval is complete |
-| Pipeline | `rag_pipeline_stages_total` | Counts by stage, to see where time is spent |
+| Category   | Metric families                                                                                                                                                              | What they tell you                                                               |
+|------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
+| Ingestion  | `rag_ingestion_documents_processed_total`, `rag_ingestion_chunks_created_total`, `rag_ingestion_duration_seconds`, `rag_ingestion_errors_total`                              | How fast/how many docs become chunks                                             |
+| Retrieval  | `rag_retrieval_query_latency_seconds`, `rag_retrieval_vector_search_seconds`, `rag_retrieval_chunks_returned`, `rag_retrieval_similarity_score`, `rag_retrieval_query_total` | Whether search (not generation) is the bottleneck, and how good the matches look |
+| Generation | `rag_generation_tokens_total`, `rag_generation_tokens_input/output`, `rag_generation_latency_seconds`, `rag_generation_cost_total`, `rag_generation_errors_total`            | Token spend and LLM latency/cost by provider                                     |
+| Quality    | `rag_quality_relevance_score`, `rag_quality_faithfulness_score`, `rag_quality_recall`, `rag_quality_hallucination_detected_total`                                            | Whether the answer is grounded and the retrieval is complete                     |
+| Pipeline   | `rag_pipeline_stages_total`                                                                                                                                                  | Counts by stage, to see where time is spent                                      |
 
 ## How to compare modules (the "how & why")
 
@@ -83,13 +83,13 @@ The goal is a fair A/B: **same corpus, same questions, same profile — only the
 
 4. **Compare on three axes:**
 
-   | Axis | Where to look | What a "better" module looks like |
-   |------|---------------|-----------------------------------|
-   | **Latency & throughput** | Grafana → *RAG Pipeline Overview* (`rag_retrieval_query_latency_seconds`, `rag_retrieval_vector_search_seconds`) | Lower p95 end-to-end and vector-search time |
-   | **Retrieval quality** | Grafana → *Retrieval Performance* (`rag_retrieval_similarity_score`, `rag_retrieval_chunks_returned`, `rag_quality_recall`) | Higher similarity/recall at the same `topK` |
-   | **Cost & tokens** | Grafana → *Cost & Usage* (`rag_generation_tokens_*`, `rag_generation_cost_total` by `provider`) | Fewer input tokens for equal quality (compression/contextual filtering) |
-   | **Trace-level cause** | Tempo — open one request's trace to see stage-by-stage spans (ingest vs search vs generate) | Reranking may add a span but reduce wrong answers |
-   | **Logs** | Loki — filter by `app`, jump to a trace via the `traceId` derived field | Fewer warnings/errors per request |
+   | Axis                     | Where to look                                                                                                               | What a "better" module looks like                                       |
+   |--------------------------|-----------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------|
+   | **Latency & throughput** | Grafana → *RAG Pipeline Overview* (`rag_retrieval_query_latency_seconds`, `rag_retrieval_vector_search_seconds`)            | Lower p95 end-to-end and vector-search time                             |
+   | **Retrieval quality**    | Grafana → *Retrieval Performance* (`rag_retrieval_similarity_score`, `rag_retrieval_chunks_returned`, `rag_quality_recall`) | Higher similarity/recall at the same `topK`                             |
+   | **Cost & tokens**        | Grafana → *Cost & Usage* (`rag_generation_tokens_*`, `rag_generation_cost_total` by `provider`)                             | Fewer input tokens for equal quality (compression/contextual filtering) |
+   | **Trace-level cause**    | Tempo — open one request's trace to see stage-by-stage spans (ingest vs search vs generate)                                 | Reranking may add a span but reduce wrong answers                       |
+   | **Logs**                 | Loki — filter by `app`, jump to a trace via the `traceId` derived field                                                     | Fewer warnings/errors per request                                       |
 
 5. **Correlate one request end to end:** every log line carries `traceId`/`spanId`. In Loki click the traceId → jumps to the Tempo trace → Tempo's **Logs** view jumps back. Use this to explain a bad score (e.g. "the similarity was fine, generation hallucinated").
 
@@ -99,11 +99,11 @@ The goal is a fair A/B: **same corpus, same questions, same profile — only the
 
 ## Dashboards (auto-loaded from `docker/grafana/`)
 
-| Dashboard | Answers |
-|-----------|---------|
-| **RAG Pipeline Overview** | Is the system healthy? Request rate, p95 latency, errors, stage counts |
+| Dashboard                 | Answers                                                                                    |
+|---------------------------|--------------------------------------------------------------------------------------------|
+| **RAG Pipeline Overview** | Is the system healthy? Request rate, p95 latency, errors, stage counts                     |
 | **Retrieval Performance** | Is retrieval fast and accurate? Vector-search latency, chunks returned, similarity, recall |
-| **Cost & Usage** | What does it cost? Token usage by provider, input/output split, estimated spend |
+| **Cost & Usage**          | What does it cost? Token usage by provider, input/output split, estimated spend            |
 
 Trace ↔ log correlation works both ways: Tempo's `tracesToLogs` and Loki's `traceId` derived field.
 

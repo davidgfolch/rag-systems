@@ -37,7 +37,7 @@ final class PgVectorWriter {
 
     private static final Logger log = LoggerFactory.getLogger(PgVectorWriter.class);
 
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final ObjectMapper OM = new ObjectMapper();
     private static final int BATCH_SIZE = 500;
     private static final int MAX_IDENTIFIER_LENGTH = 63;
     private static final String DOCUMENT_INDEX_SUFFIX = "_document_id_idx";
@@ -151,7 +151,7 @@ final class PgVectorWriter {
         metadata.put(DOCUMENT_ID, chunk.getDocumentId());
         metadata.put(CHUNK_INDEX, chunk.getIndex());
         try {
-            return OBJECT_MAPPER.writeValueAsString(metadata);
+            return OM.writeValueAsString(metadata);
         } catch (JsonProcessingException e) {
             throw new IllegalArgumentException("Cannot serialize metadata for chunk " + chunk.getId(), e);
         }

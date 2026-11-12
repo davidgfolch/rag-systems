@@ -19,22 +19,22 @@ The shared primitives live in `rag-common-core` (`com.rag.common.core.resilience
 
 ## Defaults
 
-| Boundary | Configuration | Default |
-|----------|---------------|---------|
-| Async ingestion submission | `rag.ingestion.max-concurrent` / `rag.ingestion.queue-wait` | 2 / 5m |
-| Module embedding window | `rag.embedding.batch-size` | 32 |
-| Provider embedding service | `rag.provider.embedding.max-concurrent` / `queue-wait` | 2 / 180s |
-| Provider embedding batch | `rag.provider.embedding.batch-size` | 32 |
-| Module → provider HTTP | `rag.provider.http.connect-timeout` / `request-timeout` | 10s / 180s |
-| Provider → Ollama HTTP | `rag.provider.http.connect-timeout` / `read-timeout` | 10s / 240s |
-| Webcrawler client | client factory | 5s connect / 60s read |
-| rag-tui → module (other calls) | `rag.http.read-timeout-seconds` | 60s |
-| rag-tui → module (crawl start/step/cancel) | `rag.http.crawl-read-timeout-seconds` | 600s |
-| Jsoup page fetch | `rag.crawler.fetch.timeout-seconds` | 20s |
-| robots.txt / sitemap loader | per request | 15s |
-| JDBC statements | adapter constant | 30s query timeout |
-| Hikari pool | `HIKARI_CONNECTION_TIMEOUT` / `HIKARI_VALIDATION_TIMEOUT` / `HIKARI_KEEPALIVE_TIME` | 30000 / 5000 / 60000 ms |
-| Retry schedule | `max-attempts` / `initial-backoff` / `max-backoff` | 4 / 500ms / 10s |
+| Boundary                                   | Configuration                                                                       | Default                 |
+|--------------------------------------------|-------------------------------------------------------------------------------------|-------------------------|
+| Async ingestion submission                 | `rag.ingestion.max-concurrent` / `rag.ingestion.queue-wait`                         | 2 / 5m                  |
+| Module embedding window                    | `rag.embedding.batch-size`                                                          | 32                      |
+| Provider embedding service                 | `rag.provider.embedding.max-concurrent` / `queue-wait`                              | 2 / 180s                |
+| Provider embedding batch                   | `rag.provider.embedding.batch-size`                                                 | 32                      |
+| Module → provider HTTP                     | `rag.provider.http.connect-timeout` / `request-timeout`                             | 10s / 180s              |
+| Provider → Ollama HTTP                     | `rag.provider.http.connect-timeout` / `read-timeout`                                | 10s / 240s              |
+| Webcrawler client                          | client factory                                                                      | 5s connect / 60s read   |
+| rag-tui → module (other calls)             | `rag.http.read-timeout-seconds`                                                     | 60s                     |
+| rag-tui → module (crawl start/step/cancel) | `rag.http.crawl-read-timeout-seconds`                                               | 600s                    |
+| Jsoup page fetch                           | `rag.crawler.fetch.timeout-seconds`                                                 | 20s                     |
+| robots.txt / sitemap loader                | per request                                                                         | 15s                     |
+| JDBC statements                            | adapter constant                                                                    | 30s query timeout       |
+| Hikari pool                                | `HIKARI_CONNECTION_TIMEOUT` / `HIKARI_VALIDATION_TIMEOUT` / `HIKARI_KEEPALIVE_TIME` | 30000 / 5000 / 60000 ms |
+| Retry schedule                             | `max-attempts` / `initial-backoff` / `max-backoff`                                  | 4 / 500ms / 10s         |
 
 The retry policy uses a multiplier of `2.0` with `0.5` equal jitter, so retries
 spread out instead of hammering a recovering service.
@@ -103,13 +103,13 @@ Resilience primitives register Micrometer meters when a `MeterRegistry` is
 present. Metrics are optional: contexts without observability keep the same
 behaviour with instrumentation disabled.
 
-| Meter | Type | Tags | Meaning |
-|-------|------|------|---------|
-| `rag.resilience.retry` | counter | `component` | Transient failures scheduled for another attempt |
-| `rag.resilience.retry.delay` | timer | `component` | Backoff delay applied before each retry |
-| `rag.resilience.limiter.in_flight` | gauge | `name` | Permits currently held by the gate |
-| `rag.resilience.limiter.rejections` | counter | `name` | Callers rejected after the queue wait |
-| `rag.resilience.limiter.wait` | timer | `name` | Time callers spent waiting for a permit |
+| Meter                               | Type    | Tags        | Meaning                                          |
+|-------------------------------------|---------|-------------|--------------------------------------------------|
+| `rag.resilience.retry`              | counter | `component` | Transient failures scheduled for another attempt |
+| `rag.resilience.retry.delay`        | timer   | `component` | Backoff delay applied before each retry          |
+| `rag.resilience.limiter.in_flight`  | gauge   | `name`      | Permits currently held by the gate               |
+| `rag.resilience.limiter.rejections` | counter | `name`      | Callers rejected after the queue wait            |
+| `rag.resilience.limiter.wait`       | timer   | `name`      | Time callers spent waiting for a permit          |
 
 Components currently instrumented: `provider-http`, `provider-embedding`,
 `ingestion`, `pgvector`, `webcrawler` and `crawler-client`. Query them in
@@ -149,15 +149,15 @@ inside Ollama and eventually time out.
 
 ## Troubleshooting
 
-| Symptom | Likely cause | Action |
-|---------|--------------|--------|
-| `Ingestion capacity exhausted` | More pages than the ingestion gate allows | Wait, lower crawl scope, or raise `rag.ingestion.max-concurrent` |
-| HTTP `503` from an async ingest endpoint | Ingestion limiter stayed saturated for the whole queue wait | Retry later or lower crawl scope |
-| HTTP `429` from rag-provider | Provider embedding limiter saturated | Honour `Retry-After`, lower crawl scope or raise `rag.provider.embedding.max-concurrent` |
-| `HttpTimeoutException` | Ollama too slow or queue unbounded | Raise `read-timeout`, lower concurrency, set Ollama limits |
-| `Request cancelled` in `add-url` | The crawl step waited longer than the TUI crawl read timeout | Raise `rag.http.crawl-read-timeout-seconds`, lower `rag.ingestion.queue-wait`, or reduce crawl scope |
-| Repeated retry warnings | Persistent downstream failure | Check container logs; retries only mask transient errors |
-| `42P01` missing table | Nothing ingested into the module schema yet | Expected; list/delete return empty |
+| Symptom                                  | Likely cause                                                 | Action                                                                                               |
+|------------------------------------------|--------------------------------------------------------------|------------------------------------------------------------------------------------------------------|
+| `Ingestion capacity exhausted`           | More pages than the ingestion gate allows                    | Wait, lower crawl scope, or raise `rag.ingestion.max-concurrent`                                     |
+| HTTP `503` from an async ingest endpoint | Ingestion limiter stayed saturated for the whole queue wait  | Retry later or lower crawl scope                                                                     |
+| HTTP `429` from rag-provider             | Provider embedding limiter saturated                         | Honour `Retry-After`, lower crawl scope or raise `rag.provider.embedding.max-concurrent`             |
+| `HttpTimeoutException`                   | Ollama too slow or queue unbounded                           | Raise `read-timeout`, lower concurrency, set Ollama limits                                           |
+| `Request cancelled` in `add-url`         | The crawl step waited longer than the TUI crawl read timeout | Raise `rag.http.crawl-read-timeout-seconds`, lower `rag.ingestion.queue-wait`, or reduce crawl scope |
+| Repeated retry warnings                  | Persistent downstream failure                                | Check container logs; retries only mask transient errors                                             |
+| `42P01` missing table                    | Nothing ingested into the module schema yet                  | Expected; list/delete return empty                                                                   |
 
 ## Future alternative: durable queue
 

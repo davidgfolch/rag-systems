@@ -114,7 +114,7 @@ class PgVectorWriterRetryTest {
 
         sut.add(List.of(chunk()));
 
-        var captor = ArgumentCaptor.forClass(Integer.class);
+        ArgumentCaptor<Integer> captor = ArgumentCaptor.captor();
         verify(statement).setQueryTimeout(captor.capture());
         verify(indexStatement).setQueryTimeout(captor.capture());
         assertThat(captor.getAllValues()).containsOnly(EXPECTED_QUERY_TIMEOUT);

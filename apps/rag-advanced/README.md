@@ -20,13 +20,13 @@ The shared `IngestionController`, `ChatService`, `ChatWebSocketHandler`, parser 
 
 ## Advanced Features
 
-| Feature | Description | Why it helps |
-|---------|-------------|--------------|
-| Candidate widening | Fetch `topK × 4` vector hits before re-ranking | Gives the lexical pass candidates it can promote |
-| Lexical re-ranking | BM25-style score (k1=1.2, b=0.75, δ=0.5) over the candidate set | Rewards exact/rare terms that embeddings blur |
-| Hybrid fusion | RRF over vector rank + lexical rank: `1/(60+r+1)` each | Combines both signals without score normalization |
-| Metadata filtering | Exact key/value match on chunk metadata before fusion | Removes off-topic sources early |
-| Pipeline variants | Boot + runtime variants with their own table | Compare chunking/model choices per module |
+| Feature            | Description                                                     | Why it helps                                      |
+|--------------------|-----------------------------------------------------------------|---------------------------------------------------|
+| Candidate widening | Fetch `topK × 4` vector hits before re-ranking                  | Gives the lexical pass candidates it can promote  |
+| Lexical re-ranking | BM25-style score (k1=1.2, b=0.75, δ=0.5) over the candidate set | Rewards exact/rare terms that embeddings blur     |
+| Hybrid fusion      | RRF over vector rank + lexical rank: `1/(60+r+1)` each          | Combines both signals without score normalization |
+| Metadata filtering | Exact key/value match on chunk metadata before fusion           | Removes off-topic sources early                   |
+| Pipeline variants  | Boot + runtime variants with their own table                    | Compare chunking/model choices per module         |
 
 **Not implemented:** cross-encoder/LLM re-ranking, query transformation/expansion, and contextual compression. The implemented re-ranker is the lexical BM25 + RRF pass above.
 
@@ -34,13 +34,13 @@ The shared `IngestionController`, `ChatService`, `ChatWebSocketHandler`, parser 
 
 A **variant** bundles a chunking strategy + window with the embedding model label and its own vector table. rag-advanced seeds a `boot` variant from `rag.chunking.*` that keeps the module's `chunks` table; variants registered at runtime own `variant_<id>` inside `rag_advanced`, so a chunking experiment never mixes with the baseline vectors.
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| `GET` | `/api/modules/rag-advanced/variants` | List variants |
-| `GET` | `/api/modules/rag-advanced/variants/active` | Active variant (`204` when none) |
-| `POST` | `/api/modules/rag-advanced/variants` | Register a variant (strategy + window) |
-| `POST` | `/api/modules/rag-advanced/variants/{id}/activate` | Switch without restarting the module |
-| `PUT` / `DELETE` | `/api/modules/rag-advanced/variants/{id}` | Update / remove |
+| Method           | Path                                               | Purpose                                |
+|------------------|----------------------------------------------------|----------------------------------------|
+| `GET`            | `/api/modules/rag-advanced/variants`               | List variants                          |
+| `GET`            | `/api/modules/rag-advanced/variants/active`        | Active variant (`204` when none)       |
+| `POST`           | `/api/modules/rag-advanced/variants`               | Register a variant (strategy + window) |
+| `POST`           | `/api/modules/rag-advanced/variants/{id}/activate` | Switch without restarting the module   |
+| `PUT` / `DELETE` | `/api/modules/rag-advanced/variants/{id}`          | Update / remove                        |
 
 A switch applies to the **next** ingestion and query. Each variant embeds with its own `embeddingModel` via rag-provider, so variants can use different dimensions side by side; `connect embedding` remains the fallback for the `boot` variant. Registry and active variant persist in `pipeline_variants`. See [ADR-0015](../../docs/architecture/decision-records/adr-0015-pipeline-variants.md).
 
@@ -62,12 +62,12 @@ A switch applies to the **next** ingestion and query. Each variant embeds with i
 
 ## Quick access
 
-| Endpoint | URL |
-|----------|-----|
-| API base | <http://localhost:8082> |
-| Health | <http://localhost:8082/actuator/health> |
-| Prometheus metrics | <http://localhost:8082/actuator/prometheus> |
-| API reference | [rag-api.yaml](../rag-contract/src/main/resources/openapi/rag-api.yaml) |
+| Endpoint           | URL                                                                     |
+|--------------------|-------------------------------------------------------------------------|
+| API base           | <http://localhost:8082>                                                 |
+| Health             | <http://localhost:8082/actuator/health>                                 |
+| Prometheus metrics | <http://localhost:8082/actuator/prometheus>                             |
+| API reference      | [rag-api.yaml](../rag-contract/src/main/resources/openapi/rag-api.yaml) |
 
 ## HTTP API
 
@@ -85,15 +85,15 @@ curl -H "Content-Type: application/json" \
 
 ## Configuration
 
-| Property | Env var | Default | Description |
-|----------|---------|---------|-------------|
-| `server.port` | `RAG_ADVANCED_PORT` | `8082` | HTTP port (must match the port in `RAG_ADVANCED_URL`) |
-| `rag.provider.url` | `RAG_PROVIDER_URL` | `http://localhost:8086` | Provider hub |
-| `rag.vector-store.type` | `VECTOR_STORE_TYPE` | `pgvector` | `pgvector` or `simple` |
-| `rag.chunking.strategy` | - | `recursive` | `fixed`/`recursive`/`token` |
-| `rag.chunking.size` | `CHUNK_SIZE` | `512` | Max chunk size |
-| `rag.chunking.overlap` | `CHUNK_OVERLAP` | `128` | Chunk overlap |
-| `spring.ai.vectorstore.pgvector.schema-name` | `PGVECTOR_ADVANCED_SCHEMA` | `rag_advanced` | PgVector schema (isolated from rag-basic) |
+| Property                                     | Env var                    | Default                 | Description                                           |
+|----------------------------------------------|----------------------------|-------------------------|-------------------------------------------------------|
+| `server.port`                                | `RAG_ADVANCED_PORT`        | `8082`                  | HTTP port (must match the port in `RAG_ADVANCED_URL`) |
+| `rag.provider.url`                           | `RAG_PROVIDER_URL`         | `http://localhost:8086` | Provider hub                                          |
+| `rag.vector-store.type`                      | `VECTOR_STORE_TYPE`        | `pgvector`              | `pgvector` or `simple`                                |
+| `rag.chunking.strategy`                      | -                          | `recursive`             | `fixed`/`recursive`/`token`                           |
+| `rag.chunking.size`                          | `CHUNK_SIZE`               | `512`                   | Max chunk size                                        |
+| `rag.chunking.overlap`                       | `CHUNK_OVERLAP`            | `128`                   | Chunk overlap                                         |
+| `spring.ai.vectorstore.pgvector.schema-name` | `PGVECTOR_ADVANCED_SCHEMA` | `rag_advanced`          | PgVector schema (isolated from rag-basic)             |
 
 ## How to compare it with rag-basic (the "why")
 

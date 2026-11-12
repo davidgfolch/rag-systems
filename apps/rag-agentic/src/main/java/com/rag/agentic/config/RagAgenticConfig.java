@@ -68,8 +68,8 @@ public class RagAgenticConfig {
     }
 
     @Bean
-    public ToolCallParser toolCallParser(ObjectMapper objectMapper) {
-        return new ToolCallParser(objectMapper);
+    public ToolCallParser toolCallParser(ObjectMapper om) {
+        return new ToolCallParser(om);
     }
 
     @Bean
@@ -134,7 +134,7 @@ public class RagAgenticConfig {
 
     @Bean
     public ChatWebSocketHandler chatWebSocketHandler(
-            AgenticChatService agenticChatService, ObjectMapper objectMapper, Tracer tracer) {
-        return new ChatWebSocketHandler(agenticChatService::askStream, objectMapper, tracer);
+            AgenticChatService agenticChatService, ObjectMapper om, Tracer tracer) {
+        return new ChatWebSocketHandler(agenticChatService::askStream, om, tracer);
     }
 }

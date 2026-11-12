@@ -19,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class DiscoveryCacheStoreTest {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper OM = new ObjectMapper();
     private static final String KIND = "ollama";
     private static final Instant NOW = Instant.parse("2026-01-01T00:00:00Z");
 
@@ -108,7 +108,7 @@ class DiscoveryCacheStoreTest {
 
     @Test
     void shouldIgnoreDirectoryInPlaceOfCacheFile() {
-        var sut = new DiscoveryCacheStore(MAPPER, new DiscoveryCacheSettings(directory,
+        var sut = new DiscoveryCacheStore(OM, new DiscoveryCacheSettings(directory,
                 Duration.ofSeconds(3600), Duration.ofSeconds(60)), clock);
         assertThat(sut.read(KIND)).isEmpty();
     }
@@ -116,14 +116,14 @@ class DiscoveryCacheStoreTest {
     @Test
     void shouldNotThrowWhenCacheDirectoryCannotBeCreated() throws IOException {
         var blocker = Files.writeString(directory.resolve("blocker"), "x");
-        var sut = new DiscoveryCacheStore(MAPPER, new DiscoveryCacheSettings(blocker.resolve("cache.json"),
+        var sut = new DiscoveryCacheStore(OM, new DiscoveryCacheSettings(blocker.resolve("cache.json"),
                 Duration.ofSeconds(3600), Duration.ofSeconds(60)), clock);
         sut.write(KIND, "192.168.1.10");
         assertThat(blocker).isRegularFile();
     }
 
     private DiscoveryCacheStore store() {
-        return new DiscoveryCacheStore(MAPPER, settings, clock);
+        return new DiscoveryCacheStore(OM, settings, clock);
     }
 
     private static final class MutableClock extends Clock {

@@ -60,8 +60,8 @@ public class OllamaDiscoveryConfig {
     }
 
     @Bean
-    public DiscoveryCacheStore discoveryCacheStore(ObjectMapper objectMapper, DiscoveryCacheSettings settings) {
-        return new DiscoveryCacheStore(objectMapper, settings, Clock.systemUTC());
+    public DiscoveryCacheStore discoveryCacheStore(ObjectMapper om, DiscoveryCacheSettings settings) {
+        return new DiscoveryCacheStore(om, settings, Clock.systemUTC());
     }
 
     @Bean

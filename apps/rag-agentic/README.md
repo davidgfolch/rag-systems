@@ -31,30 +31,30 @@ The loop (max steps `rag.agent.max-steps`, default 3) works as follows:
 
 ## Endpoints
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/api/query` | Shared contract retrieval (runs the loop in collect mode) |
-| `POST` | `/api/query/agentic` | Full agent run: answer + step trace + sources |
-| `GET`  | `/api/documents` | List ingested documents |
-| `DELETE` | `/api/documents/{id}` | Delete a document |
-| `POST` | `/api/documents/ingest` | Ingest raw content / raw bytes |
-| `POST` | `/api/documents/ingest-file` | Ingest a multipart file (sync) |
-| `POST` | `/api/documents/ingest-file-async` | Ingest a multipart file (async job) |
-| `GET`  | `/api/documents/ingest-status/{id}` | Async ingestion status |
-| `POST` | `/api/documents/ingest-url` | Fetch + ingest a URL via rag-webcrawler |
-| `WS`   | `/ws/chat` | `ask`/`cancel` in, `token`/`done`/`error` out |
+| Method   | Path                                | Description                                               |
+|----------|-------------------------------------|-----------------------------------------------------------|
+| `POST`   | `/api/query`                        | Shared contract retrieval (runs the loop in collect mode) |
+| `POST`   | `/api/query/agentic`                | Full agent run: answer + step trace + sources             |
+| `GET`    | `/api/documents`                    | List ingested documents                                   |
+| `DELETE` | `/api/documents/{id}`               | Delete a document                                         |
+| `POST`   | `/api/documents/ingest`             | Ingest raw content / raw bytes                            |
+| `POST`   | `/api/documents/ingest-file`        | Ingest a multipart file (sync)                            |
+| `POST`   | `/api/documents/ingest-file-async`  | Ingest a multipart file (async job)                       |
+| `GET`    | `/api/documents/ingest-status/{id}` | Async ingestion status                                    |
+| `POST`   | `/api/documents/ingest-url`         | Fetch + ingest a URL via rag-webcrawler                   |
+| `WS`     | `/ws/chat`                          | `ask`/`cancel` in, `token`/`done`/`error` out             |
 
 ## Pipeline variants
 
 A **variant** bundles a chunking strategy + window with the embedding model label and its own vector table. rag-agentic seeds a `boot` variant from `rag.chunking.*` that keeps the module's `chunks` table; variants registered at runtime own `variant_<id>` inside `rag_agentic`. Switching one changes the chunks the agent retrieves on the next run, without a restart.
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| `GET` | `/api/modules/rag-agentic/variants` | List variants |
-| `GET` | `/api/modules/rag-agentic/variants/active` | Active variant (`204` when none) |
-| `POST` | `/api/modules/rag-agentic/variants` | Register a variant (strategy + window) |
-| `POST` | `/api/modules/rag-agentic/variants/{id}/activate` | Switch without restarting the module |
-| `PUT` / `DELETE` | `/api/modules/rag-agentic/variants/{id}` | Update / remove |
+| Method           | Path                                              | Purpose                                |
+|------------------|---------------------------------------------------|----------------------------------------|
+| `GET`            | `/api/modules/rag-agentic/variants`               | List variants                          |
+| `GET`            | `/api/modules/rag-agentic/variants/active`        | Active variant (`204` when none)       |
+| `POST`           | `/api/modules/rag-agentic/variants`               | Register a variant (strategy + window) |
+| `POST`           | `/api/modules/rag-agentic/variants/{id}/activate` | Switch without restarting the module   |
+| `PUT` / `DELETE` | `/api/modules/rag-agentic/variants/{id}`          | Update / remove                        |
 
 Each variant embeds with its own `embeddingModel` via rag-provider, so variants can use different dimensions side by side; `connect embedding` remains the fallback for the `boot` variant. Registry and active variant persist in `pipeline_variants`. See [ADR-0015](../../docs/architecture/decision-records/adr-0015-pipeline-variants.md).
 

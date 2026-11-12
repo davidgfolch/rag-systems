@@ -20,11 +20,11 @@ public class ProviderProfileFileStore implements ProviderProfileStore {
 
     private static final Logger log = LoggerFactory.getLogger(ProviderProfileFileStore.class);
 
-    private final ObjectMapper mapper;
+    private final ObjectMapper om;
     private final Path file;
 
-    public ProviderProfileFileStore(ObjectMapper mapper, Path file) {
-        this.mapper = mapper;
+    public ProviderProfileFileStore(ObjectMapper om, Path file) {
+        this.om = om;
         this.file = file;
     }
 
@@ -32,7 +32,7 @@ public class ProviderProfileFileStore implements ProviderProfileStore {
     public List<ProviderProfile> load() {
         if (Files.notExists(file)) return List.of();
         try {
-            return mapper.readValue(file.toFile(), new TypeReference<List<ProviderProfile>>() {});
+            return om.readValue(file.toFile(), new TypeReference<>() {});
         } catch (IOException e) {
             log.warn("Could not read provider profiles from {}: {}", file, e.getMessage());
             return List.of();
@@ -45,7 +45,7 @@ public class ProviderProfileFileStore implements ProviderProfileStore {
             if (file.getParent() != null) {
                 Files.createDirectories(file.getParent());
             }
-            mapper.writerWithDefaultPrettyPrinter().writeValue(file.toFile(), profiles);
+            om.writerWithDefaultPrettyPrinter().writeValue(file.toFile(), profiles);
             log.info("Saved {} provider profile(s) to {}", profiles.size(), file);
         } catch (IOException e) {
             log.warn("Could not persist provider profiles to {}: {}", file, e.getMessage());

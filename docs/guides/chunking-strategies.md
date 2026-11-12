@@ -13,12 +13,12 @@ A naive split can break semantics: `"Configure the datasource URL in application
 
 ## Strategy Comparison
 
-| Strategy | Best For | Retrieval Precision | Cost | Complexity |
-|----------|----------|---------------------|------|-----------|
-| Fixed-size sliding window | Homogeneous text (reviews, logs) | ~71% | Low | Low |
-| Recursive character | Most production workloads | ~82% | Low | Low |
-| Semantic | High-value documents | ~91% (literature) | High (~4.5x recursive embedding calls) | Medium |
-| Agentic | Complex/varied documents | Best potential | High | High |
+| Strategy                  | Best For                         | Retrieval Precision | Cost                                   | Complexity |
+|---------------------------|----------------------------------|---------------------|----------------------------------------|------------|
+| Fixed-size sliding window | Homogeneous text (reviews, logs) | ~71%                | Low                                    | Low        |
+| Recursive character       | Most production workloads        | ~82%                | Low                                    | Low        |
+| Semantic                  | High-value documents             | ~91% (literature)   | High (~4.5x recursive embedding calls) | Medium     |
+| Agentic                   | Complex/varied documents         | Best potential      | High                                   | High       |
 
 *Precision figures are literature references — this repository has no retrieval-precision benchmark yet. The semantic **cost** is measured here: 4.5x the recursive strategy's embedding calls on this repo's `docs/` corpus (see [performance metrics](../comparison/performance-metrics.md)).*
 
@@ -60,12 +60,12 @@ An AI agent evaluates the document and user intent to decide how to chunk - may 
 
 ## Chunk Size Guidance
 
-| Content Type | Chunk Size (tokens) | Notes |
-|--------------|---------------------|-------|
-| Prose / general docs | 300-512 | Sweet spot for most embedding models |
-| Code documentation | 256-384 | Function-level boundaries |
-| API references | 256-384 | Function-level boundaries, metadata tags |
-| Tables/data | Preserve as units | Don't split tabular data |
+| Content Type         | Chunk Size (tokens) | Notes                                    |
+|----------------------|---------------------|------------------------------------------|
+| Prose / general docs | 300-512             | Sweet spot for most embedding models     |
+| Code documentation   | 256-384             | Function-level boundaries                |
+| API references       | 256-384             | Function-level boundaries, metadata tags |
+| Tables/data          | Preserve as units   | Don't split tabular data                 |
 
 Smaller chunks (256-384) are better for code; larger (512) for prose. Match your chunk size to your embedding model's window.
 

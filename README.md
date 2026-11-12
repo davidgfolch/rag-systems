@@ -19,7 +19,7 @@
 | Coverage | 90.8% |
 | Duplication | 0.2%
 
-*Last scan: 2026-11-08 20:19 UTC*
+*Last scan: 2026-11-12 11:01 UTC*
 <!-- SONARQUBE_RESULTS_END -->
 
 A monorepo for learning and comparing different RAG (Retrieval-Augmented Generation) implementations using Java Spring Boot and Spring AI. Each module is a decoupled bounded context with interchangeable chunking, embedding, and retrieval strategies — designed to be reusable across knowledge domains and to run comfortably on a regular local machine.
@@ -321,17 +321,17 @@ See the architecture decisions for the full rationale:
 
 ## More Documentation
 
-| Topic | Link |
-|-------|------|
-| Architecture Overview | [docs/architecture/](docs/architecture/) |
-| Master Plan | [docs/PLAN.md](docs/PLAN.md) |
-| All Guides | [docs/guides/](docs/guides/) |
-| Performance & Benchmarks | [docs/comparison/](docs/comparison/) |
+| Topic                                        | Link                                                         |
+|----------------------------------------------|--------------------------------------------------------------|
+| Architecture Overview                        | [docs/architecture/](docs/architecture/)                     |
+| Master Plan                                  | [docs/PLAN.md](docs/PLAN.md)                                 |
+| All Guides                                   | [docs/guides/](docs/guides/)                                 |
+| Performance & Benchmarks                     | [docs/comparison/](docs/comparison/)                         |
 | Observability (tracing, metrics, dashboards) | [docs/guides/observability.md](docs/guides/observability.md) |
-| Resilience (concurrency, timeouts, retries) | [docs/guides/resilience.md](docs/guides/resilience.md) |
-| SonarQube Static Analysis | [docs/guides/sonarqube.md](docs/guides/sonarqube.md) |
-| Module readmes | [apps/](apps/) — per-module guides under `apps/*/README.md` |
-| Agentic SDLC (rules, skills, config) | [.claude/](.claude/) |
+| Resilience (concurrency, timeouts, retries)  | [docs/guides/resilience.md](docs/guides/resilience.md)       |
+| SonarQube Static Analysis                    | [docs/guides/sonarqube.md](docs/guides/sonarqube.md)         |
+| Module readmes                               | [apps/](apps/) — per-module guides under `apps/*/README.md`  |
+| Agentic SDLC (rules, skills, config)         | [.claude/](.claude/)                                         |
 
 ## License
 

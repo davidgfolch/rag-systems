@@ -112,13 +112,13 @@ Master architecture plan for learning and comparing different RAG (Retrieval-Aug
 
 This architecture evolves around a **thin TUI + switchable RAG modules**. Each decision is recorded as an ADR in `docs/architecture/decision-records/`.
 
-| Area | Strategy | ADR |
-|------|----------|-----|
-| **Contract** | API-first: `rag-contract` OpenAPI spec generates shared DTOs used by all modules | [ADR-0005](architecture/decision-records/adr-0005-api-contract.md) |
-| **Data isolation** | PostgreSQL schema per rag-* module + single `chunks` table with `documentId` chunk metadata | [ADR-0006](architecture/decision-records/adr-0006-data-store-isolation.md) |
-| **TUI** | Thin interface over a control plane: starts/stops rag-* modules as child processes, routes REST/WebSocket to the active module | [ADR-0007](architecture/decision-records/adr-0007-tui-interface.md) |
-| **Conversation state** | `rag-memory` module owns chat/conversation history (schema `rag_memory`, non-vector) | [ADR-0008](architecture/decision-records/adr-0008-rag-memory.md) |
-| **Web ingestion** | `rag-webcrawler` module: intelligent fetching with LLM-driven link selection | [ADR-0009](architecture/decision-records/adr-0009-rag-webcrawler.md) |
+| Area                     | Strategy                                                                                                                                                                    | ADR                                                                                                                                                                                                        |
+|--------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Contract**             | API-first: `rag-contract` OpenAPI spec generates shared DTOs used by all modules                                                                                            | [ADR-0005](architecture/decision-records/adr-0005-api-contract.md)                                                                                                                                         |
+| **Data isolation**       | PostgreSQL schema per rag-* module + single `chunks` table with `documentId` chunk metadata                                                                                 | [ADR-0006](architecture/decision-records/adr-0006-data-store-isolation.md)                                                                                                                                 |
+| **TUI**                  | Thin interface over a control plane: starts/stops rag-* modules as child processes, routes REST/WebSocket to the active module                                              | [ADR-0007](architecture/decision-records/adr-0007-tui-interface.md)                                                                                                                                        |
+| **Conversation state**   | `rag-memory` module owns chat/conversation history (schema `rag_memory`, non-vector)                                                                                        | [ADR-0008](architecture/decision-records/adr-0008-rag-memory.md)                                                                                                                                           |
+| **Web ingestion**        | `rag-webcrawler` module: intelligent fetching with LLM-driven link selection                                                                                                | [ADR-0009](architecture/decision-records/adr-0009-rag-webcrawler.md)                                                                                                                                       |
 | **Provider abstraction** | Dedicated `rag-provider` service owns all model/provider clients; runtime model switching over HTTP; downstream modules talk to it via thin `rag-common-generation` bridges | [ADR-0010](architecture/decision-records/adr-0010-rag-provider.md), [ADR-0011](architecture/decision-records/adr-0011-model-catalog.md), [ADR-0012](architecture/decision-records/adr-0012-tui-connect.md) |
 
 Core invariants:
@@ -151,14 +151,14 @@ Core invariants:
 
 ## Technology Stack (LTS Versions)
 
-| Component | Version | Notes |
-|-----------|---------|-------|
-| Java | 25 LTS | Virtual threads, records, sealed classes |
-| Spring Boot | 3.4.x | Latest stable |
-| Spring AI | 1.1.x | Latest stable |
-| Maven | 3.9.x | Multi-module parent POM |
-| PostgreSQL | 16 LTS | For PgVector |
-| Node | 20 LTS | For CLI tooling |
+| Component   | Version | Notes                                    |
+|-------------|---------|------------------------------------------|
+| Java        | 25 LTS  | Virtual threads, records, sealed classes |
+| Spring Boot | 3.4.x   | Latest stable                            |
+| Spring AI   | 1.1.x   | Latest stable                            |
+| Maven       | 3.9.x   | Multi-module parent POM                  |
+| PostgreSQL  | 16 LTS  | For PgVector                             |
+| Node        | 20 LTS  | For CLI tooling                          |
 
 ### Dependencies
 - **Document Processing**: Apache Tika, JSoup, Apache PDFBox
@@ -365,25 +365,25 @@ The project is designed to run comfortably on a **regular local machine** (CPU-o
 
 ### Layer Hardware Requirements
 
-| Layer | Model | Memory | Hardware | Performance (CPU) |
-|-------|-------|--------|----------|-------------------|
-| Embeddings | `nomic-embed-text` | ~300MB | CPU ok | ~580 chunks/sec |
-| Embeddings | `all-MiniLM-L6-v2` | ~90MB | CPU ok | ~100+ chunks/sec |
-| Vector Store | PgVector | - | CPU ok | In-memory fast |
-| Vector Store | SimpleVectorStore | - | CPU ok | Fastest |
-| LLM (learning) | Qwen3 4B / Phi-4 | ~4GB | CPU ok (slow) | Usable |
-| LLM (comfortable) | Qwen3 8B (Q4) | ~4-8GB VRAM | GPU (8GB) | Fast |
-| LLM (best local) | Qwen3-30B-A3B (MoE) | ~16GB VRAM | GPU | Excellent |
+| Layer             | Model               | Memory      | Hardware      | Performance (CPU) |
+|-------------------|---------------------|-------------|---------------|-------------------|
+| Embeddings        | `nomic-embed-text`  | ~300MB      | CPU ok        | ~580 chunks/sec   |
+| Embeddings        | `all-MiniLM-L6-v2`  | ~90MB       | CPU ok        | ~100+ chunks/sec  |
+| Vector Store      | PgVector            | -           | CPU ok        | In-memory fast    |
+| Vector Store      | SimpleVectorStore   | -           | CPU ok        | Fastest           |
+| LLM (learning)    | Qwen3 4B / Phi-4    | ~4GB        | CPU ok (slow) | Usable            |
+| LLM (comfortable) | Qwen3 8B (Q4)       | ~4-8GB VRAM | GPU (8GB)     | Fast              |
+| LLM (best local)  | Qwen3-30B-A3B (MoE) | ~16GB VRAM  | GPU           | Excellent         |
 
 ### Recommended Local Configuration
 
-| Component | Recommendation | Why |
-|-----------|---------------|-----|
-| Embeddings | `nomic-embed-text` (Ollama) | ~300MB, fast on CPU, 8k context |
-| Vector store | PgVector + in-memory fallback | Both in plan |
-| LLM (CPU, 16GB RAM) | Qwen3 4B / Phi-4 / Llama 3.2 3B | Usable, decent answers |
-| LLM (8GB GPU) | Qwen3 8B (Q4_K_M) | Best balance, 128k context |
-| Multilingual | `bge-m3` | For non-English tech docs |
+| Component           | Recommendation                  | Why                             |
+|---------------------|---------------------------------|---------------------------------|
+| Embeddings          | `nomic-embed-text` (Ollama)     | ~300MB, fast on CPU, 8k context |
+| Vector store        | PgVector + in-memory fallback   | Both in plan                    |
+| LLM (CPU, 16GB RAM) | Qwen3 4B / Phi-4 / Llama 3.2 3B | Usable, decent answers          |
+| LLM (8GB GPU)       | Qwen3 8B (Q4_K_M)               | Best balance, 128k context      |
+| Multilingual        | `bge-m3`                        | For non-English tech docs       |
 
 ### Hardware Guidance
 
@@ -421,20 +421,20 @@ ollama pull qwen3:8b
 ┌─────────────────────────────────────────────────────────────────┐
 │                    RAG Pipeline Architecture                    │
 ├─────────────────────────────────────────────────────────────────┤
-│  INGESTION PIPELINE                                            │
-│  ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐ │
-│  │ Document │───▶│  Text    │───▶│Embedding │───▶│ Vector   │ │
-│  │ Reader   │    │ Splitter │    │ Model    │    │ Store    │ │
-│  └──────────┘    └──────────┘    └──────────┘    └──────────┘ │
+│  INGESTION PIPELINE                                             │
+│  ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐   │
+│  │ Document │───▶│  Text    │───▶│Embedding │───▶│ Vector   │   │
+│  │ Reader   │    │ Splitter │    │ Model    │    │ Store    │   │
+│  └──────────┘    └──────────┘    └──────────┘    └──────────┘   │
 │                                                                 │
-│  RETRIEVAL PIPELINE                                            │
-│  ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐ │
-│  │  User    │───▶│ Query    │───▶│ Retrieval│───▶│   LLM    │ │
-│  │  Query   │    │ Embed    │    │ Search   │    │ Generate │ │
-│  └──────────┘    └──────────┘    └──────────┘    └──────────┘ │
+│  RETRIEVAL PIPELINE                                             │
+│  ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐   │
+│  │  User    │───▶│ Query    │───▶│ Retrieval│───▶│   LLM    │   │
+│  │  Query   │    │ Embed    │    │ Search   │    │ Generate │   │
+│  └──────────┘    └──────────┘    └──────────┘    └──────────┘   │
 │                                                                 │
-│  OBSERVABILITY LAYER (cross-cutting)                           │
-│  Tracing (OTel) · Metrics (Meter) · Logging (Structured)      │
+│  OBSERVABILITY LAYER (cross-cutting)                            │
+│  Tracing (OTel) · Metrics (Meter) · Logging (Structured)        │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -460,12 +460,12 @@ User Query → Query Embedding → Vector Search → Context Assembly → LLM Ge
 
 ## Chunking Strategy Comparison
 
-| Strategy | Best For | Pros | Cons |
-|----------|----------|------|------|
-| Fixed-size | Homogeneous text | Fast, simple | Poor semantic coherence |
-| Recursive | Most cases | Good balance | May split mid-sentence |
-| Semantic | High-value docs | Best precision | Expensive (~4.5x embedding calls) |
-| Agentic | Complex documents | Adaptive | Complex implementation |
+| Strategy   | Best For          | Pros           | Cons                              |
+|------------|-------------------|----------------|-----------------------------------|
+| Fixed-size | Homogeneous text  | Fast, simple   | Poor semantic coherence           |
+| Recursive  | Most cases        | Good balance   | May split mid-sentence            |
+| Semantic   | High-value docs   | Best precision | Expensive (~4.5x embedding calls) |
+| Agentic    | Complex documents | Adaptive       | Complex implementation            |
 
 **Status**: fixed-size, recursive, token, and semantic chunking all exist (`rag-common-ingestion` `chunking/`). The semantic **cost** is measured in this repo on the `docs/` corpus ([Phase 8](#phase-8-semantic-chunking-adr-0015-semantic-variant)); the precision figures above remain literature references, because nothing here scores retrieval precision yet.
 
@@ -480,14 +480,14 @@ User Query → Query Embedding → Vector Search → Context Assembly → LLM Ge
 
 All operations centralized in `scripts/` folder with Windows (`.bat`) and Linux/Mac (`.sh`) variants.
 
-| Script | Purpose |
-|--------|---------|
-| `install` | Install dependencies (mvn clean install) |
-| `test` | Run tests (with `--coverage`, module selection; architecture tests always run) |
-| `build` | Build all or specific modules |
-| `run` | Run a specific module (with optional observability profile) |
-| `docker` | Docker operations (base, observability, SonarQube, all services) |
-| `sonar` | SonarQube static analysis (`up`/`scan`/`up-scan`/`down`) |
+| Script    | Purpose                                                                        |
+|-----------|--------------------------------------------------------------------------------|
+| `install` | Install dependencies (mvn clean install)                                       |
+| `test`    | Run tests (with `--coverage`, module selection; architecture tests always run) |
+| `build`   | Build all or specific modules                                                  |
+| `run`     | Run a specific module (with optional observability profile)                    |
+| `docker`  | Docker operations (base, observability, SonarQube, all services)               |
+| `sonar`   | SonarQube static analysis (`up`/`scan`/`up-scan`/`down`)                       |
 
 ### Static Analysis (SonarQube)
 

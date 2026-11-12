@@ -8,13 +8,13 @@ Port: **8086** (override with `RAG_PROVIDER_PORT`).
 
 ## Quick access
 
-| Endpoint | URL |
-|----------|-----|
-| API base | <http://localhost:8086> |
-| Status | <http://localhost:8086/api/provider> |
-| Health | <http://localhost:8086/actuator/health> |
-| Prometheus metrics | <http://localhost:8086/actuator/prometheus> |
-| API reference | [rag-api.yaml](../rag-contract/src/main/resources/openapi/rag-api.yaml) |
+| Endpoint           | URL                                                                     |
+|--------------------|-------------------------------------------------------------------------|
+| API base           | <http://localhost:8086>                                                 |
+| Status             | <http://localhost:8086/api/provider>                                    |
+| Health             | <http://localhost:8086/actuator/health>                                 |
+| Prometheus metrics | <http://localhost:8086/actuator/prometheus>                             |
+| API reference      | [rag-api.yaml](../rag-contract/src/main/resources/openapi/rag-api.yaml) |
 
 ## Why it is a required dependency
 
@@ -57,31 +57,31 @@ curl http://localhost:8086/api/provider
 
 All properties are overridable via environment variables.
 
-| Property | Env var | Default | Description |
-|----------|---------|---------|-------------|
-| `server.port` | `RAG_PROVIDER_PORT` | `8086` | HTTP port |
-| `rag.provider.ollama.base-url` | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama server URL, or `auto`/`discover` for LAN discovery |
-| `rag.provider.ollama.discovery.enabled` | `OLLAMA_DISCOVERY_ENABLED` | `true` | Allow `auto`/`discover` to probe and scan |
-| `rag.provider.ollama.discovery.port` | `OLLAMA_DISCOVERY_PORT` | `11434` | Port probed by discovery (separate from docker's `OLLAMA_PORT`) |
-| `rag.provider.ollama.discovery.connect-timeout-ms` | `OLLAMA_DISCOVERY_CONNECT_TIMEOUT_MS` | `500` | Per-host TCP connect timeout |
-| `rag.provider.ollama.discovery.probe-timeout-ms` | `OLLAMA_DISCOVERY_PROBE_TIMEOUT_MS` | `3000` | `GET /api/tags` verification timeout |
-| `rag.provider.ollama.discovery.max-hosts` | `OLLAMA_DISCOVERY_MAX_HOSTS` | `1024` | Total host budget per scan (`0` = safety cap) |
-| `rag.provider.ollama.discovery.subnets` | `OLLAMA_DISCOVERY_SUBNETS` | *(none)* | Extra comma-separated CIDRs to scan |
-| `rag.provider.ollama.discovery.cache-file` | `OLLAMA_DISCOVERY_CACHE` | `data/discovery/cache.json` | Discovery cache location |
-| `rag.provider.ollama.discovery.positive-ttl-seconds` | `OLLAMA_DISCOVERY_CACHE_SECONDS` | `3600` | Fresh positive entry lifetime |
-| `rag.provider.ollama.discovery.negative-ttl-seconds` | `OLLAMA_DISCOVERY_NEGATIVE_CACHE_SECONDS` | `60` | Fresh negative entry lifetime |
-| `rag.provider.ollama.chat-model` | `OLLAMA_CHAT_MODEL` | `phi4` | Default Ollama chat model |
-| `rag.provider.ollama.embedding-model` | `OLLAMA_EMBEDDING_MODEL` | `nomic-embed-text` | Default Ollama embedding model |
-| `rag.provider.openai.api-key` | `OPENAI_API_KEY` | *(empty)* | OpenAI API key |
-| `rag.provider.openai.base-url` | `OPENAI_BASE_URL` | *(empty)* | OpenAI base URL override |
-| `rag.provider.openai.chat-model` | `OPENAI_CHAT_MODEL` | `gpt-4o` | Default OpenAI chat model |
-| `rag.provider.openai.embedding-model` | `OPENAI_EMBEDDING_MODEL` | `text-embedding-3-small` | Default OpenAI embedding model |
-| `rag.provider.defaults.chat-provider` | `DEFAULT_CHAT_PROVIDER` | `ollama` | Active chat provider at boot (profile id) |
-| `rag.provider.defaults.embedding-provider` | `DEFAULT_EMBEDDING_PROVIDER` | `ollama` | Active embedding provider at boot (profile id) |
-| `rag.provider.profiles-file` | — | `data/provider-profiles.json` | JSON file holding persisted provider profiles |
-| `rag.provider.catalog.url` | `MODEL_CATALOG_URL` | `https://models.dev/api.json` | Model catalog endpoint |
-| `rag.provider.catalog.ttl` | `MODEL_CATALOG_TTL` | `86400` | Catalog cache TTL in seconds |
-| `rag.provider.catalog.enabled` | `MODEL_CATALOG_ENABLED` | `true` | Enable catalog fetching |
+| Property                                             | Env var                                   | Default                       | Description                                                     |
+|------------------------------------------------------|-------------------------------------------|-------------------------------|-----------------------------------------------------------------|
+| `server.port`                                        | `RAG_PROVIDER_PORT`                       | `8086`                        | HTTP port                                                       |
+| `rag.provider.ollama.base-url`                       | `OLLAMA_BASE_URL`                         | `http://localhost:11434`      | Ollama server URL, or `auto`/`discover` for LAN discovery       |
+| `rag.provider.ollama.discovery.enabled`              | `OLLAMA_DISCOVERY_ENABLED`                | `true`                        | Allow `auto`/`discover` to probe and scan                       |
+| `rag.provider.ollama.discovery.port`                 | `OLLAMA_DISCOVERY_PORT`                   | `11434`                       | Port probed by discovery (separate from docker's `OLLAMA_PORT`) |
+| `rag.provider.ollama.discovery.connect-timeout-ms`   | `OLLAMA_DISCOVERY_CONNECT_TIMEOUT_MS`     | `500`                         | Per-host TCP connect timeout                                    |
+| `rag.provider.ollama.discovery.probe-timeout-ms`     | `OLLAMA_DISCOVERY_PROBE_TIMEOUT_MS`       | `3000`                        | `GET /api/tags` verification timeout                            |
+| `rag.provider.ollama.discovery.max-hosts`            | `OLLAMA_DISCOVERY_MAX_HOSTS`              | `1024`                        | Total host budget per scan (`0` = safety cap)                   |
+| `rag.provider.ollama.discovery.subnets`              | `OLLAMA_DISCOVERY_SUBNETS`                | *(none)*                      | Extra comma-separated CIDRs to scan                             |
+| `rag.provider.ollama.discovery.cache-file`           | `OLLAMA_DISCOVERY_CACHE`                  | `data/discovery/cache.json`   | Discovery cache location                                        |
+| `rag.provider.ollama.discovery.positive-ttl-seconds` | `OLLAMA_DISCOVERY_CACHE_SECONDS`          | `3600`                        | Fresh positive entry lifetime                                   |
+| `rag.provider.ollama.discovery.negative-ttl-seconds` | `OLLAMA_DISCOVERY_NEGATIVE_CACHE_SECONDS` | `60`                          | Fresh negative entry lifetime                                   |
+| `rag.provider.ollama.chat-model`                     | `OLLAMA_CHAT_MODEL`                       | `phi4`                        | Default Ollama chat model                                       |
+| `rag.provider.ollama.embedding-model`                | `OLLAMA_EMBEDDING_MODEL`                  | `nomic-embed-text`            | Default Ollama embedding model                                  |
+| `rag.provider.openai.api-key`                        | `OPENAI_API_KEY`                          | *(empty)*                     | OpenAI API key                                                  |
+| `rag.provider.openai.base-url`                       | `OPENAI_BASE_URL`                         | *(empty)*                     | OpenAI base URL override                                        |
+| `rag.provider.openai.chat-model`                     | `OPENAI_CHAT_MODEL`                       | `gpt-4o`                      | Default OpenAI chat model                                       |
+| `rag.provider.openai.embedding-model`                | `OPENAI_EMBEDDING_MODEL`                  | `text-embedding-3-small`      | Default OpenAI embedding model                                  |
+| `rag.provider.defaults.chat-provider`                | `DEFAULT_CHAT_PROVIDER`                   | `ollama`                      | Active chat provider at boot (profile id)                       |
+| `rag.provider.defaults.embedding-provider`           | `DEFAULT_EMBEDDING_PROVIDER`              | `ollama`                      | Active embedding provider at boot (profile id)                  |
+| `rag.provider.profiles-file`                         | —                                         | `data/provider-profiles.json` | JSON file holding persisted provider profiles                   |
+| `rag.provider.catalog.url`                           | `MODEL_CATALOG_URL`                       | `https://models.dev/api.json` | Model catalog endpoint                                          |
+| `rag.provider.catalog.ttl`                           | `MODEL_CATALOG_TTL`                       | `86400`                       | Catalog cache TTL in seconds                                    |
+| `rag.provider.catalog.enabled`                       | `MODEL_CATALOG_ENABLED`                   | `true`                        | Enable catalog fetching                                         |
 
 > `OLLAMA_BASE_URL` (default `http://localhost:11434`) can point at a remote or containerized Ollama. The `docker` script's `INFRA_MODE=auto` reuses an already-reachable Ollama at that URL instead of starting the `rag-ollama` container; `INFRA_MODE=local` always starts it.
 
@@ -115,27 +115,27 @@ See [ADR-0014](../../docs/architecture/decision-records/adr-0014-ollama-lan-disc
 
 ### Status & control
 
-| Method | Endpoint | Purpose |
-|--------|----------|---------|
-| `GET` | `/api/provider` | Current status: active chat/embedding models + embedding dimension |
-| `POST` | `/api/provider/chat` | Switch active chat model (`{"providerId": "openai", "model": "gpt-4o"}`) |
-| `POST` | `/api/provider/embedding` | Switch active embedding model |
-| `POST` | `/api/provider/configure` | Upsert a provider profile |
+| Method | Endpoint                  | Purpose                                                                  |
+|--------|---------------------------|--------------------------------------------------------------------------|
+| `GET`  | `/api/provider`           | Current status: active chat/embedding models + embedding dimension       |
+| `POST` | `/api/provider/chat`      | Switch active chat model (`{"providerId": "openai", "model": "gpt-4o"}`) |
+| `POST` | `/api/provider/embedding` | Switch active embedding model                                            |
+| `POST` | `/api/provider/configure` | Upsert a provider profile                                                |
 
 ### Compute
 
-| Method | Endpoint | Purpose |
-|--------|----------|---------|
-| `POST` | `/api/complete` | Non-streaming chat completion |
-| `POST` | `/api/chat/stream` | Streaming chat (SSE) |
-| `POST` | `/api/embed` | Embedding computation |
+| Method | Endpoint           | Purpose                       |
+|--------|--------------------|-------------------------------|
+| `POST` | `/api/complete`    | Non-streaming chat completion |
+| `POST` | `/api/chat/stream` | Streaming chat (SSE)          |
+| `POST` | `/api/embed`       | Embedding computation         |
 
 ### Model catalog
 
-| Method | Endpoint | Purpose |
-|--------|----------|---------|
-| `GET` | `/api/provider/catalog` | Browse the model catalog (from models.dev, cached) |
-| `POST` | `/api/provider/catalog/refresh` | Force a catalog refresh |
+| Method | Endpoint                        | Purpose                                            |
+|--------|---------------------------------|----------------------------------------------------|
+| `GET`  | `/api/provider/catalog`         | Browse the model catalog (from models.dev, cached) |
+| `POST` | `/api/provider/catalog/refresh` | Force a catalog refresh                            |
 
 ## Connecting external providers
 
@@ -195,10 +195,10 @@ Ollama/OpenAI defaults are seeded at boot from `OLLAMA_*`, `OPENAI_*`, `DEFAULT_
 
 ## Provider types
 
-| Type | Behavior |
-|------|----------|
-| `OLLAMA` | Ollama chat/embedding clients via the configured `baseUrl` (`OllamaApi`) |
-| `OPENAI` | OpenAI clients via `api.openai.com` (or `baseUrl` override) |
+| Type                | Behavior                                                                                        |
+|---------------------|-------------------------------------------------------------------------------------------------|
+| `OLLAMA`            | Ollama chat/embedding clients via the configured `baseUrl` (`OllamaApi`)                        |
+| `OPENAI`            | OpenAI clients via `api.openai.com` (or `baseUrl` override)                                     |
 | `OPENAI_COMPATIBLE` | Same OpenAI clients pointed at an arbitrary `baseUrl` (OpenRouter, GLHF, any OpenAI-shaped API) |
 
 ## Embedding dimension changes

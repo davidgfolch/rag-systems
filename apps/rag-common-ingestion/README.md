@@ -32,12 +32,12 @@ com.rag.common.ingestion
 
 ## Chunking strategies
 
-| Strategy | When to use |
-|----------|-------------|
-| Fixed-size sliding window | Homogeneous text, baseline comparisons |
-| Recursive character | Most cases — the default (`rag.chunking.strategy=recursive`) |
-| Token-based | Match the embedding model's token window |
-| Semantic | High-value documents where topic shifts matter; needs an embedding model at split time |
+| Strategy                  | When to use                                                                            |
+|---------------------------|----------------------------------------------------------------------------------------|
+| Fixed-size sliding window | Homogeneous text, baseline comparisons                                                 |
+| Recursive character       | Most cases — the default (`rag.chunking.strategy=recursive`)                           |
+| Token-based               | Match the embedding model's token window                                               |
+| Semantic                  | High-value documents where topic shifts matter; needs an embedding model at split time |
 
 All chunkers implement the `TextSplitter` port from rag-common-core, so modules pick one via config (`RagBasicConfig`/`RagAdvancedConfig`) with no code change. Defaults: `CHUNK_SIZE=512`, `CHUNK_OVERLAP=128`.
 
@@ -45,12 +45,12 @@ All chunkers implement the `TextSplitter` port from rag-common-core, so modules 
 
 `ChunkingCostComparisonTest` measures how many texts each chunker sends to the embedding port over this repository's own `docs/` corpus (33 markdown files, ~150 KB, window 512/64), with a local hashing model standing in for a provider. Measured on `main` (`71773ee`); the figures are approximate because the corpus is `docs/` itself:
 
-| Strategy | Chunks | Chunks/doc | Texts embedded | vs recursive |
-|----------|--------|------------|----------------|--------------|
-| Fixed-size | ≈350 | ≈10.5 | ≈350 | 0.8x |
-| Recursive | ≈410 | ≈12.5 | ≈410 | 1.0x |
-| Token | ≈190 | ≈5.8 | ≈190 | 0.5x |
-| Semantic | ≈630 | ≈19.2 | ≈1,850 (≈1,220 sentences + ≈630 chunks) | ≈4.5x |
+| Strategy   | Chunks | Chunks/doc | Texts embedded                          | vs recursive |
+|------------|--------|------------|-----------------------------------------|--------------|
+| Fixed-size | ≈350   | ≈10.5      | ≈350                                    | 0.8x         |
+| Recursive  | ≈410   | ≈12.5      | ≈410                                    | 1.0x         |
+| Token      | ≈190   | ≈5.8       | ≈190                                    | 0.5x         |
+| Semantic   | ≈630   | ≈19.2      | ≈1,850 (≈1,220 sentences + ≈630 chunks) | ≈4.5x        |
 
 `IngestionService` embeds every chunk once, so a strategy's ingestion cost is its chunk count — except `SEMANTIC`, which also embeds every sentence of a document to find its topic shifts (`sentences + chunks`). Semantic additionally yields more, smaller chunks than recursive (19.2 vs 12.5 per document), so the measured premium is **~4.5x**, not the 8x older docs quoted. The ratio is the same at the default 512/128 window, because overlap changes chunk text, not sentence grouping.
 

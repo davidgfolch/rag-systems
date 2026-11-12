@@ -25,12 +25,12 @@ The production backend. Key behaviors:
 
 ## Configuration
 
-| Property | Env var | Default | Description |
-|----------|---------|---------|-------------|
-| `rag.vector-store.type` | `VECTOR_STORE_TYPE` | `pgvector` | `pgvector` or `simple` |
-| `spring.ai.vectorstore.pgvector.schema-name` | `PGVECTOR_<MODULE>_SCHEMA` | module's `rag_*` schema | Per-module schema (`rag_basic` / `rag_advanced` / `rag_agentic`) |
-| `spring.ai.vectorstore.pgvector.table-name` | - | `chunks` | Storage table |
-| `spring.datasource.*` | `PGVECTOR_HOST/PORT/DB/USER/PASSWORD` | `localhost:5432/rag` | Postgres connection |
+| Property                                     | Env var                               | Default                 | Description                                                      |
+|----------------------------------------------|---------------------------------------|-------------------------|------------------------------------------------------------------|
+| `rag.vector-store.type`                      | `VECTOR_STORE_TYPE`                   | `pgvector`              | `pgvector` or `simple`                                           |
+| `spring.ai.vectorstore.pgvector.schema-name` | `PGVECTOR_<MODULE>_SCHEMA`            | module's `rag_*` schema | Per-module schema (`rag_basic` / `rag_advanced` / `rag_agentic`) |
+| `spring.ai.vectorstore.pgvector.table-name`  | -                                     | `chunks`                | Storage table                                                    |
+| `spring.datasource.*`                        | `PGVECTOR_HOST/PORT/DB/USER/PASSWORD` | `localhost:5432/rag`    | Postgres connection                                              |
 
 ## Why a separate module?
 

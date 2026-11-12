@@ -53,11 +53,10 @@ class CommandDispatcherTest extends AbstractCommandDispatcherTest {
     void usePromptDoesNotOfferTheProviderCompanion() {
         var all = new ModuleRegistry(TestModules.all(), BASIC);
         when(prompter.pick(eq("Switch active module"), anyList())).thenReturn(Optional.empty());
-        @SuppressWarnings("unchecked")
-        var captor = ArgumentCaptor.forClass(List.class);
-        dispatcherFor(all).handle("use", token -> { });
+        ArgumentCaptor<List<Prompter.Choice>> captor = ArgumentCaptor.captor();
+        dispatcherFor(all).handle("use", _ -> { });
         verify(prompter).pick(eq("Switch active module"), captor.capture());
-        assertThat((List<Prompter.Choice>) captor.getValue())
+        assertThat(captor.getValue())
                 .extracting(Prompter.Choice::label)
                 .containsExactly(BASIC, ADVANCED, AGENTIC);
     }
@@ -123,11 +122,10 @@ class CommandDispatcherTest extends AbstractCommandDispatcherTest {
         when(lifecycle.isRunning(BASIC)).thenReturn(true);
         when(healthClient.isUp(ADVANCED_URL)).thenReturn(true);
         when(prompter.pick(eq("Switch active module"), anyList())).thenReturn(Optional.empty());
-        @SuppressWarnings("unchecked")
-        var captor = ArgumentCaptor.forClass(List.class);
-        dispatcherFor(all).handle("use", token -> { });
+        ArgumentCaptor<List<Prompter.Choice>> captor = ArgumentCaptor.captor();
+        dispatcherFor(all).handle("use", _ -> { });
         verify(prompter).pick(eq("Switch active module"), captor.capture());
-        assertThat((List<Prompter.Choice>) captor.getValue())
+        assertThat(captor.getValue())
                 .extracting(Prompter.Choice::detail)
                 .containsExactly("running", "running", "stopped");
     }
@@ -168,7 +166,7 @@ class CommandDispatcherTest extends AbstractCommandDispatcherTest {
     @Test
     void startPromptsForModuleWhenNoArgumentGiven() {
         when(prompter.pick(eq("Start module"), anyList())).thenReturn(Optional.of(BASIC));
-        when(lifecycle.start(registry.find(BASIC).get())).thenReturn(true);
+        when(lifecycle.start(registry.find(BASIC).orElseThrow())).thenReturn(true);
         when(healthClient.waitUntilUp(anyString(), anyLong(), any())).thenReturn(true);
         var result = handle("start");
         assertThat(result).contains("Started " + BASIC, "ready");
@@ -176,7 +174,7 @@ class CommandDispatcherTest extends AbstractCommandDispatcherTest {
 
     @Test
     void startsModuleWaitingForHealth() {
-        when(lifecycle.start(registry.find(BASIC).get())).thenReturn(true);
+        when(lifecycle.start(registry.find(BASIC).orElseThrow())).thenReturn(true);
         when(healthClient.waitUntilUp(anyString(), anyLong(), any())).thenReturn(true);
         var result = handle("start " + BASIC);
         assertThat(result).contains("Started " + BASIC, "ready");
@@ -184,7 +182,7 @@ class CommandDispatcherTest extends AbstractCommandDispatcherTest {
 
     @Test
     void reportsStartedModuleThatNeverBecomesReady() {
-        when(lifecycle.start(registry.find(BASIC).get())).thenReturn(true);
+        when(lifecycle.start(registry.find(BASIC).orElseThrow())).thenReturn(true);
         when(healthClient.waitUntilUp(anyString(), anyLong(), any())).thenReturn(false);
         var result = handle("start " + BASIC);
         assertThat(result).contains("Started " + BASIC, "not ready");
@@ -192,7 +190,7 @@ class CommandDispatcherTest extends AbstractCommandDispatcherTest {
 
     @Test
     void reportsProgressWhileModuleStarts() {
-        when(lifecycle.start(registry.find(BASIC).get())).thenReturn(true);
+        when(lifecycle.start(registry.find(BASIC).orElseThrow())).thenReturn(true);
         when(healthClient.waitUntilUp(anyString(), anyLong(), any())).thenReturn(true);
         List<String> tokens = new ArrayList<>();
         var result = sut.handle("start " + BASIC, tokens::add);
@@ -217,7 +215,7 @@ class CommandDispatcherTest extends AbstractCommandDispatcherTest {
 
     @Test
     void reportsModuleAlreadyRunning() {
-        when(lifecycle.start(registry.find(BASIC).get())).thenReturn(false);
+        when(lifecycle.start(registry.find(BASIC).orElseThrow())).thenReturn(false);
         var result = handle("start " + BASIC);
         assertThat(result).contains("Module already running: " + BASIC);
     }

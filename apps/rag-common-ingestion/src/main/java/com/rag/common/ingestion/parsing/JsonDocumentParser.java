@@ -30,7 +30,7 @@ public class JsonDocumentParser implements DocumentParser {
     private static final String ARRAY_OPEN = "[";
     private static final String ARRAY_CLOSE = "]";
 
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper om = new ObjectMapper();
 
     @Override
     public ParsedDocument parse(Document document) {
@@ -39,7 +39,7 @@ public class JsonDocumentParser implements DocumentParser {
         if (root.isArray()) {
             addArray(root, ROOT_PATH, List.of(), blocks);
         } else if (root.isObject()) {
-            addObject(root, ROOT_PATH, List.of(), blocks);
+            addObject(root, List.of(), blocks);
         } else {
             blocks.add(block(BlockType.JSON_OBJECT, root.toPrettyString(), List.of(), ROOT_PATH));
         }
@@ -50,7 +50,7 @@ public class JsonDocumentParser implements DocumentParser {
 
     private JsonNode read(Document document) {
         try {
-            var root = mapper.readTree(document.getContent());
+            var root = om.readTree(document.getContent());
             if (root == null || root.isNull() || root.isMissingNode()) {
                 throw new IllegalStateException("Empty JSON document " + document.getId());
             }
@@ -60,25 +60,23 @@ public class JsonDocumentParser implements DocumentParser {
         }
     }
 
-    private void addObject(JsonNode node, String path, List<String> section, List<DocumentBlock> blocks) {
-        var scalars = mapper.createObjectNode();
-        var fields = node.fields();
-        while (fields.hasNext()) {
-            var field = fields.next();
+    private void addObject(JsonNode node, List<String> section, List<DocumentBlock> blocks) {
+        var scalars = om.createObjectNode();
+        for (Map.Entry<String, JsonNode> field : node.properties()) {
             var child = field.getValue();
-            var childPath = path + PATH_SEPARATOR + field.getKey();
+            var childPath = JsonDocumentParser.ROOT_PATH + PATH_SEPARATOR + field.getKey();
             if (child.isArray()) {
-                flushScalars(scalars, path, section, blocks);
+                flushScalars(scalars, section, blocks);
                 addArray(child, childPath, append(section, field.getKey()), blocks);
             } else if (child.isObject()) {
-                flushScalars(scalars, path, section, blocks);
+                flushScalars(scalars, section, blocks);
                 blocks.add(block(BlockType.JSON_OBJECT, child.toPrettyString(),
                         append(section, field.getKey()), childPath));
             } else {
                 scalars.set(field.getKey(), child);
             }
         }
-        flushScalars(scalars, path, section, blocks);
+        flushScalars(scalars, section, blocks);
     }
 
     private void addArray(JsonNode array, String path, List<String> section, List<DocumentBlock> blocks) {
@@ -90,9 +88,9 @@ public class JsonDocumentParser implements DocumentParser {
         }
     }
 
-    private void flushScalars(ObjectNode scalars, String path, List<String> section, List<DocumentBlock> blocks) {
+    private void flushScalars(ObjectNode scalars, List<String> section, List<DocumentBlock> blocks) {
         if (!scalars.isEmpty()) {
-            blocks.add(block(BlockType.JSON_OBJECT, scalars.toPrettyString(), section, path));
+            blocks.add(block(BlockType.JSON_OBJECT, scalars.toPrettyString(), section, JsonDocumentParser.ROOT_PATH));
             scalars.removeAll();
         }
     }

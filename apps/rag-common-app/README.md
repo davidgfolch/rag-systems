@@ -43,10 +43,10 @@ The registry and active id are persisted in `pipeline_variants` inside the modul
 
 ## Configuration
 
-| Property | Env var | Default | Description |
-|----------|---------|---------|-------------|
-| `rag.provider.url` | `RAG_PROVIDER_URL` | `http://localhost:8086` | Provider hub base URL |
-| `rag.provider.embedding.default-dimension` | - | `768` | Dimension label of the seeded `boot` variant |
+| Property                                   | Env var            | Default                 | Description                                  |
+|--------------------------------------------|--------------------|-------------------------|----------------------------------------------|
+| `rag.provider.url`                         | `RAG_PROVIDER_URL` | `http://localhost:8086` | Provider hub base URL                        |
+| `rag.provider.embedding.default-dimension` | -                  | `768`                   | Dimension label of the seeded `boot` variant |
 
 ## Testing
 

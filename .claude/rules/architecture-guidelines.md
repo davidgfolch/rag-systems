@@ -19,6 +19,7 @@ Rules for all code in this repository. These enforce quality, maintainability, a
    - Keep closing braces/parens on same line as last content
    - No extra spaces inside parentheses
    - Avoid empty lines inside method bodies
+8. **Functional Java**: Prefer a functional style as much as it stays readable — `java.util.function.*`, `Stream` `map`/`filter`/`collect`, `Optional` composition (`map`/`filter`/`orElse`), immutable locals and pure helpers — over imperative loops and mutable accumulators.
 
 ## Architecture Rules
 

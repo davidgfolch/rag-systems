@@ -4,19 +4,19 @@ This directory records significant architecture decisions for the RAG Systems pr
 
 ## ADR Index
 
-| ADR | Status | Title |
-|-----|--------|-------|
-| [ADR-0001](adr-0001-monorepo-layout.md) | Accepted | Monorepo layout with decoupled modules |
-| [ADR-0002](adr-0002-provider-abstraction.md) | Accepted | Provider abstraction for embeddings/LLMs |
-| [ADR-0003](adr-0003-local-first.md) | Accepted | Local-first development with Ollama |
-| [ADR-0004](adr-0004-sonarqube-static-analysis.md) | Accepted | SonarQube static analysis for code quality |
-| [ADR-0010](adr-0010-rag-provider.md) | Accepted | Dedicated rag-provider service for model switching |
-| [ADR-0011](adr-0011-model-catalog.md) | Accepted | Refreshable model catalog (Models.dev) |
-| [ADR-0012](adr-0012-tui-connect.md) | Accepted | TUI `connect` command |
-| [ADR-0013](adr-0013-rag-common-split.md) | Accepted | Split rag-common into capability modules |
-| [ADR-0014](adr-0014-ollama-lan-discovery.md) | Accepted | Ollama LAN discovery |
-| [ADR-0015](adr-0015-pipeline-variants.md) | Accepted | Pipeline variants with per-variant pgvector tables |
-| [ADR-0016](adr-0016-format-aware-chunking.md) | Accepted | Format-aware parsing and structure-aware chunking |
+| ADR                                               | Status   | Title                                              |
+|---------------------------------------------------|----------|----------------------------------------------------|
+| [ADR-0001](adr-0001-monorepo-layout.md)           | Accepted | Monorepo layout with decoupled modules             |
+| [ADR-0002](adr-0002-provider-abstraction.md)      | Accepted | Provider abstraction for embeddings/LLMs           |
+| [ADR-0003](adr-0003-local-first.md)               | Accepted | Local-first development with Ollama                |
+| [ADR-0004](adr-0004-sonarqube-static-analysis.md) | Accepted | SonarQube static analysis for code quality         |
+| [ADR-0010](adr-0010-rag-provider.md)              | Accepted | Dedicated rag-provider service for model switching |
+| [ADR-0011](adr-0011-model-catalog.md)             | Accepted | Refreshable model catalog (Models.dev)             |
+| [ADR-0012](adr-0012-tui-connect.md)               | Accepted | TUI `connect` command                              |
+| [ADR-0013](adr-0013-rag-common-split.md)          | Accepted | Split rag-common into capability modules           |
+| [ADR-0014](adr-0014-ollama-lan-discovery.md)      | Accepted | Ollama LAN discovery                               |
+| [ADR-0015](adr-0015-pipeline-variants.md)         | Accepted | Pipeline variants with per-variant pgvector tables |
+| [ADR-0016](adr-0016-format-aware-chunking.md)     | Accepted | Format-aware parsing and structure-aware chunking  |
 
 ## How to add an ADR
 

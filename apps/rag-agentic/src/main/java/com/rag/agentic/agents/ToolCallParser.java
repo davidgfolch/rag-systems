@@ -33,10 +33,10 @@ public class ToolCallParser {
 
     private static final Logger log = LoggerFactory.getLogger(ToolCallParser.class);
 
-    private final ObjectMapper objectMapper;
+    private final ObjectMapper om;
 
-    public ToolCallParser(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
+    public ToolCallParser(ObjectMapper om) {
+        this.om = om;
     }
 
     public List<ToolCall> parse(String modelOutput) {
@@ -53,7 +53,7 @@ public class ToolCallParser {
 
     private Optional<ToolCall> toCall(String block) {
         try {
-            var node = objectMapper.readTree(block);
+            var node = om.readTree(block);
             if (!node.isObject() || ACTION_ANSWER.equals(node.path(ACTION_OVERALL).asText(""))) {
                 return Optional.empty();
             }
@@ -80,7 +80,7 @@ public class ToolCallParser {
     @SuppressWarnings("unchecked")
     private Map<String, Object> args(JsonNode node) {
         return node.has(FIELD_ARGS) && node.path(FIELD_ARGS).isObject()
-                ? objectMapper.convertValue(node.path(FIELD_ARGS), Map.class)
+                ? om.convertValue(node.path(FIELD_ARGS), Map.class)
                 : Map.of();
     }
 

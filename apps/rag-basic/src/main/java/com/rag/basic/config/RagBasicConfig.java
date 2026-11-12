@@ -67,7 +67,7 @@ public class RagBasicConfig {
 
     @Bean
     public ChatWebSocketHandler chatWebSocketHandler(
-            ChatService chatService, ObjectMapper objectMapper, Tracer tracer) {
-        return new ChatWebSocketHandler(chatService::askStream, objectMapper, tracer);
+            ChatService chatService, ObjectMapper om, Tracer tracer) {
+        return new ChatWebSocketHandler(chatService::askStream, om, tracer);
     }
 }

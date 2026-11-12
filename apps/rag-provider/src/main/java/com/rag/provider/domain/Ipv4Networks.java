@@ -64,6 +64,10 @@ public final class Ipv4Networks {
             return List.of();
         }
         if (prefix < 0 || prefix > IPV4_BITS) return List.of();
+        return getHosts(maxHosts, prefix, base);
+    }
+
+    private static ArrayList<String> getHosts(int maxHosts, int prefix, long base) {
         var mask = prefix == 0 ? 0L : (0xFFFFFFFFL << (IPV4_BITS - prefix)) & 0xFFFFFFFFL;
         var network = base & mask;
         var broadcast = network | ~mask & 0xFFFFFFFFL;

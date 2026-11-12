@@ -8,16 +8,16 @@
 
 ## What it features
 
-| Feature | Implementation | Notes |
-|---------|----------------|-------|
-| Baseline retrieval | `RetrievalService` → `VectorStorePort.similaritySearch` | Raw vector order, no re-ranking |
-| Per-document scoping | `similaritySearch(query, topK, documentId)` | Filter expression `documentId == '...'` in the store |
-| Contract endpoint | `POST /api/query` → `QueryResponse` | Returns chunks only, no generated answer |
-| Streaming chat | `/ws/chat` → shared `ChatService` | Grounded answer over raw top-K chunks |
-| Ingestion | Shared `IngestionController` | File, raw content, URL, async file jobs, crawl sessions |
-| Chunking variants | `ActiveDocumentChunker` | `fixed`, `recursive`, `token`, `semantic` via variants |
-| Document management | Shared controller + `RetrievalService` as `DocumentStorePort` | List / delete via the active variant store |
-| Observability | Actuator + Micrometer | `/actuator/health`, `/actuator/prometheus` |
+| Feature              | Implementation                                                | Notes                                                   |
+|----------------------|---------------------------------------------------------------|---------------------------------------------------------|
+| Baseline retrieval   | `RetrievalService` → `VectorStorePort.similaritySearch`       | Raw vector order, no re-ranking                         |
+| Per-document scoping | `similaritySearch(query, topK, documentId)`                   | Filter expression `documentId == '...'` in the store    |
+| Contract endpoint    | `POST /api/query` → `QueryResponse`                           | Returns chunks only, no generated answer                |
+| Streaming chat       | `/ws/chat` → shared `ChatService`                             | Grounded answer over raw top-K chunks                   |
+| Ingestion            | Shared `IngestionController`                                  | File, raw content, URL, async file jobs, crawl sessions |
+| Chunking variants    | `ActiveDocumentChunker`                                       | `fixed`, `recursive`, `token`, `semantic` via variants  |
+| Document management  | Shared controller + `RetrievalService` as `DocumentStorePort` | List / delete via the active variant store              |
+| Observability        | Actuator + Micrometer                                         | `/actuator/health`, `/actuator/prometheus`              |
 
 It deliberately does **not** do re-ranking, hybrid search, metadata filtering, query transformation or multi-step retrieval. That is the point of the baseline.
 
@@ -33,12 +33,12 @@ apps/rag-basic/src/main/java/com/rag/basic/
 
 Everything else comes from shared modules:
 
-| Shared bean | Source |
-|-------------|--------|
-| `IngestionController`, `IngestionService`, `AsyncIngestionService`, crawl | `rag-common-ingestion` |
-| `ChatService`, `ChatWebSocketHandler` | `rag-common-generation` |
-| `VectorStorePort`, `PgVectorStoreAdapter`, `InMemoryVectorStore` | `rag-common-core` / `rag-common-retrieval` |
-| Parser, variants, stores, chat wiring | `rag-common-app` (`RagPipelineConfiguration`) |
+| Shared bean                                                               | Source                                        |
+|---------------------------------------------------------------------------|-----------------------------------------------|
+| `IngestionController`, `IngestionService`, `AsyncIngestionService`, crawl | `rag-common-ingestion`                        |
+| `ChatService`, `ChatWebSocketHandler`                                     | `rag-common-generation`                       |
+| `VectorStorePort`, `PgVectorStoreAdapter`, `InMemoryVectorStore`          | `rag-common-core` / `rag-common-retrieval`    |
+| Parser, variants, stores, chat wiring                                     | `rag-common-app` (`RagPipelineConfiguration`) |
 
 `QueryController` maps each `Chunk` to a contract `ChunkResult` (`id`, `documentId`, `content`, `index`, `metadata`) and wraps them in `QueryResponse`.
 
@@ -144,25 +144,25 @@ If retrieval returns nothing, the context becomes `(no context retrieved)`. `can
 
 Shared ingestion and document management:
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| `POST` | `/api/documents/ingest-file` | Multipart file ingest (sync) |
-| `POST` | `/api/documents/ingest-file-async` | Multipart file ingest (async job) |
-| `GET` | `/api/documents/ingest-status/{documentId}` | Async job status |
-| `POST` | `/api/documents/ingest` | Ingest raw content / bytes |
-| `POST` | `/api/documents/ingest-url` | Fetch + ingest via `rag-webcrawler` |
-| `GET` | `/api/documents` | List ingested documents |
-| `DELETE` | `/api/documents/{documentId}` | Delete a document |
-| `POST` | `/api/documents/crawl` | Start a crawl session |
-| `POST` | `/api/documents/crawl/{sessionId}/step` | Advance one crawl step |
-| `DELETE` | `/api/documents/crawl/{sessionId}` | Cancel a crawl |
+| Method   | Path                                        | Purpose                             |
+|----------|---------------------------------------------|-------------------------------------|
+| `POST`   | `/api/documents/ingest-file`                | Multipart file ingest (sync)        |
+| `POST`   | `/api/documents/ingest-file-async`          | Multipart file ingest (async job)   |
+| `GET`    | `/api/documents/ingest-status/{documentId}` | Async job status                    |
+| `POST`   | `/api/documents/ingest`                     | Ingest raw content / bytes          |
+| `POST`   | `/api/documents/ingest-url`                 | Fetch + ingest via `rag-webcrawler` |
+| `GET`    | `/api/documents`                            | List ingested documents             |
+| `DELETE` | `/api/documents/{documentId}`               | Delete a document                   |
+| `POST`   | `/api/documents/crawl`                      | Start a crawl session               |
+| `POST`   | `/api/documents/crawl/{sessionId}/step`     | Advance one crawl step              |
+| `DELETE` | `/api/documents/crawl/{sessionId}`          | Cancel a crawl                      |
 
 rag-basic-specific:
 
-| Method | Path | Purpose |
-|--------|------|---------|
+| Method | Path         | Purpose                 |
+|--------|--------------|-------------------------|
 | `POST` | `/api/query` | Top-K similarity search |
-| `WS` | `/ws/chat` | Streaming grounded chat |
+| `WS`   | `/ws/chat`   | Streaming grounded chat |
 
 The full contract is [rag-api.yaml](../../../apps/rag-contract/src/main/resources/openapi/rag-api.yaml).
 
@@ -197,27 +197,27 @@ curl -X POST http://localhost:8081/api/modules/rag-basic/variants/<variantId>/ac
 
 ## Configuration
 
-| Property | Env var | Default | Description |
-|----------|---------|---------|-------------|
-| `server.port` | `RAG_BASIC_PORT` | `8081` | HTTP port |
-| `rag.provider.url` | `RAG_PROVIDER_URL` | `http://localhost:8086` | Chat + embedding hub |
-| `rag.webcrawler.url` | `RAG_WEBCRAWLER_URL` | `http://localhost:8085` | URL ingestion |
-| `rag.vector-store.type` | `VECTOR_STORE_TYPE` | `pgvector` | `pgvector` or `simple` |
-| `rag.chunking.strategy` | - | `recursive` | Boot variant strategy |
-| `rag.chunking.size` | `CHUNK_SIZE` | `512` | Boot variant window |
-| `rag.chunking.overlap` | `CHUNK_OVERLAP` | `128` | Boot variant overlap |
-| `rag.embedding.batch-size` | `RAG_EMBED_BATCH_SIZE` | `100` | Embedding batch window |
-| `spring.ai.vectorstore.pgvector.schema-name` | `PGVECTOR_BASIC_SCHEMA` | `rag_basic` | Isolated schema |
-| `rag.ingestion.max-concurrent` | - | `2` | Async ingest concurrency |
+| Property                                     | Env var                 | Default                 | Description              |
+|----------------------------------------------|-------------------------|-------------------------|--------------------------|
+| `server.port`                                | `RAG_BASIC_PORT`        | `8081`                  | HTTP port                |
+| `rag.provider.url`                           | `RAG_PROVIDER_URL`      | `http://localhost:8086` | Chat + embedding hub     |
+| `rag.webcrawler.url`                         | `RAG_WEBCRAWLER_URL`    | `http://localhost:8085` | URL ingestion            |
+| `rag.vector-store.type`                      | `VECTOR_STORE_TYPE`     | `pgvector`              | `pgvector` or `simple`   |
+| `rag.chunking.strategy`                      | -                       | `recursive`             | Boot variant strategy    |
+| `rag.chunking.size`                          | `CHUNK_SIZE`            | `512`                   | Boot variant window      |
+| `rag.chunking.overlap`                       | `CHUNK_OVERLAP`         | `128`                   | Boot variant overlap     |
+| `rag.embedding.batch-size`                   | `RAG_EMBED_BATCH_SIZE`  | `100`                   | Embedding batch window   |
+| `spring.ai.vectorstore.pgvector.schema-name` | `PGVECTOR_BASIC_SCHEMA` | `rag_basic`             | Isolated schema          |
+| `rag.ingestion.max-concurrent`               | -                       | `2`                     | Async ingest concurrency |
 
 ## Trade-offs and limits
 
-| Strength | Cost |
-|----------|------|
-| Cheapest and fastest retrieval path | No re-ranking: borderline vector hits survive |
-| Smallest module surface (two local classes) | Pure semantic matching can miss exact terms |
-| Easy to reason about and benchmark | No metadata filtering or query planning |
-| Same ingestion/chat as the other variants | Chat and query do not use each other's strategy |
+| Strength                                    | Cost                                            |
+|---------------------------------------------|-------------------------------------------------|
+| Cheapest and fastest retrieval path         | No re-ranking: borderline vector hits survive   |
+| Smallest module surface (two local classes) | Pure semantic matching can miss exact terms     |
+| Easy to reason about and benchmark          | No metadata filtering or query planning         |
+| Same ingestion/chat as the other variants   | Chat and query do not use each other's strategy |
 
 Use it as the baseline, for low-stakes retrieval, or when latency and cost dominate. Move to [rag-advanced](rag-advanced.md) when keyword precision matters, and to [rag-agentic](rag-agentic.md) when the question needs multiple steps.
 

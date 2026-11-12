@@ -135,7 +135,7 @@ class PgVectorStoreAdapterRetryTest {
         sut.listDocuments();
         sut.delete("d1");
 
-        var captor = ArgumentCaptor.forClass(Integer.class);
+        ArgumentCaptor<Integer> captor = ArgumentCaptor.captor();
         verify(statement, times(2)).setQueryTimeout(captor.capture());
         assertThat(captor.getAllValues()).containsOnly(EXPECTED_QUERY_TIMEOUT);
     }

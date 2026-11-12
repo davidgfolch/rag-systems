@@ -32,13 +32,13 @@ public class DiscoveryCacheStore {
     private static final String TEMP_PREFIX = "discovery-cache-";
     private static final String TEMP_SUFFIX = ".tmp";
 
-    private final ObjectMapper mapper;
+    private final ObjectMapper om;
     private final DiscoveryCacheSettings settings;
     private final Clock clock;
     private final Object lock = new Object();
 
-    public DiscoveryCacheStore(ObjectMapper mapper, DiscoveryCacheSettings settings, Clock clock) {
-        this.mapper = mapper;
+    public DiscoveryCacheStore(ObjectMapper om, DiscoveryCacheSettings settings, Clock clock) {
+        this.om = om;
         this.settings = settings;
         this.clock = clock;
     }
@@ -83,7 +83,7 @@ public class DiscoveryCacheStore {
     private ObjectNode load() {
         if (Files.notExists(settings.file())) return empty();
         try {
-            var node = mapper.readTree(settings.file().toFile());
+            var node = om.readTree(settings.file().toFile());
             return node instanceof ObjectNode object ? object : empty();
         } catch (IOException e) {
             log.debug("Could not read discovery cache {}: {}", settings.file(), e.getMessage());
@@ -92,9 +92,9 @@ public class DiscoveryCacheStore {
     }
 
     private ObjectNode empty() {
-        var root = mapper.createObjectNode();
+        var root = om.createObjectNode();
         root.put(VERSION, CACHE_VERSION);
-        root.set(ENTRIES, mapper.createObjectNode());
+        root.set(ENTRIES, om.createObjectNode());
         return root;
     }
 
@@ -110,7 +110,7 @@ public class DiscoveryCacheStore {
             if (file.getParent() != null) Files.createDirectories(file.getParent());
             var directory = file.getParent() == null ? Path.of(".") : file.getParent();
             var temp = Files.createTempFile(directory, TEMP_PREFIX, TEMP_SUFFIX);
-            mapper.writerWithDefaultPrettyPrinter().writeValue(temp.toFile(), root);
+            om.writerWithDefaultPrettyPrinter().writeValue(temp.toFile(), root);
             move(temp, file);
         } catch (IOException e) {
             log.warn("Could not write discovery cache {}: {}", file, e.getMessage());

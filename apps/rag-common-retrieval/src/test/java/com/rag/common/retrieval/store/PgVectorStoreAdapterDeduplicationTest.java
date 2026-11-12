@@ -39,7 +39,7 @@ class PgVectorStoreAdapterDeduplicationTest {
 
         adapter.similaritySearch("query", 2);
 
-        var captor = ArgumentCaptor.forClass(SearchRequest.class);
+        ArgumentCaptor<SearchRequest> captor = ArgumentCaptor.captor();
         verify(delegate).similaritySearch(captor.capture());
         assertThat(captor.getValue().getTopK()).isEqualTo(ContentDeduplicator.fetchSize(2));
     }
@@ -54,7 +54,7 @@ class PgVectorStoreAdapterDeduplicationTest {
         var result = adapter.similaritySearch("query", 2, "d1");
 
         assertThat(result).extracting(Chunk::getId).containsExactly("c1", "c3");
-        var captor = ArgumentCaptor.forClass(SearchRequest.class);
+        ArgumentCaptor<SearchRequest> captor = ArgumentCaptor.captor();
         verify(delegate).similaritySearch(captor.capture());
         assertThat(captor.getValue().hasFilterExpression()).isTrue();
         assertThat(captor.getValue().getFilterExpression().toString()).contains("d1");

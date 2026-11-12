@@ -10,15 +10,15 @@ Provide quantitative evidence for comparing the different RAG modules (rag-basic
 
 ## Metrics
 
-| Metric | Definition |
-|--------|------------|
-| Precision@k | Fraction of retrieved chunks that are relevant |
-| Recall@k | Fraction of relevant chunks retrieved |
-| MRR | Mean Reciprocal Rank of first hit |
-| Answer relevance | LLM-as-judge score of answer quality |
-| Faithfulness | Groundedness of answer to retrieved context |
-| Latency | Per-pipeline-stage timing (via observability) |
-| Cost | Estimated token cost per query |
+| Metric           | Definition                                     |
+|------------------|------------------------------------------------|
+| Precision@k      | Fraction of retrieved chunks that are relevant |
+| Recall@k         | Fraction of relevant chunks retrieved          |
+| MRR              | Mean Reciprocal Rank of first hit              |
+| Answer relevance | LLM-as-judge score of answer quality           |
+| Faithfulness     | Groundedness of answer to retrieved context    |
+| Latency          | Per-pipeline-stage timing (via observability)  |
+| Cost             | Estimated token cost per query                 |
 
 ## Structure
 
