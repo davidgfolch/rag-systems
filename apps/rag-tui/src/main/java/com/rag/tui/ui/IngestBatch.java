@@ -3,6 +3,7 @@ package com.rag.tui.ui;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import static com.rag.tui.ui.TerminalStyle.error;
 import static com.rag.tui.ui.TerminalStyle.success;
@@ -65,11 +66,9 @@ final class IngestBatch {
     }
 
     private String summary() {
-        var text = new StringBuilder("%s: %d page(s) complete, %d failed, %d chunk(s) total.%n"
-                .formatted(label, completed, failed, chunks));
-        for (var failure : failures) {
-            text.append(" - ").append(failure).append('\n');
-        }
-        return text.toString();
+        var header = "%s: %d page(s) complete, %d failed, %d chunk(s) total.%n"
+                .formatted(label, completed, failed, chunks);
+        var details = failures.stream().map(failure -> " - " + failure + '\n').collect(Collectors.joining());
+        return header + details;
     }
 }
